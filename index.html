@@ -7184,7 +7184,6 @@
         const chips = asig.map(r => `<span class="inline-flex items-center">${asigChip(r, true)}<span class="text-[10px] text-slate-500 mr-1">${escapeHtml(asigNombreAuditor(r.auditor))}</span><button type="button" onclick="asigQuitar(${r.id})" title="Quitar esta asignación" class="text-red-500 font-bold px-1 mr-1 hover:text-red-700">✕</button></span>`).join('');
         return cab + `<tr class="border-t"><td class="px-3 py-1.5"><input type="checkbox" class="as-chk" value="${escapeHtml(c.sumaria)}" ${asigSel.has(c.sumaria) ? 'checked' : ''} onchange="asigMarcar(this)"></td><td class="px-2 py-1.5 font-bold text-slate-700">${escapeHtml(c.sumaria)}</td><td class="px-2 py-1.5 text-slate-600">${escapeHtml(String(c.cuenta || '').replace(/^[A-Z0-9]+ - /, ''))}</td><td class="px-2 py-1.5">${chips || '<span class="text-slate-300">Sin asignar</span>'}</td></tr>`;
       }).join('');
-      const otra = f.visita === 'final' ? 'preliminar' : 'final';
       return `<div class="p-3 bg-indigo-50 border border-indigo-200 rounded-lg text-xs flex flex-wrap items-end gap-3">
           <div class="block"><span class="font-bold text-indigo-900">Asigna</span><div class="mt-1 p-2 border border-indigo-200 rounded-lg bg-white min-w-[200px] font-semibold text-slate-700">${escapeHtml(asigNombreAuditor(usuarioSesionEmail) || (usuarioActivo ? usuarioActivo.nombre : ''))}</div></div>
           <label class="block"><span class="font-bold text-indigo-900">Cuentas marcadas para</span>
@@ -7192,7 +7191,7 @@
           <button type="button" onclick="asigAsignarMarcadas()" class="px-4 py-2 bg-indigo-700 text-white font-bold rounded-lg hover:bg-indigo-800">Asignar marcadas (<span id="as-nsel">${asigSel.size}</span>)</button>
           <button type="button" onclick="asigMarcarTodas(true)" class="px-3 py-2 border border-slate-300 bg-white rounded-lg">Marcar todas</button>
           <button type="button" onclick="asigMarcarTodas(false)" class="px-3 py-2 border border-slate-300 bg-white rounded-lg">Desmarcar</button>
-          <button type="button" onclick="asigCopiarDe('${otra}')" class="px-3 py-2 border border-slate-300 bg-white rounded-lg ml-auto" title="Trae las asignaciones de la otra visita, sin repetir las que ya existen">Copiar asignaciones de la ${otra}</button>
+          ${(f.visita === 'final' && asigDatos.some(r => String(r.cliente_id) === f.cliente && r.visita === 'preliminar')) ? `<button type="button" onclick="asigCopiarDe('preliminar')" class="px-3 py-2 border border-slate-300 bg-white rounded-lg ml-auto" title="Trae las asignaciones de la visita preliminar, sin repetir las que ya existen">Copiar asignaciones de la preliminar</button>` : ''}
         </div>
         <div class="overflow-x-auto border border-slate-200 rounded-xl"><table class="w-full text-xs"><thead class="bg-slate-50 text-slate-500"><tr><th class="px-3 py-2 w-8"></th><th class="px-2 py-2 text-left w-16">Sumaria</th><th class="px-2 py-2 text-left">Cuenta</th><th class="px-2 py-2 text-left">Asignada a</th></tr></thead><tbody>${filas}</tbody></table></div>`;
     }
