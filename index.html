@@ -670,20 +670,30 @@
     </section>
 
     <!-- 5. SECCIÓN: ASIGNACIÓN DE CUENTAS -->
-    <section id="sec-asignacion" class="hidden bg-white rounded-2xl shadow-xl border border-slate-200 p-6 min-h-[92vh] space-y-6">
-      <div class="flex justify-between items-center border-b pb-4">
-        <div>
-          <h1 class="text-xl font-bold text-slate-800">Asignación de Cuentas / Rubros</h1>
-          <p class="text-xs text-slate-500">Asigna cuentas contables específicas a cada auditor</p>
-        </div>
+    <section id="sec-asignacion" class="hidden bg-white rounded-2xl shadow-xl border border-slate-200 p-6 min-h-[92vh] space-y-5">
+      <div class="border-b pb-4">
+        <h1 class="text-xl font-bold text-slate-800">Asignación de Cuentas</h1>
+        <p class="text-xs text-slate-500">Asigna a cada auditor las cuentas que revisará en cada cliente, año y visita. Cualquier usuario con edición sobre el cliente puede asignar. Haz clic en una cuenta asignada para cambiar su avance (pendiente → en proceso → terminada).</p>
       </div>
-
-      <div class="p-6 bg-indigo-50 border border-indigo-200 rounded-xl text-xs text-indigo-900 flex items-start gap-3">
-        <div>
-          <strong class="block font-bold">Módulo listo para vincular tabla Supabase:</strong>
-          <span>Esta sección está lista para conectar con la tabla que tienes pendiente por crear (`asignaciones_cuentas`).</span>
-        </div>
+      <div id="as-aviso" class="hidden p-3 bg-amber-50 border border-amber-300 rounded-lg text-xs text-amber-900"></div>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+        <label class="block"><span class="font-bold text-slate-600">Cliente</span>
+          <select id="as-cliente" onchange="asigRefrescar()" class="w-full mt-1 p-2 border border-slate-300 rounded-lg bg-white"></select></label>
+        <label class="block"><span class="font-bold text-slate-600">Año</span>
+          <select id="as-anio" onchange="asigCargar()" class="w-full mt-1 p-2 border border-slate-300 rounded-lg bg-white"></select></label>
+        <label class="block"><span class="font-bold text-slate-600">Visita</span>
+          <select id="as-visita" onchange="asigRefrescar()" class="w-full mt-1 p-2 border border-slate-300 rounded-lg bg-white">
+            <option value="__todas__">Todas las visitas</option><option value="preliminar">Visita preliminar</option><option value="final">Visita final</option></select></label>
+        <label class="block"><span class="font-bold text-slate-600">Auditor</span>
+          <select id="as-auditor" onchange="asigRefrescar()" class="w-full mt-1 p-2 border border-slate-300 rounded-lg bg-white"></select></label>
       </div>
+      <div class="flex flex-wrap gap-2 text-xs font-bold" id="as-tabs">
+        <button type="button" data-tab="asignar" onclick="asigTab('asignar')" class="as-tab px-4 py-2 rounded-lg border">Asignar</button>
+        <button type="button" data-tab="cliente" onclick="asigTab('cliente')" class="as-tab px-4 py-2 rounded-lg border">Por cliente</button>
+        <button type="button" data-tab="auditor" onclick="asigTab('auditor')" class="as-tab px-4 py-2 rounded-lg border">Por auditor</button>
+        <button type="button" data-tab="visita" onclick="asigTab('visita')" class="as-tab px-4 py-2 rounded-lg border">Por visita</button>
+      </div>
+      <div id="as-contenido" class="space-y-4"></div>
     </section>
 
     <!-- 2. SECCIÓN: AUDITORÍA/ANÁLISIS (por rubro y cuenta) -->
@@ -2356,6 +2366,7 @@
       if (seccion === 'arrend') abrirArrend();
       if (seccion === 'pce') abrirPce();
       if (seccion === 'cuentas') abrirCatalogoCuentas();
+      if (seccion === 'asignacion') abrirAsignacion();
       if (seccion === 'usuarios') refrescarAccesos();
 
       document.querySelectorAll('[id^="nav-cuenta-"]').forEach(b => {
@@ -6960,6 +6971,271 @@
         sel.innerHTML += `<option value="${escapeHtml(String(id))}">${escapeHtml(texto)}</option>`;
       });
       if (previo) sel.value = previo;
+    }
+
+    // ===== ASIGNACIÓN DE CUENTAS =====
+    let asigDatos = [];            // asignaciones del año elegido (solo clientes que la persona puede ver)
+    let asigTabActual = 'asignar';
+    let asigDisponible = true;
+    let asigSel = new Set();       // sumarias marcadas en la pestaña Asignar
+    const ASIG_ESTADOS = ['pendiente', 'en_proceso', 'terminada'];
+    const ASIG_TXT = { pendiente: 'Pendiente', en_proceso: 'En proceso', terminada: 'Terminada' };
+    const ASIG_CLASE = {
+      pendiente: 'bg-slate-100 text-slate-700 border-slate-300',
+      en_proceso: 'bg-amber-100 text-amber-800 border-amber-300',
+      terminada: 'bg-emerald-100 text-emerald-800 border-emerald-300'
+    };
+
+    function asigPuedeEditar(cid) {
+      if (usuarioActivo && esCargoTotal(usuarioActivo.cargo)) return true;
+      return misNivelesCliente[String(cid)] === 'edicion';
+    }
+    function asigNombreAuditor(email) {
+      const e = String(email || '').toLowerCase();
+      const u = (listaUsuariosCache || []).find(x => emailDeUsuario(x) === e);
+      return u ? String(u.nombre || u.nombre_completo || e) : e;
+    }
+    function asigNombreCliente(cid) {
+      const c = listaClientesCache.find(x => String(x.cliente_id || x.id) === String(cid));
+      return c ? (c.nombre_corto || c.nombre_completo || c.razon_social || cid) : cid;
+    }
+    function asigNombreCuenta(sm) {
+      const c = catalogoCuentas.find(x => x.sumaria === sm);
+      return c ? c.cuenta : sm;
+    }
+    function asigOrdenCuenta(sm) {
+      const i = catalogoCuentas.findIndex(x => x.sumaria === sm);
+      return i < 0 ? 9999 : i;
+    }
+    const asigTxtVisita = v => v === 'preliminar' ? 'Visita preliminar' : 'Visita final';
+
+    async function abrirAsignacion() {
+      asegurarClientesEn('as-cliente');
+      const sc = document.getElementById('as-cliente');
+      const previo = sc.value;
+      sc.innerHTML = '<option value="__todos__">Todos los clientes</option>' + sc.innerHTML.replace('<option value="">-- Selecciona un Cliente --</option>', '');
+      sc.value = (previo && [...sc.options].some(o => o.value === previo)) ? previo : '__todos__';
+      const sa = document.getElementById('as-anio'), origen = document.getElementById('select-anio');
+      const previoA = sa.value;
+      sa.innerHTML = origen ? origen.innerHTML : '';
+      if (previoA && [...sa.options].some(o => o.value === previoA)) sa.value = previoA;
+      else if (origen) sa.value = origen.value;
+      if (!catalogoCargado) await cargarCatalogoCuentas();
+      if (!listaUsuariosCache || !listaUsuariosCache.length) {
+        try { const { data } = await supabaseClient.from('usuarios').select('*'); listaUsuariosCache = data || []; } catch (e) { /* sin lista */ }
+      }
+      const au = document.getElementById('as-auditor'), pa = au.value;
+      au.innerHTML = '<option value="__todos__">Todos los auditores</option>' +
+        (listaUsuariosCache || []).filter(u => emailDeUsuario(u)).map(u =>
+          `<option value="${escapeHtml(emailDeUsuario(u))}">${escapeHtml(asigNombreAuditor(emailDeUsuario(u)))}</option>`).join('');
+      au.value = (pa && [...au.options].some(o => o.value === pa)) ? pa : '__todos__';
+      await asigCargar();
+    }
+
+    async function asigCargar() {
+      const anio = document.getElementById('as-anio').value;
+      const av = document.getElementById('as-aviso');
+      try {
+        const { data, error } = await supabaseClient.from('asignaciones_cuentas').select('*').eq('anio', String(anio));
+        if (error) throw error;
+        asigDatos = data || [];
+        asigDisponible = true;
+        av.classList.add('hidden');
+      } catch (e) {
+        asigDatos = [];
+        asigDisponible = false;
+        av.textContent = 'Todavía no se puede leer la tabla de asignaciones. Falta ejecutar el SQL "Supabase_9_asignacion_cuentas" en Supabase.';
+        av.classList.remove('hidden');
+        console.warn('asignaciones_cuentas:', e);
+      }
+      asigRefrescar();
+    }
+
+    function asigTab(t) { asigTabActual = t; asigSel = new Set(); asigRefrescar(); }
+
+    function asigFiltros() {
+      return {
+        cliente: document.getElementById('as-cliente').value,
+        anio: document.getElementById('as-anio').value,
+        visita: document.getElementById('as-visita').value,
+        auditor: document.getElementById('as-auditor').value
+      };
+    }
+    function asigFiltradas(ignorarAuditor) {
+      const f = asigFiltros();
+      return asigDatos.filter(r =>
+        (f.cliente === '__todos__' || String(r.cliente_id) === f.cliente) &&
+        (f.visita === '__todas__' || r.visita === f.visita) &&
+        (ignorarAuditor || f.auditor === '__todos__' || String(r.auditor).toLowerCase() === f.auditor));
+    }
+
+    function asigRefrescar() {
+      document.querySelectorAll('#as-tabs .as-tab').forEach(b => {
+        const on = b.dataset.tab === asigTabActual;
+        b.className = 'as-tab px-4 py-2 rounded-lg border ' + (on ? 'bg-slate-800 text-white border-slate-800' : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50');
+      });
+      const c = document.getElementById('as-contenido');
+      if (!asigDisponible) { c.innerHTML = ''; return; }
+      if (asigTabActual === 'asignar') c.innerHTML = asigHtmlAsignar();
+      else if (asigTabActual === 'cliente') c.innerHTML = asigHtmlPorCliente();
+      else if (asigTabActual === 'auditor') c.innerHTML = asigHtmlPorAuditor();
+      else c.innerHTML = asigHtmlPorVisita();
+    }
+
+    function asigChip(r, conAuditor) {
+      const editable = asigPuedeEditar(r.cliente_id);
+      const tip = `${asigNombreCuenta(r.sumaria)} · ${ASIG_TXT[r.estado] || r.estado}${conAuditor ? ' · ' + asigNombreAuditor(r.auditor) : ''}${editable ? ' (clic para cambiar el avance)' : ''}`;
+      return `<button type="button" ${editable ? `onclick="asigCiclo(${r.id})"` : 'disabled'} title="${escapeHtml(tip)}" class="inline-block px-2 py-0.5 m-0.5 rounded border text-[11px] font-bold ${ASIG_CLASE[r.estado] || ASIG_CLASE.pendiente} ${editable ? 'hover:opacity-80' : 'cursor-default'}">${escapeHtml(r.sumaria)}</button>`;
+    }
+    function asigBarra(rows) {
+      const n = rows.length, t = rows.filter(r => r.estado === 'terminada').length, p = rows.filter(r => r.estado === 'en_proceso').length;
+      const pct = n ? Math.round(t * 100 / n) : 0;
+      return `<div class="flex items-center gap-2 text-[11px] text-slate-600"><div class="flex-1 h-2 bg-slate-200 rounded overflow-hidden"><div class="h-2 bg-emerald-500" style="width:${pct}%"></div></div><span class="whitespace-nowrap font-bold">${t}/${n} terminadas${p ? ` · ${p} en proceso` : ''}</span></div>`;
+    }
+    const asigVacio = txt => `<div class="p-6 text-center text-slate-400 text-xs border border-dashed border-slate-300 rounded-xl">${txt}</div>`;
+
+    function asigAgrupar(rows, fn) {
+      const m = new Map();
+      rows.forEach(r => { const k = fn(r); if (!m.has(k)) m.set(k, []); m.get(k).push(r); });
+      return m;
+    }
+    const asigOrdenar = rows => [...rows].sort((a, b) => asigOrdenCuenta(a.sumaria) - asigOrdenCuenta(b.sumaria));
+
+    function asigHtmlPorCliente() {
+      const rows = asigFiltradas();
+      if (!rows.length) return asigVacio('No hay cuentas asignadas con estos filtros. Usa la pestaña "Asignar".');
+      const porCli = asigAgrupar(rows, r => r.cliente_id);
+      const clientes = ordenarClientes(listaClientesCache).map(c => String(c.cliente_id || c.id)).filter(id => porCli.has(id));
+      return clientes.map(cid => {
+        const rc = porCli.get(cid);
+        const visitas = ['preliminar', 'final'].filter(v => rc.some(r => r.visita === v)).map(v => {
+          const rv = rc.filter(r => r.visita === v);
+          const porAud = asigAgrupar(rv, r => String(r.auditor).toLowerCase());
+          return `<div class="mt-3"><div class="text-[11px] font-bold text-slate-500 uppercase">${asigTxtVisita(v)}</div>${asigBarra(rv)}
+            <table class="w-full text-xs mt-1"><tbody>${[...porAud.entries()].map(([a, ra]) =>
+              `<tr class="border-t"><td class="py-1.5 pr-3 w-48 font-semibold text-slate-700 align-top">${escapeHtml(asigNombreAuditor(a))}<div class="text-[10px] font-normal text-slate-400">${ra.length} cuenta(s)</div></td><td class="py-1">${asigOrdenar(ra).map(r => asigChip(r)).join('')}</td></tr>`).join('')}</tbody></table></div>`;
+        }).join('');
+        return `<div class="border border-slate-200 rounded-xl p-4"><div class="font-bold text-slate-800">${escapeHtml(asigNombreCliente(cid))} <span class="text-slate-400 font-normal text-xs">${escapeHtml(cid)}</span></div>${visitas}</div>`;
+      }).join('');
+    }
+
+    function asigHtmlPorAuditor() {
+      const rows = asigFiltradas();
+      if (!rows.length) return asigVacio('No hay cuentas asignadas con estos filtros. Usa la pestaña "Asignar".');
+      const porAud = asigAgrupar(rows, r => String(r.auditor).toLowerCase());
+      const auds = [...porAud.keys()].sort((a, b) => asigNombreAuditor(a).localeCompare(asigNombreAuditor(b), 'es'));
+      return `<div class="grid grid-cols-1 lg:grid-cols-2 gap-4">` + auds.map(a => {
+        const ra = porAud.get(a);
+        const grupos = asigAgrupar(ra, r => r.cliente_id + '|' + r.visita);
+        const lineas = [...grupos.entries()].sort((x, y) => asigNombreCliente(x[0].split('|')[0]).localeCompare(asigNombreCliente(y[0].split('|')[0]), 'es') || x[0].localeCompare(y[0])).map(([k, rg]) => {
+          const [cid, v] = k.split('|');
+          return `<div class="border-t pt-1.5 mt-1.5"><div class="text-[11px] font-semibold text-slate-600">${escapeHtml(asigNombreCliente(cid))} · <span class="text-slate-400 font-normal">${asigTxtVisita(v)}</span></div>${asigOrdenar(rg).map(r => asigChip(r)).join('')}</div>`;
+        }).join('');
+        return `<div class="border border-slate-200 rounded-xl p-4"><div class="font-bold text-slate-800">${escapeHtml(asigNombreAuditor(a))} <span class="text-slate-400 font-normal text-xs">${escapeHtml(a)}</span></div><div class="my-1">${asigBarra(ra)}</div>${lineas}</div>`;
+      }).join('') + `</div>`;
+    }
+
+    function asigHtmlPorVisita() {
+      const rows = asigFiltradas();
+      if (!rows.length) return asigVacio('No hay cuentas asignadas con estos filtros. Usa la pestaña "Asignar".');
+      const cols = ['preliminar', 'final'].filter(v => rows.some(r => r.visita === v)).map(v => {
+        const rv = rows.filter(r => r.visita === v);
+        const porCli = asigAgrupar(rv, r => r.cliente_id);
+        const cuerpo = [...porCli.entries()].sort((x, y) => asigNombreCliente(x[0]).localeCompare(asigNombreCliente(y[0]), 'es')).map(([cid, rc]) => {
+          const porAud = asigAgrupar(rc, r => String(r.auditor).toLowerCase());
+          return `<div class="border-t pt-2 mt-2"><div class="font-semibold text-slate-700 text-xs">${escapeHtml(asigNombreCliente(cid))}</div>${[...porAud.entries()].map(([a, ra]) =>
+            `<div class="text-[11px] text-slate-500 mt-1">${escapeHtml(asigNombreAuditor(a))}:</div>${asigOrdenar(ra).map(r => asigChip(r)).join('')}`).join('')}</div>`;
+        }).join('');
+        return `<div class="border border-slate-200 rounded-xl p-4"><div class="font-bold text-slate-800">${asigTxtVisita(v)}</div><div class="my-1">${asigBarra(rv)}</div>${cuerpo}</div>`;
+      });
+      return `<div class="grid grid-cols-1 lg:grid-cols-${cols.length} gap-4">${cols.join('')}</div>`;
+    }
+
+    function asigHtmlAsignar() {
+      const f = asigFiltros();
+      if (f.cliente === '__todos__') return asigVacio('Elige un cliente (arriba) para asignarle cuentas.');
+      if (f.visita === '__todas__') return asigVacio('Elige la visita (preliminar o final) en la que se asignarán las cuentas.');
+      if (!asigPuedeEditar(f.cliente)) return asigVacio('Tienes acceso de solo lectura a este cliente: puedes ver las asignaciones, no cambiarlas.');
+      if (!catalogoCuentas.length) return asigVacio('Aún no hay cuentas en el catálogo (Configuración › Cuentas).');
+      const mias = asigDatos.filter(r => String(r.cliente_id) === f.cliente && r.visita === f.visita);
+      const porCuenta = asigAgrupar(mias, r => r.sumaria);
+      const auds = (listaUsuariosCache || []).filter(u => emailDeUsuario(u));
+      let ultimoGrupo = null;
+      const filas = catalogoCuentas.map(c => {
+        const g = c.grupo || (c.clasificacion ? c.clasificacion : 'Procedimientos generales');
+        const cab = g !== ultimoGrupo ? `<tr class="bg-slate-100"><td colspan="4" class="px-3 py-1 text-[11px] font-bold text-slate-600 uppercase">${escapeHtml(g)}</td></tr>` : '';
+        ultimoGrupo = g;
+        const asig = porCuenta.get(c.sumaria) || [];
+        const chips = asig.map(r => `<span class="inline-flex items-center">${asigChip(r, true)}<span class="text-[10px] text-slate-500 mr-1">${escapeHtml(asigNombreAuditor(r.auditor))}</span><button type="button" onclick="asigQuitar(${r.id})" title="Quitar esta asignación" class="text-red-500 font-bold px-1 mr-1 hover:text-red-700">✕</button></span>`).join('');
+        return cab + `<tr class="border-t"><td class="px-3 py-1.5"><input type="checkbox" class="as-chk" value="${escapeHtml(c.sumaria)}" ${asigSel.has(c.sumaria) ? 'checked' : ''} onchange="asigMarcar(this)"></td><td class="px-2 py-1.5 font-bold text-slate-700">${escapeHtml(c.sumaria)}</td><td class="px-2 py-1.5 text-slate-600">${escapeHtml(String(c.cuenta || '').replace(/^[A-Z0-9]+ - /, ''))}</td><td class="px-2 py-1.5">${chips || '<span class="text-slate-300">Sin asignar</span>'}</td></tr>`;
+      }).join('');
+      const otra = f.visita === 'final' ? 'preliminar' : 'final';
+      return `<div class="p-3 bg-indigo-50 border border-indigo-200 rounded-lg text-xs flex flex-wrap items-end gap-3">
+          <label class="block"><span class="font-bold text-indigo-900">Asignar las cuentas marcadas a</span>
+            <select id="as-destino" class="block mt-1 p-2 border border-indigo-300 rounded-lg bg-white min-w-[220px]"><option value="">-- Elige auditor --</option>${auds.map(u => `<option value="${escapeHtml(emailDeUsuario(u))}">${escapeHtml(asigNombreAuditor(emailDeUsuario(u)))}</option>`).join('')}</select></label>
+          <button type="button" onclick="asigAsignarMarcadas()" class="px-4 py-2 bg-indigo-700 text-white font-bold rounded-lg hover:bg-indigo-800">Asignar marcadas (<span id="as-nsel">${asigSel.size}</span>)</button>
+          <button type="button" onclick="asigMarcarTodas(true)" class="px-3 py-2 border border-slate-300 bg-white rounded-lg">Marcar todas</button>
+          <button type="button" onclick="asigMarcarTodas(false)" class="px-3 py-2 border border-slate-300 bg-white rounded-lg">Desmarcar</button>
+          <button type="button" onclick="asigCopiarDe('${otra}')" class="px-3 py-2 border border-slate-300 bg-white rounded-lg ml-auto" title="Trae las asignaciones de la otra visita, sin repetir las que ya existen">Copiar asignaciones de la ${otra}</button>
+        </div>
+        <div class="overflow-x-auto border border-slate-200 rounded-xl"><table class="w-full text-xs"><thead class="bg-slate-50 text-slate-500"><tr><th class="px-3 py-2 w-8"></th><th class="px-2 py-2 text-left w-16">Sumaria</th><th class="px-2 py-2 text-left">Cuenta</th><th class="px-2 py-2 text-left">Asignada a</th></tr></thead><tbody>${filas}</tbody></table></div>`;
+    }
+
+    function asigMarcar(el) {
+      if (el.checked) asigSel.add(el.value); else asigSel.delete(el.value);
+      const n = document.getElementById('as-nsel'); if (n) n.textContent = asigSel.size;
+    }
+    function asigMarcarTodas(on) {
+      asigSel = new Set(on ? catalogoCuentas.map(c => c.sumaria) : []);
+      document.querySelectorAll('.as-chk').forEach(c => { c.checked = on; });
+      const n = document.getElementById('as-nsel'); if (n) n.textContent = asigSel.size;
+    }
+
+    async function asigGuardarFilas(filas) {
+      const { error } = await supabaseClient.from('asignaciones_cuentas').upsert(filas, { onConflict: 'cliente_id,anio,visita,sumaria,auditor', ignoreDuplicates: true });
+      if (error) { alert('No se pudo guardar: ' + (error.message || error)); return false; }
+      return true;
+    }
+
+    async function asigAsignarMarcadas() {
+      const f = asigFiltros();
+      const aud = (document.getElementById('as-destino') || {}).value;
+      if (!aud) { alert('Elige primero el auditor al que se asignarán las cuentas.'); return; }
+      if (!asigSel.size) { alert('Marca al menos una cuenta.'); return; }
+      const ya = new Set(asigDatos.filter(r => String(r.cliente_id) === f.cliente && r.visita === f.visita && String(r.auditor).toLowerCase() === aud.toLowerCase()).map(r => r.sumaria));
+      const nuevas = [...asigSel].filter(s => !ya.has(s));
+      if (!nuevas.length) { alert('Ese auditor ya tiene asignadas todas las cuentas marcadas.'); return; }
+      const filas = nuevas.map(s => ({ cliente_id: f.cliente, anio: String(f.anio), visita: f.visita, sumaria: s, auditor: aud.toLowerCase(), estado: 'pendiente', asignado_por: usuarioSesionEmail || null }));
+      if (await asigGuardarFilas(filas)) { asigSel = new Set(); await asigCargar(); }
+    }
+
+    async function asigCopiarDe(origen) {
+      const f = asigFiltros();
+      const base = asigDatos.filter(r => String(r.cliente_id) === f.cliente && r.visita === origen);
+      if (!base.length) { alert('La visita ' + origen + ' de este cliente no tiene cuentas asignadas.'); return; }
+      const existe = new Set(asigDatos.filter(r => String(r.cliente_id) === f.cliente && r.visita === f.visita).map(r => r.sumaria + '|' + String(r.auditor).toLowerCase()));
+      const filas = base.filter(r => !existe.has(r.sumaria + '|' + String(r.auditor).toLowerCase()))
+        .map(r => ({ cliente_id: f.cliente, anio: String(f.anio), visita: f.visita, sumaria: r.sumaria, auditor: String(r.auditor).toLowerCase(), estado: 'pendiente', asignado_por: usuarioSesionEmail || null }));
+      if (!filas.length) { alert('No hay nada nuevo que copiar.'); return; }
+      if (await asigGuardarFilas(filas)) await asigCargar();
+    }
+
+    async function asigQuitar(id) {
+      const r = asigDatos.find(x => x.id === id);
+      if (!r || !confirm(`¿Quitar ${r.sumaria} a ${asigNombreAuditor(r.auditor)}?`)) return;
+      const { error } = await supabaseClient.from('asignaciones_cuentas').delete().eq('id', id);
+      if (error) { alert('No se pudo quitar: ' + (error.message || error)); return; }
+      await asigCargar();
+    }
+
+    async function asigCiclo(id) {
+      const r = asigDatos.find(x => x.id === id);
+      if (!r) return;
+      const sig = ASIG_ESTADOS[(ASIG_ESTADOS.indexOf(r.estado) + 1) % ASIG_ESTADOS.length];
+      const { error } = await supabaseClient.from('asignaciones_cuentas').update({ estado: sig, updated_at: new Date().toISOString() }).eq('id', id);
+      if (error) { alert('No se pudo cambiar el avance: ' + (error.message || error)); return; }
+      r.estado = sig;
+      asigRefrescar();
     }
 
     // ----- Catálogo de cuentas (Configuración > Cuentas) -----
