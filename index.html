@@ -7075,7 +7075,7 @@
         b.className = 'as-tab px-4 py-2 rounded-lg border ' + (on ? 'bg-slate-800 text-white border-slate-800' : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50');
       });
       const c = document.getElementById('as-contenido');
-      if (!asigDisponible) { c.innerHTML = ''; return; }
+      if (!asigDisponible) { c.innerHTML = asigVacio('No se pueden leer las asignaciones: falta ejecutar en Supabase el SQL "Supabase_9_asignacion_cuentas" (o recarga la página con Ctrl+F5 si ya lo ejecutaste).'); return; }
       if (asigTabActual === 'asignar') c.innerHTML = asigHtmlAsignar();
       else if (asigTabActual === 'cliente') c.innerHTML = asigHtmlPorCliente();
       else if (asigTabActual === 'auditor') c.innerHTML = asigHtmlPorAuditor();
@@ -7092,7 +7092,7 @@
       const pct = n ? Math.round(t * 100 / n) : 0;
       return `<div class="flex items-center gap-2 text-[11px] text-slate-600"><div class="flex-1 h-2 bg-slate-200 rounded overflow-hidden"><div class="h-2 bg-emerald-500" style="width:${pct}%"></div></div><span class="whitespace-nowrap font-bold">${t}/${n} terminadas${p ? ` · ${p} en proceso` : ''}</span></div>`;
     }
-    const asigVacio = txt => `<div class="p-6 text-center text-slate-400 text-xs border border-dashed border-slate-300 rounded-xl">${txt}</div>`;
+    const asigVacio = txt => `<div class="p-6 text-center text-slate-500 text-sm border border-dashed border-slate-300 rounded-xl">${txt}<div class="text-[11px] text-slate-400 mt-2">Asignaciones guardadas en el año ${escapeHtml(String((document.getElementById('as-anio')||{}).value||''))}: ${asigDatos.length}</div></div>`;
 
     function asigAgrupar(rows, fn) {
       const m = new Map();
