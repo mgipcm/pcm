@@ -675,6 +675,12 @@
         <h1 class="text-xl font-bold text-slate-800">Asignación de Cuentas</h1>
         <p class="text-xs text-slate-500">Asigna a cada auditor las cuentas que revisará en cada cliente, año y visita. Cualquier usuario con edición sobre el cliente puede asignar. Haz clic en una cuenta asignada para cambiar su avance (pendiente → en proceso → terminada).</p>
       </div>
+      <div class="flex flex-wrap items-center gap-x-5 gap-y-1 text-xs text-slate-600">
+        <span class="font-bold">Colores del avance:</span>
+        <span><span class="inline-block px-2 py-0.5 rounded border text-[11px] font-bold bg-slate-100 text-slate-700 border-slate-300">AA</span> Gris, sin resaltar = pendiente</span>
+        <span><span class="inline-block px-2 py-0.5 rounded border text-[11px] font-bold bg-amber-100 text-amber-800 border-amber-300">AA</span> Amarillo = en proceso</span>
+        <span><span class="inline-block px-2 py-0.5 rounded border text-[11px] font-bold bg-emerald-100 text-emerald-800 border-emerald-300">AA</span> Verde = terminada</span>
+      </div>
       <div id="as-aviso" class="hidden p-3 bg-amber-50 border border-amber-300 rounded-lg text-xs text-amber-900"></div>
       <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
         <label class="block"><span class="font-bold text-slate-600">Cliente</span>
