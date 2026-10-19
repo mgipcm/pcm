@@ -10348,6 +10348,47 @@
       crearAccesos([email], true);
     }
 
+    // ----- Enviar la clave temporal por correo (se abre el correo de quien administra, con el mensaje ya escrito) -----
+    let mensajesAccesos = [];
+    function direccionApp() {
+      return /^https?:/i.test(location.protocol) ? location.origin + location.pathname.replace(/index\.html$/i, '') : 'https://mgipcm.github.io/pcm/';
+    }
+    function armarMensajeAcceso(nombre, email, clave) {
+      const primerNombre = String(nombre || '').trim().split(/\s+/)[0] || '';
+      const cuerpo = [
+        `Hola${primerNombre ? ' ' + primerNombre : ''},`,
+        '',
+        'Ya tienes acceso a PCM Inteligente (Planificación, Control y Monitoreo de Auditoría).',
+        '',
+        'Dirección: ' + direccionApp(),
+        'Usuario (tu correo): ' + email,
+        'Clave temporal: ' + clave,
+        '',
+        'Al entrar por primera vez, cambia la clave en "Cambiar mi clave" (menú lateral). Usa una clave de al menos 10 caracteres que no uses en otros sitios.',
+        'Si no puedes entrar, avísame.',
+        '',
+        'Saludos'
+      ].join('\n');
+      return { email, asunto: 'Acceso a PCM Inteligente', cuerpo };
+    }
+    function urlCorreoAcceso(m, modo) {
+      const enc = encodeURIComponent;
+      const cuerpo = enc(m.cuerpo.replace(/\n/g, '\r\n'));
+      if (modo === 'outlook') return 'https://outlook.live.com/mail/0/deeplink/compose?to=' + enc(m.email) + '&subject=' + enc(m.asunto) + '&body=' + cuerpo;
+      return 'mailto:' + m.email + '?subject=' + enc(m.asunto) + '&body=' + cuerpo;
+    }
+    async function enviarAcceso(i, modo) {
+      const m = mensajesAccesos[i];
+      if (!m) return;
+      if (modo === 'copiar') {
+        try { await navigator.clipboard.writeText('Para: ' + m.email + '\nAsunto: ' + m.asunto + '\n\n' + m.cuerpo); mostrarEstadoAccesos('Mensaje copiado. Pégalo en un correo nuevo.'); }
+        catch (e) { mostrarEstadoAccesos('No se pudo copiar el mensaje. Selecciónalo y cópialo a mano.', true); }
+        return;
+      }
+      if (modo === 'outlook') { window.open(urlCorreoAcceso(m, 'outlook'), '_blank', 'noopener'); return; }
+      window.location.href = urlCorreoAcceso(m, 'mailto');
+    }
+
     async function crearAccesos(emails, reiniciar) {
       if (!requerirPermisoConfig()) return;
       const caja = document.getElementById('usr-accesos-resultado');
@@ -10362,9 +10403,12 @@
           return { nombre: nombreDe(r.email), email: r.email, resultado: rotulos[r.estado] || r.estado, detalle: r.estado === 'error' ? r.detalle : '', clave: conClave ? claves.get(r.email) : '' };
         });
         textoUltimosAccesos = filas.filter(f => f.clave).map(f => `${f.nombre} | ${f.email} | clave temporal: ${f.clave}`).join('\n');
+        mensajesAccesos = [];
+        filas.forEach(f => { f.idx = f.clave ? mensajesAccesos.push(armarMensajeAcceso(f.nombre, f.email, f.clave)) - 1 : -1; });
+        const btnEnvio = 'px-2 py-0.5 bg-white text-indigo-700 hover:bg-indigo-50 border border-indigo-500 rounded text-[10px] font-bold';
         caja.innerHTML = `<div class="border border-slate-200 rounded-xl overflow-x-auto">
-          <table class="w-full text-xs"><thead class="bg-slate-50 text-slate-600 text-left"><tr><th class="p-2">Nombre</th><th class="p-2">Correo</th><th class="p-2">Resultado</th><th class="p-2">Clave temporal</th></tr></thead><tbody>
-          ${filas.map(f => `<tr class="border-t border-slate-200"><td class="p-2">${escapeHtml(f.nombre)}</td><td class="p-2">${escapeHtml(f.email)}</td><td class="p-2 ${f.resultado === 'Error' ? 'text-red-600 font-bold' : ''}">${escapeHtml(f.resultado)}${f.detalle ? ': ' + escapeHtml(f.detalle) : ''}</td><td class="p-2 font-mono font-bold">${escapeHtml(f.clave)}</td></tr>`).join('')}
+          <table class="w-full text-xs"><thead class="bg-slate-50 text-slate-600 text-left"><tr><th class="p-2">Nombre</th><th class="p-2">Correo</th><th class="p-2">Resultado</th><th class="p-2">Clave temporal</th><th class="p-2">Enviar por correo</th></tr></thead><tbody>
+          ${filas.map(f => `<tr class="border-t border-slate-200"><td class="p-2">${escapeHtml(f.nombre)}</td><td class="p-2">${escapeHtml(f.email)}</td><td class="p-2 ${f.resultado === 'Error' ? 'text-red-600 font-bold' : ''}">${escapeHtml(f.resultado)}${f.detalle ? ': ' + escapeHtml(f.detalle) : ''}</td><td class="p-2 font-mono font-bold">${escapeHtml(f.clave)}</td><td class="p-2 whitespace-nowrap">${f.idx >= 0 ? `<button type="button" onclick="enviarAcceso(${f.idx}, 'mailto')" class="${btnEnvio}">Mi correo</button> <button type="button" onclick="enviarAcceso(${f.idx}, 'outlook')" class="${btnEnvio}">Outlook web</button> <button type="button" onclick="enviarAcceso(${f.idx}, 'copiar')" class="${btnEnvio}">Copiar mensaje</button>` : ''}</td></tr>`).join('')}
           </tbody></table></div>
           <p class="mt-2 text-[11px] text-amber-700 font-semibold">Anota o copia estas claves ahora: no se vuelven a mostrar. Cada persona puede cambiarla con "Cambiar mi clave".</p>
           ${textoUltimosAccesos ? '<button type="button" onclick="copiarUltimosAccesos()" class="mt-1 px-3 py-1 bg-white text-slate-700 hover:bg-slate-50 border border-slate-400 rounded-lg text-[11px] font-bold">Copiar lista</button>' : ''}`;
