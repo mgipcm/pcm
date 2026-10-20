@@ -5306,6 +5306,25 @@
       renderizarCalendarioLineal();
     }
 
+    // Color pastel fijo por cliente: el mismo cliente siempre se ve del mismo color
+    const PASTELES_CLIENTE = [
+      { fondo: '#c7d2fe', borde: '#a5b4fc', texto: '#312e81' },
+      { fondo: '#a7f3d0', borde: '#6ee7b7', texto: '#064e3b' },
+      { fondo: '#fde68a', borde: '#fcd34d', texto: '#78350f' },
+      { fondo: '#fecdd3', borde: '#fda4af', texto: '#881337' },
+      { fondo: '#e9d5ff', borde: '#d8b4fe', texto: '#581c87' },
+      { fondo: '#bae6fd', borde: '#7dd3fc', texto: '#0c4a6e' },
+      { fondo: '#99f6e4', borde: '#5eead4', texto: '#134e4a' },
+      { fondo: '#f5d0fe', borde: '#f0abfc', texto: '#701a75' },
+      { fondo: '#fed7aa', borde: '#fdba74', texto: '#7c2d12' },
+      { fondo: '#d9f99d', borde: '#bef264', texto: '#365314' }
+    ];
+    function colorPastelCliente(id) {
+      let h = 0; const t = String(id || '');
+      for (let i = 0; i < t.length; i++) h = (h * 31 + t.charCodeAt(i)) >>> 0;
+      return PASTELES_CLIENTE[h % PASTELES_CLIENTE.length];
+    }
+
     function renderizarCalendarioLineal() {
       const year = fechaCalendarioActual.getFullYear();
       const month = fechaCalendarioActual.getMonth();
@@ -5429,7 +5448,7 @@
               const posicionLeftPx = (diaStart - 1) * 48;
               const anchoPx = (duracionDias * 48) - 4;
 
-              const colorEstilo = paletaColoresEscala[idxAsignacion % paletaColoresEscala.length];
+              const colorEstilo = colorPastelCliente(vis.cliente_id);
 
               const cli = buscarCliente(vis.cliente_id);
               const nombreCliente = (clienteIdRepetido(vis.cliente_id) ? '⚠ ' : '') + (cli ? (cli.nombre_corto || cli.nombre_completo) : (vis.cliente_id || 'Cliente'));
@@ -5438,8 +5457,8 @@
 
               htmlFilasAuditores += `
                 <div onclick="abrirModalApuntesVisita('${visId}')"
-                     style="left: ${posicionLeftPx + 2}px; width: ${Math.max(anchoPx, 40)}px; top: ${topOffset}px; height: 16px;"
-                     class="absolute ${colorEstilo.bg} border rounded px-1 text-[9px] font-bold flex items-center justify-between cursor-pointer shadow-xs hover:brightness-95 transition z-10 overflow-hidden leading-none"
+                     style="left: ${posicionLeftPx + 2}px; width: ${Math.max(anchoPx, 40)}px; top: ${topOffset}px; height: 16px; background:${colorEstilo.fondo}; border-color:${colorEstilo.borde}; color:${colorEstilo.texto};"
+                     class="absolute border rounded px-1 text-[9px] font-bold flex items-center justify-between cursor-pointer shadow-xs hover:brightness-95 transition z-10 overflow-hidden leading-none"
                      title="Asignación #${idxAsignacion + 1}\nCliente: ${nombreCliente}\nDesde: ${strDesde}\nHasta: ${strHasta}">
                   <span class="truncate flex-1">${idxAsignacion > 0 ? '• ' : ''}${nombreCliente}</span>
                   <button onclick="event.stopPropagation(); eliminarVisitaDirecto('${visId}')" class="ml-0.5 text-slate-500 hover:text-rose-600 font-bold p-0 rounded text-[9px] shrink-0" title="Eliminar">✕</button>
