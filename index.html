@@ -673,7 +673,7 @@
     <section id="sec-asignacion" class="hidden bg-white rounded-2xl shadow-xl border border-slate-200 p-6 min-h-[92vh] space-y-5">
       <div class="border-b pb-4">
         <h1 class="text-xl font-bold text-slate-800">Asignación de Cuentas</h1>
-        <p class="text-xs text-slate-500">Asigna a cada auditor las cuentas que revisará en cada cliente, año y visita. Cualquier usuario con edición sobre el cliente puede asignar. Haz clic en una cuenta asignada para cambiar su avance (pendiente → en proceso → terminada).</p>
+        <p class="text-xs text-slate-500">Asigna a cada auditor las cuentas que revisará en cada cliente, año y visita. Asignan Socio, Supervisor, Senior y SemiSenior; cualquier usuario puede cambiar el avance. Haz clic en una cuenta asignada para cambiar su avance (pendiente → en proceso → terminada).</p>
       </div>
       <div class="flex flex-wrap items-center gap-x-5 gap-y-1 text-xs text-slate-600">
         <span class="font-bold">Colores del avance:</span>
@@ -6996,6 +6996,10 @@
       if (usuarioActivo && esCargoTotal(usuarioActivo.cargo)) return true;
       return misNivelesCliente[String(cid)] === 'edicion';
     }
+    // Asignar / quitar / copiar: solo Socio, Supervisor, Senior y SemiSenior. El avance lo cambia cualquiera.
+    const ASIG_CARGOS = ['socio', 'supervisor', 'senior', 'semisenior'];
+    function asigCargoAsigna() { return !!(usuarioActivo && ASIG_CARGOS.includes(normalizarCargo(usuarioActivo.cargo))); }
+    function asigPuedeAsignar(cid) { return asigCargoAsigna() && asigPuedeEditar(cid); }
     function asigNombreAuditor(email) {
       const e = String(email || '').toLowerCase();
       const u = (listaUsuariosCache || []).find(x => emailDeUsuario(x) === e);
@@ -7076,10 +7080,12 @@
     }
 
     function asigRefrescar() {
+      if (!asigCargoAsigna() && asigTabActual === 'asignar') asigTabActual = 'cliente';
       document.querySelectorAll('#as-tabs .as-tab').forEach(b => {
         const on = b.dataset.tab === asigTabActual;
         b.className = 'as-tab px-4 py-2 rounded-lg border ' + (on ? 'bg-slate-800 text-white border-slate-800' : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50');
       });
+      const tabA = document.querySelector('#as-tabs [data-tab="asignar"]'); if (tabA) tabA.classList.toggle('hidden', !asigCargoAsigna());
       const cb = document.getElementById('as-auditor-box'); if (cb) cb.classList.toggle('hidden', asigTabActual === 'asignar');
       const c = document.getElementById('as-contenido');
       if (!asigDisponible) { c.innerHTML = asigVacio('No se pueden leer las asignaciones: falta ejecutar en Supabase el SQL "Supabase_9_asignacion_cuentas" (o recarga la página con Ctrl+F5 si ya lo ejecutaste).'); return; }
@@ -7090,7 +7096,7 @@
     }
 
     function asigChip(r, conAuditor) {
-      const editable = asigPuedeEditar(r.cliente_id);
+      const editable = true;
       return `<button type="button" ${editable ? `onclick="asigCiclo(${r.id})"` : 'disabled'} data-asig-id="${r.id}" class="asig-chip inline-block px-2 py-0.5 m-0.5 rounded border text-[11px] font-bold ${ASIG_CLASE[r.estado] || ASIG_CLASE.pendiente} ${editable ? 'hover:opacity-80' : 'cursor-default'}">${escapeHtml(r.sumaria)}</button>`;
     }
     // Globo de ayuda propio (con el estado en color) al pasar el cursor sobre una cuenta asignada
@@ -7108,7 +7114,7 @@
         const r = asigDatos.find(x => String(x.id) === b.dataset.asigId);
         if (!r) return;
         if (!tip) crear();
-        const ed = asigPuedeEditar(r.cliente_id);
+        const ed = true;
         tip.innerHTML = `${escapeHtml(asigNombreCuenta(r.sumaria))} - <b style="color:${COL[r.estado] || COL.pendiente}">${ASIG_TXT[r.estado] || r.estado}</b>${ed ? ' <span style="color:#94a3b8">(clic para cambiar el avance)</span>' : ''}`;
         const rc = b.getBoundingClientRect();
         tip.style.display = 'block';
@@ -7202,6 +7208,7 @@
       const f = asigFiltros();
       if (f.cliente === '__todos__') return asigVacio('Elige un cliente (arriba) para asignarle cuentas.');
       if (f.visita === '__todas__') return asigVacio('Elige la visita (preliminar o final) en la que se asignarán las cuentas.');
+      if (!asigCargoAsigna()) return asigVacio('Solo Socio, Supervisor, Senior y SemiSenior pueden asignar cuentas. Tú puedes ver las asignaciones y cambiar el avance de las cuentas.');
       if (!asigPuedeEditar(f.cliente)) return asigVacio('Tienes acceso de solo lectura a este cliente: puedes ver las asignaciones, no cambiarlas.');
       if (!catalogoCuentas.length) return asigVacio('Aún no hay cuentas en el catálogo (Configuración › Cuentas).');
       const mias = asigDatos.filter(r => String(r.cliente_id) === f.cliente && r.visita === f.visita);
@@ -7213,7 +7220,7 @@
         const cab = g !== ultimoGrupo ? `<tr class="bg-slate-100"><td colspan="4" class="px-3 py-1 text-[11px] font-bold text-slate-600 uppercase">${escapeHtml(g)}</td></tr>` : '';
         ultimoGrupo = g;
         const asig = porCuenta.get(c.sumaria) || [];
-        const chips = asig.map(r => `<span class="inline-flex items-center">${asigChip(r, true)}<span class="text-[10px] text-slate-500 mr-1">${escapeHtml(asigNombreAuditor(r.auditor))}</span><button type="button" onclick="asigQuitar(${r.id})" title="Quitar esta asignación" class="text-red-500 font-bold px-1 mr-1 hover:text-red-700">✕</button></span>`).join('');
+        const chips = asig.map(r => `<span class="inline-flex items-center">${asigChip(r, true)}<span class="text-[10px] text-slate-500 mr-1">${escapeHtml(asigNombreAuditor(r.auditor))}</span>${asigPuedeAsignar(r.cliente_id) ? `<button type="button" onclick="asigQuitar(${r.id})" title="Quitar esta asignación" class="text-red-500 font-bold px-1 mr-1 hover:text-red-700">✕</button>` : ''}</span>`).join('');
         return cab + `<tr class="border-t"><td class="px-3 py-1.5"><input type="checkbox" class="as-chk" value="${escapeHtml(c.sumaria)}" ${asigSel.has(c.sumaria) ? 'checked' : ''} onchange="asigMarcar(this)"></td><td class="px-2 py-1.5 font-bold text-slate-700">${escapeHtml(c.sumaria)}</td><td class="px-2 py-1.5 text-slate-600">${escapeHtml(String(c.cuenta || '').replace(/^[A-Z0-9]+ - /, ''))}</td><td class="px-2 py-1.5">${chips || '<span class="text-slate-300">Sin asignar</span>'}</td></tr>`;
       }).join('');
       return `<div class="p-3 bg-indigo-50 border border-indigo-200 rounded-lg text-xs flex flex-wrap items-end gap-3">
