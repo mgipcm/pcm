@@ -695,8 +695,7 @@
       </div>
       <div class="flex flex-wrap gap-2 text-xs font-bold" id="as-tabs">
         <button type="button" data-tab="asignar" onclick="asigTab('asignar')" class="as-tab px-4 py-2 rounded-lg border">Asignar</button>
-        <button type="button" data-tab="cliente" onclick="asigTab('cliente')" class="as-tab px-4 py-2 rounded-lg border">Resumen del cliente</button>
-        <button type="button" data-tab="consultas" onclick="asigTab('consultas')" class="as-tab px-4 py-2 rounded-lg border">Consultas (todos los clientes)</button>
+        <button type="button" data-tab="consulta" onclick="asigTab('consulta')" class="as-tab px-4 py-2 rounded-lg border">Ver asignaciones</button>
       </div>
       <div id="as-contenido" class="space-y-4"></div>
     </section>
@@ -7060,15 +7059,7 @@
       asigRefrescar();
     }
 
-    let asigClienteCtx = null;     // cliente elegido antes de entrar a Consultas
-    let asigVistaCons = 'auditor'; // cómo se agrupa Consultas: auditor | cliente | visita
-    function asigTab(t) {
-      const sc = document.getElementById('as-cliente');
-      if (t === 'consultas' && asigTabActual !== 'consultas') { asigClienteCtx = sc.value; sc.value = '__todos__'; }
-      else if (t !== 'consultas' && asigTabActual === 'consultas' && asigClienteCtx && [...sc.options].some(o => o.value === asigClienteCtx)) { sc.value = asigClienteCtx; }
-      asigTabActual = t; asigSel = new Set(); asigRefrescar();
-    }
-    function asigVistaConsultas(v) { asigVistaCons = v; asigRefrescar(); }
+    function asigTab(t) { asigTabActual = t; asigSel = new Set(); asigRefrescar(); }
 
     function asigFiltros() {
       return {
@@ -7080,7 +7071,7 @@
     }
     function asigFiltradas(ignorarAuditor) {
       const f = asigFiltros();
-      if (asigTabActual !== 'consultas') ignorarAuditor = true;
+      if (asigTabActual === 'asignar') ignorarAuditor = true;
       return asigDatos.filter(r =>
         (f.cliente === '__todos__' || String(r.cliente_id) === f.cliente) &&
         (f.visita === '__todas__' || r.visita === f.visita) &&
@@ -7088,24 +7079,21 @@
     }
 
     function asigRefrescar() {
-      if (!asigCargoAsigna() && asigTabActual === 'asignar') asigTabActual = 'cliente';
-      if (!['asignar', 'cliente', 'consultas'].includes(asigTabActual)) asigTabActual = 'cliente';
+      if (!asigCargoAsigna() && asigTabActual === 'asignar') asigTabActual = 'consulta';
+      if (!['asignar', 'consulta'].includes(asigTabActual)) asigTabActual = 'consulta';
       document.querySelectorAll('#as-tabs .as-tab').forEach(b => {
         const on = b.dataset.tab === asigTabActual;
         b.className = 'as-tab px-4 py-2 rounded-lg border ' + (on ? 'bg-slate-800 text-white border-slate-800' : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50');
       });
       const tabA = document.querySelector('#as-tabs [data-tab="asignar"]'); if (tabA) tabA.classList.toggle('hidden', !asigCargoAsigna());
-      const cb = document.getElementById('as-auditor-box'); if (cb) cb.classList.toggle('hidden', asigTabActual !== 'consultas');
+      const cb = document.getElementById('as-auditor-box'); if (cb) cb.classList.toggle('hidden', asigTabActual === 'asignar');
       const c = document.getElementById('as-contenido');
       if (!asigDisponible) { c.innerHTML = asigVacio('No se pueden leer las asignaciones: falta ejecutar en Supabase el SQL "Supabase_9_asignacion_cuentas" (o recarga la página con Ctrl+F5 si ya lo ejecutaste).'); return; }
       if (asigTabActual === 'asignar') c.innerHTML = asigHtmlAsignar();
-      else if (asigTabActual === 'cliente') c.innerHTML = asigFiltros().cliente === '__todos__'
-        ? asigVacio('Elige un cliente (arriba) para ver sus asignaciones. Para ver varios clientes a la vez usa "Consultas".')
-        : asigHtmlPorCliente();
       else {
-        const bt = (v, txt) => `<button type="button" onclick="asigVistaConsultas('${v}')" class="px-3 py-1.5 rounded-lg border text-xs font-bold ${asigVistaCons === v ? 'bg-indigo-700 text-white border-indigo-700' : 'bg-white text-slate-600 border-slate-300'}">${txt}</button>`;
-        const cuerpo = asigVistaCons === 'cliente' ? asigHtmlPorCliente() : (asigVistaCons === 'visita' ? asigHtmlPorVisita() : asigHtmlPorAuditor());
-        c.innerHTML = `<div class="flex flex-wrap items-center gap-2 text-xs"><span class="font-bold text-slate-600">Mostrar agrupado por:</span>${bt('auditor', 'Auditor')}${bt('cliente', 'Cliente')}${bt('visita', 'Visita')}<span class="text-slate-400">Elige un auditor arriba para ver todo lo que tiene asignado en todos los clientes.</span></div>` + cuerpo;
+        // Con un cliente elegido se ve ese cliente (todos sus auditores); con solo un auditor, todos los clientes de ese auditor.
+        const f = asigFiltros();
+        c.innerHTML = (f.cliente === '__todos__' && f.auditor !== '__todos__') ? asigHtmlPorAuditor() : asigHtmlPorCliente();
       }
     }
 
@@ -7148,7 +7136,7 @@
     const asigVacio = txt => {
       const f = asigFiltros ? asigFiltros() : {};
       const sel = id => { const e = document.getElementById(id); return e && e.selectedIndex >= 0 ? e.options[e.selectedIndex].text : ''; };
-      const oculta = asigDatos.length && !asigFiltradas().length && asigTabActual === 'consultas';
+      const oculta = asigDatos.length && !asigFiltradas().length && asigTabActual !== 'asignar';
       const det = oculta
         ? `<div class="mt-3 text-xs text-amber-800">Hay ${asigDatos.length} asignación(es) en el año, pero los filtros las ocultan (Cliente: <b>${escapeHtml(sel('as-cliente'))}</b> · Visita: <b>${escapeHtml(sel('as-visita'))}</b> · Auditor: <b>${escapeHtml(sel('as-auditor'))}</b>).<br><button type="button" onclick="asigQuitarFiltros()" class="mt-2 px-3 py-1.5 bg-slate-800 text-white font-bold rounded-lg">Quitar filtros</button></div>`
         : `<div class="text-[11px] text-slate-400 mt-2">Asignaciones guardadas en el año ${escapeHtml(String(f.anio || ''))}: ${asigDatos.length}</div>`;
