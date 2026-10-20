@@ -1826,8 +1826,15 @@
       <div class="space-y-3">
         <div class="p-3 bg-indigo-50/60 rounded-xl border border-indigo-100 text-xs space-y-1">
           <p><strong class="text-indigo-900">Cliente:</strong> <span id="modal-visita-cliente-nombre" class="font-semibold text-slate-800">-</span></p>
-          <p><strong class="text-indigo-900">Auditor:</strong> <span id="modal-visita-auditor-nombre" class="text-slate-700">-</span></p>
-          <p><strong class="text-indigo-900">Período:</strong> <span id="modal-visita-fechas" class="text-slate-700">-</span></p>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <label class="block col-span-2"><span class="block text-xs font-bold text-slate-600 mb-1">Auditor asignado</span>
+            <select id="modal-visita-auditor" class="w-full p-2 border border-slate-300 rounded-lg text-xs bg-white outline-none focus:ring-2 focus:ring-indigo-500"></select></label>
+          <label class="block"><span class="block text-xs font-bold text-slate-600 mb-1">Desde</span>
+            <input type="date" id="modal-visita-desde" class="w-full p-2 border border-slate-300 rounded-lg text-xs bg-white outline-none focus:ring-2 focus:ring-indigo-500"></label>
+          <label class="block"><span class="block text-xs font-bold text-slate-600 mb-1">Hasta</span>
+            <input type="date" id="modal-visita-hasta" class="w-full p-2 border border-slate-300 rounded-lg text-xs bg-white outline-none focus:ring-2 focus:ring-indigo-500"></label>
         </div>
 
         <div>
@@ -1840,9 +1847,10 @@
         <button onclick="eliminarVisitaActual()" class="px-3 py-1.5 text-xs font-bold text-rose-600 hover:bg-rose-50 border border-rose-200 rounded-lg transition flex items-center gap-1">
           <span>Eliminar Visita</span>
         </button>
-        <div class="flex gap-2">
-          <button onclick="cerrarModal('modal-apuntes-visita')" class="px-3 py-1.5 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-lg transition">Cancelar</button>
-          <button onclick="guardarApuntesVisita()" class="px-4 py-1.5 bg-indigo-600 text-white font-bold rounded-lg text-xs hover:bg-indigo-700 transition">Guardar Comentarios</button>
+        <div class="flex flex-wrap justify-end gap-2">
+          <button id="modal-visita-avisar" onclick="avisarVisitaPorCorreo()" class="px-3 py-1.5 text-xs font-bold text-emerald-700 hover:bg-emerald-50 border border-emerald-300 rounded-lg transition" title="Envía al auditor un correo con el cliente, las fechas y quién le asignó la visita">Avisar por correo</button>
+          <button onclick="cerrarModal('modal-apuntes-visita')" class="px-3 py-1.5 text-xs font-bold text-slate-600 hover:bg-slate-100 border border-slate-200 rounded-lg transition">Cancelar</button>
+          <button onclick="guardarApuntesVisita()" class="px-4 py-1.5 bg-indigo-600 text-white font-bold rounded-lg text-xs hover:bg-indigo-700 transition">Guardar cambios</button>
         </div>
       </div>
     </div>
@@ -5551,31 +5559,84 @@
       document.getElementById('modal-visita-id').value = visitaId;
       document.getElementById('modal-visita-cliente-nombre').textContent = nombreCliente;
       const audRaw = String(vis.auditor_asignado || vis.auditor_email || '').trim();
-      const audUsr = listaUsuariosCache.find(u =>
-        String(u.id || u.usuario_id || '').toLowerCase() === audRaw.toLowerCase() ||
-        String(u.email || u.correo || '').toLowerCase() === audRaw.toLowerCase());
-      document.getElementById('modal-visita-auditor-nombre').textContent = audUsr ? (audUsr.nombre || audUsr.nombre_completo || audRaw) : (audRaw || '-');
-      document.getElementById('modal-visita-fechas').textContent = `${vis.fecha_desde || ''} al ${vis.fecha_hasta || ''}`;
+      const selAud = document.getElementById('modal-visita-auditor');
+      selAud.innerHTML = listaUsuariosCache.filter(u => emailDeUsuario(u)).map(u =>
+        `<option value="${escapeHtml(emailDeUsuario(u))}">${escapeHtml(u.nombre || u.nombre_completo || emailDeUsuario(u))}</option>`).join('');
+      if (audRaw && ![...selAud.options].some(o => o.value === audRaw.toLowerCase())) {
+        selAud.insertAdjacentHTML('afterbegin', `<option value="${escapeHtml(audRaw.toLowerCase())}">${escapeHtml(audRaw)}</option>`);
+      }
+      selAud.value = audRaw.toLowerCase();
+      document.getElementById('modal-visita-desde').value = String(vis.fecha_desde || vis.fecha || '').slice(0, 10);
+      document.getElementById('modal-visita-hasta').value = String(vis.fecha_hasta || vis.fecha_desde || vis.fecha || '').slice(0, 10);
       document.getElementById('modal-visita-apuntes').value = vis.apuntes || vis.comentario || '';
 
       abrirModal('modal-apuntes-visita');
     }
 
+    // Cambios hechos en la ventana de la visita respecto de lo guardado
+    function cambiosVisitaModal() {
+      const id = document.getElementById('modal-visita-id').value;
+      const vis = listaVisitasCache.find(v => String(v.id || v.visita_id) === String(id));
+      if (!vis) return null;
+      const nuevo = {
+        auditor_asignado: document.getElementById('modal-visita-auditor').value,
+        fecha_desde: document.getElementById('modal-visita-desde').value,
+        fecha_hasta: document.getElementById('modal-visita-hasta').value
+      };
+      const antes = {
+        auditor_asignado: String(vis.auditor_asignado || vis.auditor_email || '').trim().toLowerCase(),
+        fecha_desde: String(vis.fecha_desde || vis.fecha || '').slice(0, 10),
+        fecha_hasta: String(vis.fecha_hasta || vis.fecha_desde || vis.fecha || '').slice(0, 10)
+      };
+      const cambio = nuevo.auditor_asignado !== antes.auditor_asignado || nuevo.fecha_desde !== antes.fecha_desde || nuevo.fecha_hasta !== antes.fecha_hasta;
+      return { id, nuevo, cambio };
+    }
+
+    async function avisoVisita(visitaId) {
+      try {
+        const r = await enviarAvisoCorreo({ tipo: 'visita', visita_id: visitaId });
+        if (r.fallidos && r.fallidos.length) return `No se pudo enviar el correo: ${r.fallidos[0].error}`;
+        return `Se envió el aviso por correo a ${(r.enviados || []).join(', ')}.`;
+      } catch (err) { return `No se pudo enviar el correo: ${err.message}`; }
+    }
+
+    async function avisarVisitaPorCorreo() {
+      const c = cambiosVisitaModal();
+      if (!c) return;
+      if (c.cambio) { alert('Hiciste cambios que todavía no están guardados. Pulsa "Guardar cambios" y luego "Avisar por correo", para que el auditor reciba los datos actualizados.'); return; }
+      if (!confirm('¿Enviar al auditor el aviso de esta visita por correo?')) return;
+      const btn = document.getElementById('modal-visita-avisar'); btn.disabled = true;
+      alert(await avisoVisita(c.id));
+      btn.disabled = false;
+    }
+
     async function guardarApuntesVisita() {
+      const c = cambiosVisitaModal();
       const visitaId = document.getElementById('modal-visita-id').value;
       const apuntes = document.getElementById('modal-visita-apuntes').value;
+      const cambios = { apuntes };
+      if (c && c.cambio) {
+        if (!c.nuevo.auditor_asignado || !c.nuevo.fecha_desde || !c.nuevo.fecha_hasta) { alert('Completa el auditor y las fechas de la visita.'); return; }
+        if (c.nuevo.fecha_hasta < c.nuevo.fecha_desde) { alert("La fecha 'Hasta' no puede ser anterior a la fecha 'Desde'."); return; }
+        Object.assign(cambios, c.nuevo);
+      }
 
       const { error } = await supabaseClient
         .from('visitas')
-        .update({ apuntes })
+        .update(cambios)
         .eq('id', visitaId);
 
       if (error) {
-        alert("Error al guardar comentarios: " + error.message);
+        alert("Error al guardar los cambios: " + error.message);
       } else {
-        alert("¡Comentarios actualizados correctamente!");
+        const huboCambio = !!(c && c.cambio);
         cerrarModal('modal-apuntes-visita');
-        cargarVisitas();
+        await cargarVisitas();
+        if (huboCambio && confirm('¡Cambios guardados! Cambió el auditor o las fechas de la visita.\n\n¿Quieres avisar al auditor por correo ahora?')) {
+          alert(await avisoVisita(visitaId));
+        } else if (!huboCambio) {
+          alert("¡Comentarios actualizados correctamente!");
+        }
       }
     }
 
