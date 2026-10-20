@@ -7091,9 +7091,35 @@
 
     function asigChip(r, conAuditor) {
       const editable = asigPuedeEditar(r.cliente_id);
-      const tip = `${asigNombreCuenta(r.sumaria)} · ${ASIG_TXT[r.estado] || r.estado}${conAuditor ? ' · ' + asigNombreAuditor(r.auditor) : ''}${r.asignado_por ? ' · asignada por ' + asigNombreAuditor(r.asignado_por) : ''}${editable ? ' (clic para cambiar el avance)' : ''}`;
-      return `<button type="button" ${editable ? `onclick="asigCiclo(${r.id})"` : 'disabled'} title="${escapeHtml(tip)}" class="inline-block px-2 py-0.5 m-0.5 rounded border text-[11px] font-bold ${ASIG_CLASE[r.estado] || ASIG_CLASE.pendiente} ${editable ? 'hover:opacity-80' : 'cursor-default'}">${escapeHtml(r.sumaria)}</button>`;
+      return `<button type="button" ${editable ? `onclick="asigCiclo(${r.id})"` : 'disabled'} data-asig-id="${r.id}" class="asig-chip inline-block px-2 py-0.5 m-0.5 rounded border text-[11px] font-bold ${ASIG_CLASE[r.estado] || ASIG_CLASE.pendiente} ${editable ? 'hover:opacity-80' : 'cursor-default'}">${escapeHtml(r.sumaria)}</button>`;
     }
+    // Globo de ayuda propio (con el estado en color) al pasar el cursor sobre una cuenta asignada
+    (function () {
+      let tip = null;
+      const COL = { pendiente: '#64748b', en_proceso: '#b45309', terminada: '#047857' };
+      function crear() {
+        tip = document.createElement('div');
+        tip.style.cssText = 'position:fixed;z-index:99999;display:none;max-width:340px;padding:6px 10px;border-radius:8px;background:#fff;border:1px solid #cbd5e1;box-shadow:0 4px 14px rgba(0,0,0,.18);font-size:12px;color:#334155;pointer-events:none';
+        document.body.appendChild(tip);
+      }
+      document.addEventListener('mouseover', e => {
+        const b = e.target.closest && e.target.closest('.asig-chip');
+        if (!b) return;
+        const r = asigDatos.find(x => String(x.id) === b.dataset.asigId);
+        if (!r) return;
+        if (!tip) crear();
+        const ed = asigPuedeEditar(r.cliente_id);
+        tip.innerHTML = `${escapeHtml(asigNombreCuenta(r.sumaria))} - <b style="color:${COL[r.estado] || COL.pendiente}">${ASIG_TXT[r.estado] || r.estado}</b>${ed ? ' <span style="color:#94a3b8">(clic para cambiar el avance)</span>' : ''}`;
+        const rc = b.getBoundingClientRect();
+        tip.style.display = 'block';
+        tip.style.left = Math.max(8, Math.min(rc.left, window.innerWidth - tip.offsetWidth - 8)) + 'px';
+        tip.style.top = (rc.bottom + 6 + tip.offsetHeight > window.innerHeight ? rc.top - tip.offsetHeight - 6 : rc.bottom + 6) + 'px';
+      });
+      document.addEventListener('mouseout', e => {
+        if (tip && e.target.closest && e.target.closest('.asig-chip')) tip.style.display = 'none';
+      });
+      document.addEventListener('click', () => { if (tip) tip.style.display = 'none'; });
+    })();
     function asigBarra(rows) {
       const n = rows.length, t = rows.filter(r => r.estado === 'terminada').length, p = rows.filter(r => r.estado === 'en_proceso').length;
       const pct = n ? Math.round(t * 100 / n) : 0;
