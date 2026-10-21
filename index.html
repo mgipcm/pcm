@@ -10813,7 +10813,7 @@
     // ----- Mensaje de bienvenida con la clave temporal, listo para copiar y pegar en un correo -----
     let mensajesAccesos = [];
     function direccionApp() {
-      return /^https?:/i.test(location.protocol) ? location.origin + location.pathname.replace(/index\.html$/i, '') : 'https://mgipcm.github.io/pcm/';
+      return /^https?:/i.test(location.protocol) ? location.origin + location.pathname.replace(/index\.html$/i, '') : 'https://app.mgipcm.com/';
     }
     function armarMensajeAcceso(nombre, email, clave) {
       const primerNombre = String(nombre || '').trim().split(/\s+/)[0] || '';
