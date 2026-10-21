@@ -5777,11 +5777,16 @@
       }
     }
 
-    // Subtítulo gris que se muestra antes de la primera pregunta de ciertos aspectos (hoy solo A: Acuerdo de los términos de auditoría)
-    const SUBTITULOS_ASPECTO = { 'A_01': 'Aceptación de clientes o descontinuado' };
-    function filaSubtituloAspecto(idAspecto, idx, colspan) {
-      const t = SUBTITULOS_ASPECTO[idAspecto];
-      if (!t || idx !== 0) return '';
+    // Subtítulos grises que se muestran antes de ciertas preguntas (hoy solo en A: Acuerdo de los términos de auditoría).
+    // Se identifican por el código de la pregunta, no por su posición.
+    const SUBTITULOS_PREGUNTA = {
+      'A_01_P_001': 'Aceptación de cliente o descontinuado',
+      'A_01_P_027': 'Independencia profesional',
+      'A_01_P_029': 'Alcance de la auditoría'
+    };
+    function filaSubtituloAspecto(pId, colspan) {
+      const t = SUBTITULOS_PREGUNTA[pId];
+      if (!t) return '';
       return `<tr class="fila-subtitulo-aspecto"><td colspan="${colspan}" class="px-3 py-2 bg-slate-50 text-slate-600 text-[11px] font-bold uppercase tracking-wide border-y border-slate-200">${escapeHtml(t)}</td></tr>`;
     }
 
@@ -5945,7 +5950,7 @@
             `;
           }
 
-          tbody.innerHTML += filaSubtituloAspecto(aspectoIdVal, idx, 4) + `
+          tbody.innerHTML += filaSubtituloAspecto(pId, 4) + `
             <tr data-fila-cap="${pId}" class="hover:bg-slate-50/80 transition border-b border-slate-200">
               <td class="p-3 border-r border-slate-200 align-top bg-white font-medium text-slate-800">
                 <span class="text-[10px] font-bold bg-slate-200 text-slate-700 px-1.5 py-0.5 rounded mr-1">#${idx + 1}</span>
@@ -6638,7 +6643,7 @@
           const pId = p.pregunta_id || p.id_pregunta || p.id || p.id_banco;
           const textoP = p.texto_pregunta || p.pregunta || `Pregunta #${pId}`;
 
-          let rowHtml = filaSubtituloAspecto(aspectoIdVal, idx, aniosActivos.length + 1) + `
+          let rowHtml = filaSubtituloAspecto(pId, aniosActivos.length + 1) + `
             <tr class="hover:bg-slate-50 transition border-b border-slate-200">
               <td class="p-3 border-r border-slate-200 font-medium text-slate-800 bg-slate-50/50 align-top">
                 <span class="text-[10px] font-bold bg-slate-200 text-slate-700 px-1.5 py-0.5 rounded mr-1">#${idx + 1}</span>
