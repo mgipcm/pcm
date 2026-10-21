@@ -7437,7 +7437,8 @@
           <button type="button" onclick="asigAsignarMarcadas()" class="px-4 py-2 bg-indigo-700 text-white font-bold rounded-lg hover:bg-indigo-800">Asignar marcadas (<span id="as-nsel">${asigSel.size}</span>)</button>
           <button type="button" onclick="asigMarcarTodas(true)" class="px-3 py-2 border border-slate-300 bg-white rounded-lg">Marcar todas</button>
           <button type="button" onclick="asigMarcarTodas(false)" class="px-3 py-2 border border-slate-300 bg-white rounded-lg">Desmarcar</button>
-          <button type="button" id="as-avisar" onclick="asigAvisarPorCorreo()" class="px-3 py-2 bg-emerald-700 text-white font-bold rounded-lg hover:bg-emerald-800" title="Envía a cada auditor un correo con las cuentas que tiene asignadas en este cliente y visita">Avisar por correo</button>
+          <button type="button" id="as-avisar" onclick="asigAvisarPorCorreo('mias')" class="px-3 py-2 bg-emerald-700 text-white font-bold rounded-lg hover:bg-emerald-800" title="Envía el correo solo con las cuentas que TÚ asignaste y que todavía no has avisado">Avisar mis asignaciones</button>
+          <button type="button" id="as-avisar-todos" onclick="asigAvisarPorCorreo('todas')" class="px-3 py-2 border border-emerald-600 text-emerald-800 bg-white font-bold rounded-lg hover:bg-emerald-50" title="Envía a cada auditor un correo con TODAS las cuentas que tiene asignadas en este cliente y visita, sin importar quién las asignó">Enviar a todos los asignados</button>
           ${(f.visita === 'final' && asigDatos.some(r => String(r.cliente_id) === f.cliente && r.visita === 'preliminar')) ? `<button type="button" onclick="asigCopiarDe('preliminar')" class="px-3 py-2 border border-slate-300 bg-white rounded-lg ml-auto" title="Trae las asignaciones de la visita preliminar, sin repetir las que ya existen">Copiar asignaciones de la preliminar</button>` : ''}
         </div>
         <div class="overflow-x-auto border border-slate-200 rounded-xl"><table class="w-full text-xs"><thead class="bg-slate-50 text-slate-500"><tr><th class="px-3 py-2 w-8"></th><th class="px-2 py-2 text-left w-16">Sumaria</th><th class="px-2 py-2 text-left">Cuenta</th><th class="px-2 py-2 text-left">Asignada a</th></tr></thead><tbody>${filas}</tbody></table></div>`;
@@ -7473,23 +7474,32 @@
       return data || {};
     }
 
-    async function asigAvisarPorCorreo() {
+    async function asigAvisarPorCorreo(alcance) {
+      const todas = alcance === 'todas';
       const f = asigFiltros();
-      // Solo se avisa de lo que asignó la persona que pulsa el botón (no de lo asignado por otros)
       const miCorreo = String(usuarioSesionEmail || '').toLowerCase();
-      const filas = asigDatos.filter(r => String(r.cliente_id) === f.cliente && r.visita === f.visita && String(r.asignado_por || '').toLowerCase() === miCorreo);
-      if (!filas.length) { alert('No hay cuentas asignadas por ti en este cliente y visita. Solo se avisa de lo que tú asignaste.'); return; }
+      const delCliente = asigDatos.filter(r => String(r.cliente_id) === f.cliente && r.visita === f.visita);
+      // "mias": solo lo que asignó quien pulsa y que aún no se ha avisado. "todas": todo lo asignado a todos.
+      const filas = todas ? delCliente : delCliente.filter(r => String(r.asignado_por || '').toLowerCase() === miCorreo && !r.avisado_at);
+      if (!filas.length) {
+        alert(todas ? 'Todavía no hay cuentas asignadas en este cliente y visita.' : 'No tienes cuentas nuevas por avisar en este cliente y visita. Solo se avisa de lo que tú asignaste y aún no has enviado.\n\nSi quieres reenviar a todos, usa "Enviar a todos los asignados".');
+        return;
+      }
       const porAud = asigAgrupar(filas, r => String(r.auditor).toLowerCase());
       const lista = [...porAud.entries()].map(([a, ra]) => `• ${asigNombreAuditor(a)} (${a}): ${ra.length} cuenta(s)`).join('\n');
-      if (!confirm(`Se enviará un correo a cada auditor con las cuentas que TÚ le asignaste en ${asigNombreCliente(f.cliente)} · ${asigTxtVisita(f.visita)} · ${f.anio}:\n\n${lista}\n\n¿Enviar los avisos?`)) return;
-      const btn = document.getElementById('as-avisar'); if (btn) { btn.disabled = true; btn.textContent = 'Enviando…'; }
+      const que = todas ? 'TODAS las cuentas que tiene asignadas' : 'las cuentas nuevas que TÚ le asignaste';
+      if (!confirm(`Se enviará un correo a cada auditor con ${que} en ${asigNombreCliente(f.cliente)} · ${asigTxtVisita(f.visita)} · ${f.anio}:\n\n${lista}\n\n¿Enviar los avisos?`)) return;
+      const idBtn = todas ? 'as-avisar-todos' : 'as-avisar';
+      const btn = document.getElementById(idBtn); const txt = btn ? btn.textContent : '';
+      if (btn) { btn.disabled = true; btn.textContent = 'Enviando…'; }
       try {
-        const r = await enviarAvisoCorreo({ tipo: 'cuentas', cliente_id: f.cliente, anio: String(f.anio), visita: f.visita });
+        const r = await enviarAvisoCorreo({ tipo: 'cuentas', cliente_id: f.cliente, anio: String(f.anio), visita: f.visita, alcance: todas ? 'todas' : 'mias' });
         let msg = `Avisos enviados: ${(r.enviados || []).length}.`;
         if (r.fallidos && r.fallidos.length) msg += `\n\nNo se pudieron enviar:\n` + r.fallidos.map(x => `• ${x.email}: ${x.error}`).join('\n');
         alert(msg);
+        await asigCargar();
       } catch (e) { alert('No se pudieron enviar los avisos: ' + e.message); }
-      if (btn) { btn.disabled = false; btn.textContent = 'Avisar por correo'; }
+      const b2 = document.getElementById(idBtn); if (b2) { b2.disabled = false; b2.textContent = txt; }
     }
 
     async function asigAsignarMarcadas() {
