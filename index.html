@@ -10956,6 +10956,22 @@
       ].join('\n');
       return { email, asunto: 'Acceso a PCM Inteligente', cuerpo };
     }
+    let clavesAccesosFila = [];
+    // Envía por correo la clave de una fila (vuelve a guardar la misma clave y manda el correo)
+    async function enviarClaveFila(i) {
+      const it = clavesAccesosFila[i]; if (!it) return;
+      const btn = document.getElementById('btn-correo-acceso-' + i);
+      if (btn) { btn.disabled = true; btn.textContent = 'Enviando...'; }
+      try {
+        const d = await llamarGestionUsuarios({ accion: 'crear', reiniciar: true, enviar_correo: true, usuarios: [{ email: it.email, password: it.clave }] });
+        const r = (d.resultados || [])[0] || {};
+        if (r.correo === 'enviado') { if (btn) btn.textContent = '✉ Correo enviado ✓'; }
+        else { if (btn) { btn.disabled = false; btn.textContent = '✉ Enviar por correo'; } mostrarEstadoAccesos('No se pudo enviar el correo: ' + (r.correo_error || r.detalle || 'error'), true); }
+      } catch (e) {
+        if (btn) { btn.disabled = false; btn.textContent = '✉ Enviar por correo'; }
+        mostrarEstadoAccesos('No se pudo enviar el correo: ' + e.message, true);
+      }
+    }
     async function copiarMensajeAcceso(i) {
       const m = mensajesAccesos[i];
       if (!m) return;
@@ -10978,11 +10994,12 @@
         });
         textoUltimosAccesos = filas.filter(f => f.clave).map(f => `${f.nombre} | ${f.email} | clave temporal: ${f.clave}`).join('\n');
         mensajesAccesos = [];
-        filas.forEach(f => { f.idx = f.clave ? mensajesAccesos.push(armarMensajeAcceso(f.nombre, f.email, f.clave)) - 1 : -1; });
+        clavesAccesosFila = [];
+        filas.forEach(f => { f.idx = f.clave ? (clavesAccesosFila.push({ email: f.email, clave: f.clave }), mensajesAccesos.push(armarMensajeAcceso(f.nombre, f.email, f.clave)) - 1) : -1; });
         const btnEnvio = 'px-2 py-0.5 bg-white text-indigo-700 hover:bg-indigo-50 border border-indigo-500 rounded text-[10px] font-bold';
         caja.innerHTML = `<div class="border border-slate-200 rounded-xl overflow-x-auto">
           <table class="w-full text-xs"><thead class="bg-slate-50 text-slate-600 text-left"><tr><th class="p-2">Nombre</th><th class="p-2">Correo</th><th class="p-2">Resultado</th><th class="p-2">Clave temporal</th><th class="p-2">Mensaje de bienvenida</th></tr></thead><tbody>
-          ${filas.map(f => `<tr class="border-t border-slate-200"><td class="p-2">${escapeHtml(f.nombre)}</td><td class="p-2">${escapeHtml(f.email)}</td><td class="p-2 ${f.resultado === 'Error' || f.detalle ? 'text-red-600 font-bold' : ''}">${escapeHtml(f.resultado)}${f.detalle ? ': ' + escapeHtml(f.detalle) : ''}</td><td class="p-2 font-mono font-bold">${escapeHtml(f.clave)}</td><td class="p-2 whitespace-nowrap">${f.idx >= 0 ? `<button type="button" onclick="copiarMensajeAcceso(${f.idx})" class="${btnEnvio}">Copiar mensaje</button>` : ''}</td></tr>`).join('')}
+          ${filas.map(f => `<tr class="border-t border-slate-200"><td class="p-2">${escapeHtml(f.nombre)}</td><td class="p-2">${escapeHtml(f.email)}</td><td class="p-2 ${f.resultado === 'Error' || f.detalle ? 'text-red-600 font-bold' : ''}">${escapeHtml(f.resultado)}${f.detalle ? ': ' + escapeHtml(f.detalle) : ''}</td><td class="p-2 font-mono font-bold">${escapeHtml(f.clave)}</td><td class="p-2 whitespace-nowrap">${f.idx >= 0 ? `<button type="button" id="btn-correo-acceso-${f.idx}" onclick="enviarClaveFila(${f.idx})" class="${btnEnvio} mr-1">✉ Enviar por correo</button><button type="button" onclick="copiarMensajeAcceso(${f.idx})" class="${btnEnvio}">Copiar mensaje</button>` : ''}</td></tr>`).join('')}
           </tbody></table></div>
           <p class="mt-2 text-[11px] text-amber-700 font-semibold">Anota o copia estas claves ahora: no se vuelven a mostrar. Cada persona puede cambiarla con "Cambiar mi clave".</p>
           ${textoUltimosAccesos ? '<button type="button" onclick="copiarUltimosAccesos()" class="mt-1 px-3 py-1 bg-white text-slate-700 hover:bg-slate-50 border border-slate-400 rounded-lg text-[11px] font-bold">Copiar lista</button>' : ''}`;
