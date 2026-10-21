@@ -1778,10 +1778,11 @@
 
         <div class="bg-slate-50 p-3 rounded-lg border border-slate-200 space-y-2">
           <input type="hidden" id="modal-socio-sel" value="PENDIENTE">
-          <div class="flex flex-wrap gap-2" id="modal-op-decisiones">
-            <button type="button" data-val="PENDIENTE" onclick="elegirDecisionOp('PENDIENTE')" class="op-dec px-3 py-1.5 rounded-lg border text-xs font-bold transition">Pendiente de revisar</button>
-            <button type="button" data-val="VA_OPINION" onclick="elegirDecisionOp('VA_OPINION')" class="op-dec px-3 py-1.5 rounded-lg border text-xs font-bold transition">Se incluye en opinión</button>
-            <button type="button" data-val="NO_VA" onclick="elegirDecisionOp('NO_VA')" class="op-dec px-3 py-1.5 rounded-lg border text-xs font-bold transition">No se incluye en opinión</button>
+          <label class="block text-[10px] font-bold text-slate-600">Estado:</label>
+          <div class="flex flex-wrap gap-1.5" id="modal-op-decisiones">
+            <button type="button" data-val="PENDIENTE" onclick="elegirDecisionOp('PENDIENTE')" class="op-dec px-2.5 py-1.5 rounded-lg border text-[11px] font-bold transition">Pendiente de revisar</button>
+            <button type="button" data-val="VA_OPINION" onclick="elegirDecisionOp('VA_OPINION')" class="op-dec px-2.5 py-1.5 rounded-lg border text-[11px] font-bold transition">Se incluye en opinión</button>
+            <button type="button" data-val="NO_VA" onclick="elegirDecisionOp('NO_VA')" class="op-dec px-2.5 py-1.5 rounded-lg border text-[11px] font-bold transition">No se incluye en opinión</button>
           </div>
           <div>
             <label class="block text-[10px] font-bold text-slate-600 mb-1">Conclusión: Comentario final (Socio / Socio revisor si se requiere)</label>
@@ -6547,7 +6548,7 @@
       };
       document.querySelectorAll('#modal-op-decisiones .op-dec').forEach(b => {
         const on = b.getAttribute('data-val') === v;
-        b.className = 'op-dec px-3 py-1.5 rounded-lg border text-xs font-bold transition ' + (on ? estilos[v] + ' ring-2 ring-offset-1 ring-slate-300' : 'bg-white border-slate-300 text-slate-500 hover:bg-slate-50');
+        b.className = 'op-dec px-2.5 py-1.5 rounded-lg border text-[11px] font-bold transition ' + (on ? estilos[v] + ' ring-2 ring-offset-1 ring-slate-300' : 'bg-white border-slate-300 text-slate-500 hover:bg-slate-50');
       });
     }
 
