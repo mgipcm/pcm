@@ -5339,12 +5339,53 @@
       { fondo: '#99f6e4', borde: '#5eead4', texto: '#134e4a' },
       { fondo: '#f5d0fe', borde: '#f0abfc', texto: '#701a75' },
       { fondo: '#fed7aa', borde: '#fdba74', texto: '#7c2d12' },
-      { fondo: '#d9f99d', borde: '#bef264', texto: '#365314' }
+      { fondo: '#d9f99d', borde: '#bef264', texto: '#365314' },
+      { fondo: '#fbcfe8', borde: '#f9a8d4', texto: '#831843' },
+      { fondo: '#cffafe', borde: '#67e8f9', texto: '#164e63' },
+      { fondo: '#e7e5e4', borde: '#d6d3d1', texto: '#44403c' },
+      { fondo: '#ddd6fe', borde: '#c4b5fd', texto: '#4c1d95' },
+      { fondo: '#fef08a', borde: '#fde047', texto: '#713f12' },
+      { fondo: '#bbf7d0', borde: '#86efac', texto: '#14532d' }
     ];
+    // Color de cada cliente: siempre el mismo (según su código) para todos los auditores.
+    // Solo si dos clientes con fechas que se cruzan en el mes caerían en el mismo color, uno toma el siguiente libre.
+    let mapaColoresMes = {};
+    function colorBaseIndice(id) {
+      const v = String(id ?? '').trim(); let h = 0;
+      for (let k = 0; k < v.length; k++) h = (h * 31 + v.charCodeAt(k)) >>> 0;
+      return h % PASTELES_CLIENTE.length;
+    }
+    function construirMapaColoresMes(year, month) {
+      const ini = new Date(year, month, 1).getTime(), fin = new Date(year, month + 1, 0).getTime();
+      const aFecha = t => { const q = String(t || '').split('T')[0].split('-'); return new Date(parseInt(q[0], 10), parseInt(q[1], 10) - 1, parseInt(q[2], 10)).getTime(); };
+      const porCliente = new Map();
+      (listaVisitasCache || []).forEach(v => {
+        const d = v.fecha_desde || v.fecha; if (!d || !v.cliente_id) return;
+        const a = aFecha(d), b = aFecha(v.fecha_hasta || d);
+        if (b < ini || a > fin) return;
+        const k = String(v.cliente_id).trim();
+        const r = porCliente.get(k) || [];
+        r.push([a, b]); porCliente.set(k, r);
+      });
+      const cruza = (r1, r2) => r1.some(x => r2.some(y => x[0] <= y[1] && y[0] <= x[1]));
+      const orden = [...porCliente.keys()].sort((x, y) => (Math.min(...porCliente.get(x).map(r => r[0])) - Math.min(...porCliente.get(y).map(r => r[0]))) || x.localeCompare(y));
+      const mapa = {}, asignados = [];
+      orden.forEach(cid => {
+        const base = colorBaseIndice(cid);
+        let elegido = base;
+        for (let n = 0; n < PASTELES_CLIENTE.length; n++) {
+          const cand = (base + n) % PASTELES_CLIENTE.length;
+          const choca = asignados.some(o => o.color === cand && cruza(o.rangos, porCliente.get(cid)));
+          if (!choca) { elegido = cand; break; }
+        }
+        mapa[cid] = elegido; asignados.push({ color: elegido, rangos: porCliente.get(cid) });
+      });
+      mapaColoresMes = mapa;
+    }
     function colorPastelCliente(id) {
-      let h = 0; const t = String(id || '');
-      for (let i = 0; i < t.length; i++) h = (h * 31 + t.charCodeAt(i)) >>> 0;
-      return PASTELES_CLIENTE[h % PASTELES_CLIENTE.length];
+      const v = String(id ?? '').trim();
+      const idx = (v in mapaColoresMes) ? mapaColoresMes[v] : colorBaseIndice(v);
+      return PASTELES_CLIENTE[idx];
     }
 
     function renderizarCalendarioLineal() {
@@ -5357,6 +5398,7 @@
       const ultimoDia = new Date(year, month + 1, 0).getDate();
       const diasNombres = ['Do', 'Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sá'];
 
+      construirMapaColoresMes(year, month);
       const contenedor = document.getElementById('contenedor-calendario-lineal');
       if(!contenedor) return;
       contenedor.innerHTML = '';
