@@ -7475,11 +7475,13 @@
 
     async function asigAvisarPorCorreo() {
       const f = asigFiltros();
-      const filas = asigDatos.filter(r => String(r.cliente_id) === f.cliente && r.visita === f.visita);
-      if (!filas.length) { alert('Primero asigna cuentas: todavía no hay nada que avisar en este cliente y visita.'); return; }
+      // Solo se avisa de lo que asignó la persona que pulsa el botón (no de lo asignado por otros)
+      const miCorreo = String(usuarioSesionEmail || '').toLowerCase();
+      const filas = asigDatos.filter(r => String(r.cliente_id) === f.cliente && r.visita === f.visita && String(r.asignado_por || '').toLowerCase() === miCorreo);
+      if (!filas.length) { alert('No hay cuentas asignadas por ti en este cliente y visita. Solo se avisa de lo que tú asignaste.'); return; }
       const porAud = asigAgrupar(filas, r => String(r.auditor).toLowerCase());
       const lista = [...porAud.entries()].map(([a, ra]) => `• ${asigNombreAuditor(a)} (${a}): ${ra.length} cuenta(s)`).join('\n');
-      if (!confirm(`Se enviará un correo a cada auditor con sus cuentas de ${asigNombreCliente(f.cliente)} · ${asigTxtVisita(f.visita)} · ${f.anio}:\n\n${lista}\n\n¿Enviar los avisos?`)) return;
+      if (!confirm(`Se enviará un correo a cada auditor con las cuentas que TÚ le asignaste en ${asigNombreCliente(f.cliente)} · ${asigTxtVisita(f.visita)} · ${f.anio}:\n\n${lista}\n\n¿Enviar los avisos?`)) return;
       const btn = document.getElementById('as-avisar'); if (btn) { btn.disabled = true; btn.textContent = 'Enviando…'; }
       try {
         const r = await enviarAvisoCorreo({ tipo: 'cuentas', cliente_id: f.cliente, anio: String(f.anio), visita: f.visita });
