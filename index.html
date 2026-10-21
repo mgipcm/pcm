@@ -398,6 +398,10 @@
           <button type="button" onclick="crearAccesosFaltantes()" class="px-3 py-1.5 bg-white text-indigo-700 hover:bg-indigo-50 border border-indigo-500 rounded-lg text-xs font-bold transition">Crear acceso a quienes no tienen</button>
           <button type="button" onclick="refrescarAccesos()" class="px-3 py-1.5 bg-white text-slate-700 hover:bg-slate-50 border border-slate-400 rounded-lg text-xs font-bold transition">Actualizar estado</button>
         </div>
+        <label class="inline-flex items-center gap-2 px-3 py-1.5 border rounded-lg cursor-pointer text-xs font-bold select-none border-emerald-500 bg-emerald-50 text-emerald-800">
+          <input type="checkbox" id="usr-enviar-correo" class="sr-only" checked onchange="var l=this.parentElement;l.classList.toggle('border-emerald-500',this.checked);l.classList.toggle('bg-emerald-50',this.checked);l.classList.toggle('text-emerald-800',this.checked);l.classList.toggle('border-slate-300',!this.checked);l.classList.toggle('bg-white',!this.checked);l.classList.toggle('text-slate-600',!this.checked);document.getElementById('usr-enviar-correo-txt').textContent='✉ Enviar la clave por correo a la persona: '+(this.checked?'Sí':'No')">
+          <span id="usr-enviar-correo-txt">✉ Enviar la clave por correo a la persona: Sí</span>
+        </label>
         <p id="usr-accesos-estado" class="text-[11px] text-slate-500 min-h-[1rem]"></p>
         <div id="usr-accesos-resultado"></div>
       </div>
@@ -10965,12 +10969,12 @@
       caja.innerHTML = '<p class="text-[11px] text-slate-500">Procesando...</p>';
       const claves = new Map(emails.map(e => [e, claveTemporal()]));
       try {
-        const d = await llamarGestionUsuarios({ accion: 'crear', reiniciar: !!reiniciar, usuarios: emails.map(e => ({ email: e, password: claves.get(e) })) });
+        const d = await llamarGestionUsuarios({ accion: 'crear', reiniciar: !!reiniciar, enviar_correo: !!(document.getElementById('usr-enviar-correo')||{}).checked, usuarios: emails.map(e => ({ email: e, password: claves.get(e) })) });
         const nombreDe = e => { const u = listaUsuariosCache.find(x => emailDeUsuario(x) === e); return u ? (u.nombre || u.nombre_completo || '') : ''; };
         const rotulos = { creado: 'Acceso creado', clave_restablecida: 'Clave restablecida', ya_existia: 'Ya tenía acceso', error: 'Error' };
         const filas = (d.resultados || []).map(r => {
           const conClave = r.estado === 'creado' || r.estado === 'clave_restablecida';
-          return { nombre: nombreDe(r.email), email: r.email, resultado: rotulos[r.estado] || r.estado, detalle: r.estado === 'error' ? r.detalle : '', clave: conClave ? claves.get(r.email) : '' };
+          return { nombre: nombreDe(r.email), email: r.email, resultado: (rotulos[r.estado] || r.estado) + (r.correo === 'enviado' ? ' · ✉ correo enviado' : ''), detalle: r.estado === 'error' ? r.detalle : (r.correo === 'error' ? 'no se pudo enviar el correo (' + (r.correo_error || 'error') + '); entrega la clave manualmente' : ''), clave: conClave ? claves.get(r.email) : '' };
         });
         textoUltimosAccesos = filas.filter(f => f.clave).map(f => `${f.nombre} | ${f.email} | clave temporal: ${f.clave}`).join('\n');
         mensajesAccesos = [];
@@ -10978,7 +10982,7 @@
         const btnEnvio = 'px-2 py-0.5 bg-white text-indigo-700 hover:bg-indigo-50 border border-indigo-500 rounded text-[10px] font-bold';
         caja.innerHTML = `<div class="border border-slate-200 rounded-xl overflow-x-auto">
           <table class="w-full text-xs"><thead class="bg-slate-50 text-slate-600 text-left"><tr><th class="p-2">Nombre</th><th class="p-2">Correo</th><th class="p-2">Resultado</th><th class="p-2">Clave temporal</th><th class="p-2">Mensaje de bienvenida</th></tr></thead><tbody>
-          ${filas.map(f => `<tr class="border-t border-slate-200"><td class="p-2">${escapeHtml(f.nombre)}</td><td class="p-2">${escapeHtml(f.email)}</td><td class="p-2 ${f.resultado === 'Error' ? 'text-red-600 font-bold' : ''}">${escapeHtml(f.resultado)}${f.detalle ? ': ' + escapeHtml(f.detalle) : ''}</td><td class="p-2 font-mono font-bold">${escapeHtml(f.clave)}</td><td class="p-2 whitespace-nowrap">${f.idx >= 0 ? `<button type="button" onclick="copiarMensajeAcceso(${f.idx})" class="${btnEnvio}">Copiar mensaje</button>` : ''}</td></tr>`).join('')}
+          ${filas.map(f => `<tr class="border-t border-slate-200"><td class="p-2">${escapeHtml(f.nombre)}</td><td class="p-2">${escapeHtml(f.email)}</td><td class="p-2 ${f.resultado === 'Error' || f.detalle ? 'text-red-600 font-bold' : ''}">${escapeHtml(f.resultado)}${f.detalle ? ': ' + escapeHtml(f.detalle) : ''}</td><td class="p-2 font-mono font-bold">${escapeHtml(f.clave)}</td><td class="p-2 whitespace-nowrap">${f.idx >= 0 ? `<button type="button" onclick="copiarMensajeAcceso(${f.idx})" class="${btnEnvio}">Copiar mensaje</button>` : ''}</td></tr>`).join('')}
           </tbody></table></div>
           <p class="mt-2 text-[11px] text-amber-700 font-semibold">Anota o copia estas claves ahora: no se vuelven a mostrar. Cada persona puede cambiarla con "Cambiar mi clave".</p>
           ${textoUltimosAccesos ? '<button type="button" onclick="copiarUltimosAccesos()" class="mt-1 px-3 py-1 bg-white text-slate-700 hover:bg-slate-50 border border-slate-400 rounded-lg text-[11px] font-bold">Copiar lista</button>' : ''}`;
