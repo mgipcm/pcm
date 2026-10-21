@@ -6816,8 +6816,8 @@
           <div class="p-4 bg-white rounded-xl border border-slate-200 shadow-xs space-y-2">
             <div class="flex justify-between items-start gap-2 border-b pb-2">
               <span class="text-[10px] font-bold bg-slate-100 text-slate-700 px-2 py-0.5 rounded">Año ${p.anio}</span>
-              <span class="text-[10px] font-bold ${p.revisado_todo ? 'text-emerald-600 bg-emerald-50' : 'text-amber-600 bg-amber-50'} px-2 py-0.5 rounded border">
-                ${p.revisado_todo ? '✓ Revisado' : 'Pendiente'}
+              <span class="text-[10px] font-bold ${valorVerdadero(p.revisado_todo) ? 'text-emerald-600 bg-emerald-50' : 'text-amber-600 bg-amber-50'} px-2 py-0.5 rounded border">
+                ${valorVerdadero(p.revisado_todo) ? '✓ Revisado' : 'Pendiente'}
               </span>
             </div>
             <p class="text-xs font-bold text-slate-800">${escapeHtml(pregTexto)}</p>
@@ -6825,7 +6825,8 @@
             <div class="text-[10px] text-slate-500 space-y-0.5 pt-1">
               <p><strong>A realizar en:</strong> ${[valorVerdadero(p.visita_preliminar_todo) ? 'Visita preliminar' : '', valorVerdadero(p.visita_final_todo) ? 'Visita final' : ''].filter(Boolean).join(' y ') || 'Sin definir'}</p>
               <p><strong>Asignado:</strong> ${escapeHtml(p.email_todo || 'Sin asignar')}</p>
-              ${p.comentario_ejecutor_todo ? `<p><strong>Avance:</strong> ${escapeHtml(p.comentario_ejecutor_todo)}</p>` : ''}
+              ${p.comentario_ejecutor_todo ? `<p><strong>Comentario del ejecutor:</strong> ${escapeHtml(p.comentario_ejecutor_todo)}</p>` : ''}
+              ${valorVerdadero(p.revisado_todo) && p.reviso_email_todo ? `<p><strong>Revisado por:</strong> ${escapeHtml(nombreDeUsuarioPorEmail(p.reviso_email_todo) + ' (' + p.reviso_email_todo + ')')}</p>` : ''}
             </div>
           </div>
         `;
@@ -6867,13 +6868,14 @@
           <div class="p-4 bg-white rounded-xl border border-amber-200 shadow-xs space-y-2">
             <div class="flex justify-between items-start gap-2 border-b border-amber-100 pb-2">
               <span class="text-[10px] font-bold bg-amber-50 text-amber-800 px-2 py-0.5 rounded border border-amber-200">Año ${h.anio}</span>
-              <span class="text-[10px] font-bold ${h.revisado_quicklett ? 'text-emerald-700 bg-emerald-50' : 'text-amber-700 bg-amber-50'} px-2 py-0.5 rounded border">
-                ${h.revisado_quicklett ? '✓ Revisado' : 'Pendiente Revisión'}
+              <span class="text-[10px] font-bold ${valorVerdadero(h.revisado_quicklett) ? 'text-emerald-700 bg-emerald-50' : 'text-amber-700 bg-amber-50'} px-2 py-0.5 rounded border">
+                ${valorVerdadero(h.revisado_quicklett) ? '✓ Revisado' : 'Pendiente Revisión'}
               </span>
             </div>
             <p class="text-xs font-bold text-slate-800">${escapeHtml(pregTexto)}</p>
             <p class="text-xs text-amber-900 bg-amber-50/50 p-2.5 rounded-lg border border-amber-200 leading-relaxed">${escapeHtml(h.detalle_quicklett || 'Sin detalle')}</p>
-            <p class="text-[10px] text-slate-500 pt-1"><strong>Elaborado por:</strong> ${escapeHtml(h.elaborado_quicklett || 'No especificado')}</p>
+            <p class="text-[10px] text-slate-500 pt-1"><strong>Elaborado por:</strong> ${escapeHtml(h.elaborado_quicklett ? nombreDeUsuarioPorEmail(h.elaborado_quicklett) + ' (' + h.elaborado_quicklett + ')' : 'No especificado')}</p>
+            ${valorVerdadero(h.revisado_quicklett) && h.revisado_por_quicklett ? `<p class="text-[10px] text-slate-500"><strong>Revisado por:</strong> ${escapeHtml(nombreDeUsuarioPorEmail(h.revisado_por_quicklett) + ' (' + h.revisado_por_quicklett + ')')}</p>` : ''}
             ${h.comentario_revisor_quicklett ? `<p class="text-[10px] text-slate-500"><strong>Comentario del revisor:</strong> ${escapeHtml(h.comentario_revisor_quicklett)}</p>` : ''}
           </div>
         `;
@@ -6928,6 +6930,10 @@
             <p class="text-xs font-bold text-slate-800">${escapeHtml(pregTexto)}</p>
             <p class="text-xs text-rose-950 bg-rose-50/40 p-2.5 rounded-lg border border-rose-100 leading-relaxed">${escapeHtml(c.detalle_opinion || 'Sin detalle')}</p>
             ${c.comentario_opinion ? `<div class="p-2 bg-slate-50 rounded text-[11px] text-slate-700 border"><strong>Conclusión:</strong> ${escapeHtml(c.comentario_opinion)}</div>` : ''}
+            <div class="text-[10px] text-slate-500 space-y-0.5 pt-1">
+              <p><strong>Elaborado por:</strong> ${escapeHtml(c.elaborado_opinion ? nombreDeUsuarioPorEmail(c.elaborado_opinion) + ' (' + c.elaborado_opinion + ')' : 'No especificado')}</p>
+              ${c.revisado_por_opinion ? `<p><strong>Revisado por:</strong> ${escapeHtml(nombreDeUsuarioPorEmail(c.revisado_por_opinion) + ' (' + c.revisado_por_opinion + ')')}</p>` : ''}
+            </div>
           </div>
         `;
       });
