@@ -1699,7 +1699,8 @@
       </div>
 
       <div class="flex items-center justify-end gap-2 pt-2 border-t">
-        <button onclick="desactivarModuloModal('todo')" class="px-3 py-1.5 text-xs font-bold text-rose-600 hover:bg-rose-50 rounded-lg transition">Desactivar To/Do</button>
+        <button onclick="desactivarModuloModal('todo', true)" class="px-3 py-1.5 text-xs font-bold text-rose-700 hover:bg-rose-50 border border-rose-300 rounded-lg transition">Quitar todo y guardar</button>
+        <button onclick="desactivarModuloModal('todo', false)" class="px-3 py-1.5 text-xs font-bold text-slate-600 hover:bg-slate-100 border border-slate-300 rounded-lg transition">Desactivar To/Do</button>
         <button onclick="guardarModalTodo()" class="px-4 py-1.5 bg-slate-800 text-white font-bold rounded-lg text-xs hover:bg-slate-900 transition">Confirmar y Guardar</button>
       </div>
     </div>
@@ -1749,7 +1750,8 @@
       </div>
 
       <div class="flex items-center justify-end gap-2 pt-2 border-t">
-        <button onclick="desactivarModuloModal('ql')" class="px-3 py-1.5 text-xs font-bold text-rose-600 hover:bg-rose-50 rounded-lg transition">Desactivar Quick Lett</button>
+        <button onclick="desactivarModuloModal('ql', true)" class="px-3 py-1.5 text-xs font-bold text-rose-700 hover:bg-rose-50 border border-rose-300 rounded-lg transition">Quitar todo y guardar</button>
+        <button onclick="desactivarModuloModal('ql', false)" class="px-3 py-1.5 text-xs font-bold text-slate-600 hover:bg-slate-100 border border-slate-300 rounded-lg transition">Desactivar Quick Lett</button>
         <button onclick="guardarModalQL()" class="px-4 py-1.5 bg-amber-500 text-white font-bold rounded-lg text-xs hover:bg-amber-600 transition">Confirmar y Guardar</button>
       </div>
     </div>
@@ -1801,7 +1803,8 @@
       </div>
 
       <div class="flex items-center justify-end gap-2 pt-2 border-t">
-        <button onclick="desactivarModuloModal('op')" class="px-3 py-1.5 text-xs font-bold text-rose-600 hover:bg-rose-50 rounded-lg transition">Desactivar Opinión</button>
+        <button onclick="desactivarModuloModal('op', true)" class="px-3 py-1.5 text-xs font-bold text-rose-700 hover:bg-rose-50 border border-rose-300 rounded-lg transition">Quitar todo y guardar</button>
+        <button onclick="desactivarModuloModal('op', false)" class="px-3 py-1.5 text-xs font-bold text-slate-600 hover:bg-slate-100 border border-slate-300 rounded-lg transition">Desactivar Opinión</button>
         <button onclick="guardarModalOpinion()" class="px-4 py-1.5 bg-rose-600 text-white font-bold rounded-lg text-xs hover:bg-rose-700 transition">Confirmar y Guardar</button>
       </div>
     </div>
@@ -5909,9 +5912,9 @@
             estado: resp ? (resp.estado_revision || '') : '',
             por: resp ? (resp.confirmado_por || '') : ''
           };
-          const tieneTodo = resp && (valorVerdadero(resp.es_todo) || (resp.detalle_todo && resp.detalle_todo.trim() !== ''));
-          const tieneQL = resp && (valorVerdadero(resp.es_quicklett) || (resp.detalle_quicklett && resp.detalle_quicklett.trim() !== ''));
-          const tieneOp = resp && (valorVerdadero(resp.es_opinion) || (resp.detalle_opinion && resp.detalle_opinion.trim() !== ''));
+          const tieneTodo = resp && (valorVerdadero(resp.es_todo));
+          const tieneQL = resp && (valorVerdadero(resp.es_quicklett));
+          const tieneOp = resp && (valorVerdadero(resp.es_opinion));
 
           const btnTodoStyle = tieneTodo
             ? "bg-white text-slate-700 border-slate-600 ring-1 ring-slate-600 font-bold"
@@ -6642,20 +6645,25 @@
       }
     }
 
-    async function desactivarModuloModal(tipo) {
+    // borrar = false: solo se desactiva (queda todo lo escrito). borrar = true: se quita todo lo escrito y se desactiva.
+    async function desactivarModuloModal(tipo, borrar) {
       let preguntaId = '';
       let payload = {};
 
       if (tipo === 'todo') {
         preguntaId = document.getElementById('modal-todo-pregunta-id').value;
-        payload = { es_todo: false, detalle_todo: '' };
+        payload = { es_todo: false };
+        if (borrar) Object.assign(payload, { detalle_todo: '', visita_preliminar_todo: false, visita_final_todo: false, email_todo: '', comentario_ejecutor_todo: '', revisado_todo: false, reviso_email_todo: '' });
       } else if (tipo === 'ql') {
         preguntaId = document.getElementById('modal-ql-pregunta-id').value;
-        payload = { es_quicklett: false, detalle_quicklett: '' };
+        payload = { es_quicklett: false };
+        if (borrar) Object.assign(payload, { detalle_quicklett: '', elaborado_quicklett: '', comentario_revisor_quicklett: '', revisado_quicklett: false, revisado_por_quicklett: '' });
       } else if (tipo === 'op') {
         preguntaId = document.getElementById('modal-op-pregunta-id').value;
-        payload = { es_opinion: false, detalle_opinion: '' };
+        payload = { es_opinion: false };
+        if (borrar) Object.assign(payload, { detalle_opinion: '', elaborado_opinion: '', decision_opinion: 'PENDIENTE', revisado_por_opinion: '', comentario_opinion: '' });
       }
+      if (borrar && !confirm('Se borrará todo lo escrito en este módulo y quedará desactivado. ¿Continuar?')) return;
 
       const clienteIdVal = document.getElementById('select-cliente').value;
       const anioVal = document.getElementById('select-anio').value;
@@ -6802,7 +6810,7 @@
         return;
       }
 
-      let pendientes = resps ? resps.filter(r => valorVerdadero(r.es_todo) || (r.detalle_todo && r.detalle_todo.trim() !== '')) : [];
+      let pendientes = resps ? resps.filter(r => valorVerdadero(r.es_todo)) : [];
       const fv = (document.getElementById('todo-filtro-visita') || {}).value || '';
       if (fv === 'preliminar') pendientes = pendientes.filter(r => valorVerdadero(r.visita_preliminar_todo));
       if (fv === 'final') pendientes = pendientes.filter(r => valorVerdadero(r.visita_final_todo));
@@ -6857,7 +6865,7 @@
         return;
       }
 
-      const hallazgos = resps ? resps.filter(r => valorVerdadero(r.es_quicklett) || (r.detalle_quicklett && r.detalle_quicklett.trim() !== '')) : [];
+      const hallazgos = resps ? resps.filter(r => valorVerdadero(r.es_quicklett)) : [];
 
       if (contador) contador.textContent = `${hallazgos.length} Hallazgos`;
       cont.innerHTML = '';
@@ -6906,7 +6914,7 @@
         return;
       }
 
-      const casos = resps ? resps.filter(r => valorVerdadero(r.es_opinion) || (r.detalle_opinion && r.detalle_opinion.trim() !== '')) : [];
+      const casos = resps ? resps.filter(r => valorVerdadero(r.es_opinion)) : [];
 
       if (contador) contador.textContent = `${casos.length} Casos`;
       cont.innerHTML = '';
