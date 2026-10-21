@@ -5777,6 +5777,14 @@
       }
     }
 
+    // Subtítulo gris que se muestra antes de la primera pregunta de ciertos aspectos (hoy solo A: Acuerdo de los términos de auditoría)
+    const SUBTITULOS_ASPECTO = { 'A_01': 'Aceptación de clientes o descontinuado' };
+    function filaSubtituloAspecto(idAspecto, idx, colspan) {
+      const t = SUBTITULOS_ASPECTO[idAspecto];
+      if (!t || idx !== 0) return '';
+      return `<tr class="fila-subtitulo-aspecto"><td colspan="${colspan}" class="px-3 py-2 bg-slate-200 text-slate-700 text-[11px] font-bold uppercase tracking-wide border-b border-slate-300">${escapeHtml(t)}</td></tr>`;
+    }
+
     // CUESTIONARIO CON OPCIONES DEPENDIENTES Y GUARDADO AUTOMÁTICO
     async function cargarPreguntas() {
       const clienteIdVal = document.getElementById('select-cliente').value;
@@ -5937,7 +5945,7 @@
             `;
           }
 
-          tbody.innerHTML += `
+          tbody.innerHTML += filaSubtituloAspecto(aspectoIdVal, idx, 4) + `
             <tr data-fila-cap="${pId}" class="hover:bg-slate-50/80 transition border-b border-slate-200">
               <td class="p-3 border-r border-slate-200 align-top bg-white font-medium text-slate-800">
                 <span class="text-[10px] font-bold bg-slate-200 text-slate-700 px-1.5 py-0.5 rounded mr-1">#${idx + 1}</span>
@@ -6630,7 +6638,7 @@
           const pId = p.pregunta_id || p.id_pregunta || p.id || p.id_banco;
           const textoP = p.texto_pregunta || p.pregunta || `Pregunta #${pId}`;
 
-          let rowHtml = `
+          let rowHtml = filaSubtituloAspecto(aspectoIdVal, idx, aniosActivos.length + 1) + `
             <tr class="hover:bg-slate-50 transition border-b border-slate-200">
               <td class="p-3 border-r border-slate-200 font-medium text-slate-800 bg-slate-50/50 align-top">
                 <span class="text-[10px] font-bold bg-slate-200 text-slate-700 px-1.5 py-0.5 rounded mr-1">#${idx + 1}</span>
