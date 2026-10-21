@@ -5777,14 +5777,19 @@
       }
     }
 
-    // Subtítulos grises que se muestran antes de ciertas preguntas (hoy en A y B).
+    // Subtítulos grises que se muestran antes de ciertas preguntas (hoy en A, B y C).
     // Se identifican por el código de la pregunta, no por su posición.
     const SUBTITULOS_PREGUNTA = {
       'A_01_P_001': 'Aceptación de cliente o descontinuado',
       'A_01_P_027': 'Independencia profesional',
       'A_01_P_029': 'Alcance de la auditoría',
       'A_02_P_001': 'Comunicación con la administración',
-      'A_02_P_003': 'Reunión del equipo de auditoría'
+      'A_02_P_003': 'Reunión del equipo de auditoría',
+      'A_03_P_001': 'Factores normativos',
+      'A_03_P_005': 'Factores sectoriales',
+      'A_03_P_007': 'Naturaleza de la entidad',
+      'A_03_P_020': 'Políticas contables significativas',
+      'A_03_P_023': 'Procedimientos analíticos, comparación de estados financieros'
     };
     function filaSubtituloAspecto(pId, colspan) {
       const t = SUBTITULOS_PREGUNTA[pId];
