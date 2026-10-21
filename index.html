@@ -567,7 +567,14 @@
         <div id="vista-todo" class="hidden space-y-3">
           <div class="flex justify-between items-center mb-2">
             <h2 class="text-xs font-bold text-slate-700">2. Acumulado de Pendientes To/Do (Todos los Aspectos)</h2>
-            <span id="contador-todo" class="text-xs font-bold text-slate-800 bg-slate-200 border border-slate-300 px-2.5 py-0.5 rounded-md">0 Pendientes</span>
+            <div class="flex items-center gap-2">
+              <select id="todo-filtro-visita" onchange="cargarResumenTodo()" class="p-1.5 border border-slate-300 rounded-lg text-[11px] bg-white outline-none">
+                <option value="">Todas las visitas</option>
+                <option value="preliminar">Visita preliminar</option>
+                <option value="final">Visita final</option>
+              </select>
+              <span id="contador-todo" class="text-xs font-bold text-slate-800 bg-slate-200 border border-slate-300 px-2.5 py-0.5 rounded-md">0 Pendientes</span>
+            </div>
           </div>
 
           <div id="contenedor-resumen-todo" class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1662,10 +1669,14 @@
           <select id="modal-todo-email" class="w-full p-2 border border-slate-300 rounded-lg text-xs outline-none focus:ring-2 focus:ring-slate-500 bg-white select-auditores-dyn">
             <option value="">-- Seleccionar Auditor / Usuario --</option>
           </select>
+          <label id="modal-todo-avisar-box" for="modal-todo-avisar" class="mt-2 inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-bold cursor-pointer select-none transition bg-emerald-50 border-emerald-400 text-emerald-800 focus-within:ring-2 focus-within:ring-emerald-400">
+            <input type="checkbox" id="modal-todo-avisar" class="sr-only" checked onchange="pintarAvisoTodo()">
+            <span id="modal-todo-avisar-txt">✉ Avisar por correo: Sí</span>
+          </label>
         </div>
 
         <div>
-          <label class="block text-[11px] font-bold text-slate-600 mb-1">Comentario Ejecutor</label>
+          <label class="block text-[11px] font-bold text-slate-600 mb-1">Comentario del ejecutor</label>
           <textarea id="modal-todo-comentario-ejecutor" rows="2" placeholder="Comentario o avance del ejecutor..." class="w-full p-2 border border-slate-300 rounded-lg text-xs outline-none focus:ring-2 focus:ring-slate-500 bg-white leading-relaxed"></textarea>
         </div>
 
@@ -1676,10 +1687,9 @@
           </div>
 
           <div>
-            <label class="block text-[11px] font-bold text-slate-600 mb-1">Email de quien revisó (Usuario en sesión)</label>
-            <select id="modal-todo-reviso-email" class="w-full p-2 border border-slate-300 rounded-lg text-xs outline-none focus:ring-2 focus:ring-slate-500 bg-white select-auditores-dyn">
-              <option value="">-- Seleccionar Revisor --</option>
-            </select>
+            <label class="block text-[11px] font-bold text-slate-600 mb-1">Revisado por (usuario en sesión)</label>
+            <input type="hidden" id="modal-todo-reviso-email" value="">
+            <div id="modal-todo-reviso-texto" class="w-full p-2 border border-slate-200 rounded-lg text-xs bg-slate-100 text-slate-600 cursor-not-allowed select-none"></div>
           </div>
         </div>
       </div>
@@ -6311,6 +6321,23 @@
     }
 
     // FUNCIONES Y MANEJADORES DE MODALES FLOTANTES (GUARDADO COMPLETO DE TO/DO, QUICK LETT Y OPINIÓN)
+    function nombreDeUsuarioPorEmail(email) {
+      const e = String(email || '').toLowerCase();
+      const u = (listaUsuariosCache || []).find(x => String(x.email || '').toLowerCase() === e);
+      return u ? (u.nombre || u.nombre_completo || email) : (email || '');
+    }
+    // El revisor es siempre el usuario en sesión (no se puede cambiar a mano)
+    function pintarRevisorTodo(email) {
+      document.getElementById('modal-todo-reviso-email').value = email || '';
+      document.getElementById('modal-todo-reviso-texto').textContent = email ? `${nombreDeUsuarioPorEmail(email)} (${email})` : '—';
+    }
+    function pintarAvisoTodo() {
+      const on = document.getElementById('modal-todo-avisar').checked;
+      document.getElementById('modal-todo-avisar-box').className = 'mt-2 inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-bold cursor-pointer select-none transition focus-within:ring-2 focus-within:ring-emerald-400 ' +
+        (on ? 'bg-emerald-50 border-emerald-400 text-emerald-800' : 'bg-white border-slate-300 text-slate-500');
+      document.getElementById('modal-todo-avisar-txt').textContent = '✉ Avisar por correo: ' + (on ? 'Sí' : 'No');
+    }
+
     async function abrirModalTodo(preguntaId) {
       document.getElementById('modal-todo-pregunta-id').value = preguntaId;
       const clienteIdVal = document.getElementById('select-cliente').value;
@@ -6322,7 +6349,8 @@
       document.getElementById('modal-todo-email').value = '';
       document.getElementById('modal-todo-comentario-ejecutor').value = '';
       document.getElementById('modal-todo-revisado').checked = false;
-      document.getElementById('modal-todo-reviso-email').value = usuarioSesionEmail || '';
+      document.getElementById('modal-todo-avisar').checked = true; pintarAvisoTodo();
+      pintarRevisorTodo(usuarioSesionEmail || '');
 
       if (clienteIdVal && anioVal) {
         const { data: resp } = await supabaseClient
@@ -6340,8 +6368,8 @@
           document.getElementById('modal-todo-email').value = resp.email_todo || '';
           document.getElementById('modal-todo-comentario-ejecutor').value = resp.comentario_ejecutor_todo || '';
           document.getElementById('modal-todo-revisado').checked = valorVerdadero(resp.revisado_todo);
-          if (resp.reviso_email_todo) {
-            document.getElementById('modal-todo-reviso-email').value = resp.reviso_email_todo;
+          if (resp.reviso_email_todo && valorVerdadero(resp.revisado_todo)) {
+            pintarRevisorTodo(resp.reviso_email_todo);
           }
         }
       }
@@ -6367,8 +6395,9 @@
         email_todo: document.getElementById('modal-todo-email').value,
         comentario_ejecutor_todo: document.getElementById('modal-todo-comentario-ejecutor').value,
         revisado_todo: document.getElementById('modal-todo-revisado').checked,
-        reviso_email_todo: document.getElementById('modal-todo-reviso-email').value
+        reviso_email_todo: document.getElementById('modal-todo-revisado').checked ? (document.getElementById('modal-todo-reviso-email').value || usuarioSesionEmail || '') : ''
       };
+      const avisar = document.getElementById('modal-todo-avisar').checked && !!datosTodo.email_todo;
 
       const { data: respExistente } = await supabaseClient
         .from('respuestas_auditoria')
@@ -6402,6 +6431,13 @@
       } else {
         cerrarModal('modal-todo');
         cargarPreguntas();
+        if (avisar) {
+          try {
+            const r = await enviarAvisoCorreo({ tipo: 'todo', cliente_id: clienteIdVal, anio: String(anioVal), pregunta_id: preguntaId });
+            if (r.fallidos && r.fallidos.length) alert('El To/Do se guardó, pero el correo no se pudo enviar: ' + r.fallidos[0].error);
+            else alert('To/Do guardado y aviso enviado a ' + datosTodo.email_todo + '.');
+          } catch (e) { alert('El To/Do se guardó, pero el correo no se pudo enviar: ' + e.message); }
+        }
       }
     }
 
@@ -6734,7 +6770,10 @@
         return;
       }
 
-      const pendientes = resps ? resps.filter(r => valorVerdadero(r.es_todo) || (r.detalle_todo && r.detalle_todo.trim() !== '')) : [];
+      let pendientes = resps ? resps.filter(r => valorVerdadero(r.es_todo) || (r.detalle_todo && r.detalle_todo.trim() !== '')) : [];
+      const fv = (document.getElementById('todo-filtro-visita') || {}).value || '';
+      if (fv === 'preliminar') pendientes = pendientes.filter(r => valorVerdadero(r.visita_preliminar_todo));
+      if (fv === 'final') pendientes = pendientes.filter(r => valorVerdadero(r.visita_final_todo));
 
       if (contador) contador.textContent = `${pendientes.length} Pendientes`;
       cont.innerHTML = '';
@@ -6757,6 +6796,7 @@
             <p class="text-xs font-bold text-slate-800">${escapeHtml(pregTexto)}</p>
             <p class="text-xs text-slate-600 bg-slate-50 p-2.5 rounded-lg border leading-relaxed">${escapeHtml(p.detalle_todo || 'Sin detalle')}</p>
             <div class="text-[10px] text-slate-500 space-y-0.5 pt-1">
+              <p><strong>A realizar en:</strong> ${[valorVerdadero(p.visita_preliminar_todo) ? 'Visita preliminar' : '', valorVerdadero(p.visita_final_todo) ? 'Visita final' : ''].filter(Boolean).join(' y ') || 'Sin definir'}</p>
               <p><strong>Asignado:</strong> ${escapeHtml(p.email_todo || 'Sin asignar')}</p>
               ${p.comentario_ejecutor_todo ? `<p><strong>Avance:</strong> ${escapeHtml(p.comentario_ejecutor_todo)}</p>` : ''}
             </div>
