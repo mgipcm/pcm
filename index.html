@@ -1637,7 +1637,7 @@
       <div class="flex justify-between items-center border-b pb-2">
         <div class="flex items-center gap-2">
           <span class="w-3 h-3 rounded-full bg-slate-800"></span>
-          <h3 class="text-sm font-bold text-slate-800">Gestión de Tarea To/Do</h3>
+          <h3 class="text-sm font-bold text-slate-800">Gestión de To/Do</h3>
         </div>
         <button onclick="cerrarModal('modal-todo')" class="text-slate-400 hover:text-slate-600 font-bold text-sm">✕</button>
       </div>
@@ -1707,7 +1707,7 @@
       <div class="flex justify-between items-center border-b pb-2">
         <div class="flex items-center gap-2">
           <span class="w-3 h-3 rounded-full bg-amber-500"></span>
-          <h3 class="text-sm font-bold text-amber-900">Hallazgo Quick Lett</h3>
+          <h3 class="text-sm font-bold text-amber-900">Gestión de Quick Lett</h3>
         </div>
         <button onclick="cerrarModal('modal-quicklett')" class="text-slate-400 hover:text-slate-600 font-bold text-sm">✕</button>
       </div>
@@ -1716,27 +1716,30 @@
 
       <div class="space-y-3">
         <div>
-          <label class="block text-[11px] font-bold text-amber-900 mb-1">Elaborado Por:</label>
-          <select id="modal-ql-elaborado" class="w-full p-2 bg-white border border-amber-300 rounded-lg text-xs outline-none focus:ring-2 focus:ring-amber-500 select-auditores-dyn">
-            <option value="">-- Seleccionar Auditor --</option>
-          </select>
+          <label class="block text-[11px] font-bold text-amber-900 mb-1">Detalle Quick Lett</label>
+          <textarea id="modal-ql-text" rows="4" placeholder="Escribe el detalle del hallazgo para Quick Lett..." class="w-full p-2.5 border border-amber-300 rounded-lg text-xs outline-none focus:ring-2 focus:ring-amber-500 bg-white leading-relaxed"></textarea>
         </div>
 
         <div>
-          <label class="block text-[11px] font-bold text-amber-900 mb-1">Detalle del Hallazgo (Quick Lett)</label>
-          <textarea id="modal-ql-text" rows="4" placeholder="Escribe el detalle del hallazgo para Quick Lett..." class="w-full p-2.5 border border-amber-300 rounded-lg text-xs outline-none focus:ring-2 focus:ring-amber-500 bg-white leading-relaxed"></textarea>
+          <label class="block text-[11px] font-bold text-amber-900 mb-1">Elaborado por (usuario en sesión)</label>
+          <input type="hidden" id="modal-ql-elaborado" value="">
+          <div id="modal-ql-elaborado-texto" class="w-full p-2 border border-amber-200 rounded-lg text-xs bg-slate-100 text-slate-600 cursor-not-allowed select-none"></div>
+        </div>
+
+        <div>
+          <label class="block text-[11px] font-bold text-amber-900 mb-1">Comentario del revisor</label>
+          <textarea id="modal-ql-comentario-revisor" rows="2" placeholder="Comentario del revisor..." class="w-full p-2.5 border border-amber-300 rounded-lg text-xs outline-none focus:ring-2 focus:ring-amber-500 bg-white leading-relaxed"></textarea>
         </div>
 
         <div class="bg-amber-50/50 p-3 rounded-lg border border-amber-200 space-y-2">
           <div class="flex items-center gap-2">
             <input type="checkbox" id="modal-ql-revisado" class="w-4 h-4 text-amber-600 border-amber-300 rounded focus:ring-amber-500">
-            <label for="modal-ql-revisado" class="text-xs font-bold text-amber-900">Marcar como Revisado</label>
+            <label for="modal-ql-revisado" class="text-xs font-bold text-amber-900">Quick Lett revisado</label>
           </div>
           <div>
-            <label class="block text-[10px] font-bold text-amber-800 mb-1">Revisado Por:</label>
-            <select id="modal-ql-revisado-por" class="w-full p-2 bg-white border border-amber-300 text-xs rounded-lg outline-none focus:ring-2 focus:ring-amber-500 select-auditores-dyn">
-              <option value="">-- Seleccionar Auditor --</option>
-            </select>
+            <label class="block text-[10px] font-bold text-amber-800 mb-1">Revisado por (usuario en sesión)</label>
+            <input type="hidden" id="modal-ql-revisado-por" value="">
+            <div id="modal-ql-revisado-por-texto" class="w-full p-2 border border-amber-200 rounded-lg text-xs bg-slate-100 text-slate-600 cursor-not-allowed select-none"></div>
           </div>
         </div>
       </div>
@@ -6441,15 +6444,22 @@
       }
     }
 
+    // Muestra nombre y correo (no editable) de quien elaboró / revisó el Quick Lett
+    function pintarPersonaQL(idCampo, email) {
+      document.getElementById(idCampo).value = email || '';
+      document.getElementById(idCampo + '-texto').textContent = email ? `${nombreDeUsuarioPorEmail(email)} (${email})` : '—';
+    }
+
     async function abrirModalQL(preguntaId) {
       document.getElementById('modal-ql-pregunta-id').value = preguntaId;
       const clienteIdVal = document.getElementById('select-cliente').value;
       const anioVal = document.getElementById('select-anio').value;
 
-      document.getElementById('modal-ql-elaborado').value = usuarioSesionEmail || '';
       document.getElementById('modal-ql-text').value = '';
+      document.getElementById('modal-ql-comentario-revisor').value = '';
       document.getElementById('modal-ql-revisado').checked = false;
-      document.getElementById('modal-ql-revisado-por').value = '';
+      pintarPersonaQL('modal-ql-elaborado', usuarioSesionEmail || '');
+      pintarPersonaQL('modal-ql-revisado-por', usuarioSesionEmail || '');
 
       if (clienteIdVal && anioVal) {
         const { data: resp } = await supabaseClient
@@ -6461,10 +6471,11 @@
           .maybeSingle();
 
         if (resp) {
-          if (resp.elaborado_quicklett) document.getElementById('modal-ql-elaborado').value = resp.elaborado_quicklett;
+          if (resp.elaborado_quicklett) pintarPersonaQL('modal-ql-elaborado', resp.elaborado_quicklett);
           document.getElementById('modal-ql-text').value = resp.detalle_quicklett || '';
+          document.getElementById('modal-ql-comentario-revisor').value = resp.comentario_revisor_quicklett || '';
           document.getElementById('modal-ql-revisado').checked = valorVerdadero(resp.revisado_quicklett);
-          if (resp.revisado_por_quicklett) document.getElementById('modal-ql-revisado-por').value = resp.revisado_por_quicklett;
+          if (resp.revisado_por_quicklett && valorVerdadero(resp.revisado_quicklett)) pintarPersonaQL('modal-ql-revisado-por', resp.revisado_por_quicklett);
         }
       }
 
@@ -6483,10 +6494,11 @@
 
       const datosQL = {
         es_quicklett: true,
-        elaborado_quicklett: document.getElementById('modal-ql-elaborado').value,
+        elaborado_quicklett: document.getElementById('modal-ql-elaborado').value || usuarioSesionEmail || '',
         detalle_quicklett: document.getElementById('modal-ql-text').value,
+        comentario_revisor_quicklett: document.getElementById('modal-ql-comentario-revisor').value,
         revisado_quicklett: document.getElementById('modal-ql-revisado').checked,
-        revisado_por_quicklett: document.getElementById('modal-ql-revisado-por').value
+        revisado_por_quicklett: document.getElementById('modal-ql-revisado').checked ? (document.getElementById('modal-ql-revisado-por').value || usuarioSesionEmail || '') : ''
       };
 
       const { data: respExistente } = await supabaseClient
@@ -6847,6 +6859,7 @@
             <p class="text-xs font-bold text-slate-800">${escapeHtml(pregTexto)}</p>
             <p class="text-xs text-amber-900 bg-amber-50/50 p-2.5 rounded-lg border border-amber-200 leading-relaxed">${escapeHtml(h.detalle_quicklett || 'Sin detalle')}</p>
             <p class="text-[10px] text-slate-500 pt-1"><strong>Elaborado por:</strong> ${escapeHtml(h.elaborado_quicklett || 'No especificado')}</p>
+            ${h.comentario_revisor_quicklett ? `<p class="text-[10px] text-slate-500"><strong>Comentario del revisor:</strong> ${escapeHtml(h.comentario_revisor_quicklett)}</p>` : ''}
           </div>
         `;
       });
