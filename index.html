@@ -637,7 +637,7 @@
         </div>
       </div>
 
-      <form onsubmit="guardarVisita(event)" class="bg-slate-50 p-3 rounded-xl border border-slate-200">
+      <form id="form-visita" onsubmit="guardarVisita(event)" class="bg-slate-50 p-3 rounded-xl border border-slate-200">
         <div class="flex flex-wrap items-center gap-3">
           <div class="flex-1 min-w-[150px]">
             <label class="block text-[11px] font-bold text-slate-600 mb-1">Cliente</label>
@@ -5365,7 +5365,10 @@
 
           // El valor guardado debe ser el correo del auditor (así lo busca el calendario y se usa para el email)
           const valorAuditor = u.email || u.correo || nombreVal;
-          if (selectVis) selectVis.innerHTML += `<option value="${valorAuditor}">${nombreVal}</option>`;
+        });
+        if (selectVis) usuariosOrdenadosPorCargo().forEach(u => {
+          const nom = u.nombre || u.nombre_completo || u.email || u.correo || '-';
+          selectVis.innerHTML += `<option value="${u.email || u.correo || nom}">${nom}${u.cargo ? ' – ' + u.cargo : ''}</option>`;
         });
       } else {
         tbody.innerHTML = '<tr><td colspan="7" class="p-4 text-center text-slate-400">No hay usuarios registrados.</td></tr>';
@@ -5397,7 +5400,7 @@
         const valPrevio = sel.value;
         sel.innerHTML = '<option value="">-- Seleccionar Auditor / Usuario --</option>';
         if (listaUsuariosCache && listaUsuariosCache.length > 0) {
-          listaUsuariosCache.forEach(u => {
+          usuariosOrdenadosPorCargo().forEach(u => {
             const nom = u.nombre || u.nombre_completo || u.email || 'Auditor';
             const email = u.email || nom;
             sel.innerHTML += `<option value="${email}">${nom} (${email})</option>`;
@@ -5427,6 +5430,22 @@
         document.getElementById('usr-email').value = '';
         cargarUsuariosTabla();
       }
+    }
+
+    // Orden para elegir auditores: Socio, Supervisor, Senior, Semisenior, Auditores
+    function ordenCargoLista(cargo) {
+      const c = normalizarCargo(cargo);
+      const o = { socio: 1, supervisor: 2, senior: 3, semisenior: 4, auditor: 5, auditores: 5 }[c];
+      return o || 6;
+    }
+    function usuariosOrdenadosPorCargo() {
+      return [...(listaUsuariosCache || [])].sort((a, b) =>
+        ordenCargoLista(a.cargo) - ordenCargoLista(b.cargo) ||
+        String(a.nombre || a.nombre_completo || a.email || '').localeCompare(String(b.nombre || b.nombre_completo || b.email || ''), 'es'));
+    }
+    // Solo Socio y Supervisor asignan, cambian y borran visitas; todos las consultan
+    function puedeGestionarVisitas() {
+      return !!(usuarioActivo && ['socio', 'supervisor'].includes(normalizarCargo(usuarioActivo.cargo)));
     }
 
     function obtenerPesoCargo(cargoStr) {
@@ -5517,6 +5536,7 @@
     }
 
     function renderizarCalendarioLineal() {
+      const fv = document.getElementById('form-visita'); if (fv) fv.classList.toggle('hidden', !puedeGestionarVisitas());
       const year = fechaCalendarioActual.getFullYear();
       const month = fechaCalendarioActual.getMonth();
 
@@ -5666,7 +5686,8 @@
                      class="absolute border rounded px-1 text-[9px] font-bold flex items-center justify-between cursor-pointer shadow-xs hover:brightness-95 transition z-10 overflow-hidden leading-none"
                      title="Asignación #${idxAsignacion + 1}\nCliente: ${nombreCliente}\nDesde: ${strDesde}\nHasta: ${strHasta}">
                   <span class="truncate flex-1">${idxAsignacion > 0 ? '• ' : ''}${nombreCliente}</span>
-                  <button onclick="event.stopPropagation(); eliminarVisitaDirecto('${visId}')" class="ml-0.5 text-slate-500 hover:text-rose-600 font-bold p-0 rounded text-[9px] shrink-0" title="Eliminar">✕</button>
+                  ${comentarioCompartidoVisita(vis) ? '<span class="ml-0.5 shrink-0 text-[9px]" title="Tiene comentario: ' + escapeHtml(comentarioCompartidoVisita(vis)).replace(/\n/g, ' ').slice(0, 120) + '">💬</span>' : ''}
+                  ${puedeGestionarVisitas() ? `<button onclick="event.stopPropagation(); eliminarVisitaDirecto('${visId}')" class="ml-0.5 text-slate-500 hover:text-rose-600 font-bold p-0 rounded text-[9px] shrink-0" title="Eliminar">✕</button>` : ''}
                 </div>
               `;
             }
@@ -5690,6 +5711,7 @@
 
     async function guardarVisita(e) {
       e.preventDefault();
+      if (!puedeGestionarVisitas()) { alert('Solo el Socio y el Supervisor pueden asignar visitas.'); return; }
       const cliente_id = document.getElementById('vis-cliente').value;
       const auditor_asignado = document.getElementById('vis-auditor').value;
       const fecha_desde = document.getElementById('vis-fecha-desde').value;
@@ -5752,6 +5774,7 @@
     }
 
     async function eliminarVisitaDirecto(visitaId) {
+      if (!puedeGestionarVisitas()) { alert('Solo el Socio y el Supervisor pueden borrar visitas.'); return; }
       if (!confirm("¿Está seguro de que desea eliminar este agendamiento de visita?")) return;
 
       const { error } = await supabaseClient
@@ -5769,6 +5792,7 @@
     async function eliminarVisitaActual() {
       const visitaId = document.getElementById('modal-visita-id').value;
       if (!visitaId) return;
+      if (!puedeGestionarVisitas()) { alert('Solo el Socio y el Supervisor pueden borrar visitas.'); return; }
 
       if (confirm("¿Confirmas eliminar permanentemente esta visita agendada?")) {
         const { error } = await supabaseClient
@@ -5785,6 +5809,25 @@
       }
     }
 
+    // Visitas del mismo cliente que coinciden en fechas: comparten el comentario
+    function rangoVisita(v) {
+      const d = String(v.fecha_desde || v.fecha || '').slice(0, 10);
+      const h = String(v.fecha_hasta || v.fecha_desde || v.fecha || '').slice(0, 10);
+      return [d, h || d];
+    }
+    function visitasRelacionadas(vis) {
+      const [d, h] = rangoVisita(vis);
+      return listaVisitasCache.filter(v => String(v.cliente_id) === String(vis.cliente_id) && (() => {
+        const [d2, h2] = rangoVisita(v); return d2 && d && d2 <= h && h2 >= d;
+      })());
+    }
+    function comentarioCompartidoVisita(vis) {
+      const propio = String(vis.apuntes || vis.comentario || '').trim();
+      if (propio) return propio;
+      const otra = visitasRelacionadas(vis).find(v => String(v.apuntes || v.comentario || '').trim());
+      return otra ? String(otra.apuntes || otra.comentario).trim() : '';
+    }
+
     function abrirModalApuntesVisita(visitaId) {
       const vis = listaVisitasCache.find(v => String(v.id || v.visita_id) === String(visitaId));
       if (!vis) return;
@@ -5796,15 +5839,18 @@
       document.getElementById('modal-visita-cliente-nombre').textContent = nombreCliente;
       const audRaw = String(vis.auditor_asignado || vis.auditor_email || '').trim();
       const selAud = document.getElementById('modal-visita-auditor');
-      selAud.innerHTML = listaUsuariosCache.filter(u => emailDeUsuario(u)).map(u =>
-        `<option value="${escapeHtml(emailDeUsuario(u))}">${escapeHtml(u.nombre || u.nombre_completo || emailDeUsuario(u))}</option>`).join('');
+      selAud.innerHTML = usuariosOrdenadosPorCargo().filter(u => emailDeUsuario(u)).map(u =>
+        `<option value="${escapeHtml(emailDeUsuario(u))}">${escapeHtml((u.nombre || u.nombre_completo || emailDeUsuario(u)) + (u.cargo ? ' – ' + u.cargo : ''))}</option>`).join('');
       if (audRaw && ![...selAud.options].some(o => o.value === audRaw.toLowerCase())) {
         selAud.insertAdjacentHTML('afterbegin', `<option value="${escapeHtml(audRaw.toLowerCase())}">${escapeHtml(audRaw)}</option>`);
       }
       selAud.value = audRaw.toLowerCase();
       document.getElementById('modal-visita-desde').value = String(vis.fecha_desde || vis.fecha || '').slice(0, 10);
       document.getElementById('modal-visita-hasta').value = String(vis.fecha_hasta || vis.fecha_desde || vis.fecha || '').slice(0, 10);
-      document.getElementById('modal-visita-apuntes').value = vis.apuntes || vis.comentario || '';
+      document.getElementById('modal-visita-apuntes').value = comentarioCompartidoVisita(vis);
+      const gestor = puedeGestionarVisitas();
+      ['modal-visita-auditor', 'modal-visita-desde', 'modal-visita-hasta'].forEach(id => { document.getElementById(id).disabled = !gestor; });
+      document.querySelectorAll('#modal-apuntes-visita button[onclick^="eliminarVisitaActual"], #modal-visita-avisar').forEach(b => b.classList.toggle('hidden', !gestor));
 
       abrirModal('modal-apuntes-visita');
     }
@@ -5851,7 +5897,7 @@
       const visitaId = document.getElementById('modal-visita-id').value;
       const apuntes = document.getElementById('modal-visita-apuntes').value;
       const cambios = { apuntes };
-      if (c && c.cambio) {
+      if (c && c.cambio && puedeGestionarVisitas()) {
         if (!c.nuevo.auditor_asignado || !c.nuevo.fecha_desde || !c.nuevo.fecha_hasta) { alert('Completa el auditor y las fechas de la visita.'); return; }
         if (c.nuevo.fecha_hasta < c.nuevo.fecha_desde) { alert("La fecha 'Hasta' no puede ser anterior a la fecha 'Desde'."); return; }
         Object.assign(cambios, c.nuevo);
@@ -5862,9 +5908,21 @@
         .update(cambios)
         .eq('id', visitaId);
 
+      // El comentario se replica en las demás visitas del mismo cliente con fechas coincidentes
+      let errorReplica = null;
+      if (!error) {
+        const visActual = listaVisitasCache.find(v => String(v.id || v.visita_id) === String(visitaId));
+        const otros = visActual ? visitasRelacionadas(visActual).map(v => v.id || v.visita_id).filter(id => String(id) !== String(visitaId)) : [];
+        if (otros.length) {
+          const r2 = await supabaseClient.from('visitas').update({ apuntes }).in('id', otros);
+          errorReplica = r2.error;
+        }
+      }
+
       if (error) {
         alert("Error al guardar los cambios: " + error.message);
       } else {
+        if (errorReplica) alert('El comentario se guardó en esta visita, pero no se pudo copiar a las demás: ' + errorReplica.message);
         const huboCambio = !!(c && c.cambio);
         cerrarModal('modal-apuntes-visita');
         await cargarVisitas();
