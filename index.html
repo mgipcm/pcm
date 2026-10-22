@@ -1462,7 +1462,7 @@
             <label for="contr-archivo" ondragover="event.preventDefault()" ondrop="event.preventDefault(); agregarArchivosContrato(event.dataTransfer.files)"
                    class="block border-2 border-dashed border-slate-300 hover:border-indigo-400 hover:bg-slate-50 rounded-xl p-5 text-center cursor-pointer transition">
               <p class="text-xs font-bold text-slate-700 mt-1">Haz clic o arrastra los archivos aquí</p>
-              <p class="text-[11px] text-slate-500 mt-0.5">PDF, Word (.docx), Excel, TXT o imágenes · hasta 6 archivos y 10 MB en total</p>
+              <p class="text-[11px] text-slate-500 mt-0.5">PDF, Word (.docx), Excel, TXT o imágenes · hasta 6 archivos y 22 MB en total</p>
             </label>
             <input type="file" id="contr-archivo" multiple class="hidden"
                    accept=".pdf,.docx,.xlsx,.xls,.csv,.txt,.md,.png,.jpg,.jpeg,.gif,.webp"
@@ -4616,7 +4616,8 @@
 
     // ===== RESUMEN DE CONTRATOS (Claude, a través de una función de Supabase) =====
     const FUNCION_RESUMEN_CONTRATOS = 'bright-function';
-    const MAX_BYTES_CONTRATOS = 10 * 1024 * 1024; // 10 MB en total
+    const MAX_BYTES_CONTRATOS = 10 * 1024 * 1024; // 10 MB en total (otras herramientas)
+    const MAX_BYTES_RESUMEN_CONTRATOS = 22 * 1024 * 1024; // 22 MB en total (resumen de contratos)
     const MAX_ARCHIVOS_CONTRATO = 6;
     let archivosContrato = [];
     let ultimoResumenContrato = '';
@@ -4911,8 +4912,8 @@
         alert('Hay archivos con formato no compatible (' + noCompatibles.map(f => f.name).join(', ') + '). Quítalos o conviértelos a PDF o Word (.docx).');
         return;
       }
-      if (archivosContrato.reduce((s, f) => s + f.size, 0) > MAX_BYTES_CONTRATOS) {
-        alert('Los archivos superan los 10 MB en total. Súbelos por partes.');
+      if (archivosContrato.reduce((s, f) => s + f.size, 0) > MAX_BYTES_RESUMEN_CONTRATOS) {
+        alert('Los archivos superan los 22 MB en total. Súbelos por partes.');
         return;
       }
 
@@ -5057,7 +5058,7 @@
       if (archivosContrato.length > MAX_ARCHIVOS_CONTRATO) { alert(`Máximo ${MAX_ARCHIVOS_CONTRATO} archivos.`); return; }
       const noCompatibles = archivosContrato.filter(f => tipoArchivoContrato(f) === null);
       if (noCompatibles.length > 0) { alert('Hay archivos con formato no compatible (' + noCompatibles.map(f => f.name).join(', ') + ').'); return; }
-      if (archivosContrato.reduce((s, f) => s + f.size, 0) > MAX_BYTES_CONTRATOS) { alert('Los archivos superan los 10 MB en total. Súbelos por partes.'); return; }
+      if (archivosContrato.reduce((s, f) => s + f.size, 0) > MAX_BYTES_RESUMEN_CONTRATOS) { alert('Los archivos superan los 22 MB en total. Súbelos por partes.'); return; }
       const clienteId = document.getElementById('contr-cliente').value;
       const cli = clienteId ? buscarCliente(clienteId) : null;
       const nombreCliente = cli ? `${cli.nombre_corto || ''} ${cli.nombre_completo ? '(' + cli.nombre_completo + ')' : ''}`.trim() : '';
