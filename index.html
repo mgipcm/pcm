@@ -11441,16 +11441,17 @@
     function aplicarEstadoMenu() {
       HERRAMIENTAS_MENU.forEach(h => {
         const btn = document.getElementById(h.btn); if (!btn) return;
-        const viejo = btn.querySelector('.etiqueta-desarrollo'); if (viejo) viejo.remove();
-        btn.classList.remove('opacity-60');
+        // la etiqueta es una línea aparte debajo del botón: no toca el diseño del botón
+        const vecino = btn.nextElementSibling;
+        if (vecino && vecino.classList.contains('etiqueta-desarrollo')) vecino.remove();
+        btn.style.opacity = '';
         if (estadoHerramientas[h.clave] === false) {
-          const et = document.createElement('span');
+          const et = document.createElement('div');
           et.className = 'etiqueta-desarrollo';
-          et.style.cssText = 'display:block;width:fit-content;margin-top:1px;font-size:9px;line-height:12px;font-weight:500;color:#94a3b8;background:transparent;border:1px solid #cbd5e1;border-radius:4px;padding:0 5px;white-space:nowrap';
           et.textContent = 'En desarrollo';
-          const cont = btn.querySelector('span') || btn;
-          cont.appendChild(et);
-          if (!esSocioSesion()) btn.classList.add('opacity-60');
+          et.style.cssText = 'font-size:9px;line-height:11px;color:#94a3b8;padding:0 0 2px 14px;margin-top:-2px;text-align:left';
+          btn.insertAdjacentElement('afterend', et);
+          if (!esSocioSesion()) btn.style.opacity = '0.6';
         }
       });
       const sa = document.getElementById('sec-auditoria');
