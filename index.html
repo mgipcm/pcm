@@ -5486,23 +5486,19 @@
     }
 
     // Color pastel fijo por cliente: el mismo cliente siempre se ve del mismo color
+    // g = familia de color: clientes con fechas cruzadas evitan familias parecidas (azul/cian/turquesa, verde/lima, rojo/rosa, naranja/amarillo)
     const PASTELES_CLIENTE = [
-      { fondo: '#c7d2fe', borde: '#a5b4fc', texto: '#312e81' },
-      { fondo: '#a7f3d0', borde: '#6ee7b7', texto: '#064e3b' },
-      { fondo: '#fde68a', borde: '#fcd34d', texto: '#78350f' },
-      { fondo: '#fecdd3', borde: '#fda4af', texto: '#881337' },
-      { fondo: '#e9d5ff', borde: '#d8b4fe', texto: '#581c87' },
-      { fondo: '#bae6fd', borde: '#7dd3fc', texto: '#0c4a6e' },
-      { fondo: '#99f6e4', borde: '#5eead4', texto: '#134e4a' },
-      { fondo: '#f5d0fe', borde: '#f0abfc', texto: '#701a75' },
-      { fondo: '#fed7aa', borde: '#fdba74', texto: '#7c2d12' },
-      { fondo: '#d9f99d', borde: '#bef264', texto: '#365314' },
-      { fondo: '#fbcfe8', borde: '#f9a8d4', texto: '#831843' },
-      { fondo: '#cffafe', borde: '#67e8f9', texto: '#164e63' },
-      { fondo: '#e7e5e4', borde: '#d6d3d1', texto: '#44403c' },
-      { fondo: '#ddd6fe', borde: '#c4b5fd', texto: '#4c1d95' },
-      { fondo: '#fef08a', borde: '#fde047', texto: '#713f12' },
-      { fondo: '#bbf7d0', borde: '#86efac', texto: '#14532d' }
+      { g: 'azul', fondo: '#bfdbfe', borde: '#93c5fd', texto: '#1e3a8a' },
+      { g: 'rojo', fondo: '#fecaca', borde: '#fca5a5', texto: '#7f1d1d' },
+      { g: 'verde', fondo: '#bbf7d0', borde: '#86efac', texto: '#14532d' },
+      { g: 'calido', fondo: '#fed7aa', borde: '#fdba74', texto: '#7c2d12' },
+      { g: 'morado', fondo: '#e9d5ff', borde: '#d8b4fe', texto: '#581c87' },
+      { g: 'calido', fondo: '#fef08a', borde: '#fde047', texto: '#713f12' },
+      { g: 'azul', fondo: '#99f6e4', borde: '#5eead4', texto: '#134e4a' },
+      { g: 'rojo', fondo: '#fbcfe8', borde: '#f9a8d4', texto: '#831843' },
+      { g: 'verde', fondo: '#d9f99d', borde: '#bef264', texto: '#365314' },
+      { g: 'azul', fondo: '#a5f3fc', borde: '#67e8f9', texto: '#164e63' },
+      { g: 'gris', fondo: '#e2e8f0', borde: '#cbd5e1', texto: '#334155' }
     ];
     // Color de cada cliente: siempre el mismo (según su código) para todos los auditores.
     // Solo si dos clientes con fechas que se cruzan en el mes caerían en el mismo color, uno toma el siguiente libre.
@@ -5530,10 +5526,16 @@
       orden.forEach(cid => {
         const base = colorBaseIndice(cid);
         let elegido = base;
-        for (let n = 0; n < PASTELES_CLIENTE.length; n++) {
-          const cand = (base + n) % PASTELES_CLIENTE.length;
-          const choca = asignados.some(o => o.color === cand && cruza(o.rangos, porCliente.get(cid)));
-          if (!choca) { elegido = cand; break; }
+        // 1.º intento: ninguna familia parecida entre clientes con fechas cruzadas; 2.º: al menos un color distinto
+        let hallado = false;
+        for (const estricto of [true, false]) {
+          for (let n = 0; n < PASTELES_CLIENTE.length && !hallado; n++) {
+            const cand = (base + n) % PASTELES_CLIENTE.length;
+            const choca = asignados.some(o => cruza(o.rangos, porCliente.get(cid)) &&
+              (estricto ? PASTELES_CLIENTE[o.color].g === PASTELES_CLIENTE[cand].g : o.color === cand));
+            if (!choca) { elegido = cand; hallado = true; }
+          }
+          if (hallado) break;
         }
         mapa[cid] = elegido; asignados.push({ color: elegido, rangos: porCliente.get(cid) });
       });
