@@ -11375,10 +11375,24 @@
       reuAvance(`Analizando: 0 de ${partes.length} partes · 0 %`, 0);
       await Promise.all(partes.map(async p => {
         try {
-          const { data, error } = await supabaseClient.functions.invoke(FUNCION_REUNIONES, { body: { cliente, participantes, enfoque, transcripcion, parte: p.id } });
-          if (error) throw error;
-          if (!data || data.error) throw new Error((data && data.error) || 'La función no devolvió resultado.');
-          p.texto = data.resumen || ''; p.truncado = !!data.truncado;
+          // Si Claude se corta, se le pide que continúe donde quedó (hasta 3 veces) y se reintenta una vez si hay un fallo de conexión
+          let acumulado = '', ronda = 0, corto = false;
+          do {
+            let intento = 0, data = null;
+            while (true) {
+              try {
+                const parcial = acumulado ? acumulado.slice(0, acumulado.lastIndexOf('\n') + 1) : '';
+                if (acumulado) acumulado = parcial;
+                const r = await supabaseClient.functions.invoke(FUNCION_REUNIONES, { body: { cliente, participantes, enfoque, transcripcion, parte: p.id, parcial } });
+                if (r.error) throw r.error;
+                if (!r.data || r.data.error) throw new Error((r.data && r.data.error) || 'La función no devolvió resultado.');
+                data = r.data; break;
+              } catch (e) { if (++intento >= 2) throw e; await new Promise(res => setTimeout(res, 2000)); }
+            }
+            acumulado += (acumulado && !acumulado.endsWith('\n') ? '\n' : '') + (data.resumen || '');
+            corto = !!data.truncado; ronda++;
+          } while (corto && ronda < 4);
+          p.texto = acumulado; p.truncado = corto;
         } catch (err) {
           p.error = await mensajeErrorContratos(err, FUNCION_REUNIONES);
         }
