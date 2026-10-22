@@ -266,6 +266,9 @@
             <button onclick="navegarMenu('cuentas')" id="nav-cuentas" class="w-full text-left px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:bg-slate-800 hover:text-white transition flex items-center gap-2">
               <span>c) Cuentas / Actividades</span>
             </button>
+            <button onclick="navegarMenu('habilitar')" id="nav-habilitar" class="w-full text-left px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:bg-slate-800 hover:text-white transition flex items-center gap-2">
+              <span>d) Habilitar herramientas</span>
+            </button>
           </div>
         </div>
       </nav>
@@ -1666,6 +1669,24 @@
       </div>
     </section>
 
+    <section id="sec-desarrollo" class="hidden bg-white rounded-2xl shadow-xl border border-slate-200 p-10 min-h-[60vh] flex items-center justify-center">
+      <div class="text-center max-w-md space-y-2">
+        <p class="text-lg font-bold text-slate-800">Herramienta en desarrollo</p>
+        <p class="text-xs text-slate-500">Esta pantalla todavía no está habilitada. Se activará cuando esté probada. Mientras tanto puedes usar las demás opciones del menú.</p>
+      </div>
+    </section>
+
+    <section id="sec-habilitar" class="hidden bg-white rounded-2xl shadow-xl border border-slate-200 p-6 min-h-[92vh] space-y-6">
+      <div class="flex justify-between items-center border-b pb-4">
+        <div>
+          <h1 class="text-xl font-bold text-slate-800">6d. Configuración: Habilitar herramientas</h1>
+          <p class="text-xs text-slate-500">Solo el Socio decide qué herramientas del menú ve el resto del equipo. Las que no estén habilitadas muestran «En desarrollo» a los auditores; tú las sigues viendo y usando para probarlas.</p>
+        </div>
+      </div>
+      <div id="hab-aviso" class="text-xs"></div>
+      <div id="hab-lista" class="space-y-2 max-w-2xl"></div>
+    </section>
+
     <section id="sec-mas-herramientas" class="hidden bg-white rounded-2xl shadow-xl border border-slate-200 p-6 min-h-[92vh] space-y-6">
       <div class="flex justify-between items-center border-b pb-4">
         <div>
@@ -2227,6 +2248,7 @@
       if (u) usuarioSesionEmail = email;
       pintarIdentidadAnalisis();
       pintarPanelUsuario();
+      cargarEstadoHerramientas();
       return u;
     }
 
@@ -2441,15 +2463,20 @@
 
     function navegarMenu(seccion, sub, cuenta) {
       // Clientes y Usuarios solo se abren con ingreso de Socio o Supervisor
-      if ((seccion === 'clientes' || seccion === 'usuarios' || seccion === 'cuentas') && !puedeConfigurar()) {
+      if ((seccion === 'clientes' || seccion === 'usuarios' || seccion === 'cuentas' || seccion === 'habilitar') && !puedeConfigurar()) {
         abrirLoginConfig(seccion);
         return;
       }
 
-      const secciones = ['clientes', 'usuarios', 'cuentas', 'sumarias', 'pendientes', 'flujo', 'auditoria', 'analisis', 'visitas', 'asignacion', 'indices', 'mayor', 'contratos', 'arrend', 'pce', 'reuniones', 'mas-herramientas'];
+      if (!herramientaHabilitada(seccion)) {
+        if (seccion === 'auditoria') seccion = 'desarrollo'; // pantalla principal: se muestra un aviso en vez de un mensaje emergente
+        else { avisarEnDesarrollo(); return; }
+      }
+
+      const secciones = ['desarrollo', 'clientes', 'usuarios', 'cuentas', 'habilitar', 'sumarias', 'pendientes', 'flujo', 'auditoria', 'analisis', 'visitas', 'asignacion', 'indices', 'mayor', 'contratos', 'arrend', 'pce', 'reuniones', 'mas-herramientas'];
       const grupoSubmenu = sec => ['indices', 'mayor', 'contratos', 'flujo', 'arrend', 'pce', 'reuniones', 'mas-herramientas'].includes(sec)
         ? 'herramientas'
-        : (['clientes', 'usuarios', 'cuentas'].includes(sec) ? 'config' : (['sumarias', 'pendientes'].includes(sec) ? 'analisis' : null));
+        : (['clientes', 'usuarios', 'cuentas', 'habilitar'].includes(sec) ? 'config' : (['sumarias', 'pendientes'].includes(sec) ? 'analisis' : null));
       const esSubmenu = sec => grupoSubmenu(sec) !== null;
       
       secciones.forEach(sec => {
@@ -2469,6 +2496,7 @@
       const activeSec = document.getElementById(`sec-${seccion}`);
       if (activeSec) activeSec.classList.remove('hidden');
       if (seccion === 'contratos') { poblarClientesContratos(); cargarResumenesGuardados(); }
+      if (seccion === 'habilitar') abrirHabilitar();
       if (seccion === 'reuniones') poblarClientesReunion();
       if (seccion === 'sumarias') abrirSumarias();
       if (seccion === 'pendientes') abrirPendientes();
@@ -2560,6 +2588,7 @@
     }
 
     function toggleSubmenuAnalisis() {
+      if (!herramientaHabilitada('analisis')) { avisarEnDesarrollo(); return; }
       const submenu = document.getElementById('submenu-analisis');
       const icon = document.getElementById('icon-analisis');
       if (submenu.classList.contains('hidden')) {
@@ -11371,6 +11400,91 @@
       a.download = 'Analisis-reunion-' + new Date().toISOString().slice(0, 10) + '.doc';
       document.body.appendChild(a); a.click(); document.body.removeChild(a);
       setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+    }
+
+
+    // ================= HABILITAR HERRAMIENTAS (solo Socio) =================
+    const HERRAMIENTAS_MENU = [
+      { clave: 'auditoria', nombre: '1. Auditoría/Planificación', btn: 'nav-auditoria' },
+      { clave: 'analisis', nombre: '2. Auditoría/Análisis Claves', btn: 'nav-analisis' },
+      { clave: 'visitas', nombre: '3. Visitas (Calendario)', btn: 'nav-visitas' },
+      { clave: 'asignacion', nombre: '4. Asignación de Cuentas', btn: 'nav-asignacion' },
+      { clave: 'indices', nombre: '5a) Índices financieros', btn: 'nav-indices' },
+      { clave: 'mayor', nombre: '5b) Análisis de mayor contable', btn: 'nav-mayor' },
+      { clave: 'contratos', nombre: '5c) Resumen de contratos', btn: 'nav-contratos' },
+      { clave: 'flujo', nombre: '5d) Flujo de efectivo', btn: 'nav-flujo' },
+      { clave: 'arrend', nombre: '5e) Arrendamientos NIIF 16', btn: 'nav-arrend' },
+      { clave: 'pce', nombre: '5f) Matriz de transición - PCE', btn: 'nav-pce' },
+      { clave: 'reuniones', nombre: '5g) Resumen de reuniones', btn: 'nav-reuniones' }
+    ];
+    let estadoHerramientas = {}; // clave -> true/false (si no existe, está habilitada)
+
+    function esSocioSesion() {
+      const c = usuarioActivo ? String(usuarioActivo.cargo || '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, '').toLowerCase() : '';
+      return c === 'socio';
+    }
+    function herramientaHabilitada(clave) {
+      if (!HERRAMIENTAS_MENU.some(h => h.clave === clave)) return true;
+      return estadoHerramientas[clave] !== false || esSocioSesion();
+    }
+    function avisarEnDesarrollo() {
+      alert('Esta herramienta está en desarrollo y todavía no está habilitada. Se activará cuando esté probada.');
+    }
+    async function cargarEstadoHerramientas() {
+      try {
+        const { data, error } = await supabaseClient.from('config_herramientas').select('clave, habilitada');
+        if (!error && data) { estadoHerramientas = {}; data.forEach(r => { estadoHerramientas[r.clave] = r.habilitada !== false; }); }
+      } catch (e) { /* sin tabla todavía: todo queda habilitado */ }
+      aplicarEstadoMenu();
+    }
+    // Marca en el menú las herramientas "En desarrollo"
+    function aplicarEstadoMenu() {
+      HERRAMIENTAS_MENU.forEach(h => {
+        const btn = document.getElementById(h.btn); if (!btn) return;
+        const viejo = btn.querySelector('.etiqueta-desarrollo'); if (viejo) viejo.remove();
+        btn.classList.remove('opacity-60');
+        if (estadoHerramientas[h.clave] === false) {
+          const et = document.createElement('span');
+          et.className = 'etiqueta-desarrollo ml-1.5 px-1.5 py-0.5 rounded bg-amber-400/20 text-amber-300 text-[9px] font-bold whitespace-nowrap';
+          et.textContent = 'En desarrollo';
+          const cont = btn.querySelector('span') || btn;
+          cont.appendChild(et);
+          if (!esSocioSesion()) btn.classList.add('opacity-60');
+        }
+      });
+      const sa = document.getElementById('sec-auditoria');
+      if (sa && !sa.classList.contains('hidden') && !herramientaHabilitada('auditoria')) navegarMenu('auditoria');
+    }
+    async function abrirHabilitar() {
+      const aviso = document.getElementById('hab-aviso'), lista = document.getElementById('hab-lista');
+      if (!esSocioSesion()) {
+        aviso.innerHTML = '<p class="p-3 bg-amber-50 border border-amber-300 rounded-lg text-amber-800 font-bold">Solo el Socio puede habilitar o deshabilitar herramientas.</p>';
+        lista.innerHTML = ''; return;
+      }
+      aviso.innerHTML = '';
+      await cargarEstadoHerramientas();
+      lista.innerHTML = HERRAMIENTAS_MENU.map(h => {
+        const on = estadoHerramientas[h.clave] !== false;
+        return `<label class="flex items-center justify-between gap-3 px-3 py-2 border rounded-lg cursor-pointer select-none ${on ? 'border-emerald-400 bg-emerald-50' : 'border-slate-300 bg-white'}">
+          <span class="text-xs font-bold text-slate-700">${escapeHtml(h.nombre)}</span>
+          <span class="flex items-center gap-2"><span class="text-[11px] font-bold ${on ? 'text-emerald-800' : 'text-slate-500'}">${on ? 'Habilitada para auditores' : 'En desarrollo'}</span>
+          <input type="checkbox" class="sr-only" ${on ? 'checked' : ''} onchange="cambiarHabilitacion('${h.clave}', this.checked)">
+          <span class="w-9 h-5 rounded-full relative transition ${on ? 'bg-emerald-500' : 'bg-slate-300'}"><span class="absolute top-0.5 ${on ? 'left-4' : 'left-0.5'} w-4 h-4 bg-white rounded-full shadow"></span></span></span>
+        </label>`;
+      }).join('');
+    }
+    async function cambiarHabilitacion(clave, habilitada) {
+      const aviso = document.getElementById('hab-aviso');
+      const { error } = await supabaseClient.from('config_herramientas').upsert({ clave, habilitada, actualizado_por: usuarioSesionEmail || '', updated_at: new Date().toISOString() });
+      if (error) {
+        const m = String(error.message || '');
+        aviso.innerHTML = `<p class="p-3 bg-red-50 border border-red-300 rounded-lg text-red-700 font-bold">No se pudo guardar: ${escapeHtml(/relation|does not exist|schema cache/i.test(m) ? 'falta ejecutar el archivo Supabase_15_config_herramientas.sql en Supabase.' : m)}</p>`;
+        abrirHabilitar(); return;
+      }
+      aviso.innerHTML = '';
+      estadoHerramientas[clave] = habilitada;
+      aplicarEstadoMenu();
+      abrirHabilitar();
     }
 
     // ----- Cambiar mi clave -----
