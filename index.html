@@ -11432,7 +11432,6 @@
       const b = document.getElementById('reu-progreso-barra');
       b.style.width = (pct == null ? 100 : pct) + '%';
       b.classList.toggle('animate-pulse', pct == null);
-      reuAvance(texto.replace(/\.\.\.$/, ''), pct);
     }
     function reuAvance(texto, pct) {
       const c = document.getElementById('reu-avance'); if (!c) return;
@@ -11443,7 +11442,7 @@
       b.style.width = (pct == null ? 100 : pct) + '%';
       b.classList.toggle('animate-pulse', pct == null);
     }
-    function reuProgresoOcultar() { document.getElementById('reu-progreso').classList.add('hidden'); reuAvance(null); }
+    function reuProgresoOcultar() { document.getElementById('reu-progreso').classList.add('hidden'); }
 
     // Sube el audio con porcentaje de avance
     function subirAudioConProgreso(ruta, f, token, alAvanzar) {
