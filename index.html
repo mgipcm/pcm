@@ -1618,7 +1618,21 @@
           </div>
 
           <div>
-            <h2 class="text-xs font-bold text-slate-600 mb-1">2. Transcripción o audio (mp3) de la reunión</h2>
+            <h2 class="text-xs font-bold text-slate-600 mb-1">2. Tipo de reunión</h2>
+            <select id="reu-tipo" class="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs sm:text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+              <option value="todo">Procesos (completo: los 6 temas)</option>
+              <option value="c1">Cuentas por cobrar – Ingresos – Cobros</option>
+              <option value="c2">Gastos – Cuentas por pagar – Pagos</option>
+              <option value="c3">Costo de ventas – Inventarios</option>
+              <option value="c4">Nómina</option>
+              <option value="c5">Propiedad, planta y equipo</option>
+              <option value="c6">Revisión analítica – Revisión de variaciones de estados financieros</option>
+            </select>
+            <p class="text-[11px] text-slate-400 mt-1">Si la reunión trató un solo tema, elígelo: el análisis se concentra solo en ese tema.</p>
+          </div>
+
+          <div>
+            <h2 class="text-xs font-bold text-slate-600 mb-1">3. Transcripción o audio (mp3) de la reunión</h2>
             <label for="reu-archivo" ondragover="event.preventDefault()" ondrop="event.preventDefault(); procesarArchivoReunion(event.dataTransfer.files[0])" class="block border-2 border-dashed border-slate-300 hover:border-indigo-400 hover:bg-slate-50 rounded-xl p-4 text-center cursor-pointer transition">
               <p class="text-xs font-bold text-slate-700">Haz clic o arrastra aquí la transcripción o el audio</p>
               <p class="text-[11px] text-slate-500 mt-1"><b>Transcripción:</b> Word (.docx), .txt o .vtt · hasta 10 MB (unas 600.000 letras, de sobra para una reunión de varias horas)</p>
@@ -1639,17 +1653,20 @@
           </div>
 
           <div>
-            <h2 class="text-xs font-bold text-slate-600 mb-1">3. Participantes y cargos (opcional)</h2>
+            <h2 class="text-xs font-bold text-slate-600 mb-1">4. Participantes y cargos (opcional)</h2>
             <textarea id="reu-participantes" rows="2" placeholder="Ej. Diana Pérez – Contadora; Juan Mora – Gerente financiero" class="w-full p-2.5 border border-slate-300 rounded-lg text-xs outline-none focus:ring-2 focus:ring-indigo-500 bg-white leading-relaxed text-slate-800 resize-none"></textarea>
           </div>
 
           <div>
-            <h2 class="text-xs font-bold text-slate-600 mb-1">4. Enfoque adicional (opcional)</h2>
+            <h2 class="text-xs font-bold text-slate-600 mb-1">5. Enfoque adicional (opcional)</h2>
             <textarea id="reu-enfoque" rows="2" placeholder="Ej. Dar más atención a inventarios y a partes relacionadas..." class="w-full p-2.5 border border-slate-300 rounded-lg text-xs outline-none focus:ring-2 focus:ring-indigo-500 bg-white leading-relaxed text-slate-800 resize-none"></textarea>
           </div>
 
           <button id="reu-btn-generar" onclick="generarResumenReunion()" class="w-full py-2.5 bg-indigo-600 text-white rounded-lg text-xs font-bold hover:bg-indigo-700 transition shadow disabled:opacity-50">
             Generar análisis de la reunión con Claude
+          </button>
+          <button id="reu-btn-reiniciar" onclick="reiniciarReunion()" class="w-full py-2 bg-white text-slate-600 border border-slate-300 rounded-lg text-xs font-bold hover:bg-slate-50 transition">
+            Reiniciar todo (dejar la pantalla en blanco)
           </button>
           <p id="reu-estado" class="text-xs text-slate-500 min-h-[1rem]"></p>
           <p class="text-[11px] text-slate-400 leading-relaxed">El texto se envía a Claude (Anthropic) solo para generar el análisis y no se guarda en la aplicación. Confirma que la política de confidencialidad con tu cliente permite este uso. Descarga o copia el resultado antes de salir de esta pantalla.</p>
@@ -11285,7 +11302,7 @@
         } else if ((m = t.match(/^[-*•]\s+(.*)$/))) {
           html += '<ul class="list-disc pl-5 space-y-1 mb-2"><li>' + inline(m[1]) + '</li></ul>';
         } else if ((m = t.match(/^\d+[.)]\s+(.*)$/))) {
-          html += '<ol class="list-decimal pl-5 space-y-1 mb-2"><li>' + inline(m[1]) + '</li></ol>';
+          html += '<ul class="list-disc pl-5 space-y-1 mb-2"><li>' + inline(m[1]) + '</li></ul>';
         } else if (/^-{3,}$/.test(t)) {
           html += '<hr class="my-3 border-slate-200">';
         } else { html += `<p class="mb-2">${inline(t)}</p>`; }
@@ -11327,14 +11344,14 @@
               const r = x.match(/^(.*?)\s*[—–-]\s*Responsable:\s*(.*)$/i);
               const cuerpo = r ? r[1] : x; const resp = r ? r[2] : 'por definir';
               const mm = cuerpo.match(/\[([^\]]+)\]/);
-              pendientes.push({ txt: cuerpo.replace(/\s*\[[^\]]+\]\s*/g, ' ').trim(), ciclo: idx + 1, resp, min: mm ? mm[1] : '—' });
+              pendientes.push({ txt: cuerpo.replace(/\s*\[[^\]]+\]\s*/g, ' ').trim(), ciclo: parseInt(p.id.slice(1), 10), resp, min: mm ? mm[1] : '—' });
             }
           }
         });
         const rm = p.texto.match(/Riesgo preliminar:\s*(Alto|Medio|Bajo)/i);
-        filas.push(`| ${idx + 1}. ${celda(p.nombre)} | ${ident} | ${conf} | ${aus} | ${def} | ${niif} | ${pend} | ${rm ? rm[1] : '—'} |`);
+        filas.push(`| ${parseInt(p.id.slice(1), 10)}. ${celda(p.nombre)} | ${ident} | ${conf} | ${aus} | ${def} | ${niif} | ${pend} | ${rm ? rm[1] : '—'} |`);
       });
-      const mapa = filas.length
+      const mapa = filas.length > 1
         ? '## Mapa de calor por ciclo\n| Ciclo | Controles identificados | Por confirmar | Ausentes / débiles | Posibles deficiencias | Temas NIIF | Pendientes | Riesgo preliminar |\n|---|---|---|---|---|---|---|---|\n' + filas.join('\n') + '\n\nEl riesgo preliminar es una propuesta según lo oído en la reunión; ajústalo con tu juicio y la materialidad.'
         : '';
       const tablaPend = pendientes.length
@@ -11343,6 +11360,22 @@
         : '';
       return [cliente ? `Cliente: ${cliente}` : '', general && general.texto ? general.texto : '', leer, mapa,
               ...ciclos.filter(p => p.texto).map(p => p.texto), tablaPend].filter(Boolean).join('\n\n');
+    }
+
+    function reiniciarReunion() {
+      const hayAlgo = document.getElementById('reu-texto').value.trim() || ultimoResumenReunion;
+      if (hayAlgo && !confirm('Se borrará la transcripción, los datos escritos y el análisis de esta pantalla. ¿Reiniciar todo?')) return;
+      ['reu-texto', 'reu-participantes', 'reu-enfoque'].forEach(id => { const e = document.getElementById(id); if (e) e.value = ''; });
+      document.getElementById('reu-cliente').value = '';
+      document.getElementById('reu-tipo').value = 'todo';
+      document.getElementById('reu-archivo').value = '';
+      document.getElementById('reu-resultado').innerHTML = '<p class="text-slate-400">El análisis aparecerá aquí.</p>';
+      document.getElementById('reu-estado').textContent = '';
+      document.getElementById('reu-btn-copiar').classList.add('hidden');
+      document.getElementById('reu-btn-word').classList.add('hidden');
+      document.getElementById('reu-btn-generar').disabled = false;
+      ultimoResumenReunion = '';
+      contarTextoReunion(); reuProgresoOcultar(); reuAvance(null);
     }
 
     async function generarResumenReunion() {
@@ -11362,7 +11395,8 @@
       document.getElementById('reu-btn-copiar').classList.add('hidden');
       document.getElementById('reu-btn-word').classList.add('hidden');
       ultimoResumenReunion = '';
-      const partes = PARTES_REUNION.map(p => ({ ...p, texto: null, error: null, truncado: false }));
+      const alcance = (document.getElementById('reu-tipo') || {}).value || 'todo';
+      const partes = PARTES_REUNION.filter(p => alcance === 'todo' || p.id === 'general' || p.id === alcance).map(p => ({ ...p, texto: null, error: null, truncado: false }));
       let listas = 0;
       const pintar = () => {
         resultado.innerHTML = (cliente ? `<p class="mb-2 text-[11px] text-slate-500">Cliente: <span class="font-bold text-slate-700">${escapeHtml(cliente)}</span></p>` : '') +
@@ -11384,7 +11418,7 @@
               try {
                 const parcial = acumulado ? acumulado.slice(0, acumulado.lastIndexOf('\n') + 1) : '';
                 if (acumulado) acumulado = parcial;
-                const r = await supabaseClient.functions.invoke(FUNCION_REUNIONES, { body: { cliente, participantes, enfoque, transcripcion, parte: p.id, parcial } });
+                const r = await supabaseClient.functions.invoke(FUNCION_REUNIONES, { body: { cliente, participantes, enfoque, transcripcion, parte: p.id, parcial, alcance: alcance === 'todo' ? '' : alcance } });
                 if (r.error) throw r.error;
                 if (!r.data || r.data.error) throw new Error((r.data && r.data.error) || 'La función no devolvió resultado.');
                 data = r.data; break;
