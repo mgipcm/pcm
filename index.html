@@ -219,27 +219,27 @@
             <span id="icon-herramientas" class="inline-block text-[11px] leading-none transition-transform duration-200">▾</span>
           </button>
           
-          <div id="submenu-herramientas" class="hidden pl-7 space-y-1">
-            <button onclick="navegarMenu('indices')" id="nav-indices" class="w-full text-left px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:bg-slate-800 hover:text-white transition flex items-center gap-2">
-              <span>a) Índices financieros</span>
+          <div id="submenu-herramientas" class="hidden pl-2 space-y-0">
+            <button onclick="navegarMenu('indices')" id="nav-indices" class="w-full text-left px-2 py-1 rounded-lg text-xs font-medium text-slate-400 hover:bg-slate-800 hover:text-white transition flex items-center gap-2">
+              <span style="white-space:nowrap">a) Índices financieros</span>
             </button>
-            <button onclick="navegarMenu('mayor')" id="nav-mayor" class="w-full text-left px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:bg-slate-800 hover:text-white transition flex items-center gap-2">
-              <span>b) Análisis de mayor contable</span>
+            <button onclick="navegarMenu('mayor')" id="nav-mayor" class="w-full text-left px-2 py-1 rounded-lg text-xs font-medium text-slate-400 hover:bg-slate-800 hover:text-white transition flex items-center gap-2">
+              <span style="white-space:nowrap">b) Análisis de mayor contable</span>
             </button>
-            <button onclick="navegarMenu('contratos')" id="nav-contratos" class="w-full text-left px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:bg-slate-800 hover:text-white transition flex items-center gap-2">
-              <span>c) Resumen de contratos</span>
+            <button onclick="navegarMenu('contratos')" id="nav-contratos" class="w-full text-left px-2 py-1 rounded-lg text-xs font-medium text-slate-400 hover:bg-slate-800 hover:text-white transition flex items-center gap-2">
+              <span style="white-space:nowrap">c) Resumen de contratos</span>
             </button>
-            <button onclick="navegarMenu('flujo')" id="nav-flujo" class="w-full text-left px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:bg-slate-800 hover:text-white transition flex items-center gap-2">
-              <span>d) Flujo de efectivo</span>
+            <button onclick="navegarMenu('flujo')" id="nav-flujo" class="w-full text-left px-2 py-1 rounded-lg text-xs font-medium text-slate-400 hover:bg-slate-800 hover:text-white transition flex items-center gap-2">
+              <span style="white-space:nowrap">d) Flujo de efectivo</span>
             </button>
-            <button onclick="navegarMenu('arrend')" id="nav-arrend" class="w-full text-left px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:bg-slate-800 hover:text-white transition flex items-center gap-2">
-              <span>e) Arrendamientos NIIF 16</span>
+            <button onclick="navegarMenu('arrend')" id="nav-arrend" class="w-full text-left px-2 py-1 rounded-lg text-xs font-medium text-slate-400 hover:bg-slate-800 hover:text-white transition flex items-center gap-2">
+              <span style="white-space:nowrap">e) Arrendamientos NIIF 16</span>
             </button>
-            <button onclick="navegarMenu('pce')" id="nav-pce" class="w-full text-left px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:bg-slate-800 hover:text-white transition flex items-center gap-2">
-              <span>f) Matriz de transición - PCE</span>
+            <button onclick="navegarMenu('pce')" id="nav-pce" class="w-full text-left px-2 py-1 rounded-lg text-xs font-medium text-slate-400 hover:bg-slate-800 hover:text-white transition flex items-center gap-2">
+              <span style="white-space:nowrap">f) Matriz de transición - PCE</span>
             </button>
-            <button onclick="navegarMenu('reuniones')" id="nav-reuniones" class="w-full text-left px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:bg-slate-800 hover:text-white transition flex items-center gap-2">
-              <span>g) Resumen de reuniones</span>
+            <button onclick="navegarMenu('reuniones')" id="nav-reuniones" class="w-full text-left px-2 py-1 rounded-lg text-xs font-medium text-slate-400 hover:bg-slate-800 hover:text-white transition flex items-center gap-2">
+              <span style="white-space:nowrap">g) Resumen de reuniones</span>
             </button>
             <button onclick="navegarMenu('mas-herramientas')" id="nav-mas-herramientas" class="w-full text-left px-3 py-1.5 rounded-lg text-xs font-medium text-slate-500 hover:bg-slate-800 hover:text-slate-300 transition flex items-center gap-2 border-t border-slate-800/60 pt-2 mt-1 italic">
               <span>+ Espacio para incluir más</span>
@@ -11634,7 +11634,7 @@ ${cont.innerHTML}
           et.className = 'etiqueta-desarrollo';
           et.title = 'En desarrollo: aún no habilitada para el equipo';
           et.textContent = 'Off';
-          et.style.cssText = 'display:inline-block;margin-left:6px;padding:0 5px;font-size:9px;line-height:13px;font-weight:600;color:#94a3b8;border:1px solid #cbd5e1;border-radius:4px;vertical-align:middle;white-space:nowrap';
+          et.style.cssText = 'display:inline-block;margin-left:4px;padding:0 4px;font-size:8px;line-height:13px;font-weight:600;color:#94a3b8;border:1px solid #cbd5e1;border-radius:4px;vertical-align:middle;white-space:nowrap';
           (btn.querySelector('span') || btn).appendChild(et);
           if (!esSocioSesion()) btn.style.opacity = '0.6';
         }
