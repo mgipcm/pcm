@@ -1482,6 +1482,9 @@
           <button id="contr-btn-informe" onclick="generarInformeContrato()" class="w-full py-2.5 bg-white text-indigo-700 border border-indigo-500 rounded-lg text-xs font-bold hover:bg-indigo-50 transition disabled:opacity-60 disabled:cursor-not-allowed">
             Generar versión informe (tabla de la nota Contratos suscritos)
           </button>
+          <button id="contr-btn-reiniciar" onclick="reiniciarContratos()" class="w-full py-2 bg-white text-slate-600 border border-slate-300 rounded-lg text-xs font-bold hover:bg-slate-50 transition">
+            Reiniciar todo (dejar la pantalla en blanco)
+          </button>
           <p id="contr-estado" class="text-xs text-slate-500 min-h-[1rem]"></p>
           <p class="text-[11px] text-slate-400 leading-relaxed">Los archivos se envían a Claude (Anthropic) solo para generar el resumen. Confirma que la política de confidencialidad con tu cliente lo permite.</p>
         </div>
@@ -4993,6 +4996,22 @@
       } finally {
         boton.disabled = false;
       }
+    }
+
+    function reiniciarContratos() {
+      const hayAlgo = archivosContrato.length || ultimoResumenContrato || filasInformeContratos.length || document.getElementById('contr-instruccion').value.trim();
+      if (hayAlgo && !confirm('Se borrarán los archivos cargados, el resumen y la tabla de la versión informe de esta pantalla (los resúmenes ya guardados no se borran). ¿Reiniciar todo?')) return;
+      archivosContrato = []; ultimoResumenContrato = ''; filasInformeContratos = [];
+      document.getElementById('contr-cliente').value = '';
+      document.getElementById('contr-instruccion').value = '';
+      document.getElementById('contr-archivo').value = '';
+      document.getElementById('contr-resultado').innerHTML = '<p class="text-slate-400">El resumen aparecerá aquí.</p>';
+      document.getElementById('contr-estado').textContent = '';
+      document.getElementById('contr-btn-copiar').classList.add('hidden');
+      document.getElementById('contr-btn-generar').disabled = false;
+      document.getElementById('contr-btn-informe').disabled = false;
+      renderListaArchivosContrato(); renderInformeContratos();
+      if (typeof cargarResumenesGuardados === 'function') cargarResumenesGuardados();
     }
 
     // ===== Versión informe: tabla de la nota "Contratos suscritos" =====
