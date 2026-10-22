@@ -5498,7 +5498,12 @@
       { g: 'rojo', fondo: '#fbcfe8', borde: '#f9a8d4', texto: '#831843' },
       { g: 'verde', fondo: '#d9f99d', borde: '#bef264', texto: '#365314' },
       { g: 'azul', fondo: '#a5f3fc', borde: '#67e8f9', texto: '#164e63' },
-      { g: 'gris', fondo: '#e2e8f0', borde: '#cbd5e1', texto: '#334155' }
+      { g: 'gris', fondo: '#e2e8f0', borde: '#cbd5e1', texto: '#334155' },
+      { g: 'morado', fondo: '#c7d2fe', borde: '#a5b4fc', texto: '#312e81' },
+      { g: 'rojo', fondo: '#f5d0fe', borde: '#f0abfc', texto: '#701a75' },
+      { g: 'azul', fondo: '#bae6fd', borde: '#7dd3fc', texto: '#0c4a6e' },
+      { g: 'calido', fondo: '#fde68a', borde: '#fcd34d', texto: '#78350f' },
+      { g: 'gris', fondo: '#e7e5e4', borde: '#d6d3d1', texto: '#44403c' }
     ];
     // Color de cada cliente: siempre el mismo (según su código) para todos los auditores.
     // Solo si dos clientes con fechas que se cruzan en el mes caerían en el mismo color, uno toma el siguiente libre.
@@ -5526,14 +5531,20 @@
       orden.forEach(cid => {
         const base = colorBaseIndice(cid);
         let elegido = base;
-        // 1.º intento: ninguna familia parecida entre clientes con fechas cruzadas; 2.º: al menos un color distinto
+        // Prioridad: 1) color que no use ningún otro cliente del mes y familia distinta a los de fechas cruzadas;
+        // 2) color que no use ningún otro cliente del mes; 3) color distinto a los de fechas cruzadas
+        const rangos = porCliente.get(cid);
+        const n = PASTELES_CLIENTE.length;
+        const reglas = [
+          cand => !asignados.some(o => o.color === cand || (cruza(o.rangos, rangos) && PASTELES_CLIENTE[o.color].g === PASTELES_CLIENTE[cand].g)),
+          cand => !asignados.some(o => o.color === cand),
+          cand => !asignados.some(o => o.color === cand && cruza(o.rangos, rangos))
+        ];
         let hallado = false;
-        for (const estricto of [true, false]) {
-          for (let n = 0; n < PASTELES_CLIENTE.length && !hallado; n++) {
-            const cand = (base + n) % PASTELES_CLIENTE.length;
-            const choca = asignados.some(o => cruza(o.rangos, porCliente.get(cid)) &&
-              (estricto ? PASTELES_CLIENTE[o.color].g === PASTELES_CLIENTE[cand].g : o.color === cand));
-            if (!choca) { elegido = cand; hallado = true; }
+        for (const ok of reglas) {
+          for (let k = 0; k < n; k++) {
+            const cand = (base + k) % n;
+            if (ok(cand)) { elegido = cand; hallado = true; break; }
           }
           if (hallado) break;
         }
