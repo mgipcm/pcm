@@ -11258,7 +11258,9 @@
             tabla = true;
           } else {
             const est = (c[c.length - 1] || '').toLowerCase();
-            const color = est.includes('ausencia') ? 'text-red-700 font-bold' : (est.includes('no mencionado') ? 'text-amber-700' : 'text-emerald-700');
+            const color = /ausen|ausencia|^alto/.test(est) ? 'text-red-700 font-bold'
+              : (/por confirmar|no mencionado|por solicitar|^medio/.test(est) ? 'text-amber-700 font-semibold'
+              : (/^identificado|^bajo/.test(est) ? 'text-emerald-700' : ''));
             html += '<tr class="border-t border-slate-200 align-top">' + c.map((x, i) => `<td class="p-1.5 ${i === c.length - 1 ? color : ''}">${inline(x)}</td>`).join('') + '</tr>';
           }
           return;
@@ -11268,6 +11270,8 @@
           html += `<h3 class="text-sm font-bold text-[#3f4143] mt-5 mb-1 pb-1 border-b border-slate-300">${inline(m[2])}</h3>`;
         } else if ((m = t.match(/^#{3,4}\s+(.*)$/))) {
           html += `<h4 class="text-xs font-bold text-indigo-700 mt-3 mb-1">${inline(m[1])}</h4>`;
+        } else if ((m = t.match(/^[-*•]\s+\[ \]\s+(.*)$/))) {
+          html += '<p class="mb-1 pl-1">☐ ' + inline(m[1]) + '</p>';
         } else if ((m = t.match(/^[-*•]\s+(.*)$/))) {
           html += '<ul class="list-disc pl-5 space-y-1 mb-2"><li>' + inline(m[1]) + '</li></ul>';
         } else if ((m = t.match(/^\d+[.)]\s+(.*)$/))) {
@@ -11278,6 +11282,57 @@
       });
       cerrar();
       return html;
+    }
+
+
+    // Une las partes y agrega: cómo leer, mapa de calor por ciclo y pendientes consolidados
+    function armarAnalisisFinalReunion(partes, cliente) {
+      const celda = t => String(t || '').replace(/\|/g, '/').replace(/\n/g, ' ').trim();
+      const general = partes.find(p => p.id === 'general');
+      const ciclos = partes.filter(p => p.id !== 'general');
+      const leer = '## Cómo leer este documento\n' +
+        '- [mm:ss] es el minuto aproximado de la grabación donde se trató el tema. Úsalo para confirmar en el video.\n' +
+        '- Estado de cada control: **Identificado** (el cliente lo describió; falta probarlo), **Por confirmar** (no quedó claro o no se mencionó) y **Ausente / débil** (lo dicho sugiere una posible deficiencia).\n' +
+        '- La transcripción es automática: nombres propios, montos y siglas pueden tener errores de audio; confírmalos antes de usarlos en papeles de trabajo.\n' +
+        '- Las deficiencias son posibles: salen de lo que se dijo en la reunión y deben corroborarse con pruebas.';
+      const filas = []; const pendientes = [];
+      ciclos.forEach((p, idx) => {
+        if (!p.texto) return;
+        let seccion = '', ident = 0, conf = 0, aus = 0, def = 0, niif = 0, pend = 0;
+        p.texto.split('\n').forEach(l => {
+          const t = l.trim(); let m;
+          if ((m = t.match(/^#{2,4}\s+(.*)$/))) { seccion = m[1].toLowerCase(); return; }
+          if (/^\|.*\|$/.test(t) && seccion.includes('matriz')) {
+            if (/^\|[\s:|-]+\|$/.test(t)) return;
+            const c = t.replace(/^\||\|$/g, '').split('|').map(x => x.trim());
+            const est = (c[c.length - 1] || '').toLowerCase();
+            if (est === 'estado') return;
+            if (est.includes('ausen')) aus++; else if (est.includes('confirmar')) conf++; else if (est.includes('identificado')) ident++;
+          } else if (/^[-*•]\s+/.test(t)) {
+            if (seccion.includes('deficiencias')) def++;
+            else if (seccion.includes('niif')) niif++;
+            else if (seccion.includes('pendientes')) {
+              pend++;
+              const x = t.replace(/^[-*•]\s+(\[ \]\s*)?/, '');
+              const r = x.match(/^(.*?)\s*[—–-]\s*Responsable:\s*(.*)$/i);
+              const cuerpo = r ? r[1] : x; const resp = r ? r[2] : 'por definir';
+              const mm = cuerpo.match(/\[([^\]]+)\]/);
+              pendientes.push({ txt: cuerpo.replace(/\s*\[[^\]]+\]\s*/g, ' ').trim(), ciclo: idx + 1, resp, min: mm ? mm[1] : '—' });
+            }
+          }
+        });
+        const rm = p.texto.match(/Riesgo preliminar:\s*(Alto|Medio|Bajo)/i);
+        filas.push(`| ${idx + 1}. ${celda(p.nombre)} | ${ident} | ${conf} | ${aus} | ${def} | ${niif} | ${pend} | ${rm ? rm[1] : '—'} |`);
+      });
+      const mapa = filas.length
+        ? '## Mapa de calor por ciclo\n| Ciclo | Controles identificados | Por confirmar | Ausentes / débiles | Posibles deficiencias | Temas NIIF | Pendientes | Riesgo preliminar |\n|---|---|---|---|---|---|---|---|\n' + filas.join('\n') + '\n\nEl riesgo preliminar es una propuesta según lo oído en la reunión; ajústalo con tu juicio y la materialidad.'
+        : '';
+      const tablaPend = pendientes.length
+        ? `## Pendientes consolidados para el cliente\nHay ${pendientes.length} pedidos de información o aclaraciones. Cambia el estado a medida que avancen.\n| # | Pendiente | Ciclo | Quién en el cliente | Minuto | Estado |\n|---|---|---|---|---|---|\n` +
+          pendientes.map((x, i) => `| ${i + 1} | ${celda(x.txt)} | ${x.ciclo} | ${celda(x.resp)} | ${celda(x.min)} | Por solicitar |`).join('\n')
+        : '';
+      return [cliente ? `Cliente: ${cliente}` : '', general && general.texto ? general.texto : '', leer, mapa,
+              ...ciclos.filter(p => p.texto).map(p => p.texto), tablaPend].filter(Boolean).join('\n\n');
     }
 
     async function generarResumenReunion() {
@@ -11320,7 +11375,8 @@
         estado.textContent = `Claude está analizando la reunión (${listas} de ${partes.length} partes)...`;
         pintar();
       }));
-      ultimoResumenReunion = (cliente ? `Cliente: ${cliente}\n\n` : '') + partes.filter(p => p.texto).map(p => p.texto).join('\n\n');
+      ultimoResumenReunion = armarAnalisisFinalReunion(partes, cliente);
+      resultado.innerHTML = renderAnalisisReunion(ultimoResumenReunion) + partes.filter(p => p.error).map(p => `<p class="mt-3 text-red-600 font-bold">No se pudo generar: ${escapeHtml(p.nombre)}.</p><p class="text-[11px]">${escapeHtml(p.error)}</p>`).join('') + partes.filter(p => p.truncado).map(() => '<p class="text-[11px] text-red-600 font-bold">Una parte se cortó por su extensión; vuelve a generar.</p>').join('');
       const fallas = partes.filter(p => p.error).length;
       estado.textContent = fallas ? `Listo, pero ${fallas} parte(s) fallaron. Vuelve a generar para reintentar.` : 'Análisis listo. Cópialo o descárgalo antes de salir de esta pantalla.';
       if (ultimoResumenReunion) {
@@ -11387,17 +11443,61 @@
       catch (e) { const ta = document.createElement('textarea'); ta.value = ultimoResumenReunion; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); }
       btn.textContent = 'Copiado ✓'; setTimeout(() => { btn.textContent = 'Copiar'; }, 1800);
     }
-    // Descarga el análisis como documento que Word abre directamente
+    // Descarga el análisis como documento de Word con formato de informe
     function descargarResumenReunion() {
       if (!ultimoResumenReunion) return;
-      const cuerpo = renderAnalisisReunion(ultimoResumenReunion)
-        .replace(/class="[^"]*"/g, '')
-        .replace(/<table /g, '<table border="1" cellspacing="0" cellpadding="4" style="border-collapse:collapse;font-size:10pt" ');
-      const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word"><head><meta charset="utf-8"><title>Análisis de reunión</title><style>body{font-family:Calibri,Arial,sans-serif;font-size:11pt} h3{color:#005cab;border-bottom:1px solid #005cab} h4{color:#00929f}</style></head><body><h2><span style="color:#005cab">MGI</span> <span style="color:#00929f">Guerra</span> · Análisis de reunión</h2>${cuerpo}</body></html>`;
+      const cliente = (document.getElementById('reu-cliente').selectedOptions[0] || {}).textContent || '';
+      const nombreCli = cliente.startsWith('--') ? '' : cliente.replace(/\s*\(.*$/, '').trim();
+      const quien = (typeof nombreUsuarioActivo === 'function' && nombreUsuarioActivo()) || '';
+      const fecha = new Date().toLocaleDateString('es-EC', { day: '2-digit', month: 'short', year: 'numeric' });
+      const cuerpoMd = ultimoResumenReunion.replace(/^Cliente:[^\n]*\n+/, '');
+      const cont = document.createElement('div');
+      cont.innerHTML = renderAnalisisReunion(cuerpoMd);
+
+      const est = (el, css) => { el.setAttribute('style', css); };
+      cont.querySelectorAll('h3').forEach(h => {
+        const esCiclo = /^ciclo\s*\d?/i.test(h.textContent.trim()) || /^ciclo:/i.test(h.textContent.trim());
+        est(h, `font-size:15pt;font-weight:bold;color:#005cab;border-bottom:1.5pt solid #005cab;padding-bottom:2pt;margin:${esCiclo ? '0' : '18pt'} 0 8pt 0;${esCiclo ? 'page-break-before:always;' : ''}`);
+      });
+      cont.querySelectorAll('h4').forEach(h => est(h, 'font-size:11.5pt;font-weight:bold;color:#00929f;margin:12pt 0 4pt 0'));
+      cont.querySelectorAll('p').forEach(x => est(x, 'margin:0 0 6pt 0;line-height:1.25'));
+      cont.querySelectorAll('ul,ol').forEach(x => est(x, 'margin:0 0 6pt 18pt;padding:0'));
+      cont.querySelectorAll('li').forEach(x => est(x, 'margin:0 0 3pt 0;line-height:1.25'));
+      cont.querySelectorAll('strong').forEach(x => est(x, 'font-weight:bold;color:#1e293b'));
+      cont.querySelectorAll('span.font-mono').forEach(x => est(x, 'font-family:Consolas,monospace;font-size:8.5pt;color:#4338ca;background:#eef2ff'));
+      cont.querySelectorAll('table').forEach(t => {
+        t.setAttribute('border', '1'); t.setAttribute('cellspacing', '0'); t.setAttribute('cellpadding', '4'); t.setAttribute('width', '100%');
+        est(t, 'border-collapse:collapse;border:0.5pt solid #cbd5e1;font-size:9pt;margin:4pt 0 10pt 0');
+      });
+      cont.querySelectorAll('th').forEach(x => est(x, 'background:#005cab;color:#ffffff;font-weight:bold;text-align:left;border:0.5pt solid #005cab;padding:4pt'));
+      cont.querySelectorAll('td').forEach(x => {
+        const c = x.className || '';
+        let extra = '';
+        if (/text-red-700/.test(c)) extra = 'background:#fee2e2;color:#b91c1c;font-weight:bold;';
+        else if (/text-amber-700/.test(c)) extra = 'background:#fef3c7;color:#92400e;font-weight:bold;';
+        else if (/text-emerald-700/.test(c)) extra = 'background:#dcfce7;color:#166534;font-weight:bold;';
+        est(x, `border:0.5pt solid #cbd5e1;padding:4pt;vertical-align:top;${extra}`);
+      });
+      // filas alternas suaves
+      cont.querySelectorAll('tbody').forEach(tb => Array.from(tb.querySelectorAll('tr')).forEach((tr, k) => {
+        if (k % 2 === 1) tr.querySelectorAll('td').forEach(td => { if (!/background/.test(td.getAttribute('style') || '')) td.style.background = '#f8fafc'; });
+      }));
+      cont.querySelectorAll('[class]').forEach(x => x.removeAttribute('class'));
+
+      const titulo = (nombreCli ? nombreCli + ' – ' : '') + 'Reunión de procesos y analítica: resumen por ciclos';
+      const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"><title>${escapeHtml(titulo)}</title>
+<!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View><w:Zoom>100</w:Zoom></w:WordDocument></xml><![endif]-->
+<style>@page{size:21.0cm 29.7cm;margin:1.8cm 1.6cm 1.8cm 1.6cm} body{font-family:Calibri,Arial,sans-serif;font-size:10.5pt;color:#1e293b}</style></head><body>
+<table width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse"><tr><td style="border-bottom:1pt solid #005cab;padding:0 0 3pt 0;font-size:11pt;font-weight:bold"><span style="color:#005cab">MGI</span> <span style="color:#00929f">Guerra</span> <span style="color:#005cab">· PCM Inteligente</span></td></tr></table>
+<p style="font-size:20pt;font-weight:bold;color:#1e293b;margin:14pt 0 2pt 0;line-height:1.1">${escapeHtml(titulo)}</p>
+<p style="font-size:10pt;color:#64748b;margin:0 0 12pt 0">${escapeHtml(fecha)}${quien ? ' · ' + escapeHtml(quien) : ''}</p>
+${cont.innerHTML}
+<p style="font-size:8.5pt;color:#64748b;margin-top:18pt;border-top:0.5pt solid #cbd5e1;padding-top:4pt">Documento generado con PCM Inteligente a partir de la transcripción de la reunión. Son indicios para el juicio del auditor; confirma cada punto con el minuto indicado en el video.</p>
+</body></html>`;
       const blob = new Blob(['﻿', html], { type: 'application/msword' });
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
-      a.download = 'Analisis-reunion-' + new Date().toISOString().slice(0, 10) + '.doc';
+      a.download = (nombreCli ? nombreCli.replace(/[^\w\- ]+/g, '').trim().replace(/\s+/g, '-') + '-' : '') + 'Analisis-reunion-' + new Date().toISOString().slice(0, 10) + '.doc';
       document.body.appendChild(a); a.click(); document.body.removeChild(a);
       setTimeout(() => URL.revokeObjectURL(a.href), 2000);
     }
