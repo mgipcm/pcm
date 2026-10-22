@@ -11624,16 +11624,18 @@ ${cont.innerHTML}
     function aplicarEstadoMenu() {
       HERRAMIENTAS_MENU.forEach(h => {
         const btn = document.getElementById(h.btn); if (!btn) return;
-        // la etiqueta es una línea aparte debajo del botón: no toca el diseño del botón
-        const vecino = btn.nextElementSibling;
-        if (vecino && vecino.classList.contains('etiqueta-desarrollo')) vecino.remove();
+        btn.querySelectorAll('.etiqueta-desarrollo').forEach(e => e.remove());
+        const suelta = btn.nextElementSibling;
+        if (suelta && suelta.classList.contains('etiqueta-desarrollo')) suelta.remove();
         btn.style.opacity = '';
         if (estadoHerramientas[h.clave] === false) {
-          const et = document.createElement('div');
+          // etiqueta corta "Off" en la misma línea del nombre
+          const et = document.createElement('span');
           et.className = 'etiqueta-desarrollo';
-          et.textContent = 'En desarrollo';
-          et.style.cssText = 'font-size:9px;line-height:11px;color:#94a3b8;padding:0 0 2px 14px;margin-top:-2px;text-align:left';
-          btn.insertAdjacentElement('afterend', et);
+          et.title = 'En desarrollo: aún no habilitada para el equipo';
+          et.textContent = 'Off';
+          et.style.cssText = 'display:inline-block;margin-left:6px;padding:0 5px;font-size:9px;line-height:13px;font-weight:600;color:#94a3b8;border:1px solid #cbd5e1;border-radius:4px;vertical-align:middle;white-space:nowrap';
+          (btn.querySelector('span') || btn).appendChild(et);
           if (!esSocioSesion()) btn.style.opacity = '0.6';
         }
       });
