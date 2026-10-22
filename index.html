@@ -1604,7 +1604,7 @@
       <div class="flex justify-between items-center border-b pb-4">
         <div>
           <h1 class="text-xl font-bold text-slate-800">5g. Herramientas: Resumen de reuniones</h1>
-          <p class="text-xs text-slate-500">Pega o sube la transcripción de una reunión (por ejemplo de Teams) y Claude la ordena por ciclos: proceso, matriz de controles, deficiencias, NIIF y pendientes, con el minuto de cada tema</p>
+          <p class="text-xs text-slate-500">Sube la transcripción o el audio (mp3) de una reunión y Claude la ordena por ciclos: proceso, matriz de controles, deficiencias, NIIF y pendientes, con el minuto de cada tema</p>
         </div>
       </div>
 
@@ -1618,20 +1618,14 @@
           </div>
 
           <div>
-            <h2 class="text-xs font-bold text-slate-600 mb-1">2. Transcripción de la reunión</h2>
-            <label for="reu-archivo" class="block border-2 border-dashed border-slate-300 hover:border-indigo-400 hover:bg-slate-50 rounded-xl p-4 text-center cursor-pointer transition">
-              <p class="text-xs font-bold text-slate-700">Sube la transcripción (Word, .txt o .vtt) o pégala abajo</p>
-              <p class="text-[11px] text-slate-500 mt-0.5">En Teams: abre la grabación, pestaña «Transcripción» y descárgala. Así cada intervención trae su minuto.</p>
+            <h2 class="text-xs font-bold text-slate-600 mb-1">2. Transcripción o audio (mp3) de la reunión</h2>
+            <label for="reu-archivo" ondragover="event.preventDefault()" ondrop="event.preventDefault(); procesarArchivoReunion(event.dataTransfer.files[0])" class="block border-2 border-dashed border-slate-300 hover:border-indigo-400 hover:bg-slate-50 rounded-xl p-4 text-center cursor-pointer transition">
+              <p class="text-xs font-bold text-slate-700">Haz clic o arrastra aquí la transcripción o el audio</p>
+              <p class="text-[11px] text-slate-500 mt-1"><b>Transcripción:</b> Word (.docx), .txt o .vtt · hasta 10 MB (unas 600.000 letras, de sobra para una reunión de varias horas)</p>
+              <p class="text-[11px] text-slate-500"><b>Audio:</b> .mp3, .m4a o .wav · hasta 50 MB. Si pesa más, conviértelo en VLC a 64 kbps y mono (una hora pesa unos 30 MB)</p>
+              <p class="text-[11px] text-slate-400 mt-1">El audio se envía a AssemblyAI para pasarlo a texto con minutos y hablantes, y se borra al terminar. El texto aparece abajo para que lo revises antes de generar el análisis.</p>
             </label>
-            <input type="file" id="reu-archivo" class="hidden" accept=".docx,.txt,.vtt,.md" onchange="cargarArchivoReunion(this.files[0]); this.value=''">
-            <div class="mt-2 p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-1.5">
-              <p class="text-[11px] font-bold text-slate-700">¿Solo tienes el audio (mp3)?</p>
-              <div class="flex flex-wrap items-center gap-2">
-                <input type="file" id="reu-audio" accept=".mp3,.m4a,.wav,.mp4,.ogg,.webm,audio/*" class="text-[11px] text-slate-600 max-w-full">
-                <button id="reu-btn-audio" type="button" onclick="transcribirAudioReunion()" class="px-3 py-1.5 bg-white text-indigo-700 hover:bg-indigo-50 border border-indigo-500 rounded-lg text-[11px] font-bold transition disabled:opacity-50">Transcribir audio</button>
-              </div>
-              <p class="text-[11px] text-slate-500">El audio se envía a AssemblyAI para pasarlo a texto con minutos y hablantes, y se borra al terminar. El texto aparece en el cuadro de abajo para que lo revises antes de generar el análisis.</p>
-            </div>
+            <input type="file" id="reu-archivo" class="hidden" accept=".docx,.txt,.vtt,.md,.mp3,.m4a,.wav,.mp4,.ogg,.webm,audio/*" onchange="procesarArchivoReunion(this.files[0]); this.value=''">
             <textarea id="reu-texto" rows="8" oninput="contarTextoReunion()" placeholder="O pega aquí el texto de la transcripción..." class="mt-2 w-full p-2.5 border border-slate-300 rounded-lg text-xs outline-none focus:ring-2 focus:ring-indigo-500 bg-white leading-relaxed text-slate-800 resize-y"></textarea>
             <p id="reu-contador" class="text-[11px] text-slate-400"></p>
           </div>
@@ -11235,7 +11229,7 @@
         }
         document.getElementById('reu-texto').value = txt.trim();
         contarTextoReunion();
-        est.textContent = `Archivo cargado: ${f.name}`;
+        est.textContent = txt.length > 600000 ? `Archivo cargado, pero es muy largo (${txt.length.toLocaleString('es')} letras; el máximo es 600.000). Divídelo en dos.` : `Archivo cargado: ${f.name}`;
       } catch (e) { est.textContent = 'No se pudo leer el archivo: ' + e.message; }
     }
 
@@ -11341,6 +11335,7 @@
       const boton = document.getElementById('reu-btn-generar');
       const resultado = document.getElementById('reu-resultado');
       if (transcripcion.length < 200) { alert('Pega o sube primero la transcripción de la reunión.'); return; }
+      if (transcripcion.length > 600000) { alert('La transcripción supera las 600.000 letras. Divídela en dos partes y analiza cada una por separado.'); return; }
       const clienteId = document.getElementById('reu-cliente').value;
       const cli = clienteId ? buscarCliente(clienteId) : null;
       const cliente = cli ? `${cli.nombre_corto || ''} ${cli.nombre_completo ? '(' + cli.nombre_completo + ')' : ''}`.trim() : '';
@@ -11388,12 +11383,20 @@
 
 
     // Sube el audio al almacenamiento privado, lo transcribe con AssemblyAI y pone el texto en el cuadro
-    async function transcribirAudioReunion() {
-      const f = (document.getElementById('reu-audio').files || [])[0];
+    // Un solo cuadro: si es audio se transcribe; si es texto se carga
+    function procesarArchivoReunion(f) {
+      if (!f) return;
+      const ext = (f.name.split('.').pop() || '').toLowerCase();
+      if (['mp3', 'm4a', 'wav', 'mp4', 'ogg', 'webm'].includes(ext) || (f.type || '').startsWith('audio/')) return transcribirAudioReunion(f);
+      if (!['docx', 'txt', 'vtt', 'md'].includes(ext)) { alert('Formato no compatible. Usa Word (.docx), .txt, .vtt o un audio (.mp3, .m4a, .wav).'); return; }
+      if (f.size > 10 * 1024 * 1024) { alert('La transcripción pesa más de 10 MB. Divídela en dos archivos.'); return; }
+      return cargarArchivoReunion(f);
+    }
+    async function transcribirAudioReunion(f) {
       const est = document.getElementById('reu-estado');
-      const btn = document.getElementById('reu-btn-audio');
-      if (!f) { alert('Primero elige el archivo de audio.'); return; }
-      if (f.size > 500 * 1024 * 1024) { alert('El audio pesa más de 500 MB. Conviértelo a mp3 con menor calidad (por ejemplo 64 kbps, mono) e inténtalo de nuevo.'); return; }
+      const btn = document.getElementById('reu-btn-generar');
+      if (!f) return;
+      if (f.size > 50 * 1024 * 1024) { alert('El audio pesa ' + (f.size / 1048576).toFixed(0) + ' MB y el máximo es 50 MB. En VLC conviértelo a mp3 con menor calidad (64 kbps, mono; una hora pesa unos 30 MB) e inténtalo de nuevo.'); return; }
       btn.disabled = true;
       let ruta = '';
       try {
