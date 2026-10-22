@@ -2488,6 +2488,7 @@
     });
 
     function navegarMenu(seccion, sub, cuenta) {
+      if (seccion === 'visitas') { fechaCalendarioActual = new Date(); renderizarCalendarioLineal(); setTimeout(posicionarCalendarioHoy, 60); }
       // Clientes y Usuarios solo se abren con ingreso de Socio o Supervisor
       if ((seccion === 'clientes' || seccion === 'usuarios' || seccion === 'cuentas' || seccion === 'habilitar') && !puedeConfigurar()) {
         abrirLoginConfig(seccion);
@@ -5470,9 +5471,18 @@
       renderizarCalendarioLineal();
     }
 
+    // Al abrir el calendario: muestra desde una semana antes de hoy (si es el mes actual)
+    function posicionarCalendarioHoy() {
+      const cont = document.getElementById('contenedor-calendario-lineal'); if (!cont || !cont.parentElement) return;
+      const hoy = new Date(), f = fechaCalendarioActual;
+      const esMesActual = f.getFullYear() === hoy.getFullYear() && f.getMonth() === hoy.getMonth();
+      cont.parentElement.scrollLeft = esMesActual ? Math.max(0, (hoy.getDate() - 7 - 1) * 48) : 0;
+    }
+
     function cambiarMesCalendario(offset) {
       fechaCalendarioActual.setMonth(fechaCalendarioActual.getMonth() + offset);
       renderizarCalendarioLineal();
+      posicionarCalendarioHoy();
     }
 
     // Color pastel fijo por cliente: el mismo cliente siempre se ve del mismo color
