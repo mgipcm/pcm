@@ -1479,6 +1479,9 @@
           <button id="contr-btn-generar" onclick="generarResumenContrato()" class="w-full py-2.5 bg-indigo-600 text-white rounded-lg text-xs font-bold hover:bg-indigo-700 transition shadow disabled:opacity-60 disabled:cursor-not-allowed">
             Generar resumen con Claude
           </button>
+          <button id="contr-btn-informe" onclick="generarInformeContrato()" class="w-full py-2.5 bg-white text-indigo-700 border border-indigo-500 rounded-lg text-xs font-bold hover:bg-indigo-50 transition disabled:opacity-60 disabled:cursor-not-allowed">
+            Generar versión informe (tabla de la nota Contratos suscritos)
+          </button>
           <p id="contr-estado" class="text-xs text-slate-500 min-h-[1rem]"></p>
           <p class="text-[11px] text-slate-400 leading-relaxed">Los archivos se envían a Claude (Anthropic) solo para generar el resumen. Confirma que la política de confidencialidad con tu cliente lo permite.</p>
         </div>
@@ -1492,6 +1495,20 @@
             <p class="text-slate-400">El resumen aparecerá aquí.</p>
           </div>
           <p class="px-4 py-2 border-t border-slate-200 text-[11px] text-slate-400">Revisa siempre el resumen contra el contrato original; no sustituye su lectura ni la asesoría legal.</p>
+        </div>
+      </div>
+
+      <div class="border border-slate-200 rounded-xl">
+        <div class="flex flex-wrap items-center justify-between gap-2 px-4 py-2.5 border-b border-slate-200 bg-slate-50 rounded-t-xl">
+          <h2 class="text-xs font-bold text-slate-600">Versión informe · Contratos suscritos (cada contrato que generes se agrega como una fila)</h2>
+          <div class="flex gap-1.5">
+            <button id="inf-btn-copiar" onclick="copiarInformeContrato()" class="hidden px-2.5 py-1 bg-white text-slate-700 hover:bg-slate-50 border border-slate-400 rounded text-[11px] font-bold transition">Copiar tabla</button>
+            <button id="inf-btn-word" onclick="descargarInformeContrato()" class="hidden px-2.5 py-1 bg-white text-indigo-700 hover:bg-indigo-50 border border-indigo-500 rounded text-[11px] font-bold transition">Descargar Word</button>
+            <button id="inf-btn-vaciar" onclick="vaciarInformeContrato()" class="hidden px-2.5 py-1 bg-white text-rose-600 hover:bg-rose-50 border border-rose-300 rounded text-[11px] font-bold transition">Vaciar tabla</button>
+          </div>
+        </div>
+        <div id="inf-resultado" class="p-3 text-xs text-slate-700 overflow-x-auto">
+          <p class="text-slate-400">Sube un contrato y pulsa "Generar versión informe". Puedes corregir cualquier celda haciendo clic sobre ella.</p>
         </div>
       </div>
 
@@ -4975,6 +4992,92 @@
       } finally {
         boton.disabled = false;
       }
+    }
+
+    // ===== Versión informe: tabla de la nota "Contratos suscritos" =====
+    const COLS_INFORME = [
+      ['contrato', 'Contrato'], ['tipo', 'Tipo de contrato'], ['comparecen', 'Comparecen'], ['objeto', 'Objeto'],
+      ['fecha_inicio', 'Fecha/inicio'], ['duracion', 'Duración/vencimiento'], ['valor', 'Valor'], ['otros', 'Otros']
+    ];
+    let filasInformeContratos = [];
+
+    function renderInformeContratos() {
+      const cont = document.getElementById('inf-resultado');
+      const hay = filasInformeContratos.length > 0;
+      ['inf-btn-copiar', 'inf-btn-word', 'inf-btn-vaciar'].forEach(id => document.getElementById(id).classList.toggle('hidden', !hay));
+      if (!hay) { cont.innerHTML = '<p class="text-slate-400">Sube un contrato y pulsa "Generar versión informe". Puedes corregir cualquier celda haciendo clic sobre ella.</p>'; return; }
+      cont.innerHTML = '<table id="inf-tabla" class="w-full text-[11px] border border-slate-300 border-collapse"><thead><tr class="bg-slate-100 text-slate-700">' +
+        COLS_INFORME.map(c => `<th class="p-1.5 text-left border border-slate-300">${c[1]}</th>`).join('') + '<th class="border border-slate-300 w-6"></th></tr></thead><tbody>' +
+        filasInformeContratos.map((f, i) => '<tr class="align-top">' + COLS_INFORME.map(c =>
+          `<td contenteditable="true" data-f="${i}" data-c="${c[0]}" oninput="editarCeldaInforme(this)" class="p-1.5 border border-slate-300 outline-none focus:bg-indigo-50">${escapeHtml(f[c[0]] || '')}</td>`).join('') +
+          `<td class="border border-slate-300 text-center"><button onclick="quitarFilaInforme(${i})" class="text-slate-400 hover:text-rose-600 font-bold" title="Quitar fila">✕</button></td></tr>`).join('') +
+        '</tbody></table>';
+    }
+    function editarCeldaInforme(td) {
+      const f = filasInformeContratos[parseInt(td.dataset.f, 10)];
+      if (f) f[td.dataset.c] = td.innerText.trim();
+    }
+    function quitarFilaInforme(i) { filasInformeContratos.splice(i, 1); renderInformeContratos(); }
+    function vaciarInformeContrato() {
+      if (filasInformeContratos.length && !confirm('¿Vaciar la tabla de la versión informe?')) return;
+      filasInformeContratos = []; renderInformeContratos();
+    }
+    function tablaInformeHtml(conEstilo) {
+      const th = conEstilo ? ' style="border:1px solid #000;padding:4px;background:#d9e2f3;text-align:left;font-size:9pt"' : '';
+      const td = conEstilo ? ' style="border:1px solid #000;padding:4px;vertical-align:top;font-size:9pt"' : '';
+      return '<table style="border-collapse:collapse;width:100%"><thead><tr>' + COLS_INFORME.map(c => `<th${th}>${c[1]}</th>`).join('') + '</tr></thead><tbody>' +
+        filasInformeContratos.map(f => '<tr>' + COLS_INFORME.map(c => `<td${td}>${escapeHtml(f[c[0]] || '')}</td>`).join('') + '</tr>').join('') + '</tbody></table>';
+    }
+    async function copiarInformeContrato() {
+      if (!filasInformeContratos.length) return;
+      const btn = document.getElementById('inf-btn-copiar');
+      const html = tablaInformeHtml(true);
+      const texto = [COLS_INFORME.map(c => c[1]).join('\t'), ...filasInformeContratos.map(f => COLS_INFORME.map(c => String(f[c[0]] || '').replace(/\s+/g, ' ')).join('\t'))].join('\n');
+      try {
+        await navigator.clipboard.write([new ClipboardItem({ 'text/html': new Blob([html], { type: 'text/html' }), 'text/plain': new Blob([texto], { type: 'text/plain' }) })]);
+      } catch (e) {
+        try { await navigator.clipboard.writeText(texto); } catch (e2) { alert('No se pudo copiar. Usa "Descargar Word".'); return; }
+      }
+      btn.textContent = 'Copiado ✓'; setTimeout(() => { btn.textContent = 'Copiar tabla'; }, 1800);
+    }
+    function descargarInformeContrato() {
+      if (!filasInformeContratos.length) return;
+      const cli = document.getElementById('contr-cliente');
+      const nombre = cli && cli.value ? ((cli.selectedOptions[0] || {}).textContent || '') : '';
+      const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"><style>@page{size:29.7cm 21cm;mso-page-orientation:landscape;margin:1.5cm}body{font-family:Calibri,Arial,sans-serif;font-size:10pt}h3{font-size:11pt}</style></head><body>` +
+        `<h3>Nota - Contratos suscritos, garantías, avales y actos legales</h3>${nombre ? `<p>${escapeHtml(nombre)}</p>` : ''}<p>A continuación se presentan los contratos suscritos por la compañía:</p>${tablaInformeHtml(true)}</body></html>`;
+      const blob = new Blob(['﻿', html], { type: 'application/msword' });
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'Contratos_suscritos_version_informe.doc';
+      document.body.appendChild(a); a.click(); document.body.removeChild(a); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+    }
+    async function generarInformeContrato() {
+      const estado = document.getElementById('contr-estado');
+      const boton = document.getElementById('contr-btn-informe');
+      if (archivosContrato.length === 0) { alert('Sube al menos un archivo del contrato.'); return; }
+      if (archivosContrato.length > MAX_ARCHIVOS_CONTRATO) { alert(`Máximo ${MAX_ARCHIVOS_CONTRATO} archivos.`); return; }
+      const noCompatibles = archivosContrato.filter(f => tipoArchivoContrato(f) === null);
+      if (noCompatibles.length > 0) { alert('Hay archivos con formato no compatible (' + noCompatibles.map(f => f.name).join(', ') + ').'); return; }
+      if (archivosContrato.reduce((s, f) => s + f.size, 0) > MAX_BYTES_CONTRATOS) { alert('Los archivos superan los 10 MB en total. Súbelos por partes.'); return; }
+      const clienteId = document.getElementById('contr-cliente').value;
+      const cli = clienteId ? buscarCliente(clienteId) : null;
+      const nombreCliente = cli ? `${cli.nombre_corto || ''} ${cli.nombre_completo ? '(' + cli.nombre_completo + ')' : ''}`.trim() : '';
+      boton.disabled = true;
+      try {
+        estado.textContent = 'Leyendo los archivos...';
+        const archivos = [];
+        for (const f of archivosContrato) archivos.push(await prepararArchivoContrato(f));
+        estado.textContent = 'Claude está preparando la versión informe...';
+        const { data, error } = await supabaseClient.functions.invoke(FUNCION_RESUMEN_CONTRATOS, { body: { cliente: nombreCliente, archivos, modo: 'informe' } });
+        if (error) throw error;
+        if (!data || data.error) throw new Error((data && data.error) || 'La función no devolvió resultado.');
+        const nuevas = (data.filas || []).map(f => { const o = {}; COLS_INFORME.forEach(c => { o[c[0]] = String((f && f[c[0]]) ?? 'N/A'); }); return o; });
+        filasInformeContratos.push(...nuevas);
+        renderInformeContratos();
+        estado.textContent = `Versión informe lista: ${nuevas.length} contrato(s) agregado(s) a la tabla de abajo.`;
+      } catch (err) {
+        estado.textContent = '';
+        alert('No se pudo generar la versión informe: ' + (await mensajeErrorContratos(err)));
+      } finally { boton.disabled = false; }
     }
 
     async function copiarResumenContrato() {
