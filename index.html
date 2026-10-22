@@ -238,6 +238,9 @@
             <button onclick="navegarMenu('pce')" id="nav-pce" class="w-full text-left px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:bg-slate-800 hover:text-white transition flex items-center gap-2">
               <span>f) Matriz de transición - PCE</span>
             </button>
+            <button onclick="navegarMenu('reuniones')" id="nav-reuniones" class="w-full text-left px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:bg-slate-800 hover:text-white transition flex items-center gap-2">
+              <span>g) Resumen de reuniones</span>
+            </button>
             <button onclick="navegarMenu('mas-herramientas')" id="nav-mas-herramientas" class="w-full text-left px-3 py-1.5 rounded-lg text-xs font-medium text-slate-500 hover:bg-slate-800 hover:text-slate-300 transition flex items-center gap-2 border-t border-slate-800/60 pt-2 mt-1 italic">
               <span>+ Espacio para incluir más</span>
             </button>
@@ -1594,6 +1597,75 @@
       </div>
     </section>
 
+    <section id="sec-reuniones" class="hidden bg-white rounded-2xl shadow-xl border border-slate-200 p-6 min-h-[92vh] space-y-6">
+      <div class="flex justify-between items-center border-b pb-4">
+        <div>
+          <h1 class="text-xl font-bold text-slate-800">5g. Herramientas: Resumen de reuniones</h1>
+          <p class="text-xs text-slate-500">Pega o sube la transcripción de una reunión (por ejemplo de Teams) y Claude la ordena por ciclos: proceso, matriz de controles, deficiencias, NIIF y pendientes, con el minuto de cada tema</p>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="space-y-4">
+          <div>
+            <h2 class="text-xs font-bold text-slate-600 mb-1">1. Cliente (opcional)</h2>
+            <select id="reu-cliente" class="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs sm:text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+              <option value="">-- Sin cliente / otra reunión --</option>
+            </select>
+          </div>
+
+          <div>
+            <h2 class="text-xs font-bold text-slate-600 mb-1">2. Transcripción de la reunión</h2>
+            <label for="reu-archivo" class="block border-2 border-dashed border-slate-300 hover:border-indigo-400 hover:bg-slate-50 rounded-xl p-4 text-center cursor-pointer transition">
+              <p class="text-xs font-bold text-slate-700">Sube la transcripción (Word, .txt o .vtt) o pégala abajo</p>
+              <p class="text-[11px] text-slate-500 mt-0.5">En Teams: abre la grabación, pestaña «Transcripción» y descárgala. Así cada intervención trae su minuto.</p>
+            </label>
+            <input type="file" id="reu-archivo" class="hidden" accept=".docx,.txt,.vtt,.md" onchange="cargarArchivoReunion(this.files[0]); this.value=''">
+            <div class="mt-2 p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-1.5">
+              <p class="text-[11px] font-bold text-slate-700">¿Solo tienes el audio (mp3)?</p>
+              <div class="flex flex-wrap items-center gap-2">
+                <input type="file" id="reu-audio" accept=".mp3,.m4a,.wav,.mp4,.ogg,.webm,audio/*" class="text-[11px] text-slate-600 max-w-full">
+                <button id="reu-btn-audio" type="button" onclick="transcribirAudioReunion()" class="px-3 py-1.5 bg-white text-indigo-700 hover:bg-indigo-50 border border-indigo-500 rounded-lg text-[11px] font-bold transition disabled:opacity-50">Transcribir audio</button>
+              </div>
+              <p class="text-[11px] text-slate-500">El audio se envía a AssemblyAI para pasarlo a texto con minutos y hablantes, y se borra al terminar. El texto aparece en el cuadro de abajo para que lo revises antes de generar el análisis.</p>
+            </div>
+            <textarea id="reu-texto" rows="8" oninput="contarTextoReunion()" placeholder="O pega aquí el texto de la transcripción..." class="mt-2 w-full p-2.5 border border-slate-300 rounded-lg text-xs outline-none focus:ring-2 focus:ring-indigo-500 bg-white leading-relaxed text-slate-800 resize-y"></textarea>
+            <p id="reu-contador" class="text-[11px] text-slate-400"></p>
+          </div>
+
+          <div>
+            <h2 class="text-xs font-bold text-slate-600 mb-1">3. Participantes y cargos (opcional)</h2>
+            <textarea id="reu-participantes" rows="2" placeholder="Ej. Diana Pérez – Contadora; Juan Mora – Gerente financiero" class="w-full p-2.5 border border-slate-300 rounded-lg text-xs outline-none focus:ring-2 focus:ring-indigo-500 bg-white leading-relaxed text-slate-800 resize-none"></textarea>
+          </div>
+
+          <div>
+            <h2 class="text-xs font-bold text-slate-600 mb-1">4. Enfoque adicional (opcional)</h2>
+            <textarea id="reu-enfoque" rows="2" placeholder="Ej. Dar más atención a inventarios y a partes relacionadas..." class="w-full p-2.5 border border-slate-300 rounded-lg text-xs outline-none focus:ring-2 focus:ring-indigo-500 bg-white leading-relaxed text-slate-800 resize-none"></textarea>
+          </div>
+
+          <button id="reu-btn-generar" onclick="generarResumenReunion()" class="w-full py-2.5 bg-indigo-600 text-white rounded-lg text-xs font-bold hover:bg-indigo-700 transition shadow disabled:opacity-50">
+            Generar análisis de la reunión con Claude
+          </button>
+          <p id="reu-estado" class="text-xs text-slate-500 min-h-[1rem]"></p>
+          <p class="text-[11px] text-slate-400 leading-relaxed">El texto se envía a Claude (Anthropic) solo para generar el análisis y no se guarda en la aplicación. Confirma que la política de confidencialidad con tu cliente permite este uso. Descarga o copia el resultado antes de salir de esta pantalla.</p>
+        </div>
+
+        <div class="border border-slate-200 rounded-xl flex flex-col min-h-[420px]">
+          <div class="flex items-center justify-between px-4 py-2.5 border-b border-slate-200 bg-slate-50 rounded-t-xl">
+            <h2 class="text-xs font-bold text-slate-600">Análisis de la reunión</h2>
+            <div class="flex gap-1.5">
+              <button id="reu-btn-copiar" onclick="copiarResumenReunion()" class="hidden px-2.5 py-1 bg-white text-slate-700 hover:bg-slate-50 border border-slate-400 rounded text-[11px] font-bold transition">Copiar</button>
+              <button id="reu-btn-word" onclick="descargarResumenReunion()" class="hidden px-2.5 py-1 bg-white text-indigo-700 hover:bg-indigo-50 border border-indigo-500 rounded text-[11px] font-bold transition">Descargar en Word</button>
+            </div>
+          </div>
+          <div id="reu-resultado" class="p-4 text-xs text-slate-700 leading-relaxed overflow-y-auto flex-1">
+            <p class="text-slate-400">El análisis aparecerá aquí.</p>
+          </div>
+          <p class="px-4 py-2 border-t border-slate-200 text-[11px] text-slate-400">Son indicios para el juicio del auditor. Confirma cada punto con el minuto indicado en el video; la transcripción automática puede tener errores.</p>
+        </div>
+      </div>
+    </section>
+
     <section id="sec-mas-herramientas" class="hidden bg-white rounded-2xl shadow-xl border border-slate-200 p-6 min-h-[92vh] space-y-6">
       <div class="flex justify-between items-center border-b pb-4">
         <div>
@@ -2374,8 +2446,8 @@
         return;
       }
 
-      const secciones = ['clientes', 'usuarios', 'cuentas', 'sumarias', 'pendientes', 'flujo', 'auditoria', 'analisis', 'visitas', 'asignacion', 'indices', 'mayor', 'contratos', 'arrend', 'pce', 'mas-herramientas'];
-      const grupoSubmenu = sec => ['indices', 'mayor', 'contratos', 'flujo', 'arrend', 'pce', 'mas-herramientas'].includes(sec)
+      const secciones = ['clientes', 'usuarios', 'cuentas', 'sumarias', 'pendientes', 'flujo', 'auditoria', 'analisis', 'visitas', 'asignacion', 'indices', 'mayor', 'contratos', 'arrend', 'pce', 'reuniones', 'mas-herramientas'];
+      const grupoSubmenu = sec => ['indices', 'mayor', 'contratos', 'flujo', 'arrend', 'pce', 'reuniones', 'mas-herramientas'].includes(sec)
         ? 'herramientas'
         : (['clientes', 'usuarios', 'cuentas'].includes(sec) ? 'config' : (['sumarias', 'pendientes'].includes(sec) ? 'analisis' : null));
       const esSubmenu = sec => grupoSubmenu(sec) !== null;
@@ -2397,6 +2469,7 @@
       const activeSec = document.getElementById(`sec-${seccion}`);
       if (activeSec) activeSec.classList.remove('hidden');
       if (seccion === 'contratos') { poblarClientesContratos(); cargarResumenesGuardados(); }
+      if (seccion === 'reuniones') poblarClientesReunion();
       if (seccion === 'sumarias') abrirSumarias();
       if (seccion === 'pendientes') abrirPendientes();
       if (seccion === 'flujo') abrirFlujo();
@@ -5457,8 +5530,21 @@
                    (nombreAuditor !== '' && audAsignado.includes(nombreAuditor.toLowerCase()));
           });
 
-          const cantAsignaciones = visitasDelAuditor.length;
-          const minHeightPx = Math.max(48, (cantAsignaciones * 18) + 12);
+          // Reparte las visitas del mes en "carriles": las que no se cruzan en fechas comparten renglón,
+          // y la altura de la fila se ajusta sola al número de renglones realmente usados.
+          const carrilDe = new Map(); const finCarril = [];
+          visitasDelAuditor.map(v => {
+            const d = v.fecha_desde || v.fecha; if (!d) return null;
+            const ini = new Date(d.split('T')[0] + 'T00:00:00'), fin = new Date((v.fecha_hasta || d).split('T')[0] + 'T00:00:00');
+            if (fin < new Date(year, month, 1) || ini > new Date(year, month, ultimoDia)) return null;
+            return { v, ini: ini.getTime(), fin: fin.getTime() };
+          }).filter(Boolean).sort((x, y) => x.ini - y.ini || x.fin - y.fin).forEach(it => {
+            let c = finCarril.findIndex(f => f < it.ini);
+            if (c < 0) { c = finCarril.length; finCarril.push(it.fin); } else finCarril[c] = it.fin;
+            carrilDe.set(it.v, c);
+          });
+          const cantAsignaciones = Math.max(1, finCarril.length);
+          const minHeightPx = Math.max(48, (cantAsignaciones * 17) + 10);
 
           htmlFilasAuditores += `
             <div class="flex border-b border-slate-200 hover:bg-slate-50/50 transition relative" style="min-height: ${minHeightPx}px;">
@@ -5517,7 +5603,7 @@
               const cli = buscarCliente(vis.cliente_id);
               const nombreCliente = (clienteIdRepetido(vis.cliente_id) ? '⚠ ' : '') + (cli ? (cli.nombre_corto || cli.nombre_completo) : (vis.cliente_id || 'Cliente'));
 
-              const topOffset = (idxAsignacion * 17) + 3;
+              const topOffset = ((carrilDe.get(vis) || 0) * 17) + 3;
 
               htmlFilasAuditores += `
                 <div onclick="abrirModalApuntesVisita('${visId}')"
@@ -11062,6 +11148,229 @@
     async function copiarUltimosAccesos() {
       try { await navigator.clipboard.writeText(textoUltimosAccesos); mostrarEstadoAccesos('Lista copiada.'); }
       catch (e) { mostrarEstadoAccesos('No se pudo copiar automáticamente; selecciona el texto de la tabla.', true); }
+    }
+
+
+    // ================= RESUMEN DE REUNIONES =================
+    const FUNCION_REUNIONES = 'resumir-reunion';
+    const PARTES_REUNION = [
+      { id: 'general', nombre: 'resumen general' },
+      { id: 'c1', nombre: 'Cuentas por cobrar – Ingresos – Cobros' },
+      { id: 'c2', nombre: 'Gastos – Cuentas por pagar – Pagos' },
+      { id: 'c3', nombre: 'Costo de ventas – Inventarios' },
+      { id: 'c4', nombre: 'Nómina' },
+      { id: 'c5', nombre: 'Propiedad, planta y equipo' }
+    ];
+    let ultimoResumenReunion = '';
+
+    function poblarClientesReunion() {
+      const sel = document.getElementById('reu-cliente'); if (!sel) return;
+      const previo = sel.value;
+      sel.innerHTML = '<option value="">-- Sin cliente / otra reunión --</option>';
+      ordenarClientes(listaClientesCache).forEach(c => {
+        const id = c.cliente_id || c.id;
+        const completo = c.nombre_completo || c.razon_social || c.nombre || '';
+        const op = document.createElement('option');
+        op.value = id; op.textContent = c.nombre_corto ? `${c.nombre_corto} (${completo})` : completo;
+        sel.appendChild(op);
+      });
+      sel.value = previo;
+    }
+    function contarTextoReunion() {
+      const n = document.getElementById('reu-texto').value.length;
+      document.getElementById('reu-contador').textContent = n ? `${n.toLocaleString('es')} caracteres` : '';
+    }
+    // Convierte subtítulos .vtt en líneas "[h:mm:ss] texto"
+    function vttATexto(t) {
+      const out = []; let marca = '';
+      t.replace(/\r/g, '').split('\n').forEach(l => {
+        const m = l.match(/^(\d{1,2}:)?(\d{2}):(\d{2})[.,]\d+\s*-->/);
+        if (m) { marca = ((m[1] || '0:').replace(/^0(\d):/, '$1:')) + m[2] + ':' + m[3]; return; }
+        if (!l.trim() || /^WEBVTT/.test(l) || /^NOTE/.test(l) || /^[0-9a-f-]{8,}(\/\d+-\d+)?$/i.test(l.trim())) return;
+        out.push(marca ? `[${marca}] ${l.trim()}` : l.trim());
+      });
+      return out.join('\n');
+    }
+    async function cargarArchivoReunion(f) {
+      if (!f) return;
+      const est = document.getElementById('reu-estado');
+      try {
+        const ext = (f.name.split('.').pop() || '').toLowerCase();
+        let txt = '';
+        if (ext === 'docx') {
+          if (!window.mammoth) throw new Error('No se pudo cargar el lector de Word.');
+          txt = (await window.mammoth.extractRawText({ arrayBuffer: await f.arrayBuffer() })).value || '';
+        } else {
+          txt = await f.text();
+          if (ext === 'vtt') txt = vttATexto(txt);
+        }
+        document.getElementById('reu-texto').value = txt.trim();
+        contarTextoReunion();
+        est.textContent = `Archivo cargado: ${f.name}`;
+      } catch (e) { est.textContent = 'No se pudo leer el archivo: ' + e.message; }
+    }
+
+    // Convierte el texto del análisis en HTML (títulos, listas, negritas y tablas)
+    function renderAnalisisReunion(md) {
+      const inline = t => t.replace(/\*\*(.+?)\*\*/g, '<strong class="text-slate-800">$1</strong>')
+        .replace(/\[((?:\d+:)?\d{1,2}:\d{2}|sin minuto)\]/g, '<span class="font-mono text-[10px] bg-indigo-50 text-indigo-700 border border-indigo-200 rounded px-1">$1</span>');
+      let html = '', lista = null, tabla = null;
+      const cerrar = () => { if (lista) { html += `</${lista}>`; lista = null; } if (tabla) { html += '</tbody></table></div>'; tabla = null; } };
+      const celdas = t => t.replace(/^\|/, '').replace(/\|$/, '').split('|').map(c => c.trim());
+      escapeHtml(md).split('\n').forEach(linea => {
+        const t = linea.trim(); let m;
+        if (!t) { cerrar(); return; }
+        if (/^\|.*\|$/.test(t)) {
+          if (/^\|[\s:|-]+\|$/.test(t)) return;
+          const c = celdas(t);
+          if (!tabla) {
+            if (lista) { html += `</${lista}>`; lista = null; }
+            html += '<div class="overflow-x-auto mb-3"><table class="w-full text-[11px] border border-slate-200"><thead class="bg-slate-100 text-slate-600"><tr>' + c.map(x => `<th class="p-1.5 text-left border-b border-slate-200">${inline(x)}</th>`).join('') + '</tr></thead><tbody>';
+            tabla = true;
+          } else {
+            const est = (c[c.length - 1] || '').toLowerCase();
+            const color = est.includes('ausencia') ? 'text-red-700 font-bold' : (est.includes('no mencionado') ? 'text-amber-700' : 'text-emerald-700');
+            html += '<tr class="border-t border-slate-200 align-top">' + c.map((x, i) => `<td class="p-1.5 ${i === c.length - 1 ? color : ''}">${inline(x)}</td>`).join('') + '</tr>';
+          }
+          return;
+        }
+        cerrar();
+        if ((m = t.match(/^(#{1,2})\s+(.*)$/))) {
+          html += `<h3 class="text-sm font-bold text-[#3f4143] mt-5 mb-1 pb-1 border-b border-slate-300">${inline(m[2])}</h3>`;
+        } else if ((m = t.match(/^#{3,4}\s+(.*)$/))) {
+          html += `<h4 class="text-xs font-bold text-indigo-700 mt-3 mb-1">${inline(m[1])}</h4>`;
+        } else if ((m = t.match(/^[-*•]\s+(.*)$/))) {
+          html += '<ul class="list-disc pl-5 space-y-1 mb-2"><li>' + inline(m[1]) + '</li></ul>';
+        } else if ((m = t.match(/^\d+[.)]\s+(.*)$/))) {
+          html += '<ol class="list-decimal pl-5 space-y-1 mb-2"><li>' + inline(m[1]) + '</li></ol>';
+        } else if (/^-{3,}$/.test(t)) {
+          html += '<hr class="my-3 border-slate-200">';
+        } else { html += `<p class="mb-2">${inline(t)}</p>`; }
+      });
+      cerrar();
+      return html;
+    }
+
+    async function generarResumenReunion() {
+      const transcripcion = document.getElementById('reu-texto').value.trim();
+      const estado = document.getElementById('reu-estado');
+      const boton = document.getElementById('reu-btn-generar');
+      const resultado = document.getElementById('reu-resultado');
+      if (transcripcion.length < 200) { alert('Pega o sube primero la transcripción de la reunión.'); return; }
+      const clienteId = document.getElementById('reu-cliente').value;
+      const cli = clienteId ? buscarCliente(clienteId) : null;
+      const cliente = cli ? `${cli.nombre_corto || ''} ${cli.nombre_completo ? '(' + cli.nombre_completo + ')' : ''}`.trim() : '';
+      const participantes = document.getElementById('reu-participantes').value.trim();
+      const enfoque = document.getElementById('reu-enfoque').value.trim();
+
+      boton.disabled = true;
+      document.getElementById('reu-btn-copiar').classList.add('hidden');
+      document.getElementById('reu-btn-word').classList.add('hidden');
+      ultimoResumenReunion = '';
+      const partes = PARTES_REUNION.map(p => ({ ...p, texto: null, error: null, truncado: false }));
+      let listas = 0;
+      const pintar = () => {
+        resultado.innerHTML = (cliente ? `<p class="mb-2 text-[11px] text-slate-500">Cliente: <span class="font-bold text-slate-700">${escapeHtml(cliente)}</span></p>` : '') +
+          partes.map(p => p.texto !== null
+            ? renderAnalisisReunion(p.texto) + (p.truncado ? '<p class="text-[11px] text-red-600 font-bold">Esta parte se cortó por su extensión.</p>' : '')
+            : (p.error ? `<p class="mt-3 text-red-600 font-bold">No se pudo generar: ${escapeHtml(p.nombre)}.</p><p class="text-[11px]">${escapeHtml(p.error)}</p>`
+                       : `<p class="mt-3 text-slate-400">Preparando: ${escapeHtml(p.nombre)}...</p>`)).join('');
+      };
+      pintar();
+      estado.textContent = `Claude está analizando la reunión (0 de ${partes.length} partes). Puede tardar un par de minutos...`;
+      await Promise.all(partes.map(async p => {
+        try {
+          const { data, error } = await supabaseClient.functions.invoke(FUNCION_REUNIONES, { body: { cliente, participantes, enfoque, transcripcion, parte: p.id } });
+          if (error) throw error;
+          if (!data || data.error) throw new Error((data && data.error) || 'La función no devolvió resultado.');
+          p.texto = data.resumen || ''; p.truncado = !!data.truncado;
+        } catch (err) {
+          p.error = await mensajeErrorContratos(err, FUNCION_REUNIONES);
+        }
+        listas++;
+        estado.textContent = `Claude está analizando la reunión (${listas} de ${partes.length} partes)...`;
+        pintar();
+      }));
+      ultimoResumenReunion = (cliente ? `Cliente: ${cliente}\n\n` : '') + partes.filter(p => p.texto).map(p => p.texto).join('\n\n');
+      const fallas = partes.filter(p => p.error).length;
+      estado.textContent = fallas ? `Listo, pero ${fallas} parte(s) fallaron. Vuelve a generar para reintentar.` : 'Análisis listo. Cópialo o descárgalo antes de salir de esta pantalla.';
+      if (ultimoResumenReunion) {
+        document.getElementById('reu-btn-copiar').classList.remove('hidden');
+        document.getElementById('reu-btn-word').classList.remove('hidden');
+      }
+      boton.disabled = false;
+    }
+
+
+    // Sube el audio al almacenamiento privado, lo transcribe con AssemblyAI y pone el texto en el cuadro
+    async function transcribirAudioReunion() {
+      const f = (document.getElementById('reu-audio').files || [])[0];
+      const est = document.getElementById('reu-estado');
+      const btn = document.getElementById('reu-btn-audio');
+      if (!f) { alert('Primero elige el archivo de audio.'); return; }
+      if (f.size > 500 * 1024 * 1024) { alert('El audio pesa más de 500 MB. Conviértelo a mp3 con menor calidad (por ejemplo 64 kbps, mono) e inténtalo de nuevo.'); return; }
+      btn.disabled = true;
+      let ruta = '';
+      try {
+        const { data: ses } = await supabaseClient.auth.getSession();
+        const uid = (ses && ses.session && ses.session.user && ses.session.user.id) || 'usuario';
+        const ext = ((f.name.split('.').pop() || 'mp3').replace(/[^a-z0-9]/gi, '').toLowerCase()) || 'mp3';
+        ruta = `${uid}/${Date.now()}.${ext}`;
+        est.textContent = `Subiendo el audio (${(f.size / 1048576).toFixed(0)} MB)... no cierres esta pantalla.`;
+        const { error: eSub } = await supabaseClient.storage.from('reuniones').upload(ruta, f, { contentType: f.type || 'audio/mpeg', upsert: false });
+        if (eSub) {
+          const m = String(eSub.message || '');
+          throw new Error(/bucket not found/i.test(m) ? 'Falta crear el espacio de audios en Supabase (archivo Supabase_14_bucket_reuniones.sql).' :
+            /exceeded|too large|maximum/i.test(m) ? 'El audio es demasiado pesado para el plan de Supabase. Conviértelo a mp3 más liviano (64 kbps, mono) e inténtalo de nuevo.' : m);
+        }
+        est.textContent = 'Audio subido. Enviándolo a transcribir...';
+        const ini = await supabaseClient.functions.invoke('transcribir-reunion', { body: { accion: 'iniciar', path: ruta } });
+        if (ini.error) throw ini.error;
+        if (!ini.data || ini.data.error) throw new Error((ini.data && ini.data.error) || 'No se pudo iniciar la transcripción.');
+        const id = ini.data.id;
+        const inicio = Date.now();
+        while (true) {
+          await new Promise(r => setTimeout(r, 8000));
+          const min = Math.floor((Date.now() - inicio) / 60000);
+          est.textContent = `Transcribiendo el audio... lleva ${min} min (una reunión de 80 minutos suele tardar entre 3 y 8).`;
+          const r = await supabaseClient.functions.invoke('transcribir-reunion', { body: { accion: 'estado', id, path: ruta } });
+          if (r.error) throw r.error;
+          if (r.data && r.data.error) throw new Error(r.data.error);
+          if (r.data && r.data.estado === 'completed') {
+            document.getElementById('reu-texto').value = r.data.texto || '';
+            contarTextoReunion();
+            est.textContent = 'Transcripción lista. Revísala y pulsa «Generar análisis de la reunión con Claude».';
+            break;
+          }
+          if (Date.now() - inicio > 90 * 60000) throw new Error('La transcripción tardó demasiado. Inténtalo de nuevo.');
+        }
+      } catch (err) {
+        console.error('Transcripción:', err);
+        est.textContent = 'No se pudo transcribir: ' + (await mensajeErrorContratos(err, 'transcribir-reunion'));
+        if (ruta) { try { await supabaseClient.storage.from('reuniones').remove([ruta]); } catch (e) { /* sin permiso: la función lo limpia */ } }
+      } finally { btn.disabled = false; }
+    }
+
+    async function copiarResumenReunion() {
+      if (!ultimoResumenReunion) return;
+      const btn = document.getElementById('reu-btn-copiar');
+      try { await navigator.clipboard.writeText(ultimoResumenReunion); }
+      catch (e) { const ta = document.createElement('textarea'); ta.value = ultimoResumenReunion; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); }
+      btn.textContent = 'Copiado ✓'; setTimeout(() => { btn.textContent = 'Copiar'; }, 1800);
+    }
+    // Descarga el análisis como documento que Word abre directamente
+    function descargarResumenReunion() {
+      if (!ultimoResumenReunion) return;
+      const cuerpo = renderAnalisisReunion(ultimoResumenReunion)
+        .replace(/class="[^"]*"/g, '')
+        .replace(/<table /g, '<table border="1" cellspacing="0" cellpadding="4" style="border-collapse:collapse;font-size:10pt" ');
+      const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word"><head><meta charset="utf-8"><title>Análisis de reunión</title><style>body{font-family:Calibri,Arial,sans-serif;font-size:11pt} h3{color:#005cab;border-bottom:1px solid #005cab} h4{color:#00929f}</style></head><body><h2><span style="color:#005cab">MGI</span> <span style="color:#00929f">Guerra</span> · Análisis de reunión</h2>${cuerpo}</body></html>`;
+      const blob = new Blob(['﻿', html], { type: 'application/msword' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'Analisis-reunion-' + new Date().toISOString().slice(0, 10) + '.doc';
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(a.href), 2000);
     }
 
     // ----- Cambiar mi clave -----
