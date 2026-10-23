@@ -1921,8 +1921,8 @@
 
   <!-- MODAL OPINIÓN -->
   <div id="modal-opinion" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs hidden z-50 flex items-center justify-center p-4">
-    <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-5 border border-slate-200 space-y-4 animate-in fade-in zoom-in-95 duration-200">
-      <div class="flex justify-between items-center border-b pb-2">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-xl w-full max-h-[94vh] flex flex-col p-4 border border-slate-200 gap-2.5 animate-in fade-in zoom-in-95 duration-200">
+      <div class="flex justify-between items-center border-b pb-1.5 shrink-0">
         <div class="flex items-center gap-2">
           <span class="w-3 h-3 rounded-full bg-rose-600"></span>
           <h3 class="text-sm font-bold text-rose-900">Gestión de Asunto para Opinión</h3>
@@ -1932,19 +1932,21 @@
 
       <input type="hidden" id="modal-op-pregunta-id" value="">
 
-      <div class="space-y-3">
+      <div class="space-y-2 overflow-y-auto min-h-0 flex-1 pr-1">
+        <div class="p-2 bg-rose-50/50 rounded-lg border border-rose-200 space-y-1.5">
         <div>
           <label class="block text-[11px] font-bold text-rose-900 mb-1">Detalle de Asunto de Opinión</label>
           <textarea id="modal-op-text" rows="3" placeholder="Escribe el detalle del asunto para la opinión..." class="w-full p-2.5 border border-rose-300 rounded-lg text-xs outline-none focus:ring-2 focus:ring-rose-500 bg-white leading-relaxed"></textarea>
         </div>
 
-        <div>
-          <label class="block text-[11px] font-bold text-rose-900 mb-1">Elaborado por (usuario en sesión)</label>
+        <div class="flex items-center gap-2">
+          <label class="text-[11px] font-bold text-rose-900 shrink-0">Elaborado por</label>
           <input type="hidden" id="modal-op-elaborado" value="">
-          <div id="modal-op-elaborado-texto" class="w-full p-2 border border-rose-200 rounded-lg text-xs bg-slate-100 text-slate-600 cursor-not-allowed select-none"></div>
+          <div id="modal-op-elaborado-texto" class="flex-1 min-w-0 truncate px-2 py-1 border border-rose-200 rounded-lg text-xs bg-slate-100 text-slate-600 cursor-not-allowed select-none"></div>
+        </div>
         </div>
 
-        <div class="bg-slate-50 p-3 rounded-lg border border-slate-200 space-y-2">
+        <div class="bg-slate-50 p-2 rounded-lg border border-slate-200 space-y-1.5">
           <input type="hidden" id="modal-socio-sel" value="PENDIENTE">
           <label class="block text-[10px] font-bold text-slate-600">Estado:</label>
           <div class="flex flex-wrap gap-1.5" id="modal-op-decisiones">
@@ -1956,15 +1958,15 @@
             <label class="block text-[10px] font-bold text-slate-600 mb-1">Conclusión: Comentario final (Socio / Socio revisor si se requiere)</label>
             <textarea id="modal-socio-comment" rows="2" placeholder="Comentario final..." class="w-full p-2 border border-slate-300 rounded-lg text-xs outline-none focus:ring-2 focus:ring-rose-500 bg-white leading-relaxed"></textarea>
           </div>
-          <div>
-            <label class="block text-[10px] font-bold text-slate-600 mb-1">Revisado por (Socio / Socio revisor)</label>
+          <div class="flex items-center gap-2">
+            <label class="text-[11px] font-bold text-slate-600 shrink-0">Revisado por</label>
             <input type="hidden" id="modal-op-revisado-por" value="">
-            <div id="modal-op-revisado-por-texto" class="w-full p-2 border border-slate-200 rounded-lg text-xs bg-slate-100 text-slate-600 cursor-not-allowed select-none"></div>
+            <div id="modal-op-revisado-por-texto" class="flex-1 min-w-0 truncate px-2 py-1 border border-slate-200 rounded-lg text-xs bg-slate-100 text-slate-600 cursor-not-allowed select-none"></div>
           </div>
         </div>
       </div>
 
-      <div class="flex items-center justify-end gap-2 pt-2 border-t">
+      <div class="flex items-center justify-end gap-2 pt-2 border-t shrink-0">
         <button onclick="desactivarModuloModal('op', true)" class="px-3 py-1.5 text-xs font-bold text-rose-700 hover:bg-rose-50 border border-rose-300 rounded-lg transition">Quitar todo y guardar</button>
         <button onclick="desactivarModuloModal('op', false)" class="px-3 py-1.5 text-xs font-bold text-slate-600 hover:bg-slate-100 border border-slate-300 rounded-lg transition">Desactivar Opinión</button>
         <button onclick="guardarModalOpinion()" class="px-4 py-1.5 bg-rose-600 text-white font-bold rounded-lg text-xs hover:bg-rose-700 transition">Confirmar y Guardar</button>
