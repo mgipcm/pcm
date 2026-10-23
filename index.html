@@ -1491,7 +1491,14 @@
 
         <div class="border border-slate-200 rounded-xl flex flex-col min-h-[420px]">
           <div class="flex items-center justify-between px-4 py-2.5 border-b border-slate-200 bg-slate-50 rounded-t-xl">
-            <h2 class="text-xs font-bold text-slate-600">Resumen</h2>
+            <div class="flex items-center gap-3 min-w-0">
+              <h2 class="text-xs font-bold text-slate-600">Resumen</h2>
+              <div id="contr-avance" class="hidden items-center gap-2 min-w-0">
+                <span class="inline-block w-3.5 h-3.5 border-2 border-indigo-300 border-t-indigo-700 rounded-full animate-spin shrink-0"></span>
+                <span id="contr-avance-texto" class="text-[11px] font-bold text-indigo-700 truncate"></span>
+                <div class="w-24 h-1.5 bg-indigo-100 rounded-full overflow-hidden shrink-0"><div id="contr-avance-barra" class="h-1.5 bg-indigo-600 rounded-full transition-all" style="width:0%"></div></div>
+              </div>
+            </div>
             <button id="contr-btn-copiar" onclick="copiarResumenContrato()" class="hidden px-2.5 py-1 bg-white text-slate-700 hover:bg-slate-50 border border-slate-400 rounded text-[11px] font-bold transition">Copiar</button>
           </div>
           <div id="contr-resultado" class="p-4 text-xs text-slate-700 leading-relaxed overflow-y-auto flex-1">
@@ -4929,6 +4936,7 @@
 
       try {
         estado.textContent = 'Leyendo los archivos...';
+        contAvance('Leyendo archivos · 5 %', 5);
 
         // Huella de cada archivo y revisión de duplicados
         const infoArchivos = [];
@@ -4956,6 +4964,7 @@
         for (const f of archivosContrato) archivos.push(await prepararArchivoContrato(f));
 
         estado.textContent = 'Claude está analizando el contrato. Puede tardar hasta un par de minutos...';
+        contAvanceAnalizando('Claude analizando', 15);
         resultado.innerHTML = '<p class="text-slate-400">Preparando el resumen...</p>';
         const { data, error } = await supabaseClient.functions.invoke(FUNCION_RESUMEN_CONTRATOS, {
           body: { cliente: nombreCliente, instruccion, archivos }
@@ -4968,6 +4977,7 @@
 
         // Guardar el resumen en Supabase
         estado.textContent = 'Guardando el resumen...';
+        contAvance('Guardando · 95 %', 95);
         const { error: errGuardar } = await supabaseClient.from('resumenes_contratos').insert([{
           cliente_id: clienteId,
           cliente_nombre: nombreCliente,
@@ -4994,8 +5004,31 @@
         resultado.innerHTML = `<p class="text-red-600 font-bold">No se pudo generar el resumen.</p><p class="mt-1">${escapeHtml(msg)}</p>`;
         estado.textContent = '';
       } finally {
+        contAvance(null);
         boton.disabled = false;
       }
+    }
+
+    // Avance junto al título "Resumen": Claude no informa su progreso, por eso la barra avanza sola mientras analiza
+    let contAvanceTimer = null, contAvancePct = 0;
+    function contAvance(texto, pct) {
+      const c = document.getElementById('contr-avance'); if (!c) return;
+      if (contAvanceTimer) { clearInterval(contAvanceTimer); contAvanceTimer = null; }
+      if (texto === null) { c.classList.add('hidden'); c.classList.remove('flex'); return; }
+      c.classList.remove('hidden'); c.classList.add('flex');
+      contAvancePct = pct;
+      document.getElementById('contr-avance-texto').textContent = texto;
+      document.getElementById('contr-avance-barra').style.width = pct + '%';
+    }
+    function contAvanceAnalizando(texto, desde) {
+      contAvance(texto + ' · ' + desde + ' %', desde);
+      let seg = 0;
+      contAvanceTimer = setInterval(() => {
+        seg++;
+        contAvancePct = Math.min(92, contAvancePct + (92 - contAvancePct) * 0.04);
+        document.getElementById('contr-avance-texto').textContent = `${texto} · ${Math.round(contAvancePct)} % (${seg} s)`;
+        document.getElementById('contr-avance-barra').style.width = contAvancePct + '%';
+      }, 1000);
     }
 
     function reiniciarContratos() {
@@ -5010,7 +5043,7 @@
       document.getElementById('contr-btn-copiar').classList.add('hidden');
       document.getElementById('contr-btn-generar').disabled = false;
       document.getElementById('contr-btn-informe').disabled = false;
-      renderListaArchivosContrato(); renderInformeContratos();
+      contAvance(null); renderListaArchivosContrato(); renderInformeContratos();
       if (typeof cargarResumenesGuardados === 'function') cargarResumenesGuardados();
     }
 
@@ -5084,9 +5117,11 @@
       boton.disabled = true;
       try {
         estado.textContent = 'Leyendo los archivos...';
+        contAvance('Leyendo archivos · 5 %', 5);
         const archivos = [];
         for (const f of archivosContrato) archivos.push(await prepararArchivoContrato(f));
         estado.textContent = 'Claude está preparando la versión informe...';
+        contAvanceAnalizando('Preparando versión informe', 15);
         const { data, error } = await supabaseClient.functions.invoke(FUNCION_RESUMEN_CONTRATOS, { body: { cliente: nombreCliente, archivos, modo: 'informe' } });
         if (error) throw error;
         if (!data || data.error) throw new Error((data && data.error) || 'La función no devolvió resultado.');
@@ -5097,7 +5132,7 @@
       } catch (err) {
         estado.textContent = '';
         alert('No se pudo generar la versión informe: ' + (await mensajeErrorContratos(err)));
-      } finally { boton.disabled = false; }
+      } finally { contAvance(null); boton.disabled = false; }
     }
 
     async function copiarResumenContrato() {
@@ -5610,25 +5645,35 @@
     }
 
     // Color pastel fijo por cliente: el mismo cliente siempre se ve del mismo color
-    // g = familia de color: clientes con fechas cruzadas evitan familias parecidas (azul/cian/turquesa, verde/lima, rojo/rosa, naranja/amarillo)
-    const PASTELES_CLIENTE = [
-      { g: 'azul', fondo: '#bfdbfe', borde: '#93c5fd', texto: '#1e3a8a' },
-      { g: 'rojo', fondo: '#fecaca', borde: '#fca5a5', texto: '#7f1d1d' },
-      { g: 'verde', fondo: '#bbf7d0', borde: '#86efac', texto: '#14532d' },
-      { g: 'calido', fondo: '#fed7aa', borde: '#fdba74', texto: '#7c2d12' },
-      { g: 'morado', fondo: '#e9d5ff', borde: '#d8b4fe', texto: '#581c87' },
-      { g: 'calido', fondo: '#fef08a', borde: '#fde047', texto: '#713f12' },
-      { g: 'azul', fondo: '#99f6e4', borde: '#5eead4', texto: '#134e4a' },
-      { g: 'rojo', fondo: '#fbcfe8', borde: '#f9a8d4', texto: '#831843' },
-      { g: 'verde', fondo: '#d9f99d', borde: '#bef264', texto: '#365314' },
-      { g: 'azul', fondo: '#a5f3fc', borde: '#67e8f9', texto: '#164e63' },
-      { g: 'gris', fondo: '#e2e8f0', borde: '#cbd5e1', texto: '#334155' },
-      { g: 'morado', fondo: '#c7d2fe', borde: '#a5b4fc', texto: '#312e81' },
-      { g: 'rojo', fondo: '#f5d0fe', borde: '#f0abfc', texto: '#701a75' },
-      { g: 'azul', fondo: '#bae6fd', borde: '#7dd3fc', texto: '#0c4a6e' },
-      { g: 'calido', fondo: '#fde68a', borde: '#fcd34d', texto: '#78350f' },
-      { g: 'gris', fondo: '#e7e5e4', borde: '#d6d3d1', texto: '#44403c' }
+    // Colores del calendario: 11 tonos base x 5 intensidades (pastel + 4 escalas más fuertes) = 55 colores.
+    // Se usan primero los fuertes y al final los pasteles; los colores vecinos contrastan entre sí.
+    // g = familia amplia (azul/turquesa/cian parecen similares); f = tono exacto.
+    const FAMILIAS_COLOR = [
+      { f: 'azul', g: 'azul', t: ['#bfdbfe', '#93c5fd', '#60a5fa', '#3b82f6', '#2563eb'] },
+      { f: 'rojo', g: 'rojo', t: ['#fecaca', '#fca5a5', '#f87171', '#ef4444', '#dc2626'] },
+      { f: 'verde', g: 'verde', t: ['#bbf7d0', '#86efac', '#4ade80', '#22c55e', '#16a34a'] },
+      { f: 'naranja', g: 'calido', t: ['#fed7aa', '#fdba74', '#fb923c', '#f97316', '#ea580c'] },
+      { f: 'morado', g: 'morado', t: ['#e9d5ff', '#d8b4fe', '#c084fc', '#a855f7', '#9333ea'] },
+      { f: 'amarillo', g: 'calido', t: ['#fef08a', '#fde047', '#facc15', '#eab308', '#ca8a04'] },
+      { f: 'turquesa', g: 'azul', t: ['#99f6e4', '#5eead4', '#2dd4bf', '#14b8a6', '#0d9488'] },
+      { f: 'rosa', g: 'rojo', t: ['#fbcfe8', '#f9a8d4', '#f472b6', '#ec4899', '#db2777'] },
+      { f: 'lima', g: 'verde', t: ['#d9f99d', '#bef264', '#a3e635', '#84cc16', '#65a30d'] },
+      { f: 'cian', g: 'azul', t: ['#a5f3fc', '#67e8f9', '#22d3ee', '#06b6d4', '#0891b2'] },
+      { f: 'gris', g: 'gris', t: ['#e2e8f0', '#cbd5e1', '#94a3b8', '#64748b', '#475569'] }
     ];
+    const PASTELES_CLIENTE = (() => {
+      const ajustar = (hex, k) => '#' + [1, 3, 5].map(i => {
+        const v = parseInt(hex.slice(i, i + 2), 16);
+        return Math.max(0, Math.min(255, Math.round(k < 0 ? v * (1 + k) : v + (255 - v) * k))).toString(16).padStart(2, '0');
+      }).join('');
+      const lum = hex => { const [r, g, b] = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16)); return (0.299 * r + 0.587 * g + 0.114 * b) / 255; };
+      const lista = [];
+      for (let n = 4; n >= 0; n--) FAMILIAS_COLOR.forEach(fam => {
+        const fondo = fam.t[n];
+        lista.push({ f: fam.f, g: fam.g, fondo, borde: ajustar(fondo, -0.12), texto: lum(fondo) > 0.62 ? ajustar(fondo, -0.72) : '#ffffff' });
+      });
+      return lista;
+    })();
     // Color de cada cliente: siempre el mismo (según su código) para todos los auditores.
     // Solo si dos clientes con fechas que se cruzan en el mes caerían en el mismo color, uno toma el siguiente libre.
     let mapaColoresMes = {};
@@ -5653,7 +5698,7 @@
       const orden = [...porCliente.keys()].sort((x, y) => (Math.min(...porCliente.get(x).map(r => r[0])) - Math.min(...porCliente.get(y).map(r => r[0]))) || x.localeCompare(y));
       const mapa = {}, asignados = [];
       orden.forEach(cid => {
-        const base = colorBaseIndice(cid);
+        const base = 0; // se reparte desde el color más fuerte, sin repetir dentro del mes
         let elegido = base;
         // Prioridad: 1) color que no use ningún otro cliente del mes y familia distinta a los de fechas cruzadas;
         // 2) color que no use ningún otro cliente del mes; 3) color distinto a los de fechas cruzadas
@@ -5661,6 +5706,7 @@
         const n = PASTELES_CLIENTE.length;
         const reglas = [
           cand => !asignados.some(o => o.color === cand || (cruza(o.rangos, rangos) && PASTELES_CLIENTE[o.color].g === PASTELES_CLIENTE[cand].g)),
+          cand => !asignados.some(o => o.color === cand || (cruza(o.rangos, rangos) && PASTELES_CLIENTE[o.color].f === PASTELES_CLIENTE[cand].f)),
           cand => !asignados.some(o => o.color === cand),
           cand => !asignados.some(o => o.color === cand && cruza(o.rangos, rangos))
         ];
