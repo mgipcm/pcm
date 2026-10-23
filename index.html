@@ -1796,9 +1796,16 @@
       <input type="hidden" id="modal-todo-pregunta-id" value="">
 
       <div class="space-y-3">
-        <div>
+        <div class="p-2.5 bg-slate-50 rounded-lg border border-slate-200 space-y-2">
+          <div>
           <label class="block text-[11px] font-bold text-slate-600 mb-1">Detalle To/Do</label>
           <textarea id="modal-todo-text" rows="3" placeholder="Detalle de lo que está pendiente..." class="w-full p-2 border border-slate-300 rounded-lg text-xs outline-none focus:ring-2 focus:ring-slate-500 bg-white leading-relaxed"></textarea>
+          </div>
+          <div>
+            <label class="block text-[11px] font-bold text-slate-600 mb-1">Elaborado por (usuario en sesión)</label>
+            <input type="hidden" id="modal-todo-elaborado" value="">
+            <div id="modal-todo-elaborado-texto" class="w-full p-2 border border-slate-200 rounded-lg text-xs bg-slate-100 text-slate-600 cursor-not-allowed select-none"></div>
+          </div>
         </div>
 
         <div class="p-2.5 bg-slate-50 rounded-lg border border-slate-200 space-y-3">
@@ -6822,6 +6829,7 @@
       document.getElementById('modal-todo-comentario-ejecutor').value = '';
       document.getElementById('modal-todo-realizado').checked = false;
       document.getElementById('modal-todo-revisado').checked = false;
+      pintarPersonaQL('modal-todo-elaborado', usuarioSesionEmail || '');
       document.getElementById('modal-todo-avisar').checked = true; pintarAvisoTodo();
       pintarRevisorTodo(usuarioSesionEmail || '');
 
@@ -6841,6 +6849,7 @@
           document.getElementById('modal-todo-email').value = resp.email_todo || '';
           document.getElementById('modal-todo-comentario-ejecutor').value = resp.comentario_ejecutor_todo || '';
           document.getElementById('modal-todo-realizado').checked = valorVerdadero(resp.realizado_todo);
+          if (resp.elaborado_todo) pintarPersonaQL('modal-todo-elaborado', resp.elaborado_todo);
           document.getElementById('modal-todo-revisado').checked = valorVerdadero(resp.revisado_todo);
           if (resp.reviso_email_todo && valorVerdadero(resp.revisado_todo)) {
             pintarRevisorTodo(resp.reviso_email_todo);
@@ -6869,6 +6878,7 @@
         email_todo: document.getElementById('modal-todo-email').value,
         comentario_ejecutor_todo: document.getElementById('modal-todo-comentario-ejecutor').value,
         realizado_todo: document.getElementById('modal-todo-realizado').checked,
+        elaborado_todo: document.getElementById('modal-todo-elaborado').value || usuarioSesionEmail || '',
         revisado_todo: document.getElementById('modal-todo-revisado').checked,
         reviso_email_todo: document.getElementById('modal-todo-revisado').checked ? (document.getElementById('modal-todo-reviso-email').value || usuarioSesionEmail || '') : ''
       };
@@ -6892,9 +6902,9 @@
       };
       let error = await guardarTodo(datosTodo);
       let sinColumnaRealizado = false;
-      if (error && /realizado_todo/i.test(String(error.message || ''))) {
+      if (error && /realizado_todo|elaborado_todo/i.test(String(error.message || ''))) {
         // Falta la columna en Supabase: se guarda todo lo demás y se avisa
-        const { realizado_todo, ...sinRealizado } = datosTodo;
+        const { realizado_todo, elaborado_todo, ...sinRealizado } = datosTodo;
         error = await guardarTodo(sinRealizado);
         sinColumnaRealizado = !error;
       }
@@ -6904,7 +6914,7 @@
       } else {
         cerrarModal('modal-todo');
         cargarPreguntas();
-        if (sinColumnaRealizado) alert('El To/Do se guardó, pero la casilla "To/Do Realizado" no se pudo guardar: falta ejecutar en Supabase el archivo Supabase_18_todo_realizado.sql.');
+        if (sinColumnaRealizado) alert('El To/Do se guardó, pero la casilla "To/Do Realizado" y el campo "Elaborado por" no se pudieron guardar: falta ejecutar en Supabase el archivo Supabase_18_todo_realizado.sql.');
         if (avisar) {
           try {
             const r = await enviarAvisoCorreo({ tipo: 'todo', cliente_id: clienteIdVal, anio: String(anioVal), pregunta_id: preguntaId });
@@ -7115,7 +7125,7 @@
       if (tipo === 'todo') {
         preguntaId = document.getElementById('modal-todo-pregunta-id').value;
         payload = { es_todo: false };
-        if (borrar) Object.assign(payload, { detalle_todo: '', visita_preliminar_todo: false, visita_final_todo: false, email_todo: '', comentario_ejecutor_todo: '', realizado_todo: false, revisado_todo: false, reviso_email_todo: '' });
+        if (borrar) Object.assign(payload, { detalle_todo: '', visita_preliminar_todo: false, visita_final_todo: false, email_todo: '', comentario_ejecutor_todo: '', realizado_todo: false, elaborado_todo: '', revisado_todo: false, reviso_email_todo: '' });
       } else if (tipo === 'ql') {
         preguntaId = document.getElementById('modal-ql-pregunta-id').value;
         payload = { es_quicklett: false };
@@ -7304,6 +7314,7 @@
             <p class="text-xs text-slate-600 bg-slate-50 p-2.5 rounded-lg border leading-relaxed">${escapeHtml(p.detalle_todo || 'Sin detalle')}</p>
             <div class="text-[10px] text-slate-500 space-y-0.5 pt-1">
               <p><strong>A realizar en:</strong> ${[valorVerdadero(p.visita_preliminar_todo) ? 'Visita preliminar' : '', valorVerdadero(p.visita_final_todo) ? 'Visita final' : ''].filter(Boolean).join(' y ') || 'Sin definir'}</p>
+              ${p.elaborado_todo ? `<p><strong>Elaborado por:</strong> ${escapeHtml(nombreDeUsuarioPorEmail(p.elaborado_todo) + ' (' + p.elaborado_todo + ')')}</p>` : ''}
               <p><strong>Asignado:</strong> ${escapeHtml(p.email_todo || 'Sin asignar')}</p>
               ${p.comentario_ejecutor_todo ? `<p><strong>Comentario del ejecutor:</strong> ${escapeHtml(p.comentario_ejecutor_todo)}</p>` : ''}
               ${valorVerdadero(p.revisado_todo) && p.reviso_email_todo ? `<p><strong>Revisado por:</strong> ${escapeHtml(nombreDeUsuarioPorEmail(p.reviso_email_todo) + ' (' + p.reviso_email_todo + ')')}</p>` : ''}
