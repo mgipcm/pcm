@@ -1826,9 +1826,15 @@
           </label>
         </div>
 
-        <div>
-          <label class="block text-[11px] font-bold text-slate-600 mb-1">Comentario del ejecutor</label>
-          <textarea id="modal-todo-comentario-ejecutor" rows="2" placeholder="Comentario o avance del ejecutor..." class="w-full p-2 border border-slate-300 rounded-lg text-xs outline-none focus:ring-2 focus:ring-slate-500 bg-white leading-relaxed"></textarea>
+        <div class="p-2.5 bg-slate-50 rounded-lg border border-slate-200 space-y-2">
+          <div class="flex items-center gap-2">
+            <input type="checkbox" id="modal-todo-realizado" class="w-4 h-4 text-slate-700 border-slate-300 rounded focus:ring-slate-500">
+            <label for="modal-todo-realizado" class="text-xs font-bold text-slate-700">To/Do Realizado</label>
+          </div>
+          <div>
+            <label class="block text-[11px] font-bold text-slate-600 mb-1">Comentario del ejecutor</label>
+            <textarea id="modal-todo-comentario-ejecutor" rows="2" placeholder="Comentario o avance del ejecutor..." class="w-full p-2 border border-slate-300 rounded-lg text-xs outline-none focus:ring-2 focus:ring-slate-500 bg-white leading-relaxed"></textarea>
+          </div>
         </div>
 
         <div class="p-2.5 bg-slate-50 rounded-lg border border-slate-200 space-y-2">
@@ -6812,6 +6818,7 @@
       document.getElementById('modal-todo-visita-final').checked = false;
       document.getElementById('modal-todo-email').value = '';
       document.getElementById('modal-todo-comentario-ejecutor').value = '';
+      document.getElementById('modal-todo-realizado').checked = false;
       document.getElementById('modal-todo-revisado').checked = false;
       document.getElementById('modal-todo-avisar').checked = true; pintarAvisoTodo();
       pintarRevisorTodo(usuarioSesionEmail || '');
@@ -6831,6 +6838,7 @@
           document.getElementById('modal-todo-visita-final').checked = valorVerdadero(resp.visita_final_todo);
           document.getElementById('modal-todo-email').value = resp.email_todo || '';
           document.getElementById('modal-todo-comentario-ejecutor').value = resp.comentario_ejecutor_todo || '';
+          document.getElementById('modal-todo-realizado').checked = valorVerdadero(resp.realizado_todo);
           document.getElementById('modal-todo-revisado').checked = valorVerdadero(resp.revisado_todo);
           if (resp.reviso_email_todo && valorVerdadero(resp.revisado_todo)) {
             pintarRevisorTodo(resp.reviso_email_todo);
@@ -6858,6 +6866,7 @@
         visita_final_todo: document.getElementById('modal-todo-visita-final').checked,
         email_todo: document.getElementById('modal-todo-email').value,
         comentario_ejecutor_todo: document.getElementById('modal-todo-comentario-ejecutor').value,
+        realizado_todo: document.getElementById('modal-todo-realizado').checked,
         revisado_todo: document.getElementById('modal-todo-revisado').checked,
         reviso_email_todo: document.getElementById('modal-todo-revisado').checked ? (document.getElementById('modal-todo-reviso-email').value || usuarioSesionEmail || '') : ''
       };
@@ -6871,23 +6880,21 @@
         .eq('pregunta_id', preguntaId)
         .maybeSingle();
 
-      let error = null;
-      if (respExistente) {
-        const res = await supabaseClient
-          .from('respuestas_auditoria')
-          .update(datosTodo)
-          .eq('id', respExistente.id);
-        error = res.error;
-      } else {
-        const res = await supabaseClient
-          .from('respuestas_auditoria')
-          .insert([{
-            cliente_id: clienteIdVal,
-            anio: Number(anioVal),
-            pregunta_id: preguntaId,
-            ...datosTodo
-          }]);
-        error = res.error;
+      const guardarTodo = async (datos) => {
+        if (respExistente) {
+          const res = await supabaseClient.from('respuestas_auditoria').update(datos).eq('id', respExistente.id);
+          return res.error;
+        }
+        const res = await supabaseClient.from('respuestas_auditoria').insert([{ cliente_id: clienteIdVal, anio: Number(anioVal), pregunta_id: preguntaId, ...datos }]);
+        return res.error;
+      };
+      let error = await guardarTodo(datosTodo);
+      let sinColumnaRealizado = false;
+      if (error && /realizado_todo/i.test(String(error.message || ''))) {
+        // Falta la columna en Supabase: se guarda todo lo demás y se avisa
+        const { realizado_todo, ...sinRealizado } = datosTodo;
+        error = await guardarTodo(sinRealizado);
+        sinColumnaRealizado = !error;
       }
 
       if (error) {
@@ -6895,6 +6902,7 @@
       } else {
         cerrarModal('modal-todo');
         cargarPreguntas();
+        if (sinColumnaRealizado) alert('El To/Do se guardó, pero la casilla "To/Do Realizado" no se pudo guardar: falta ejecutar en Supabase el archivo Supabase_18_todo_realizado.sql.');
         if (avisar) {
           try {
             const r = await enviarAvisoCorreo({ tipo: 'todo', cliente_id: clienteIdVal, anio: String(anioVal), pregunta_id: preguntaId });
@@ -7105,7 +7113,7 @@
       if (tipo === 'todo') {
         preguntaId = document.getElementById('modal-todo-pregunta-id').value;
         payload = { es_todo: false };
-        if (borrar) Object.assign(payload, { detalle_todo: '', visita_preliminar_todo: false, visita_final_todo: false, email_todo: '', comentario_ejecutor_todo: '', revisado_todo: false, reviso_email_todo: '' });
+        if (borrar) Object.assign(payload, { detalle_todo: '', visita_preliminar_todo: false, visita_final_todo: false, email_todo: '', comentario_ejecutor_todo: '', realizado_todo: false, revisado_todo: false, reviso_email_todo: '' });
       } else if (tipo === 'ql') {
         preguntaId = document.getElementById('modal-ql-pregunta-id').value;
         payload = { es_quicklett: false };
@@ -7281,8 +7289,13 @@
           <div class="p-4 bg-white rounded-xl border border-slate-200 shadow-xs space-y-2">
             <div class="flex justify-between items-start gap-2 border-b pb-2">
               <span class="text-[10px] font-bold bg-slate-100 text-slate-700 px-2 py-0.5 rounded">Año ${p.anio}</span>
-              <span class="text-[10px] font-bold ${valorVerdadero(p.revisado_todo) ? 'text-emerald-600 bg-emerald-50' : 'text-amber-600 bg-amber-50'} px-2 py-0.5 rounded border">
-                ${valorVerdadero(p.revisado_todo) ? '✓ Revisado' : 'Pendiente'}
+              <span class="flex items-center gap-1">
+                <span class="text-[10px] font-bold ${valorVerdadero(p.realizado_todo) ? 'text-emerald-600 bg-emerald-50' : 'text-slate-500 bg-slate-50'} px-2 py-0.5 rounded border">
+                  ${valorVerdadero(p.realizado_todo) ? '✓ Realizado' : 'Por realizar'}
+                </span>
+                <span class="text-[10px] font-bold ${valorVerdadero(p.revisado_todo) ? 'text-emerald-600 bg-emerald-50' : 'text-amber-600 bg-amber-50'} px-2 py-0.5 rounded border">
+                  ${valorVerdadero(p.revisado_todo) ? '✓ Revisado' : 'Pendiente'}
+                </span>
               </span>
             </div>
             <p class="text-xs font-bold text-slate-800">${escapeHtml(pregTexto)}</p>
