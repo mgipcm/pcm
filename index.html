@@ -5647,16 +5647,16 @@
     // Color pastel fijo por cliente: el mismo cliente siempre se ve del mismo color
     // Colores del calendario: 11 tonos base x 5 intensidades (pastel + 4 escalas más fuertes) = 55 colores.
     // Se usan primero los fuertes y al final los pasteles; los colores vecinos contrastan entre sí.
-    // g = familia amplia (azul/turquesa/cian parecen similares); f = tono exacto.
+    // g = grupo de tonos vecinos que se confunden (rojo/naranja/amarillo, azul/turquesa/cian, verde/lima, rosa/morado); f = tono exacto.
     const FAMILIAS_COLOR = [
       { f: 'azul', g: 'azul', t: ['#bfdbfe', '#93c5fd', '#60a5fa', '#3b82f6', '#2563eb'] },
-      { f: 'rojo', g: 'rojo', t: ['#fecaca', '#fca5a5', '#f87171', '#ef4444', '#dc2626'] },
+      { f: 'rojo', g: 'calido', t: ['#fecaca', '#fca5a5', '#f87171', '#ef4444', '#dc2626'] },
       { f: 'verde', g: 'verde', t: ['#bbf7d0', '#86efac', '#4ade80', '#22c55e', '#16a34a'] },
       { f: 'naranja', g: 'calido', t: ['#fed7aa', '#fdba74', '#fb923c', '#f97316', '#ea580c'] },
-      { f: 'morado', g: 'morado', t: ['#e9d5ff', '#d8b4fe', '#c084fc', '#a855f7', '#9333ea'] },
+      { f: 'morado', g: 'rosado', t: ['#e9d5ff', '#d8b4fe', '#c084fc', '#a855f7', '#9333ea'] },
       { f: 'amarillo', g: 'calido', t: ['#fef08a', '#fde047', '#facc15', '#eab308', '#ca8a04'] },
       { f: 'turquesa', g: 'azul', t: ['#99f6e4', '#5eead4', '#2dd4bf', '#14b8a6', '#0d9488'] },
-      { f: 'rosa', g: 'rojo', t: ['#fbcfe8', '#f9a8d4', '#f472b6', '#ec4899', '#db2777'] },
+      { f: 'rosa', g: 'rosado', t: ['#fbcfe8', '#f9a8d4', '#f472b6', '#ec4899', '#db2777'] },
       { f: 'lima', g: 'verde', t: ['#d9f99d', '#bef264', '#a3e635', '#84cc16', '#65a30d'] },
       { f: 'cian', g: 'azul', t: ['#a5f3fc', '#67e8f9', '#22d3ee', '#06b6d4', '#0891b2'] },
       { f: 'gris', g: 'gris', t: ['#e2e8f0', '#cbd5e1', '#94a3b8', '#64748b', '#475569'] }
