@@ -1784,8 +1784,8 @@
 
   <!-- MODAL TO/DO -->
   <div id="modal-todo" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs hidden z-50 flex items-center justify-center p-4">
-    <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-5 border border-slate-200 space-y-4 animate-in fade-in zoom-in-95 duration-200">
-      <div class="flex justify-between items-center border-b pb-2">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-xl w-full max-h-[94vh] flex flex-col p-4 border border-slate-200 gap-2.5 animate-in fade-in zoom-in-95 duration-200">
+      <div class="flex justify-between items-center border-b pb-1.5 shrink-0">
         <div class="flex items-center gap-2">
           <span class="w-3 h-3 rounded-full bg-slate-800"></span>
           <h3 class="text-sm font-bold text-slate-800">Gestión de To/Do</h3>
@@ -1795,20 +1795,20 @@
 
       <input type="hidden" id="modal-todo-pregunta-id" value="">
 
-      <div class="space-y-3">
-        <div class="p-2.5 bg-slate-50 rounded-lg border border-slate-200 space-y-2">
+      <div class="space-y-2 overflow-y-auto min-h-0 flex-1 pr-1">
+        <div class="p-2 bg-slate-50 rounded-lg border border-slate-200 space-y-1.5">
           <div>
           <label class="block text-[11px] font-bold text-slate-600 mb-1">Detalle To/Do</label>
-          <textarea id="modal-todo-text" rows="3" placeholder="Detalle de lo que está pendiente..." class="w-full p-2 border border-slate-300 rounded-lg text-xs outline-none focus:ring-2 focus:ring-slate-500 bg-white leading-relaxed"></textarea>
+          <textarea id="modal-todo-text" rows="2" placeholder="Detalle de lo que está pendiente..." class="w-full p-2 border border-slate-300 rounded-lg text-xs outline-none focus:ring-2 focus:ring-slate-500 bg-white leading-relaxed"></textarea>
           </div>
-          <div>
-            <label class="block text-[11px] font-bold text-slate-600 mb-1">Elaborado por (usuario en sesión)</label>
+          <div class="flex items-center gap-2">
+            <label class="text-[11px] font-bold text-slate-600 shrink-0">Elaborado por</label>
             <input type="hidden" id="modal-todo-elaborado" value="">
-            <div id="modal-todo-elaborado-texto" class="w-full p-2 border border-slate-200 rounded-lg text-xs bg-slate-100 text-slate-600 cursor-not-allowed select-none"></div>
+            <div id="modal-todo-elaborado-texto" class="flex-1 min-w-0 truncate px-2 py-1 border border-slate-200 rounded-lg text-xs bg-slate-100 text-slate-600 cursor-not-allowed select-none"></div>
           </div>
         </div>
 
-        <div class="p-2.5 bg-slate-50 rounded-lg border border-slate-200 space-y-3">
+        <div class="p-2 bg-slate-50 rounded-lg border border-slate-200 space-y-1.5">
          <div>
           <label class="block text-[11px] font-bold text-indigo-700 mb-1">A Realizar To/Do</label>
           <div class="flex flex-wrap items-center gap-4 text-xs font-medium text-slate-700">
@@ -1835,7 +1835,7 @@
         </div>
         </div>
 
-        <div class="p-2.5 bg-slate-50 rounded-lg border border-slate-200 space-y-2">
+        <div class="p-2 bg-slate-50 rounded-lg border border-slate-200 space-y-1.5">
           <div class="flex items-center gap-2">
             <input type="checkbox" id="modal-todo-realizado" class="w-4 h-4 text-slate-700 border-slate-300 rounded focus:ring-slate-500">
             <label for="modal-todo-realizado" class="text-xs font-bold text-slate-700">To/Do Realizado</label>
@@ -1846,21 +1846,21 @@
           </div>
         </div>
 
-        <div class="p-2.5 bg-slate-50 rounded-lg border border-slate-200 space-y-2">
+        <div class="p-2 bg-slate-50 rounded-lg border border-slate-200 space-y-1.5">
           <div class="flex items-center gap-2">
             <input type="checkbox" id="modal-todo-revisado" class="w-4 h-4 text-slate-700 border-slate-300 rounded focus:ring-slate-500">
             <label for="modal-todo-revisado" class="text-xs font-bold text-slate-700">To/Do Revisado</label>
           </div>
 
-          <div>
-            <label class="block text-[11px] font-bold text-slate-600 mb-1">Revisado por (usuario en sesión)</label>
+          <div class="flex items-center gap-2">
+            <label class="text-[11px] font-bold text-slate-600 shrink-0">Revisado por</label>
             <input type="hidden" id="modal-todo-reviso-email" value="">
-            <div id="modal-todo-reviso-texto" class="w-full p-2 border border-slate-200 rounded-lg text-xs bg-slate-100 text-slate-600 cursor-not-allowed select-none"></div>
+            <div id="modal-todo-reviso-texto" class="flex-1 min-w-0 truncate px-2 py-1 border border-slate-200 rounded-lg text-xs bg-slate-100 text-slate-600 cursor-not-allowed select-none"></div>
           </div>
         </div>
       </div>
 
-      <div class="flex items-center justify-end gap-2 pt-2 border-t">
+      <div class="flex items-center justify-end gap-2 pt-2 border-t shrink-0">
         <button onclick="desactivarModuloModal('todo', true)" class="px-3 py-1.5 text-xs font-bold text-rose-700 hover:bg-rose-50 border border-rose-300 rounded-lg transition">Quitar todo y guardar</button>
         <button onclick="desactivarModuloModal('todo', false)" class="px-3 py-1.5 text-xs font-bold text-slate-600 hover:bg-slate-100 border border-slate-300 rounded-lg transition">Desactivar To/Do</button>
         <button onclick="guardarModalTodo()" class="px-4 py-1.5 bg-slate-800 text-white font-bold rounded-lg text-xs hover:bg-slate-900 transition">Confirmar y Guardar</button>
