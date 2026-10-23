@@ -1483,7 +1483,7 @@
             Generar versión informe (tabla de la nota Contratos suscritos)
           </button>
           <button id="contr-btn-reiniciar" onclick="reiniciarContratos()" class="w-full py-2 bg-white text-slate-600 border border-slate-300 rounded-lg text-xs font-bold hover:bg-slate-50 transition">
-            Reiniciar todo (dejar la pantalla en blanco)
+            Reiniciar todo (dejar la pantalla en blanco) · No borra los contratos guardados
           </button>
           <p id="contr-estado" class="text-xs text-slate-500 min-h-[1rem]"></p>
           <p class="text-[11px] text-slate-400 leading-relaxed">Los archivos se envían a Claude (Anthropic) solo para generar el resumen. Confirma que la política de confidencialidad con tu cliente lo permite.</p>
@@ -4857,6 +4857,14 @@
     // ----- Lista de resúmenes guardados del cliente -----
     let pedidoGuardadosContratos = 0;
 
+    async function borrarResumenGuardado(id) {
+      if (!confirm('¿Borrar este resumen guardado? No se puede deshacer.\n\nSi subes el mismo contrato otra vez, podrás generarlo de nuevo.')) return;
+      const { data, error } = await supabaseClient.from('resumenes_contratos').delete().eq('id', id).select('id');
+      if (error) { alert('No se pudo borrar: ' + error.message); return; }
+      if (!data || data.length === 0) { alert('No se pudo borrar. Falta ejecutar en Supabase el archivo Supabase_19_borrar_resumenes_contratos.sql.'); return; }
+      cargarResumenesGuardados();
+    }
+
     async function cargarResumenesGuardados() {
       const cont = document.getElementById('contr-guardados');
       const sel = document.getElementById('contr-cliente');
@@ -4891,7 +4899,10 @@
         const nombres = (r.archivos || []).map(a => a && a.nombre).filter(Boolean).join(', ') || 'Contrato';
         return `<div class="flex items-center justify-between gap-3 px-3 py-2 rounded-lg border border-slate-200 bg-slate-50">
           <span class="truncate"><span class="text-slate-500">${escapeHtml(formatoFechaContrato(r.created_at))}</span> · <span class="font-bold text-slate-800">${escapeHtml(nombres)}</span>${r.truncado ? ' <span class="text-red-600 font-bold">· incompleto</span>' : ''}</span>
-          <button type="button" onclick="verResumenGuardado('${escapeHtml(r.id)}')" class="px-2.5 py-1 bg-white text-slate-700 hover:bg-slate-100 border border-slate-400 rounded text-[11px] font-bold transition shrink-0">Ver</button>
+          <span class="flex items-center gap-1.5 shrink-0">
+            <button type="button" onclick="verResumenGuardado('${escapeHtml(r.id)}')" class="px-2.5 py-1 bg-white text-slate-700 hover:bg-slate-100 border border-slate-400 rounded text-[11px] font-bold transition shrink-0">Ver</button>
+            <button type="button" onclick="borrarResumenGuardado('${escapeHtml(r.id)}')" class="px-2.5 py-1 bg-white text-rose-600 hover:bg-rose-50 border border-rose-300 rounded text-[11px] font-bold transition">Borrar</button>
+          </span>
         </div>`;
       }).join('');
     }
