@@ -12433,6 +12433,7 @@ ${cont.innerHTML}
     const ENLACES_USO = {
       supabase: 'https://supabase.com/dashboard/project/yyjeqklvrhezprrkdfof',
       claude: 'https://platform.claude.com/settings/billing',
+      assembly: 'https://www.assemblyai.com/dashboard',
       resend: 'https://resend.com/emails',
       github: 'https://github.com/mgipcm/pcm',
       namecheap: 'https://ap.www.namecheap.com/domains/list'
@@ -12503,6 +12504,11 @@ ${cont.innerHTML}
       tarjetas += _tarjetaUso('Claude API (inteligencia artificial)', ENLACES_USO.claude,
         `<div class="py-2 text-xs text-slate-700">Crédito de prueba: <b>US$${CREDITO_CLAUDE.monto}</b> · vence en <b>enero de 2027</b> · faltan <b style="color:${colCred}">${diasCred > 0 ? diasCred + ' días' : 'ya venció'}</b>${diasCred > 0 && diasCred <= 60 ? ' · conviene aprovecharlo antes de que se pierda' : ''}</div>` + usosIA +
         `<p class="text-[10px] text-slate-500 mt-1">Anthropic no permite ver el saldo restante desde la aplicación: míralo en el panel (botón «Abrir panel»). Cuando se acabe o venza el crédito, las herramientas con inteligencia artificial dejan de responder.</p>`);
+
+      // AssemblyAI (transcripción de audios de reuniones)
+      const audios = sb ? `<p class="text-xs text-slate-700 py-1">Audios enviados a transcribir: <b>${Number(sb.audios_mes || 0)}</b> este mes · <b>${Number(sb.audios_total || 0)}</b> en total.</p>` : '';
+      tarjetas += _tarjetaUso('AssemblyAI (transcripción de reuniones)', ENLACES_USO.assembly,
+        audios + `<p class="text-[10px] text-slate-500 mt-1">El saldo o las horas que te quedan se ven en el panel (botón «Abrir panel»); la aplicación solo puede contar cuántos audios se han enviado. Cuando se agote el saldo, la transcripción de reuniones deja de funcionar.</p>`);
 
       cont.innerHTML = tarjetas;
       est.textContent = 'Actualizado: ' + new Date().toLocaleString('es-EC');
