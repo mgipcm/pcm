@@ -7024,7 +7024,7 @@
 
       const { data: respExistente } = await supabaseClient
         .from('respuestas_auditoria')
-        .select('id')
+        .select('*')
         .eq('cliente_id', clienteIdVal)
         .eq('anio', Number(anioVal))
         .eq('pregunta_id', preguntaId)
@@ -7047,17 +7047,30 @@
         sinColumnaRealizado = !error;
       }
 
+      // Qué mensaje corresponde: revisado, realizado o asignado (según lo que cambió en este guardado)
+      const antesRealizado = !!respExistente && valorVerdadero(respExistente.realizado_todo);
+      const antesRevisado = !!respExistente && valorVerdadero(respExistente.revisado_todo);
+      let eventoTodo = 'asignado';
+      if (datosTodo.revisado_todo && !antesRevisado) eventoTodo = 'revisado';
+      else if (datosTodo.realizado_todo && !antesRealizado) eventoTodo = 'realizado';
+      else if (datosTodo.realizado_todo || datosTodo.revisado_todo) eventoTodo = '';   // ya estaba realizado o revisado: no se repite el aviso
+
       if (error) {
         alert("Error al guardar To/Do: " + error.message);
       } else {
         cerrarModal('modal-todo');
         cargarPreguntas();
         if (sinColumnaRealizado) alert('El To/Do se guardó, pero la casilla "To/Do Realizado" y el campo "Elaborado por" no se pudieron guardar: falta ejecutar en Supabase el archivo Supabase_18_todo_realizado.sql.');
-        if (avisar) {
+        if (avisar && eventoTodo) {
           try {
-            const r = await enviarAvisoCorreo({ tipo: 'todo', cliente_id: clienteIdVal, anio: String(anioVal), pregunta_id: preguntaId });
+            const r = await enviarAvisoCorreo({ tipo: 'todo', evento: eventoTodo, cliente_id: clienteIdVal, anio: String(anioVal), pregunta_id: preguntaId });
             if (r.fallidos && r.fallidos.length) alert('El To/Do se guardó, pero el correo no se pudo enviar: ' + r.fallidos[0].error);
-            else alert('To/Do guardado y aviso enviado a ' + datosTodo.email_todo + '.');
+            else if (r.omitido) alert('To/Do guardado. ' + r.omitido);
+            else {
+              const para = (r.enviados && r.enviados[0]) || datosTodo.email_todo;
+              const que = eventoTodo === 'revisado' ? 'aviso de To/Do revisado' : (eventoTodo === 'realizado' ? 'aviso de To/Do realizado' : 'aviso de asignación');
+              alert('To/Do guardado y ' + que + ' enviado a ' + para + '.');
+            }
           } catch (e) { alert('El To/Do se guardó, pero el correo no se pudo enviar: ' + e.message); }
         }
       }
