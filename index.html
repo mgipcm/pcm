@@ -135,6 +135,58 @@
       #gate-btn { border-color:#005cab; color:#005cab; }
     #gate-btn:hover { background-color:#eef5fb; }
   </style>
+
+  <style id="estilo-sobrio">
+    /* ===== Estilo sobrio: fondo gris suave, letras gris oscuro, sin degradados de color ===== */
+    :root { --fondo:#f1f1ef; --panel:#fafaf9; --menu:#e9e9e6; --linea:#d9d9d5; --texto:#383836; --texto-suave:#5c5c59; --acento:#44443f; --acento-hover:#2b2b29; }
+    html body.mgi-bg { background-color:var(--fondo) !important; background-image:none !important; color:var(--texto); }
+
+    /* Menú lateral */
+    #sidebar { background-color:var(--menu) !important; border-right:1px solid var(--linea) !important; color:var(--texto) !important; }
+    #sidebar .text-slate-400 { color:var(--texto) !important; }
+    #sidebar .text-slate-500 { color:#6b6b68 !important; }
+    #sidebar .hover\:bg-slate-800:hover { background-color:#dcdcd8 !important; }
+    #sidebar .hover\:text-white:hover, #sidebar .hover\:text-slate-300:hover { color:#1f1f1e !important; }
+    #sidebar .bg-indigo-600, #sidebar .bg-indigo-600:hover { background-image:none !important; background-color:#d3d3ce !important; color:#1f1f1e !important; border-color:#c4c4be !important; }
+    .mgi-sidebar-head { background-color:var(--menu) !important; background-image:none !important; border-bottom:1px solid var(--linea); }
+    .mgi-sidebar-head .mgi-tagline { color:#6b6b68 !important; }
+
+    /* Secciones: tarjeta clara, sin franja de color y con sombra suave */
+    main section[id^="sec-"] { background-image:none !important; background-color:var(--panel); border:1px solid var(--linea); box-shadow:0 1px 2px rgba(0,0,0,.05) !important; }
+    main section h1.text-slate-800 { color:#2b2b29 !important; }
+    main thead.bg-slate-100 { background-color:#e6e6e3 !important; }
+
+    /* Botones principales: gris oscuro liso */
+    .bg-indigo-600 { background-image:none !important; background-color:var(--acento) !important; border-color:var(--acento) !important; color:#fff !important; }
+    .hover\:bg-indigo-700:hover { background-image:none !important; background-color:var(--acento-hover) !important; }
+    #select-anio { background-image:none !important; background-color:var(--acento) !important; color:#fff !important; }
+    .mgi-grad { background-image:none !important; background-color:#6b6b68 !important; }
+    input[type="checkbox"], input[type="radio"], .accent-indigo-600 { accent-color:#44443f; }
+    .flecha-caja { background:#6b6b68 !important; }
+    .flecha-caja:hover, .flecha-caja.abierta { background:#383836 !important; }
+    .fila-desplegada { background-color:#ececea !important; border-bottom-color:var(--linea) !important; }
+    main::-webkit-scrollbar-thumb { background:#b8b8b3 !important; }
+
+    /* Fondos suaves y letras un poco más oscuras */
+    .bg-slate-50 { background-color:#f6f6f4 !important; }
+    .bg-slate-100 { background-color:#ececea !important; }
+    .bg-slate-200 { background-color:#e0e0dc !important; }
+    .border-slate-200 { border-color:var(--linea) !important; }
+    .text-slate-400 { color:#75756f !important; }
+    .text-slate-500 { color:#5f5f5a !important; }
+    .text-slate-600 { color:#4b4b47 !important; }
+    .text-slate-700 { color:#3b3b38 !important; }
+    .text-slate-800 { color:#2b2b29 !important; }
+    .text-indigo-700, .text-indigo-600, .text-indigo-800, .text-indigo-900 { color:#3b3b38 !important; }
+    .focus\:ring-indigo-500:focus { --tw-ring-color:#8a8a84 !important; }
+
+    /* Pantalla de ingreso */
+    #puerta-acceso { background-color:var(--fondo) !important; background-image:none !important; }
+    #puerta-acceso p[style*="005cab"] { color:#383836 !important; }
+    #puerta-acceso div[style*="linear-gradient"] { background-image:none !important; background-color:#b8b8b3 !important; }
+    #gate-btn { background-color:var(--acento) !important; border-color:var(--acento) !important; color:#fff !important; }
+    #gate-btn:hover { background-color:var(--acento-hover) !important; }
+  </style>
 </head>
 <body class="mgi-bg min-h-screen text-slate-800 font-sans flex relative">
 
