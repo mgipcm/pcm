@@ -6363,10 +6363,37 @@
       'A_08_P_001': 'Actividades de la revisión final - Estados financieros',
       'A_09_P_001': 'Actividades de conclusión - Aspectos finales a considerar - Informe de auditoría'
     };
+    // Norma evaluada por cada sección (según el Manual General y de Procedimientos de MGI Guerra)
+    const NIA_SUBTITULO = {
+      'A_01_P_001': 'NIGC 1.30 · NIA 210 · NIA 220.22 a 220.24 · NIA 300.13 y 510 (primer año)',
+      'A_01_P_027': 'NIA 220.16 a 220.21 · Código de Ética IESBA',
+      'A_01_P_029': 'NIA 210 · NIA 300',
+      'A_02_P_001': 'NIA 260 · NIA 300',
+      'A_02_P_003': 'NIA 315.17 y 315.18 · NIA 240 · NIA 220.29',
+      'A_03_P_001': 'NIA 315.19 y 315.20 · NIA 250',
+      'A_03_P_005': 'NIA 315.19 y 315.20',
+      'A_03_P_007': 'NIA 315.19 y 315.20 · NIA 550',
+      'A_03_P_020': 'NIA 315.19 y 315.20 · NIA 540',
+      'A_03_P_023': 'NIA 315 · NIA 520',
+      'A_04_P_001': 'NIA 315.21 a 315.24 · NIA 240',
+      'A_05_P_001': 'NIA 300 · NIA 315',
+      'A_05_P_003': 'NIA 300.13 · NIA 510',
+      'A_05_P_005': 'NIA 510 · NIA 300.13',
+      'A_05_P_006': 'NIA 500.8 · NIA 620',
+      'A_05_P_007': 'NIA 300.7 a 300.11 · NIA 315.32 · NIA 330',
+      'A_05_P_009': 'NIA 300',
+      'A_05_P_011': 'NIA 330',
+      'A_06_P_001': 'NIA 330 · NIA 520',
+      'A_07_P_001': 'NIA 315.37 · NIA 330.25 · NIA 300',
+      'A_08_P_001': 'NIA 330.24 · NIA 520.6 · NIA 450',
+      'A_09_P_001': 'NIA 570 · NIA 560 · NIA 230 · NIA 700 · NIA 701 · NIA 706'
+    };
     function filaSubtituloAspecto(pId, colspan) {
       const t = SUBTITULOS_PREGUNTA[pId];
       if (!t) return '';
-      return `<tr class="fila-subtitulo-aspecto"><td colspan="${colspan}" class="px-3 py-2 bg-slate-50 text-slate-600 text-[11px] font-bold uppercase tracking-wide border-y border-slate-200">${escapeHtml(t)}</td></tr>`;
+      const nia = NIA_SUBTITULO[pId];
+      const chip = nia ? ` <span class="ml-2 px-2 py-0.5 rounded bg-slate-200 text-slate-700 text-[10px] font-bold normal-case tracking-normal align-middle whitespace-nowrap">${escapeHtml(nia)}</span>` : '';
+      return `<tr class="fila-subtitulo-aspecto"><td colspan="${colspan}" class="px-3 py-2 bg-slate-50 text-slate-600 text-[11px] font-bold uppercase tracking-wide border-y border-slate-200">${escapeHtml(t)}${chip}</td></tr>`;
     }
 
     // CUESTIONARIO CON OPCIONES DEPENDIENTES Y GUARDADO AUTOMÁTICO
