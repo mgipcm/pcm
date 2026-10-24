@@ -12327,6 +12327,7 @@ ${cont.innerHTML}
           const k = 'pcm_ultimo_ingreso', ult = Number(localStorage.getItem(k) || 0);
           if (Date.now() - ult > 30 * 60 * 1000) { localStorage.setItem(k, String(Date.now())); registrarActividad('Abrió la aplicación', '', { cliente: '', anio: '' }); }
         } catch (e) {}
+        setTimeout(revisarAlertasUso, 2500);
         return r;
       };
     })();
@@ -12431,6 +12432,8 @@ ${cont.innerHTML}
     const CREDITO_CLAUDE = { monto: 100, vence: '2027-01-04' };
     // AssemblyAI (transcripción): datos tomados del panel el 24 de octubre de 2026. La aplicación no puede leerlos sola; actualiza estas cifras cuando revises el panel.
     const ASSEMBLY_USO = { plan: 'Gratuito', creditoRestante: 47.43, fecha: '24 de octubre de 2026', horas30dias: 11.2, creditoInicial: 50 };
+    // Cuándo se enciende la alerta de cada servicio
+    const UMBRALES_ALERTA = { porcentaje: 70, assemblyUSD: 10, claudeDias: 30, dominioDias: 30 };
     const LIMITES_USO = { dbMB: 500, archivosMB: 1024, usuariosMes: 50000, correosMes: 3000, correosDia: 100, sitioMB: 1024 };
     const ENLACES_USO = {
       supabase: 'https://supabase.com/dashboard/project/yyjeqklvrhezprrkdfof',
@@ -12440,6 +12443,39 @@ ${cont.innerHTML}
       github: 'https://github.com/mgipcm/pcm',
       namecheap: 'https://ap.www.namecheap.com/domains/list'
     };
+    function listaAlertasUso(sb, dom) {
+      const al = [], U = UMBRALES_ALERTA;
+      if (sb) {
+        const pdb = _mb(sb.db_bytes) / LIMITES_USO.dbMB * 100; if (pdb >= U.porcentaje) al.push('Supabase: la base de datos va en ' + pdb.toFixed(0) + '% de su límite.');
+        const pst = _mb(sb.storage_bytes) / LIMITES_USO.archivosMB * 100; if (pst >= U.porcentaje) al.push('Supabase: los archivos guardados van en ' + pst.toFixed(0) + '% de su límite.');
+        const pcm = Number(sb.correos_mes || 0) / LIMITES_USO.correosMes * 100; if (pcm >= U.porcentaje) al.push('Resend: los correos del mes van en ' + pcm.toFixed(0) + '% de su límite.');
+        const pcd = Number(sb.correos_hoy || 0) / LIMITES_USO.correosDia * 100; if (pcd >= U.porcentaje) al.push('Resend: los correos de hoy van en ' + pcd.toFixed(0) + '% de su límite diario.');
+      }
+      if (ASSEMBLY_USO.creditoRestante <= U.assemblyUSD) al.push('AssemblyAI: quedan US$' + ASSEMBLY_USO.creditoRestante.toFixed(2) + ' de crédito (dato del ' + ASSEMBLY_USO.fecha + '). Revisa el panel.');
+      const dc = Math.ceil((new Date(CREDITO_CLAUDE.vence + 'T23:59:59').getTime() - Date.now()) / 86400000);
+      if (dc <= U.claudeDias) al.push(dc > 0 ? 'Claude API: el crédito de prueba vence en ' + dc + ' días.' : 'Claude API: el crédito de prueba ya venció.');
+      if (dom && dom.dias !== undefined && dom.dias <= U.dominioDias) al.push('Dominio ' + dom.nombre + ': vence en ' + dom.dias + ' días. Renuévalo.');
+      return al;
+    }
+    // Al entrar a la aplicación (Socio y Supervisor), una vez al día, avisa si algún servicio necesita atención
+    async function revisarAlertasUso() {
+      try {
+        if (!usuarioActivo) return;
+        const c = String(usuarioActivo.cargo || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '').toLowerCase();
+        if (c !== 'socio' && c !== 'supervisor') return;
+        const hoy = new Date().toISOString().slice(0, 10);
+        if (localStorage.getItem('pcm_alerta_uso_dia') === hoy) return;
+        const { data } = await supabaseClient.rpc('medidor_supabase');
+        const al = listaAlertasUso(data, null);
+        if (!al.length) return;
+        localStorage.setItem('pcm_alerta_uso_dia', hoy);
+        const caja = document.createElement('div');
+        caja.id = 'alerta-uso';
+        caja.style.cssText = 'position:fixed;right:16px;bottom:16px;max-width:380px;z-index:90;background:#fff;border:1px solid #b91c1c;border-left:5px solid #b91c1c;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.18);padding:12px 14px;font-size:12px;color:#383836';
+        caja.innerHTML = '<div style="display:flex;justify-content:space-between;gap:8px"><b style="color:#b91c1c">Medidor de uso: requiere atención</b><button type="button" onclick="this.closest(\'#alerta-uso\').remove()" style="font-weight:bold">✕</button></div><ul style="margin:6px 0 8px 16px;list-style:disc">' + al.map(x => '<li>' + escapeHtml(x) + '</li>').join('') + '</ul><button type="button" onclick="navegarMenu(\'medidor\');this.closest(\'#alerta-uso\').remove()" style="font-weight:bold;text-decoration:underline">Abrir el medidor</button>';
+        document.body.appendChild(caja);
+      } catch (e) { /* la alerta nunca debe frenar la aplicación */ }
+    }
     function _mb(bytes) { return (Number(bytes || 0) / 1048576); }
     function _fmtMB(mb) { return mb >= 100 ? mb.toFixed(0) : mb.toFixed(1); }
     function _barraUso(etq, usado, limite, unidad, nota) {
@@ -12515,6 +12551,12 @@ ${cont.innerHTML}
       tarjetas += _tarjetaUso('AssemblyAI (transcripción de reuniones)', ENLACES_USO.assembly,
         _barraUso('Crédito usado (US$)', gastado, A.creditoInicial, 'US$', 'Saldo según el panel el ' + A.fecha + ': <b>US$' + A.creditoRestante.toFixed(2) + '</b> · plan ' + A.plan + '. Alcanza para unas <b>' + horasQuedan + ' horas</b> más de audio a este ritmo (aprox.).') +
         audios + `<p class="text-[10px] text-slate-500 mt-1">Estas cifras no se actualizan solas: revisa el panel (botón «Abrir panel») de vez en cuando y avísame para actualizarlas. Cuando se agote el crédito, la transcripción de reuniones deja de funcionar.</p>`);
+
+      const alertas = listaAlertasUso(sb, d);
+      const cajaAl = alertas.length
+        ? `<div class="lg:col-span-2 border border-red-300 bg-red-50 rounded-xl p-3 text-xs text-red-800"><b>Requiere atención</b><ul class="list-disc ml-5 mt-1">${alertas.map(x => '<li>' + escapeHtml(x) + '</li>').join('')}</ul></div>`
+        : `<div class="lg:col-span-2 border border-slate-200 bg-slate-50 rounded-xl p-3 text-xs text-slate-700">Todo en orden: ningún servicio está cerca de su límite.</div>`;
+      tarjetas = cajaAl + tarjetas;
 
       cont.innerHTML = tarjetas;
       est.textContent = 'Actualizado: ' + new Date().toLocaleString('es-EC');
