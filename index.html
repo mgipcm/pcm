@@ -2271,7 +2271,9 @@
         poner('select-aspecto', v.aspecto);
         if (v.pestana && typeof cambiarPestana === 'function') cambiarPestana(v.pestana);
         if (v.seccion) navegarMenu(v.seccion, v.sub, v.cuenta);
-        if (v.seccion === 'auditoria') ejecutarConsultaSegunVista();
+        // La pantalla de Auditoría es la de inicio: si está visible y hay cliente, año y aspecto, se cargan las preguntas
+        const secAud = document.getElementById('sec-auditoria');
+        if (secAud && !secAud.classList.contains('hidden')) ejecutarConsultaSegunVista();
       } catch (e) { console.warn('No se pudo restaurar la vista', e); }
     }
 
