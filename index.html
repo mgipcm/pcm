@@ -15,6 +15,7 @@
         indigo: { 50:'#f6f6f6',100:'#ececec',200:'#dcdcdd',300:'#c6c7c8',400:'#aeaeae',500:'#8f9092',600:'#6f7173',700:'#58595b',800:'#434446',900:'#2d2e30' },
         teal: { 50:'#f6f6f6',100:'#ececec',200:'#dcdcdd',300:'#c6c7c8',400:'#aeaeae',500:'#8f9092',600:'#6f7173',700:'#58595b',800:'#434446',900:'#2d2e30' },
         sky: { 50:'#f6f6f6',100:'#ececec',200:'#dcdcdd',300:'#c6c7c8',400:'#aeaeae',500:'#8f9092',600:'#6f7173',700:'#58595b',800:'#434446',900:'#2d2e30' },
+        slate: { 50:'#f6f6f4',100:'#ececea',200:'#dfdfdb',300:'#cdcdc8',400:'#9b9b96',500:'#6f6f6a',600:'#55554f',700:'#3d3d3a',800:'#2b2b29',900:'#1c1c1b' },
         mgi: { teal:'#00929f', blue:'#005cab', navy:'#0b2c4d' }
       } } }
     };
@@ -192,6 +193,8 @@
       -webkit-text-fill-color:#383836 !important; caret-color:#383836; transition:background-color 9999s ease-out 0s;
     }
     input:autofill { box-shadow:0 0 0 1000px #f1f1ef inset !important; -webkit-text-fill-color:#383836 !important; }
+    ::placeholder { color:#9b9b96 !important; opacity:1; }
+    textarea, input, select { border-color:#cdcdc8; }
   </style>
 </head>
 <body class="mgi-bg min-h-screen text-slate-800 font-sans flex relative">
