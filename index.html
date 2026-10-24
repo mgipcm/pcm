@@ -1811,6 +1811,12 @@
         <div><label class="block text-[10px] font-bold text-slate-500 mb-1">Buscar</label><input type="text" id="his-buscar" oninput="pintarHistorial()" placeholder="Cliente, pregunta, pantalla..." class="w-full p-2 border border-slate-300 rounded-lg text-xs bg-white"></div>
         <button type="button" onclick="cargarHistorial()" class="px-3 py-2 text-xs font-bold text-white bg-indigo-600 rounded-lg">Consultar</button>
       </div>
+      <div id="his-borrar-caja" class="hidden flex flex-wrap items-end gap-2 p-3 bg-slate-50 border border-slate-200 rounded-lg">
+        <div class="text-[11px] text-slate-600 mr-2">Se conserva el periodo del <b>1 de septiembre al 31 de agosto</b>; lo anterior se borra solo cada día. También puedes borrar a mano:</div>
+        <div><label class="block text-[10px] font-bold text-slate-500 mb-1">Borrar registros anteriores al</label><input type="date" id="his-borrar-fecha" class="p-2 border border-slate-300 rounded-lg text-xs bg-white"></div>
+        <button type="button" onclick="borrarHistorial()" class="px-3 py-2 text-xs font-bold text-white bg-slate-700 rounded-lg hover:bg-slate-900">Borrar</button>
+        <span class="text-[10px] text-slate-500">Solo el Socio. Descarga el Excel antes si quieres guardar una copia.</span>
+      </div>
       <div id="his-aviso" class="text-xs text-slate-500"></div>
       <div id="his-resumen" class="flex flex-wrap gap-2"></div>
       <div class="overflow-auto border border-slate-200 rounded-lg" style="max-height:62vh">
@@ -12317,7 +12323,24 @@ ${cont.innerHTML}
       const p = n => String(n).padStart(2, '0');
       return p(d.getDate()) + '/' + p(d.getMonth() + 1) + '/' + d.getFullYear() + ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
     }
+    async function borrarHistorial() {
+      if (!esSocioSesion()) { alert('Solo el Socio puede borrar el histórico.'); return; }
+      const f = document.getElementById('his-borrar-fecha').value;
+      if (!f) { alert('Elige la fecha: se borrarán los registros anteriores a ese día.'); return; }
+      const limite = new Date(f + 'T00:00:00').toISOString();
+      const { count, error: e1 } = await supabaseClient.from('bitacora_actividad').select('id', { count: 'exact', head: true }).lt('creado_at', limite);
+      if (e1) { alert('No se pudo consultar: ' + e1.message); return; }
+      if (!count) { alert('No hay registros anteriores al ' + f + '.'); return; }
+      if (!confirm('Se borrarán ' + count + ' registro(s) anteriores al ' + f + '. Esta acción no se puede deshacer.\n\n¿Deseas continuar?')) return;
+      const { error } = await supabaseClient.from('bitacora_actividad').delete().lt('creado_at', limite);
+      if (error) { alert('No se pudo borrar: ' + error.message); return; }
+      registrarActividad('Borró históricos', count + ' registro(s) anteriores al ' + f, { cliente: '', anio: '' });
+      alert('Se borraron ' + count + ' registro(s).');
+      cargarHistorial();
+    }
     function abrirHistorial() {
+      const caja = document.getElementById('his-borrar-caja');
+      if (caja) caja.classList.toggle('hidden', !esSocioSesion());
       const d = document.getElementById('his-desde'), h = document.getElementById('his-hasta');
       if (d && !d.value) {
         const hoy = new Date(), ini = new Date(Date.now() - 6 * 86400000);
