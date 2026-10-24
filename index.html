@@ -12427,8 +12427,8 @@ ${cont.innerHTML}
 
     // ===== Medidor de uso de los servicios (solo Socio y Supervisor) =====
     // Límites del plan gratuito de cada servicio (cámbialos aquí si se contrata un plan mayor)
-    // Crédito de prueba de la API de Claude: US$100 que vencen en enero de 2027 (se toma el último día del mes; ajusta si conoces la fecha exacta)
-    const CREDITO_CLAUDE = { monto: 100, vence: '2027-01-31' };
+    // Crédito de prueba de la API de Claude: US$100 que vencen el 4 de enero de 2027
+    const CREDITO_CLAUDE = { monto: 100, vence: '2027-01-04' };
     const LIMITES_USO = { dbMB: 500, archivosMB: 1024, usuariosMes: 50000, correosMes: 3000, correosDia: 100, sitioMB: 1024 };
     const ENLACES_USO = {
       supabase: 'https://supabase.com/dashboard/project/yyjeqklvrhezprrkdfof',
@@ -12502,7 +12502,7 @@ ${cont.innerHTML}
       const colCred = diasCred <= 30 ? '#b91c1c' : (diasCred <= 60 ? '#b45309' : '#57574f');
       const usosIA = sb ? `<p class="text-xs text-slate-700 py-1">Usos de resúmenes de contratos y reuniones: <b>${Number(sb.ia_mes || 0)}</b> este mes · <b>${Number(sb.ia_total || 0)}</b> en total.</p>` : '';
       tarjetas += _tarjetaUso('Claude API (inteligencia artificial)', ENLACES_USO.claude,
-        `<div class="py-2 text-xs text-slate-700">Crédito de prueba: <b>US$${CREDITO_CLAUDE.monto}</b> · vence en <b>enero de 2027</b> · faltan <b style="color:${colCred}">${diasCred > 0 ? diasCred + ' días' : 'ya venció'}</b>${diasCred > 0 && diasCred <= 60 ? ' · conviene aprovecharlo antes de que se pierda' : ''}</div>` + usosIA +
+        `<div class="py-2 text-xs text-slate-700">Crédito de prueba: <b>US$${CREDITO_CLAUDE.monto}</b> · vence el <b>4 de enero de 2027</b> · faltan <b style="color:${colCred}">${diasCred > 0 ? diasCred + ' días' : 'ya venció'}</b>${diasCred > 0 && diasCred <= 60 ? ' · conviene aprovecharlo antes de que se pierda' : ''}</div>` + usosIA +
         `<p class="text-[10px] text-slate-500 mt-1">Anthropic no permite ver el saldo restante desde la aplicación: míralo en el panel (botón «Abrir panel»). Cuando se acabe o venza el crédito, las herramientas con inteligencia artificial dejan de responder.</p>`);
 
       // AssemblyAI (transcripción de audios de reuniones)
