@@ -195,6 +195,7 @@
     input:autofill { box-shadow:0 0 0 1000px #f1f1ef inset !important; -webkit-text-fill-color:#383836 !important; }
     ::placeholder { color:#9b9b96 !important; opacity:1; }
     textarea, input, select { border-color:#cdcdc8; }
+    tr.fila-por-revisar > td { background-color:#f4f4f1 !important; }
   </style>
 </head>
 <body class="mgi-bg min-h-screen text-slate-800 font-sans flex relative">
@@ -6838,7 +6839,7 @@
       const ap = capturaCtx.prev;
       let h = '';
       if (est === 'revisar') {
-        h = `<div class="flex flex-wrap items-center gap-2 border border-amber-400 bg-amber-50 rounded-lg px-2.5 py-1.5">
+        h = `<div class="flex flex-wrap items-center gap-2 border border-amber-300 bg-slate-50 rounded-lg px-2.5 py-1.5">
                <span class="text-[11px] font-bold text-amber-800">Copiada del ${ap}, por revisar</span>
                <button type="button" onclick="confirmarVigente('${pId}')" class="px-2.5 py-1 text-[11px] font-semibold rounded-lg border border-emerald-600 bg-white text-emerald-700 hover:bg-emerald-50">Confirmar, sigue vigente</button>
                <span class="text-[10px] text-amber-700">o edite la respuesta si cambió</span>
@@ -6851,7 +6852,7 @@
       cont.innerHTML = h;
       const tr = document.querySelector(`tr[data-fila-cap="${pId}"]`);
       if (tr) {
-        tr.classList.toggle('bg-amber-50/40', est === 'revisar');
+        tr.classList.toggle('fila-por-revisar', est === 'revisar');
         aplicarFiltroFila(tr, est);
       }
     }
