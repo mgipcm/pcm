@@ -335,6 +335,9 @@
             <button onclick="navegarMenu('historial')" id="nav-historial" class="w-full text-left px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:bg-slate-800 hover:text-white transition flex items-center gap-2">
               <span>e) Históricos de visitas</span>
             </button>
+            <button onclick="navegarMenu('medidor')" id="nav-medidor" class="w-full text-left px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:bg-slate-800 hover:text-white transition flex items-center gap-2">
+              <span>f) Medidor de uso</span>
+            </button>
           </div>
         </div>
       </nav>
@@ -1834,6 +1837,18 @@
       </div>
     </section>
 
+    <section id="sec-medidor" class="hidden bg-white rounded-2xl shadow-xl border border-slate-200 p-6 min-h-[92vh] space-y-4">
+      <div class="flex justify-between items-center border-b pb-4">
+        <div>
+          <h1 class="text-xl font-bold text-slate-800">6f. Configuración: Medidor de uso</h1>
+          <p class="text-xs text-slate-500">Cuánto llevas usado de cada servicio y cuánto te queda. Los límites son los del plan gratuito; si cambias de plan, avísame y los ajusto.</p>
+        </div>
+        <button type="button" onclick="abrirMedidor()" class="px-3 py-1.5 text-xs font-bold text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50">Actualizar</button>
+      </div>
+      <div id="med-estado" class="text-xs text-slate-500"></div>
+      <div id="med-tarjetas" class="grid grid-cols-1 lg:grid-cols-2 gap-4"></div>
+    </section>
+
     <section id="sec-habilitar" class="hidden bg-white rounded-2xl shadow-xl border border-slate-200 p-6 min-h-[92vh] space-y-6">
       <div class="flex justify-between items-center border-b pb-4">
         <div>
@@ -2673,7 +2688,7 @@
     function navegarMenu(seccion, sub, cuenta) {
       if (seccion === 'visitas') { fechaCalendarioActual = new Date(); renderizarCalendarioLineal(); setTimeout(posicionarCalendarioHoy, 60); }
       // Clientes y Usuarios solo se abren con ingreso de Socio o Supervisor
-      if ((seccion === 'clientes' || seccion === 'usuarios' || seccion === 'cuentas' || seccion === 'habilitar' || seccion === 'historial') && !puedeConfigurar()) {
+      if ((seccion === 'clientes' || seccion === 'usuarios' || seccion === 'cuentas' || seccion === 'habilitar' || seccion === 'historial' || seccion === 'medidor') && !puedeConfigurar()) {
         abrirLoginConfig(seccion);
         return;
       }
@@ -2682,12 +2697,12 @@
         if (seccion === 'auditoria') seccion = 'desarrollo'; // pantalla principal: se muestra un aviso en vez de un mensaje emergente
         else { avisarEnDesarrollo(); return; }
       }
-      if (!['clientes', 'usuarios', 'cuentas', 'habilitar', 'historial'].includes(seccion)) guardarVista({ seccion: seccion, sub: sub || null, cuenta: cuenta || null });
+      if (!['clientes', 'usuarios', 'cuentas', 'habilitar', 'historial', 'medidor'].includes(seccion)) guardarVista({ seccion: seccion, sub: sub || null, cuenta: cuenta || null });
 
-      const secciones = ['desarrollo', 'clientes', 'usuarios', 'cuentas', 'habilitar', 'historial', 'sumarias', 'pendientes', 'flujo', 'auditoria', 'analisis', 'visitas', 'asignacion', 'indices', 'mayor', 'contratos', 'arrend', 'pce', 'reuniones', 'mas-herramientas'];
+      const secciones = ['desarrollo', 'clientes', 'usuarios', 'cuentas', 'habilitar', 'historial', 'medidor', 'sumarias', 'pendientes', 'flujo', 'auditoria', 'analisis', 'visitas', 'asignacion', 'indices', 'mayor', 'contratos', 'arrend', 'pce', 'reuniones', 'mas-herramientas'];
       const grupoSubmenu = sec => ['indices', 'mayor', 'contratos', 'flujo', 'arrend', 'pce', 'reuniones', 'mas-herramientas'].includes(sec)
         ? 'herramientas'
-        : (['clientes', 'usuarios', 'cuentas', 'habilitar', 'historial'].includes(sec) ? 'config' : (['sumarias', 'pendientes'].includes(sec) ? 'analisis' : null));
+        : (['clientes', 'usuarios', 'cuentas', 'habilitar', 'historial', 'medidor'].includes(sec) ? 'config' : (['sumarias', 'pendientes'].includes(sec) ? 'analisis' : null));
       const esSubmenu = sec => grupoSubmenu(sec) !== null;
       
       secciones.forEach(sec => {
@@ -2709,6 +2724,7 @@
       if (seccion === 'contratos') { poblarClientesContratos(); cargarResumenesGuardados(); }
       if (seccion === 'habilitar') abrirHabilitar();
       if (seccion === 'historial') abrirHistorial();
+      if (seccion === 'medidor') abrirMedidor();
       if (seccion === 'reuniones') poblarClientesReunion();
       if (seccion === 'sumarias') abrirSumarias();
       if (seccion === 'pendientes') abrirPendientes();
@@ -12231,7 +12247,7 @@ ${cont.innerHTML}
       indices: 'Herramienta: Índices', mayor: 'Herramienta: Mayor', contratos: 'Herramienta: Resumen de contratos',
       flujo: 'Herramienta: Flujo de efectivo', arrend: 'Herramienta: Arrendamientos NIIF 16', pce: 'Herramienta: Matriz PCE',
       reuniones: 'Herramienta: Resumen de reuniones', clientes: 'Configuración: Clientes', usuarios: 'Configuración: Usuarios / Auditores',
-      cuentas: 'Configuración: Cuentas / Actividades', habilitar: 'Configuración: Habilitar herramientas', historial: 'Configuración: Históricos de visitas'
+      cuentas: 'Configuración: Cuentas / Actividades', habilitar: 'Configuración: Habilitar herramientas', historial: 'Configuración: Históricos de visitas', medidor: 'Configuración: Medidor de uso'
     };
     const _regTiempos = {};
     function _permitido(clave, ms) {
@@ -12407,6 +12423,89 @@ ${cont.innerHTML}
       const ws = XLSX.utils.json_to_sheet(datos), wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Históricos de visitas');
       XLSX.writeFile(wb, 'Historicos_de_visitas.xlsx');
+    }
+
+    // ===== Medidor de uso de los servicios (solo Socio y Supervisor) =====
+    // Límites del plan gratuito de cada servicio (cámbialos aquí si se contrata un plan mayor)
+    // Crédito de prueba de la API de Claude: US$100 que vencen en enero de 2027 (se toma el último día del mes; ajusta si conoces la fecha exacta)
+    const CREDITO_CLAUDE = { monto: 100, vence: '2027-01-31' };
+    const LIMITES_USO = { dbMB: 500, archivosMB: 1024, usuariosMes: 50000, correosMes: 3000, correosDia: 100, sitioMB: 1024 };
+    const ENLACES_USO = {
+      supabase: 'https://supabase.com/dashboard/project/yyjeqklvrhezprrkdfof',
+      claude: 'https://platform.claude.com/settings/billing',
+      resend: 'https://resend.com/emails',
+      github: 'https://github.com/mgipcm/pcm',
+      namecheap: 'https://ap.www.namecheap.com/domains/list'
+    };
+    function _mb(bytes) { return (Number(bytes || 0) / 1048576); }
+    function _fmtMB(mb) { return mb >= 100 ? mb.toFixed(0) : mb.toFixed(1); }
+    function _barraUso(etq, usado, limite, unidad, nota) {
+      const pct = limite > 0 ? Math.min(100, usado / limite * 100) : 0;
+      const color = pct >= 90 ? '#b91c1c' : (pct >= 70 ? '#b45309' : '#57574f');
+      const estado = pct >= 90 ? 'Casi lleno' : (pct >= 70 ? 'Atento' : 'Bien');
+      return `<div class="py-2">
+        <div class="flex justify-between text-xs text-slate-700"><span class="font-semibold">${escapeHtml(etq)}</span>
+          <span><b>${escapeHtml(String(usado >= 100 ? Math.round(usado) : (Math.round(usado * 10) / 10)))}</b> / ${escapeHtml(String(limite))} ${escapeHtml(unidad)} · <span style="color:${color}">${estado}</span></span></div>
+        <div class="h-2 mt-1 rounded bg-slate-200 overflow-hidden"><div style="width:${Math.max(pct, usado > 0 ? 1.5 : 0).toFixed(1)}%;background:${color}" class="h-2 rounded"></div></div>
+        ${nota ? `<p class="text-[10px] text-slate-500 mt-1">${nota}</p>` : ''}</div>`;
+    }
+    function _tarjetaUso(titulo, enlace, cuerpo) {
+      return `<div class="border border-slate-200 rounded-xl p-4 bg-white">
+        <div class="flex justify-between items-center mb-1"><h2 class="text-sm font-bold text-slate-800">${escapeHtml(titulo)}</h2>
+        <a href="${enlace}" target="_blank" rel="noopener" class="text-[11px] font-bold text-slate-600 underline">Abrir panel</a></div>${cuerpo}</div>`;
+    }
+    async function abrirMedidor() {
+      const est = document.getElementById('med-estado'), cont = document.getElementById('med-tarjetas');
+      est.textContent = 'Consultando los servicios...';
+      const [rSb, rFn] = await Promise.all([
+        supabaseClient.rpc('medidor_supabase'),
+        supabaseClient.functions.invoke('medidor-uso', { body: {} }).catch(e => ({ error: e }))
+      ]);
+      const sb = rSb && rSb.data, fn = rFn && rFn.data;
+      let tarjetas = '';
+
+      // Supabase
+      if (sb) {
+        const tablas = (sb.tablas || []).map(t => `<li class="flex justify-between"><span>${escapeHtml(t.nombre)}</span><span>${_fmtMB(_mb(t.bytes))} MB</span></li>`).join('');
+        tarjetas += _tarjetaUso('Supabase (base de datos y usuarios)', ENLACES_USO.supabase,
+          _barraUso('Base de datos', _mb(sb.db_bytes), LIMITES_USO.dbMB, 'MB', 'Dato aproximado: el panel de Supabase suele marcar más porque suma archivos internos del sistema.') +
+          _barraUso('Archivos guardados (audios)', _mb(sb.storage_bytes), LIMITES_USO.archivosMB, 'MB') +
+          _barraUso('Usuarios activos este mes', Number(sb.usuarios_activos_mes || 0), LIMITES_USO.usuariosMes, 'usuarios') +
+          `<p class="text-[11px] font-bold text-slate-600 mt-2">Tablas más grandes</p><ul class="text-[11px] text-slate-600 space-y-0.5 mt-1">${tablas}</ul>` +
+          `<p class="text-[10px] text-slate-500 mt-2">Históricos de visitas guardados: ${Number(sb.registros_bitacora || 0)} registro(s). La transferencia de datos (egress) solo se ve en el panel de Supabase.</p>`);
+        tarjetas += _tarjetaUso('Resend (correos de aviso)', ENLACES_USO.resend,
+          _barraUso('Correos este mes (aprox.)', Number(sb.correos_mes || 0), LIMITES_USO.correosMes, 'correos') +
+          _barraUso('Correos hoy (aprox.)', Number(sb.correos_hoy || 0), LIMITES_USO.correosDia, 'correos', 'Se cuentan los avisos enviados desde la aplicación; una cuenta con varias personas puede enviar más de uno por aviso.'));
+      } else {
+        tarjetas += _tarjetaUso('Supabase y Resend', ENLACES_USO.supabase, `<p class="text-xs text-red-700 py-2">No se pudo consultar: ${escapeHtml((rSb && rSb.error && rSb.error.message) || 'sin detalle')}. Si dice que no existe la función, avísame.</p>`);
+      }
+
+      // Dominio (Namecheap) y aplicación (GitHub Pages)
+      const d = fn && fn.dominio, a = fn && fn.app;
+      let cuerpoDom = '<p class="text-xs text-slate-500 py-2">Sin datos.</p>';
+      if (d && d.expira) {
+        const f = new Date(d.expira), dias = d.dias;
+        const color = dias <= 30 ? '#b91c1c' : (dias <= 90 ? '#b45309' : '#57574f');
+        cuerpoDom = `<div class="py-2 text-xs text-slate-700"><b>${escapeHtml(d.nombre)}</b> vence el <b>${f.getDate()}/${f.getMonth() + 1}/${f.getFullYear()}</b> · faltan <b style="color:${color}">${dias} días</b>${dias <= 90 ? ' · conviene renovarlo pronto' : ''}</div>`;
+      } else if (d) cuerpoDom = `<p class="text-xs text-slate-600 py-2">${escapeHtml(d.nombre)}: ${escapeHtml(d.error || 'sin datos')}</p>`;
+      tarjetas += _tarjetaUso('Dominio (Namecheap)', ENLACES_USO.namecheap, cuerpoDom);
+
+      let cuerpoApp = '<p class="text-xs text-slate-500 py-2">Sin datos.</p>';
+      if (a) cuerpoApp = `<div class="py-2 text-xs text-slate-700">Aplicación ${a.ok ? '<b style="color:#15803d">en línea</b>' : '<b style="color:#b91c1c">sin respuesta</b>'}${a.ms ? ' · responde en ' + a.ms + ' ms' : ''}</div>`;
+      let tamApp = '';
+      try { const r = await fetch(location.pathname, { cache: 'no-store' }); const b = await r.blob(); tamApp = _barraUso('Tamaño de la aplicación', _mb(b.size), LIMITES_USO.sitioMB, 'MB', 'GitHub Pages permite hasta 1 GB por sitio y 100 GB de visitas al mes.'); } catch (e) { /* sin dato */ }
+      tarjetas += _tarjetaUso('Aplicación (GitHub Pages)', ENLACES_USO.github, cuerpoApp + tamApp);
+
+      // Claude API
+      const diasCred = Math.ceil((new Date(CREDITO_CLAUDE.vence + 'T23:59:59').getTime() - Date.now()) / 86400000);
+      const colCred = diasCred <= 30 ? '#b91c1c' : (diasCred <= 60 ? '#b45309' : '#57574f');
+      const usosIA = sb ? `<p class="text-xs text-slate-700 py-1">Usos de resúmenes de contratos y reuniones: <b>${Number(sb.ia_mes || 0)}</b> este mes · <b>${Number(sb.ia_total || 0)}</b> en total.</p>` : '';
+      tarjetas += _tarjetaUso('Claude API (inteligencia artificial)', ENLACES_USO.claude,
+        `<div class="py-2 text-xs text-slate-700">Crédito de prueba: <b>US$${CREDITO_CLAUDE.monto}</b> · vence en <b>enero de 2027</b> · faltan <b style="color:${colCred}">${diasCred > 0 ? diasCred + ' días' : 'ya venció'}</b>${diasCred > 0 && diasCred <= 60 ? ' · conviene aprovecharlo antes de que se pierda' : ''}</div>` + usosIA +
+        `<p class="text-[10px] text-slate-500 mt-1">Anthropic no permite ver el saldo restante desde la aplicación: míralo en el panel (botón «Abrir panel»). Cuando se acabe o venza el crédito, las herramientas con inteligencia artificial dejan de responder.</p>`);
+
+      cont.innerHTML = tarjetas;
+      est.textContent = 'Actualizado: ' + new Date().toLocaleString('es-EC');
     }
   </script>
 </body>
