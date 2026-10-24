@@ -2241,6 +2241,36 @@
     });
 
     let appArrancada = false;
+    // ===== Recordar dónde estabas (pantalla, cliente, año, aspecto y pestaña) para el F5 =====
+    const CLAVE_VISTA = 'pcm_ultima_vista';
+    function leerVista() {
+      try { return JSON.parse(localStorage.getItem(CLAVE_VISTA) || 'null') || {}; } catch (e) { return {}; }
+    }
+    function guardarVista(cambios) {
+      try { localStorage.setItem(CLAVE_VISTA, JSON.stringify(Object.assign(leerVista(), cambios))); } catch (e) {}
+    }
+    function enganchar_memoria_vista() {
+      [['select-cliente', 'cliente'], ['select-anio', 'anio'], ['select-aspecto', 'aspecto']].forEach(([id, k]) => {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('change', () => guardarVista({ [k]: el.value }));
+      });
+    }
+    function restaurarVista() {
+      try {
+        const v = leerVista();
+        const poner = (id, val) => {
+          const el = document.getElementById(id);
+          if (el && val && Array.from(el.options).some(o => o.value === String(val))) el.value = String(val);
+        };
+        poner('select-cliente', v.cliente);
+        poner('select-anio', v.anio);
+        poner('select-aspecto', v.aspecto);
+        if (v.pestana && typeof cambiarPestana === 'function') cambiarPestana(v.pestana);
+        if (v.seccion) navegarMenu(v.seccion, v.sub, v.cuenta);
+        if (v.seccion === 'auditoria') ejecutarConsultaSegunVista();
+      } catch (e) { console.warn('No se pudo restaurar la vista', e); }
+    }
+
     async function arrancarApp() {
       if (appArrancada) return;
       appArrancada = true;
@@ -2250,6 +2280,8 @@
       await cargarVisitas();
       renderizerFiltrosHistorico();
       pintarIdentidadAnalisis();
+      enganchar_memoria_vista();
+      restaurarVista();
     }
 
     async function iniciar() {
@@ -2602,6 +2634,7 @@
         if (seccion === 'auditoria') seccion = 'desarrollo'; // pantalla principal: se muestra un aviso en vez de un mensaje emergente
         else { avisarEnDesarrollo(); return; }
       }
+      if (!['clientes', 'usuarios', 'cuentas', 'habilitar'].includes(seccion)) guardarVista({ seccion: seccion, sub: sub || null, cuenta: cuenta || null });
 
       const secciones = ['desarrollo', 'clientes', 'usuarios', 'cuentas', 'habilitar', 'sumarias', 'pendientes', 'flujo', 'auditoria', 'analisis', 'visitas', 'asignacion', 'indices', 'mayor', 'contratos', 'arrend', 'pce', 'reuniones', 'mas-herramientas'];
       const grupoSubmenu = sec => ['indices', 'mayor', 'contratos', 'flujo', 'arrend', 'pce', 'reuniones', 'mas-herramientas'].includes(sec)
@@ -6234,6 +6267,7 @@
     // AUDITORÍA / PLANIFICACIÓN
     function cambiarPestana(modo) {
       pestanaActual = modo;
+      guardarVista({ pestana: modo });
       
       const btnCaptura = document.getElementById('tab-captura-btn');
       const btnHistorico = document.getElementById('tab-historico-btn');
