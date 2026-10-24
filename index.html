@@ -12429,6 +12429,8 @@ ${cont.innerHTML}
     // Límites del plan gratuito de cada servicio (cámbialos aquí si se contrata un plan mayor)
     // Crédito de prueba de la API de Claude: US$100 que vencen el 4 de enero de 2027
     const CREDITO_CLAUDE = { monto: 100, vence: '2027-01-04' };
+    // AssemblyAI (transcripción): datos tomados del panel el 24 de octubre de 2026. La aplicación no puede leerlos sola; actualiza estas cifras cuando revises el panel.
+    const ASSEMBLY_USO = { plan: 'Gratuito', creditoRestante: 47.43, fecha: '24 de octubre de 2026', horas30dias: 11.2, creditoInicial: 50 };
     const LIMITES_USO = { dbMB: 500, archivosMB: 1024, usuariosMes: 50000, correosMes: 3000, correosDia: 100, sitioMB: 1024 };
     const ENLACES_USO = {
       supabase: 'https://supabase.com/dashboard/project/yyjeqklvrhezprrkdfof',
@@ -12507,8 +12509,12 @@ ${cont.innerHTML}
 
       // AssemblyAI (transcripción de audios de reuniones)
       const audios = sb ? `<p class="text-xs text-slate-700 py-1">Audios enviados a transcribir: <b>${Number(sb.audios_mes || 0)}</b> este mes · <b>${Number(sb.audios_total || 0)}</b> en total.</p>` : '';
+      const A = ASSEMBLY_USO, gastado = Math.max(0, A.creditoInicial - A.creditoRestante);
+      const costoHora = A.horas30dias > 0 ? gastado / A.horas30dias : 0;
+      const horasQuedan = costoHora > 0 ? Math.round(A.creditoRestante / costoHora / 10) * 10 : 0;
       tarjetas += _tarjetaUso('AssemblyAI (transcripción de reuniones)', ENLACES_USO.assembly,
-        audios + `<p class="text-[10px] text-slate-500 mt-1">El saldo o las horas que te quedan se ven en el panel (botón «Abrir panel»); la aplicación solo puede contar cuántos audios se han enviado. Cuando se agote el saldo, la transcripción de reuniones deja de funcionar.</p>`);
+        _barraUso('Crédito usado (US$)', gastado, A.creditoInicial, 'US$', 'Saldo según el panel el ' + A.fecha + ': <b>US$' + A.creditoRestante.toFixed(2) + '</b> · plan ' + A.plan + '. Alcanza para unas <b>' + horasQuedan + ' horas</b> más de audio a este ritmo (aprox.).') +
+        audios + `<p class="text-[10px] text-slate-500 mt-1">Estas cifras no se actualizan solas: revisa el panel (botón «Abrir panel») de vez en cuando y avísame para actualizarlas. Cuando se agote el crédito, la transcripción de reuniones deja de funcionar.</p>`);
 
       cont.innerHTML = tarjetas;
       est.textContent = 'Actualizado: ' + new Date().toLocaleString('es-EC');
