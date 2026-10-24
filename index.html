@@ -332,6 +332,9 @@
             <button onclick="navegarMenu('habilitar')" id="nav-habilitar" class="w-full text-left px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:bg-slate-800 hover:text-white transition flex items-center gap-2">
               <span>d) Habilitar herramientas</span>
             </button>
+            <button onclick="navegarMenu('historial')" id="nav-historial" class="w-full text-left px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:bg-slate-800 hover:text-white transition flex items-center gap-2">
+              <span>e) Históricos de visitas</span>
+            </button>
           </div>
         </div>
       </nav>
@@ -1792,6 +1795,39 @@
       </div>
     </section>
 
+    <section id="sec-historial" class="hidden bg-white rounded-2xl shadow-xl border border-slate-200 p-6 min-h-[92vh] space-y-4">
+      <div class="flex justify-between items-center border-b pb-4">
+        <div>
+          <h1 class="text-xl font-bold text-slate-800">6e. Configuración: Históricos de visitas</h1>
+          <p class="text-xs text-slate-500">Quién ingresa a la aplicación, cuándo, y qué está revisando o llenando. Solo lo ven el Socio y el Supervisor.</p>
+        </div>
+        <button type="button" onclick="descargarHistorial()" class="px-3 py-1.5 text-xs font-bold text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50">Descargar Excel</button>
+      </div>
+      <div class="grid grid-cols-2 md:grid-cols-6 gap-2 items-end">
+        <div><label class="block text-[10px] font-bold text-slate-500 mb-1">Desde</label><input type="date" id="his-desde" class="w-full p-2 border border-slate-300 rounded-lg text-xs bg-white"></div>
+        <div><label class="block text-[10px] font-bold text-slate-500 mb-1">Hasta</label><input type="date" id="his-hasta" class="w-full p-2 border border-slate-300 rounded-lg text-xs bg-white"></div>
+        <div><label class="block text-[10px] font-bold text-slate-500 mb-1">Usuario</label><select id="his-usuario" onchange="pintarHistorial()" class="w-full p-2 border border-slate-300 rounded-lg text-xs bg-white"><option value="">Todos</option></select></div>
+        <div><label class="block text-[10px] font-bold text-slate-500 mb-1">Acción</label><select id="his-accion" onchange="pintarHistorial()" class="w-full p-2 border border-slate-300 rounded-lg text-xs bg-white"><option value="">Todas</option></select></div>
+        <div><label class="block text-[10px] font-bold text-slate-500 mb-1">Buscar</label><input type="text" id="his-buscar" oninput="pintarHistorial()" placeholder="Cliente, pregunta, pantalla..." class="w-full p-2 border border-slate-300 rounded-lg text-xs bg-white"></div>
+        <button type="button" onclick="cargarHistorial()" class="px-3 py-2 text-xs font-bold text-white bg-indigo-600 rounded-lg">Consultar</button>
+      </div>
+      <div id="his-aviso" class="text-xs text-slate-500"></div>
+      <div id="his-resumen" class="flex flex-wrap gap-2"></div>
+      <div class="overflow-auto border border-slate-200 rounded-lg" style="max-height:62vh">
+        <table class="w-full text-xs">
+          <thead class="bg-slate-100 text-slate-600 sticky top-0"><tr>
+            <th class="text-left px-3 py-2 font-bold whitespace-nowrap">Fecha y hora</th>
+            <th class="text-left px-3 py-2 font-bold">Usuario</th>
+            <th class="text-left px-3 py-2 font-bold">Acción</th>
+            <th class="text-left px-3 py-2 font-bold">Detalle</th>
+            <th class="text-left px-3 py-2 font-bold">Cliente</th>
+            <th class="text-left px-3 py-2 font-bold">Año</th>
+          </tr></thead>
+          <tbody id="his-tbody"><tr><td colspan="6" class="p-6 text-center text-slate-400">Pulsa «Consultar» para ver la actividad.</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+
     <section id="sec-habilitar" class="hidden bg-white rounded-2xl shadow-xl border border-slate-200 p-6 min-h-[92vh] space-y-6">
       <div class="flex justify-between items-center border-b pb-4">
         <div>
@@ -2631,7 +2667,7 @@
     function navegarMenu(seccion, sub, cuenta) {
       if (seccion === 'visitas') { fechaCalendarioActual = new Date(); renderizarCalendarioLineal(); setTimeout(posicionarCalendarioHoy, 60); }
       // Clientes y Usuarios solo se abren con ingreso de Socio o Supervisor
-      if ((seccion === 'clientes' || seccion === 'usuarios' || seccion === 'cuentas' || seccion === 'habilitar') && !puedeConfigurar()) {
+      if ((seccion === 'clientes' || seccion === 'usuarios' || seccion === 'cuentas' || seccion === 'habilitar' || seccion === 'historial') && !puedeConfigurar()) {
         abrirLoginConfig(seccion);
         return;
       }
@@ -2640,12 +2676,12 @@
         if (seccion === 'auditoria') seccion = 'desarrollo'; // pantalla principal: se muestra un aviso en vez de un mensaje emergente
         else { avisarEnDesarrollo(); return; }
       }
-      if (!['clientes', 'usuarios', 'cuentas', 'habilitar'].includes(seccion)) guardarVista({ seccion: seccion, sub: sub || null, cuenta: cuenta || null });
+      if (!['clientes', 'usuarios', 'cuentas', 'habilitar', 'historial'].includes(seccion)) guardarVista({ seccion: seccion, sub: sub || null, cuenta: cuenta || null });
 
-      const secciones = ['desarrollo', 'clientes', 'usuarios', 'cuentas', 'habilitar', 'sumarias', 'pendientes', 'flujo', 'auditoria', 'analisis', 'visitas', 'asignacion', 'indices', 'mayor', 'contratos', 'arrend', 'pce', 'reuniones', 'mas-herramientas'];
+      const secciones = ['desarrollo', 'clientes', 'usuarios', 'cuentas', 'habilitar', 'historial', 'sumarias', 'pendientes', 'flujo', 'auditoria', 'analisis', 'visitas', 'asignacion', 'indices', 'mayor', 'contratos', 'arrend', 'pce', 'reuniones', 'mas-herramientas'];
       const grupoSubmenu = sec => ['indices', 'mayor', 'contratos', 'flujo', 'arrend', 'pce', 'reuniones', 'mas-herramientas'].includes(sec)
         ? 'herramientas'
-        : (['clientes', 'usuarios', 'cuentas', 'habilitar'].includes(sec) ? 'config' : (['sumarias', 'pendientes'].includes(sec) ? 'analisis' : null));
+        : (['clientes', 'usuarios', 'cuentas', 'habilitar', 'historial'].includes(sec) ? 'config' : (['sumarias', 'pendientes'].includes(sec) ? 'analisis' : null));
       const esSubmenu = sec => grupoSubmenu(sec) !== null;
       
       secciones.forEach(sec => {
@@ -2666,6 +2702,7 @@
       if (activeSec) activeSec.classList.remove('hidden');
       if (seccion === 'contratos') { poblarClientesContratos(); cargarResumenesGuardados(); }
       if (seccion === 'habilitar') abrirHabilitar();
+      if (seccion === 'historial') abrirHistorial();
       if (seccion === 'reuniones') poblarClientesReunion();
       if (seccion === 'sumarias') abrirSumarias();
       if (seccion === 'pendientes') abrirPendientes();
@@ -6068,6 +6105,7 @@
           } catch (err) { avisoCorreo = `\n\nLa visita quedó agendada, pero no se pudo enviar el correo: ${err.message}`; }
         }
 
+        registrarActividad('Asignó visita', `${nombreDeUsuarioPorEmail(auditor_asignado)} · ${fecha_desde} al ${fecha_hasta}`, { cliente: cliente_id });
         alert("¡Visita agendada correctamente!" + avisoCorreo);
         document.getElementById('vis-fecha-desde').value = '';
         document.getElementById('vis-fecha-hasta').value = '';
@@ -6103,6 +6141,7 @@
       if (error) {
         alert("Error al eliminar la visita: " + error.message);
       } else {
+        registrarActividad('Eliminó visita', 'Borró una asignación del calendario');
         cargarVisitas();
       }
     }
@@ -12177,6 +12216,174 @@ ${cont.innerHTML}
         document.getElementById('clave-nueva').value = ''; document.getElementById('clave-repite').value = '';
       } catch (ex) { error('No se pudo conectar con Supabase.'); }
       finally { btn.disabled = false; }
+    }
+
+    // ===== Históricos de visitas: quién ingresa y qué hace (bitácora en Supabase) =====
+    const NOMBRE_PANTALLA = {
+      auditoria: '1. Auditoría/Planificación', desarrollo: 'Pantalla principal', analisis: '2. Auditoría/Análisis Claves',
+      sumarias: 'Sumarias', pendientes: 'Pendientes', visitas: '3. Visitas (Calendario)', asignacion: '4. Asignación de Cuentas',
+      indices: 'Herramienta: Índices', mayor: 'Herramienta: Mayor', contratos: 'Herramienta: Resumen de contratos',
+      flujo: 'Herramienta: Flujo de efectivo', arrend: 'Herramienta: Arrendamientos NIIF 16', pce: 'Herramienta: Matriz PCE',
+      reuniones: 'Herramienta: Resumen de reuniones', clientes: 'Configuración: Clientes', usuarios: 'Configuración: Usuarios / Auditores',
+      cuentas: 'Configuración: Cuentas / Actividades', habilitar: 'Configuración: Habilitar herramientas', historial: 'Configuración: Históricos de visitas'
+    };
+    const _regTiempos = {};
+    function _permitido(clave, ms) {
+      const ahora = Date.now();
+      if (_regTiempos[clave] && ahora - _regTiempos[clave] < ms) return false;
+      _regTiempos[clave] = ahora; return true;
+    }
+    function registrarActividad(accion, detalle, opciones) {
+      try {
+        if (!usuarioActivo || !usuarioActivo.email || typeof supabaseClient === 'undefined') return;
+        const o = opciones || {};
+        const sc = document.getElementById('select-cliente'), sa = document.getElementById('select-anio');
+        const cliente = o.cliente !== undefined ? o.cliente : (sc ? sc.value : '');
+        const anio = o.anio !== undefined ? o.anio : (sa ? sa.value : '');
+        supabaseClient.from('bitacora_actividad').insert([{
+          email: usuarioActivo.email, nombre: usuarioActivo.nombre || '', cargo: usuarioActivo.cargo || '',
+          accion: accion, detalle: String(detalle || '').slice(0, 300),
+          cliente_id: cliente ? String(cliente) : null, anio: anio ? String(anio) : null
+        }]).then(function () {}, function () {});
+      } catch (e) { /* la bitácora nunca debe frenar el trabajo */ }
+    }
+    function _textoPregunta(pId) {
+      try {
+        const tr = document.querySelector('tr[data-fila-cap="' + pId + '"]');
+        const t = tr ? tr.querySelector('td').innerText.replace(/\s+/g, ' ').trim() : '';
+        return (t || pId).slice(0, 120);
+      } catch (e) { return pId; }
+    }
+    // Envuelve una función existente: registra antes o después de ejecutarla, sin cambiar lo que hace
+    function _conRegistro(nombre, cuando, fn) {
+      const orig = window[nombre];
+      if (typeof orig !== 'function') return;
+      window[nombre] = function () {
+        const args = arguments, self = this;
+        if (cuando === 'antes') { try { fn.apply(null, args); } catch (e) {} return orig.apply(self, args); }
+        const r = orig.apply(self, args);
+        Promise.resolve(r).then(function (v) { try { fn.apply(null, args); } catch (e) {} return v; }, function () {});
+        return r;
+      };
+    }
+    _conRegistro('navegarMenu', 'antes', function (sec, sub, cuenta) {
+      if (!_permitido('pant_' + sec + '_' + (sub || ''), 4000)) return;
+      registrarActividad('Abrió pantalla', NOMBRE_PANTALLA[sec] || sec);
+    });
+    _conRegistro('guardarCamposRespuesta', 'despues', function (cid, anio, pId, campos) {
+      if (!_permitido('resp_' + cid + '_' + anio + '_' + pId, 300000)) return;
+      registrarActividad('Llenó respuesta', _textoPregunta(pId), { cliente: cid, anio: anio });
+    });
+    _conRegistro('guardarModalTodo', 'despues', function () { registrarActividad('Guardó To/Do', _textoPregunta(document.getElementById('modal-todo-pregunta-id').value)); });
+    _conRegistro('guardarModalQL', 'despues', function () { registrarActividad('Guardó Quick Lett', _textoPregunta(document.getElementById('modal-ql-pregunta-id').value)); });
+    _conRegistro('guardarModalOpinion', 'despues', function () {
+      const el = document.getElementById('modal-op-pregunta-id') || document.getElementById('modal-opinion-pregunta-id');
+      registrarActividad('Guardó Opinión', _textoPregunta(el ? el.value : ''));
+    });
+    _conRegistro('confirmarVigente', 'despues', function (pId) { registrarActividad('Confirmó respuesta vigente', _textoPregunta(pId)); });
+    _conRegistro('copiarDelAnterior', 'despues', function (pId) { registrarActividad('Copió respuesta del año anterior', _textoPregunta(pId)); });
+    _conRegistro('copiarTodoAnterior', 'despues', function () { registrarActividad('Copió todas las respuestas del año anterior', ''); });
+    _conRegistro('generarResumenContrato', 'antes', function () { registrarActividad('Usó herramienta', 'Resumen de contratos: generó resumen'); });
+    _conRegistro('generarResumenReunion', 'antes', function () { registrarActividad('Usó herramienta', 'Resumen de reuniones: generó análisis'); });
+    _conRegistro('transcribirAudioReunion', 'antes', function () { registrarActividad('Usó herramienta', 'Resumen de reuniones: subió audio para transcribir'); });
+    _conRegistro('enviarAvisoCorreo', 'despues', function (b) {
+      const t = b && b.tipo === 'todo' ? 'To/Do (' + (b.evento || 'asignado') + ')' : (b && b.tipo) || '';
+      registrarActividad('Envió aviso por correo', t, { cliente: (b && b.cliente_id) || '' });
+    });
+    _conRegistro('asigGuardarFilas', 'despues', function (filas) { registrarActividad('Asignó cuentas', (filas ? filas.length : 0) + ' cuenta(s)'); });
+    _conRegistro('asigQuitar', 'despues', function () { registrarActividad('Quitó una cuenta asignada', ''); });
+    _conRegistro('cerrarSesionApp', 'antes', function () { registrarActividad('Cerró sesión', ''); });
+    _conRegistro('iniciarSesionApp', 'despues', function () { setTimeout(function () { if (usuarioActivo) registrarActividad('Inició sesión', ''); }, 800); });
+
+    // Al abrir la aplicación con una sesión ya iniciada se anota una vez cada 30 minutos
+    (function () {
+      const orig = window.arrancarApp;
+      if (typeof orig !== 'function') return;
+      window.arrancarApp = async function () {
+        const r = await orig.apply(this, arguments);
+        try {
+          const k = 'pcm_ultimo_ingreso', ult = Number(localStorage.getItem(k) || 0);
+          if (Date.now() - ult > 30 * 60 * 1000) { localStorage.setItem(k, String(Date.now())); registrarActividad('Abrió la aplicación', '', { cliente: '', anio: '' }); }
+        } catch (e) {}
+        return r;
+      };
+    })();
+
+    // ---- Pantalla de consulta (solo Socio y Supervisor) ----
+    let historialFilas = [];
+    function _fechaHoraLocal(iso) {
+      const d = new Date(iso);
+      if (isNaN(d)) return '';
+      const p = n => String(n).padStart(2, '0');
+      return p(d.getDate()) + '/' + p(d.getMonth() + 1) + '/' + d.getFullYear() + ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
+    }
+    function abrirHistorial() {
+      const d = document.getElementById('his-desde'), h = document.getElementById('his-hasta');
+      if (d && !d.value) {
+        const hoy = new Date(), ini = new Date(Date.now() - 6 * 86400000);
+        const f = x => x.getFullYear() + '-' + String(x.getMonth() + 1).padStart(2, '0') + '-' + String(x.getDate()).padStart(2, '0');
+        d.value = f(ini); h.value = f(hoy);
+      }
+      cargarHistorial();
+    }
+    async function cargarHistorial() {
+      const aviso = document.getElementById('his-aviso');
+      aviso.textContent = 'Consultando...';
+      const desde = document.getElementById('his-desde').value, hasta = document.getElementById('his-hasta').value;
+      let q = supabaseClient.from('bitacora_actividad').select('*').order('creado_at', { ascending: false }).limit(2000);
+      if (desde) q = q.gte('creado_at', new Date(desde + 'T00:00:00').toISOString());
+      if (hasta) q = q.lte('creado_at', new Date(hasta + 'T23:59:59').toISOString());
+      const { data, error } = await q;
+      if (error) {
+        aviso.textContent = /bitacora_actividad/i.test(error.message || '') ? 'Falta crear la tabla «bitacora_actividad» en Supabase (archivo Supabase_20_bitacora_actividad.sql).' : 'No se pudo consultar: ' + error.message;
+        historialFilas = []; pintarHistorial(); return;
+      }
+      historialFilas = data || [];
+      const selU = document.getElementById('his-usuario'), selA = document.getElementById('his-accion');
+      const uPrev = selU.value, aPrev = selA.value;
+      const usuarios = [...new Set(historialFilas.map(r => String(r.email || '').toLowerCase()))].sort();
+      const acciones = [...new Set(historialFilas.map(r => r.accion))].sort();
+      selU.innerHTML = '<option value="">Todos</option>' + usuarios.map(e => `<option value="${escapeHtml(e)}">${escapeHtml(nombreDeUsuarioPorEmail(e))}</option>`).join('');
+      selA.innerHTML = '<option value="">Todas</option>' + acciones.map(a => `<option value="${escapeHtml(a)}">${escapeHtml(a)}</option>`).join('');
+      selU.value = usuarios.includes(uPrev) ? uPrev : ''; selA.value = acciones.includes(aPrev) ? aPrev : '';
+      pintarHistorial();
+    }
+    function _filtradasHistorial() {
+      const u = document.getElementById('his-usuario').value, a = document.getElementById('his-accion').value;
+      const t = document.getElementById('his-buscar').value.trim().toLowerCase();
+      return historialFilas.filter(r => (!u || String(r.email || '').toLowerCase() === u) && (!a || r.accion === a) &&
+        (!t || [r.accion, r.detalle, r.nombre, r.email, asigNombreCliente(r.cliente_id)].join(' ').toLowerCase().includes(t)));
+    }
+    function pintarHistorial() {
+      const filas = _filtradasHistorial();
+      const aviso = document.getElementById('his-aviso');
+      if (historialFilas.length >= 2000) aviso.textContent = 'Se muestran los 2000 registros más recientes del periodo; acota las fechas para ver el resto.';
+      else if (!aviso.textContent.startsWith('Falta') && !aviso.textContent.startsWith('No se pudo')) aviso.textContent = filas.length + ' registro(s).';
+      // Resumen por usuario: último movimiento y cantidad de acciones
+      const por = {};
+      filas.forEach(r => { const k = String(r.email || '').toLowerCase(); if (!por[k]) por[k] = { n: 0, ult: r.creado_at }; por[k].n++; });
+      document.getElementById('his-resumen').innerHTML = Object.keys(por).map(k =>
+        `<span class="px-2.5 py-1 rounded-lg border border-slate-200 bg-slate-50 text-[11px] text-slate-700"><b>${escapeHtml(nombreDeUsuarioPorEmail(k))}</b> · ${por[k].n} acción(es) · último: ${_fechaHoraLocal(por[k].ult)}</span>`).join('');
+      const tb = document.getElementById('his-tbody');
+      tb.innerHTML = filas.length ? filas.map(r => `<tr class="border-b border-slate-200">
+          <td class="px-3 py-1.5 whitespace-nowrap text-slate-600">${_fechaHoraLocal(r.creado_at)}</td>
+          <td class="px-3 py-1.5 text-slate-800"><b>${escapeHtml(nombreDeUsuarioPorEmail(r.email))}</b><br><span class="text-[10px] text-slate-500">${escapeHtml(r.cargo || '')}</span></td>
+          <td class="px-3 py-1.5 font-semibold text-slate-700">${escapeHtml(r.accion)}</td>
+          <td class="px-3 py-1.5 text-slate-600">${escapeHtml(r.detalle || '')}</td>
+          <td class="px-3 py-1.5 text-slate-600">${escapeHtml(r.cliente_id ? asigNombreCliente(r.cliente_id) : '')}</td>
+          <td class="px-3 py-1.5 text-slate-600">${escapeHtml(r.anio || '')}</td></tr>`).join('')
+        : '<tr><td colspan="6" class="p-6 text-center text-slate-400">No hay actividad con esos filtros.</td></tr>';
+    }
+    function descargarHistorial() {
+      const filas = _filtradasHistorial();
+      if (!filas.length) { alert('No hay registros para descargar.'); return; }
+      const datos = filas.map(r => ({
+        'Fecha y hora': _fechaHoraLocal(r.creado_at), 'Usuario': nombreDeUsuarioPorEmail(r.email), 'Correo': r.email, 'Cargo': r.cargo || '',
+        'Acción': r.accion, 'Detalle': r.detalle || '', 'Cliente': r.cliente_id ? asigNombreCliente(r.cliente_id) : '', 'Año': r.anio || ''
+      }));
+      const ws = XLSX.utils.json_to_sheet(datos), wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Históricos de visitas');
+      XLSX.writeFile(wb, 'Historicos_de_visitas.xlsx');
     }
   </script>
 </body>
