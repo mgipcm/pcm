@@ -12404,7 +12404,7 @@ ${cont.innerHTML}
           m: mapa, P, n: 0, apertura: 0, sinDoc: 0, sinFecha: 0, debe: 0, haber: 0, minDia: Infinity, maxDia: -Infinity,
           asientos: new Map(), tipos: new Map(), benford: new Map(), ctas: new Map(), users: new Map(), series: new Map(),
           topAt: new TopK(3000), topRed: new TopK(3000), redCnt: new Map(), kw: new TopK(3000), kwCnt: new Map(),
-          seen: new Map(), dups: new Map(), chSeen: new Map(), chHits: new Map()
+          benCta: new Map(), seen: new Map(), dups: new Map(), chSeen: new Map(), chHits: new Map()
         };
       }
 
@@ -12449,8 +12449,9 @@ ${cont.innerHTML}
 
         // Benford (primer dígito)
         let bf = A.benford.get(tk); if (!bf) { bf = new Int32Array(10); A.benford.set(tk, bf); }
-        if (debe >= 1) bf[Math.min(9, Math.max(1, Math.floor(debe / Math.pow(10, Math.floor(Math.log10(debe))))))]++;
-        if (haber >= 1) bf[Math.min(9, Math.max(1, Math.floor(haber / Math.pow(10, Math.floor(Math.log10(haber))))))]++;
+        let bc = A.benCta.get(cod); if (!bc) { bc = new Int32Array(10); A.benCta.set(cod, bc); }
+        if (debe >= 1) { const dg = Math.min(9, Math.max(1, Math.floor(debe / Math.pow(10, Math.floor(Math.log10(debe)))))); bf[dg]++; bc[dg]++; }
+        if (haber >= 1) { const dg = Math.min(9, Math.max(1, Math.floor(haber / Math.pow(10, Math.floor(Math.log10(haber)))))); bf[dg]++; bc[dg]++; }
 
         // Usuarios
         const un = usuario || '(sin usuario)';
@@ -12486,11 +12487,11 @@ ${cont.innerHTML}
         if (m.cheque >= 0 && doc) {
           const ch = s(m.cheque);
           if (ch && ch !== '0') {
-            const ck = cod + '|' + ch, f = A.chSeen.get(ck);
+            const lado = debe > 0 ? 'Débito' : 'Crédito', ck = cod + '|' + ch + '|' + lado, f = A.chSeen.get(ck);
             if (f === undefined) A.chSeen.set(ck, doc);
             else if (f !== doc) {
               let h = A.chHits.get(ck);
-              if (!h) { h = { n: 2, docs: [f, doc], cod, cu: ct.nom, ch, deb: debe, hab: haber, tk: f.split('|')[0], d, k: monto }; A.chHits.set(ck, h); }
+              if (!h) { h = { n: 2, docs: [f, doc], cod, cu: ct.nom, ch, lado, mon: monto, tk: f.split('|')[0], d, k: monto }; A.chHits.set(ck, h); }
               else { h.n++; if (h.docs.length < 6 && !h.docs.includes(doc)) h.docs.push(doc); }
             }
           }
@@ -12638,11 +12639,19 @@ ${cont.innerHTML}
         A.benford.forEach((c, tk) => { for (let i = 1; i <= 9; i++) { gTodos[i] += c[i]; (esMan(tk) ? gMan : gAut)[i] += c[i]; } });
         const bTodos = benfordDe(gTodos), bMan = benfordDe(gMan), bAut = benfordDe(gAut);
         const bRef = bAut.N >= 300 ? bAut : bTodos;
+        const bCtas = [];
+        A.benCta.forEach((cn, cod) => {
+          const b = benfordDe(cn); if (b.N < 300 || b.mad <= 0.012) return;
+          let mx = b.filas[0]; b.filas.forEach(f => { if (Math.abs(f.dif) > Math.abs(mx.dif)) mx = f; });
+          const ct = A.ctas.get(cod);
+          bCtas.push([cod, ct ? ct.nom : '', b.N, b.mad, b.mad > 0.015 ? 'No conforme' : 'Marginal', 'Dígito ' + mx.dg + ': ' + (mx.obs * 100).toFixed(1) + '% frente a ' + (mx.esp * 100).toFixed(1) + '% esperado', ct ? ct.deb + ct.hab : 0]);
+        });
+        bCtas.sort((a, b) => b[3] - a[3]);
         add({
           id: 'benford', titulo: 'Ley de Benford', nia: 'NIA 520 · NIA 240 A44',
           que: 'En datos contables naturales el primer dígito de los importes sigue una distribución conocida (el 1 aparece ~30% y el 9 ~4,6%). Se mide con la desviación absoluta media (MAD): hasta 0,006 conforme, hasta 0,012 aceptable, hasta 0,015 marginal, más no conforme (criterio de Nigrini). Una desviación no prueba fraude, indica dónde mirar. No es confiable con menos de unos 300 datos ni en cuentas con importes fijos (cuotas, tarifas).',
-          vista: 'benford', benford: { todos: bTodos, manuales: bMan, automaticos: bAut },
-          nivel: bRef.nivel, resumen: 'MAD ' + bRef.mad.toFixed(4) + ' · ' + bRef.txt + ' (' + bRef.N.toLocaleString('en-US') + ' importes)',
+          vista: 'benford', benford: { todos: bTodos, manuales: bMan, automaticos: bAut, cuentas: bCtas },
+          nivel: bRef.nivel, resumen: 'MAD ' + bRef.mad.toFixed(4) + ' · ' + bRef.txt + ' (' + bRef.N.toLocaleString('en-US') + ' importes) · ' + bCtas.length + ' cuentas con patrón desviado',
           cols: [], filas: [], total: 0
         });
 
@@ -12674,10 +12683,10 @@ ${cont.innerHTML}
           const ch = []; A.chHits.forEach(h => ch.push(h)); ch.sort((a, b) => b.k - a.k);
           add({
             id: 'cheques', titulo: 'Cheques repetidos', nia: 'NIA 240 · NIA 330',
-            que: 'El mismo número de cheque usado en la misma cuenta en documentos diferentes. Puede ser un cheque anulado y reutilizado, o un pago doble.',
+            que: 'El mismo número de cheque, en la misma cuenta y del mismo lado (débito con débito o crédito con crédito), en documentos diferentes. Puede ser un pago registrado dos veces o un cheque reutilizado. No se comparan un débito con un crédito del mismo cheque, porque eso es lo normal en una anulación o un reverso.',
             nivel: ch.length ? 'warn' : 'ok', resumen: ch.length ? ch.length + ' cheques repetidos en documentos distintos' : 'No se encontraron',
-            cols: [{ h: 'Código', t: 's' }, { h: 'Cuenta', t: 's' }, { h: 'Cheque', t: 's' }, { h: 'Fecha', t: 'f' }, { h: 'Debe', t: 'm' }, { h: 'Haber', t: 'm' }, { h: 'Veces', t: 'i' }, { h: 'Documentos', t: 's' }],
-            filas: ch.slice(0, 1000).map(h => [h.cod, h.cu, h.ch, h.d, h.deb, h.hab, h.n, h.docs.map(docDeKey).join(' · ')]), total: ch.length
+            cols: [{ h: 'Código', t: 's' }, { h: 'Cuenta', t: 's' }, { h: 'Cheque', t: 's' }, { h: 'Lado', t: 's' }, { h: 'Fecha (1.º)', t: 'f' }, { h: 'Importe (1.º)', t: 'm' }, { h: 'Veces', t: 'i' }, { h: 'Documentos', t: 's' }],
+            filas: ch.slice(0, 1000).map(h => [h.cod, h.cu, h.ch, h.lado, h.d, h.mon, h.n, h.docs.map(docDeKey).join(' · ')]), total: ch.length
           });
         }
 
@@ -12984,6 +12993,10 @@ ${cont.innerHTML}
         h += `<div class="text-xs text-slate-700">${myPunto(b.nivel)} <span class="font-bold">${escapeHtml(b.txt)}</span> · MAD ${b.mad.toFixed(4)} · ${myInt(b.N)} importes</div>`;
         const mx = Math.max(0.0001, ...b.filas.map(f => Math.max(f.obs, f.esp)));
         h += `<div class="overflow-x-auto border border-slate-200 rounded-xl bg-white"><table class="w-full text-xs text-slate-700"><thead class="bg-slate-100 text-[10px] font-bold text-slate-600"><tr><th class="p-2 text-center">Dígito</th><th class="p-2 text-right">Cantidad</th><th class="p-2 text-right">Observado</th><th class="p-2 text-right">Esperado</th><th class="p-2 text-right">Diferencia</th><th class="p-2 w-1/2">Observado (barra) frente a esperado (línea)</th><th class="p-2 text-center">Desvío</th></tr></thead><tbody>${b.filas.map(f => `<tr class="border-t"><td class="p-2 text-center font-bold">${f.dg}</td><td class="p-2 text-right">${myInt(f.n)}</td><td class="p-2 text-right">${(f.obs * 100).toFixed(1)}%</td><td class="p-2 text-right">${(f.esp * 100).toFixed(1)}%</td><td class="p-2 text-right ${f.sig ? 'font-bold text-red-700' : ''}">${f.dif >= 0 ? '+' : ''}${(f.dif * 100).toFixed(1)} pts</td><td class="p-2"><div class="relative h-3 bg-slate-100 rounded"><div class="absolute h-3 rounded ${f.sig ? 'bg-red-400' : 'bg-slate-500'}" style="width:${(f.obs / mx * 100).toFixed(1)}%"></div><div class="absolute top-[-2px] h-4 w-0.5 bg-slate-900" style="left:${(f.esp / mx * 100).toFixed(1)}%"></div></div></td><td class="p-2 text-center">${f.sig ? '<span class="text-red-700 font-bold">Significativo</span>' : ''}</td></tr>`).join('')}</tbody></table></div>`;
+        const bc = t.benford.cuentas;
+        h += `<h4 class="text-xs font-bold text-slate-800 pt-2">Cuentas cuyo patrón se desvía (revisar con su soporte)</h4><p class="text-[11px] text-slate-500">Se evalúa cada cuenta con al menos 300 importes. Se listan las marginales y no conformes, de mayor a menor desviación. Si la cuenta tiene importes fijos (cuotas, tarifas, sueldos), la desviación es normal.</p>`;
+        if (!bc.length) h += '<div class="p-4 text-center text-slate-400 text-xs border border-dashed rounded-xl">Ninguna cuenta con suficientes datos se desvía.</div>';
+        else h += `<div class="overflow-x-auto border border-slate-200 rounded-xl bg-white"><table class="w-full text-left text-xs text-slate-700"><thead class="bg-slate-100 text-[10px] font-bold text-slate-600"><tr><th class="p-2">Código</th><th class="p-2">Cuenta</th><th class="p-2 text-right">Importes</th><th class="p-2 text-right">MAD</th><th class="p-2">Resultado</th><th class="p-2">Dígito más desviado</th><th class="p-2 text-right">Movimiento total</th></tr></thead><tbody class="divide-y divide-slate-100">${bc.slice(0, 300).map(r => `<tr class="hover:bg-slate-50"><td class="p-2 font-mono">${escapeHtml(r[0])}</td><td class="p-2">${escapeHtml(r[1])}</td><td class="p-2 text-right">${myInt(r[2])}</td><td class="p-2 text-right">${r[3].toFixed(4)}</td><td class="p-2"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${r[4] === 'No conforme' ? 'bg-red-100 text-red-800' : 'bg-amber-100 text-amber-800'}">${r[4]}</span></td><td class="p-2">${escapeHtml(r[5])}</td><td class="p-2 text-right">${myMoney(r[6])}</td></tr>`).join('')}</tbody></table></div><p class="text-[10px] text-slate-400">Mostrando ${Math.min(300, bc.length)} de ${myInt(bc.length)} cuentas.</p>`;
         p.innerHTML = h; return;
       }
       const MAXV = 300;
@@ -13007,6 +13020,8 @@ ${cont.innerHTML}
         if (t.vista === 'benford') {
           aoa = [['Grupo', 'Dígito', 'Cantidad', 'Observado', 'Esperado', 'Diferencia']];
           ['todos', 'manuales', 'automaticos'].forEach(g => t.benford[g].filas.forEach(f => aoa.push([g, f.dg, f.n, f.obs, f.esp, f.dif])));
+          aoa.push([], ['Cuentas desviadas', 'Cuenta', 'Importes', 'MAD', 'Resultado', 'Dígito más desviado', 'Movimiento total']);
+          t.benford.cuentas.forEach(r => aoa.push(r));
         } else {
           aoa = [t.cols.map(c => c.h)].concat(t.filas.map(r => r.map((v, i) => t.cols[i].t === 'f' ? MYM.fmtDia(v) : v)));
         }
