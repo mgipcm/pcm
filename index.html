@@ -12404,7 +12404,7 @@ ${cont.innerHTML}
           m: mapa, P, n: 0, apertura: 0, sinDoc: 0, sinFecha: 0, debe: 0, haber: 0, minDia: Infinity, maxDia: -Infinity,
           asientos: new Map(), tipos: new Map(), benford: new Map(), ctas: new Map(), users: new Map(), series: new Map(),
           topAt: new TopK(3000), topRed: new TopK(3000), redCnt: new Map(), kw: new TopK(3000), kwCnt: new Map(),
-          benCta: new Map(), seen: new Map(), dups: new Map(), chSeen: new Map(), chHits: new Map()
+          chLin: new Map(), chLinN: 0, benCta: new Map(), seen: new Map(), dups: new Map(), chSeen: new Map(), chHits: new Map()
         };
       }
 
@@ -12483,6 +12483,10 @@ ${cont.innerHTML}
             if (!h) { h = { n: 2, docs: [f, doc], cod, cu: ct.nom, d, deb: debe, hab: haber, con, tk: f.split('|')[0], k: monto }; A.dups.set(dk, h); }
             else { h.n++; if (h.docs.length < 6 && !h.docs.includes(doc)) h.docs.push(doc); }
           }
+        }
+        if (m.cheque >= 0 && A.chLinN < 400000) {
+          const c0 = s(m.cheque);
+          if (c0 && c0 !== '0') { let ls = A.chLin.get(c0); if (!ls) { ls = []; A.chLin.set(c0, ls); } ls.push([cod, ct.nom, d, tk + ' ' + numRaw, debe, haber, con.slice(0, 120), usuario]); A.chLinN++; }
         }
         if (m.cheque >= 0 && doc) {
           const ch = s(m.cheque);
@@ -12692,7 +12696,7 @@ ${cont.innerHTML}
             id: 'cheques', titulo: 'Cheques repetidos', nia: 'NIA 240 · NIA 330',
             que: 'El mismo número de cheque, en la misma cuenta y del mismo lado (débito con débito o crédito con crédito), en documentos diferentes. Puede ser un pago registrado dos veces o un cheque reutilizado. Si el mismo par de documentos repite el cheque en varias cuentas (por ejemplo banco y clientes), se muestra una sola vez con todas las cuentas. No se comparan un débito con un crédito del mismo cheque, porque eso es lo normal en una anulación o un reverso.',
             nivel: ch.length ? 'warn' : 'ok', resumen: ch.length ? ch.length + ' cheques repetidos en documentos distintos' : 'No se encontraron',
-            cols: [{ h: 'Cheque', t: 's' }, { h: 'Mes (1.º)', t: 's' }, { h: 'Fecha (1.º)', t: 'f' }, { h: 'Importe', t: 'm' }, { h: 'Veces', t: 'i' }, { h: 'Documentos', t: 's' }, { h: 'Cuentas donde se repite', t: 's' }],
+            cols: [{ h: 'Cheque (clic para ver todo)', t: 'q' }, { h: 'Mes (1.º)', t: 's' }, { h: 'Fecha (1.º)', t: 'f' }, { h: 'Importe', t: 'm' }, { h: 'Veces', t: 'i' }, { h: 'Documentos', t: 's' }, { h: 'Cuentas donde se repite', t: 's' }],
             filas: ch.slice(0, 1000).map(g => [g.ch, (g.d === g.d ? MYM.isoDia(g.d).slice(0, 7) : ''), g.d, g.mon, g.n, g.docs.map(docDeKey).join(' · '), g.ctas.join(' · ')]), total: ch.length
           });
         }
@@ -12966,6 +12970,12 @@ ${cont.innerHTML}
     }
 
     function mayorTab(id) { MYS.tab = id; MYS.sort = null; mayorPintar(); }
+    function mayorVerCheque(ch) {
+      const ls = (MYS.A.chLin.get(ch) || []).slice().sort((a, b) => (a[2] - b[2]) || String(a[3]).localeCompare(String(b[3])));
+      let td = 0, th = 0; ls.forEach(r => { td += r[4]; th += r[5]; });
+      let m = myEl('my-modal-ch'); if (!m) { m = document.createElement('div'); m.id = 'my-modal-ch'; m.className = 'fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4'; m.onclick = e => { if (e.target === m) m.remove(); }; document.body.appendChild(m); }
+      m.innerHTML = `<div class="bg-white rounded-2xl shadow-2xl max-w-6xl w-full max-h-[85vh] overflow-auto p-5 space-y-3"><div class="flex justify-between items-start gap-3"><div><h3 class="text-sm font-bold text-slate-800">Cheque ${escapeHtml(ch)} · todas las líneas del mayor</h3><p class="text-[11px] text-slate-500">Incluye todas las cuentas y documentos que usan este número de cheque. El mismo número puede existir en bancos distintos.</p></div><button onclick="document.getElementById('my-modal-ch').remove()" class="px-3 py-1.5 bg-slate-800 text-white rounded-lg text-xs font-bold">Cerrar</button></div><div class="overflow-x-auto border border-slate-200 rounded-xl"><table class="w-full text-left text-xs text-slate-700"><thead class="bg-slate-100 text-[10px] font-bold text-slate-600"><tr><th class="p-2">Fecha</th><th class="p-2">Documento</th><th class="p-2">Código</th><th class="p-2">Cuenta</th><th class="p-2 text-right">Debe</th><th class="p-2 text-right">Haber</th><th class="p-2">Usuario</th><th class="p-2">Concepto</th></tr></thead><tbody class="divide-y divide-slate-100">${ls.map(r => `<tr><td class="p-2 whitespace-nowrap">${MYM.fmtDia(r[2])}</td><td class="p-2 font-mono whitespace-nowrap">${escapeHtml(r[3])}</td><td class="p-2 font-mono">${escapeHtml(r[0])}</td><td class="p-2">${escapeHtml(r[1])}</td><td class="p-2 text-right">${r[4] ? myMoney(r[4]) : ''}</td><td class="p-2 text-right">${r[5] ? myMoney(r[5]) : ''}</td><td class="p-2">${escapeHtml(r[7])}</td><td class="p-2">${escapeHtml(r[6])}</td></tr>`).join('')}<tr class="font-bold bg-slate-50"><td class="p-2" colspan="4">Totales</td><td class="p-2 text-right">${myMoney(td)}</td><td class="p-2 text-right">${myMoney(th)}</td><td colspan="2"></td></tr></tbody></table></div></div>`;
+    }
     function mayorOrdenar(c) {
       const s = MYS.sort;
       MYS.sort = (s && s.tab === MYS.tab && s.col === c) ? { tab: MYS.tab, col: c, dir: -s.dir } : { tab: MYS.tab, col: c, dir: 1 };
@@ -12980,6 +12990,7 @@ ${cont.innerHTML}
         case 'i': return myInt(v);
         case 'f': return MYM.fmtDia(v);
         case 'p': return (v * 100).toFixed(1) + '%';
+        case 'q': return `<a href="#" onclick="mayorVerCheque(decodeURIComponent('${encodeURIComponent(v)}'));return false" class="font-mono font-bold text-indigo-700 underline">${escapeHtml(v)}</a>`;
         case 'b': { const c = v === 'Manual' || v === 'Revisar' ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-600'; return `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${c}">${escapeHtml(v)}</span>`; }
         default: return escapeHtml(v);
       }
