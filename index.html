@@ -1383,17 +1383,22 @@
         <div id="my-kpis" class="grid grid-cols-2 md:grid-cols-6 gap-3"></div>
 
         <div class="border border-slate-200 rounded-2xl p-5 space-y-3">
-          <div class="flex flex-wrap justify-between items-center gap-2">
+          <div class="flex items-start justify-between gap-3 cursor-pointer" onclick="mayorPlegarTipos()">
             <div>
               <h3 class="text-sm font-bold text-slate-800">¿Qué asientos son manuales y cuáles automáticos?</h3>
-              <p class="text-[11px] text-slate-500">Marca como «manual» los tipos que los registra una persona a mano (por ejemplo diario general o ajustes). Los que genera el sistema (facturas, cobros, roles) déjalos sin marcar. Las pruebas de NIA 240 se concentran en los manuales.</p>
+              <p id="my-msg-tipos" class="text-[11px] text-slate-400">Se guardan el significado de cada tipo y cuáles son manuales, y quedan para ese cliente en los próximos análisis.</p>
             </div>
-            <div class="flex gap-2"><button onclick="mayorRecalcular()" class="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-xs font-bold">Recalcular</button>
-            <button onclick="mayorGuardarTipos()" class="px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-bold">Guardar para este cliente</button></div>
+            <button id="my-flecha-tipos" type="button" title="Mostrar u ocultar" class="shrink-0 w-8 h-8 rounded-full border border-slate-300 bg-white text-slate-600 text-sm font-bold">▲</button>
           </div>
-          <p id="my-msg-tipos" class="text-[11px] text-slate-400">Se guardan el significado de cada tipo y cuáles son manuales, y quedan para ese cliente en los próximos análisis.</p>
-          <div id="my-partes" class="space-y-1"></div>
-          <div id="my-tipos" class="overflow-x-auto border border-slate-200 rounded-lg"></div>
+          <div id="my-tipos-cuerpo" class="space-y-3">
+            <p class="text-[11px] text-slate-500">Marca como «manual» los tipos que los registra una persona a mano (por ejemplo diario general o ajustes). Los que genera el sistema (facturas, cobros, roles) déjalos sin marcar. Las pruebas de NIA 240 se concentran en los manuales.</p>
+            <div id="my-partes" class="space-y-1"></div>
+            <div id="my-tipos" class="overflow-x-auto border border-slate-200 rounded-lg"></div>
+            <div class="flex flex-wrap justify-end gap-2 pt-1">
+              <button onclick="mayorRecalcular()" class="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-xs font-bold">Recalcular sin guardar</button>
+              <button onclick="mayorGuardarTipos()" class="px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-bold">Guardar para este cliente</button>
+            </div>
+          </div>
         </div>
 
         <div class="flex flex-wrap justify-between items-center gap-2">
@@ -12837,6 +12842,11 @@ ${cont.innerHTML}
       if (v) m[cod] = v; else delete m[cod];
       mayorPanel(); mayorPintarTipos();
     }
+    function mayorPlegarTipos(forzar) {
+      const c = myEl('my-tipos-cuerpo'), f = myEl('my-flecha-tipos'); if (!c) return;
+      const ocultar = forzar === undefined ? !c.classList.contains('hidden') : forzar;
+      c.classList.toggle('hidden', ocultar); if (f) f.textContent = ocultar ? '▼' : '▲';
+    }
     function mayorGuardarSig(tk, v) {
       v = String(v || '').trim(); if (v) MYS.sig[tk] = v; else delete MYS.sig[tk];
       mayorPanel();
@@ -12888,7 +12898,7 @@ ${cont.innerHTML}
         if (error) throw error;
         filas.forEach(f => { if (f.tipo[0] !== '#') MYS.guardados[f.tipo] = f; });
         mayorMsgTipos('Guardado para ' + mayorClienteNombre() + ': ' + MYS.A.tipos.size + ' tipos. La próxima vez se cargan solos.', false);
-        mayorCalcular(); mayorPintar(); mayorMsgTipos('Guardado para ' + mayorClienteNombre() + ': ' + MYS.A.tipos.size + ' tipos. La próxima vez se cargan solos.', false);
+        mayorCalcular(); mayorPintar(); mayorMsgTipos('Guardado para ' + mayorClienteNombre() + ': ' + MYS.A.tipos.size + ' tipos. La próxima vez se cargan solos. (Toca la flecha para volver a abrir.)', false); mayorPlegarTipos(true);
       } catch (e) { mayorMsgTipos('No se pudo guardar: ' + (e.message || e) + (/row-level|permission/i.test(String(e.message || e)) ? ' (no tienes permiso de edición sobre este cliente)' : ''), true); }
     }
     const myEl = id => document.getElementById(id);
@@ -13031,6 +13041,7 @@ ${cont.innerHTML}
         if (isFinite(A.maxDia) && !myEl('my-p-cierre').value) { /* se mostrará el cierre supuesto en la prueba de corte */ }
         mayorCalcular();
         MYS.tab = 'resumen';
+        mayorPlegarTipos(false);
         mayorPintar();
         myEl('my-reporte').classList.remove('hidden');
         myEl('my-prog-txt').textContent = 'Listo: ' + myInt(A.n) + ' líneas en ' + ((performance.now() - t0) / 1000).toFixed(1) + ' s';
