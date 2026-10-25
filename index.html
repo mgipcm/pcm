@@ -12680,13 +12680,20 @@ ${cont.innerHTML}
           filas: dpF, total: dp.length
         });
         if (A.m.cheque >= 0) {
-          const ch = []; A.chHits.forEach(h => ch.push(h)); ch.sort((a, b) => b.k - a.k);
+          const grp = new Map();
+          A.chHits.forEach(h => {
+            const gk = h.ch + '|' + h.docs.slice().sort().join(',') + '|' + h.mon;
+            let g = grp.get(gk);
+            if (!g) { g = { ch: h.ch, docs: h.docs, mon: h.mon, d: h.d, n: h.n, k: h.k, ctas: [] }; grp.set(gk, g); }
+            g.ctas.push(h.cod + ' ' + h.cu + ' (' + h.lado + ')');
+          });
+          const ch = []; grp.forEach(g => ch.push(g)); ch.sort((a, b) => b.k - a.k);
           add({
             id: 'cheques', titulo: 'Cheques repetidos', nia: 'NIA 240 · NIA 330',
-            que: 'El mismo número de cheque, en la misma cuenta y del mismo lado (débito con débito o crédito con crédito), en documentos diferentes. Puede ser un pago registrado dos veces o un cheque reutilizado. No se comparan un débito con un crédito del mismo cheque, porque eso es lo normal en una anulación o un reverso.',
+            que: 'El mismo número de cheque, en la misma cuenta y del mismo lado (débito con débito o crédito con crédito), en documentos diferentes. Puede ser un pago registrado dos veces o un cheque reutilizado. Si el mismo par de documentos repite el cheque en varias cuentas (por ejemplo banco y clientes), se muestra una sola vez con todas las cuentas. No se comparan un débito con un crédito del mismo cheque, porque eso es lo normal en una anulación o un reverso.',
             nivel: ch.length ? 'warn' : 'ok', resumen: ch.length ? ch.length + ' cheques repetidos en documentos distintos' : 'No se encontraron',
-            cols: [{ h: 'Código', t: 's' }, { h: 'Cuenta', t: 's' }, { h: 'Cheque', t: 's' }, { h: 'Lado', t: 's' }, { h: 'Mes (1.º)', t: 's' }, { h: 'Fecha (1.º)', t: 'f' }, { h: 'Importe (1.º)', t: 'm' }, { h: 'Veces', t: 'i' }, { h: 'Documentos', t: 's' }],
-            filas: ch.slice(0, 1000).map(h => [h.cod, h.cu, h.ch, h.lado, (h.d === h.d ? MYM.isoDia(h.d).slice(0, 7) : ''), h.d, h.mon, h.n, h.docs.map(docDeKey).join(' · ')]), total: ch.length
+            cols: [{ h: 'Cheque', t: 's' }, { h: 'Mes (1.º)', t: 's' }, { h: 'Fecha (1.º)', t: 'f' }, { h: 'Importe', t: 'm' }, { h: 'Veces', t: 'i' }, { h: 'Documentos', t: 's' }, { h: 'Cuentas donde se repite', t: 's' }],
+            filas: ch.slice(0, 1000).map(g => [g.ch, (g.d === g.d ? MYM.isoDia(g.d).slice(0, 7) : ''), g.d, g.mon, g.n, g.docs.map(docDeKey).join(' · '), g.ctas.join(' · ')]), total: ch.length
           });
         }
 
