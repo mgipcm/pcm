@@ -12685,8 +12685,8 @@ ${cont.innerHTML}
             id: 'cheques', titulo: 'Cheques repetidos', nia: 'NIA 240 · NIA 330',
             que: 'El mismo número de cheque, en la misma cuenta y del mismo lado (débito con débito o crédito con crédito), en documentos diferentes. Puede ser un pago registrado dos veces o un cheque reutilizado. No se comparan un débito con un crédito del mismo cheque, porque eso es lo normal en una anulación o un reverso.',
             nivel: ch.length ? 'warn' : 'ok', resumen: ch.length ? ch.length + ' cheques repetidos en documentos distintos' : 'No se encontraron',
-            cols: [{ h: 'Código', t: 's' }, { h: 'Cuenta', t: 's' }, { h: 'Cheque', t: 's' }, { h: 'Lado', t: 's' }, { h: 'Fecha (1.º)', t: 'f' }, { h: 'Importe (1.º)', t: 'm' }, { h: 'Veces', t: 'i' }, { h: 'Documentos', t: 's' }],
-            filas: ch.slice(0, 1000).map(h => [h.cod, h.cu, h.ch, h.lado, h.d, h.mon, h.n, h.docs.map(docDeKey).join(' · ')]), total: ch.length
+            cols: [{ h: 'Código', t: 's' }, { h: 'Cuenta', t: 's' }, { h: 'Cheque', t: 's' }, { h: 'Lado', t: 's' }, { h: 'Mes (1.º)', t: 's' }, { h: 'Fecha (1.º)', t: 'f' }, { h: 'Importe (1.º)', t: 'm' }, { h: 'Veces', t: 'i' }, { h: 'Documentos', t: 's' }],
+            filas: ch.slice(0, 1000).map(h => [h.cod, h.cu, h.ch, h.lado, (h.d === h.d ? MYM.isoDia(h.d).slice(0, 7) : ''), h.d, h.mon, h.n, h.docs.map(docDeKey).join(' · ')]), total: ch.length
           });
         }
 
@@ -12772,7 +12772,7 @@ ${cont.innerHTML}
     // MOTOR-FIN
 
     // ===== MAYOR CONTABLE: PANTALLA =====
-    const MYS = { fuente: null, headers: [], mapa: {}, hdrIdx: 0, A: null, res: null, manuales: new Set(), tab: 'resumen', bfSel: 'todos', ocupado: false };
+    const MYS = { fuente: null, headers: [], mapa: {}, hdrIdx: 0, A: null, res: null, manuales: new Set(), tab: 'resumen', bfSel: 'todos', ocupado: false, sort: null };
     const myEl = id => document.getElementById(id);
     const myTick = () => new Promise(r => setTimeout(r, 0));
     const myMoney = v => (v < 0 ? '-' : '') + '$' + Math.abs(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -12958,7 +12958,12 @@ ${cont.innerHTML}
       mayorPanel();
     }
 
-    function mayorTab(id) { MYS.tab = id; mayorPintar(); }
+    function mayorTab(id) { MYS.tab = id; MYS.sort = null; mayorPintar(); }
+    function mayorOrdenar(c) {
+      const s = MYS.sort;
+      MYS.sort = (s && s.tab === MYS.tab && s.col === c) ? { tab: MYS.tab, col: c, dir: -s.dir } : { tab: MYS.tab, col: c, dir: 1 };
+      mayorPanel();
+    }
     function mayorBenfordSel(s) { MYS.bfSel = s; mayorPanel(); }
 
     function myCelda(v, t) {
@@ -13000,10 +13005,13 @@ ${cont.innerHTML}
         p.innerHTML = h; return;
       }
       const MAXV = 300;
+      const srt = MYS.sort && MYS.sort.tab === t.id ? MYS.sort : null;
+      let filasV = t.filas;
+      if (srt) filasV = t.filas.slice().sort((a, b) => { const x = a[srt.col], y = b[srt.col]; const r = (typeof x === 'number' && typeof y === 'number') ? ((x !== x ? -Infinity : x) - (y !== y ? -Infinity : y)) : String(x == null ? '' : x).localeCompare(String(y == null ? '' : y), 'es', { numeric: true }); return r * srt.dir; });
       if (!t.filas.length) h += '<div class="p-4 text-center text-slate-400 text-xs border border-dashed rounded-xl">Sin partidas para mostrar.</div>';
       else {
-        h += `<div class="overflow-x-auto border border-slate-200 rounded-xl bg-white shadow-sm"><table class="w-full text-left text-xs text-slate-700"><thead class="bg-slate-100 text-[10px] font-bold text-slate-600 border-b"><tr>${t.cols.map(c => `<th class="p-2 ${['m', 'i', 'p'].includes(c.t) ? 'text-right' : ''} whitespace-nowrap">${escapeHtml(c.h)}</th>`).join('')}</tr></thead><tbody class="divide-y divide-slate-100">${t.filas.slice(0, MAXV).map(r => `<tr class="hover:bg-slate-50">${r.map((v, i) => `<td class="p-2 ${['m', 'i', 'p'].includes(t.cols[i].t) ? 'text-right whitespace-nowrap' : (t.cols[i].t === 's' && String(v).length > 60 ? 'min-w-[260px]' : 'whitespace-nowrap')}">${myCelda(v, t.cols[i].t)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
-        h += `<p class="text-[10px] text-slate-400">Mostrando ${Math.min(MAXV, t.filas.length)} de ${myInt(t.total)} casos${t.filas.length < t.total ? ' (el Excel trae hasta ' + myInt(t.filas.length) + ')' : t.filas.length > MAXV ? ' (el Excel trae todos)' : ''}.</p>`;
+        h += `<div class="overflow-x-auto border border-slate-200 rounded-xl bg-white shadow-sm"><table class="w-full text-left text-xs text-slate-700"><thead class="bg-slate-100 text-[10px] font-bold text-slate-600 border-b"><tr>${t.cols.map((c, ci) => `<th onclick="mayorOrdenar(${ci})" title="Clic para ordenar" class="p-2 cursor-pointer select-none hover:bg-slate-200 ${['m', 'i', 'p'].includes(c.t) ? 'text-right' : ''} whitespace-nowrap">${escapeHtml(c.h)}${srt && srt.col === ci ? (srt.dir === 1 ? ' ▲' : ' ▼') : ''}</th>`).join('')}</tr></thead><tbody class="divide-y divide-slate-100">${filasV.slice(0, MAXV).map(r => `<tr class="hover:bg-slate-50">${r.map((v, i) => `<td class="p-2 ${['m', 'i', 'p'].includes(t.cols[i].t) ? 'text-right whitespace-nowrap' : (t.cols[i].t === 's' && String(v).length > 60 ? 'min-w-[260px]' : 'whitespace-nowrap')}">${myCelda(v, t.cols[i].t)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+        h += `<p class="text-[10px] text-slate-400">Haz clic en el título de una columna para ordenar. Mostrando ${Math.min(MAXV, t.filas.length)} de ${myInt(t.total)} casos${t.filas.length < t.total ? ' (el Excel trae hasta ' + myInt(t.filas.length) + ')' : t.filas.length > MAXV ? ' (el Excel trae todos)' : ''}.</p>`;
       }
       p.innerHTML = h;
     }
