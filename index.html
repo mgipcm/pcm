@@ -1333,6 +1333,10 @@
         <p class="text-xs text-slate-600 leading-relaxed">
           Lo mejor es guardar el mayor como <span class="font-bold">CSV</span> (en Excel: Guardar como → CSV). Así se pueden cargar cientos de miles de líneas sin que el navegador se trabe. También acepta .xlsx / .xls, pero solo para archivos pequeños.
         </p>
+        <label class="block max-w-md space-y-1">
+          <span class="font-bold text-[11px] text-slate-600 block">Cliente que vas a analizar <span title="Con el cliente elegido, el significado de los tipos de asiento y cuáles son manuales se guardan y se cargan solos la próxima vez." class="inline-flex items-center justify-center w-4 h-4 rounded-full bg-slate-200 text-slate-600 text-[10px] cursor-help align-middle">?</span></span>
+          <select id="my-cliente" onmousedown="mayorPoblarClientes()" onchange="mayorCambioCliente()" class="w-full border rounded-lg px-2 py-1.5 text-xs bg-white"><option value="">-- Selecciona un cliente --</option></select>
+        </label>
         <div class="flex flex-wrap items-center gap-3">
           <label class="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold cursor-pointer transition shadow">
             <span>Seleccionar archivo</span>
@@ -1376,7 +1380,7 @@
       </div>
 
       <div id="my-reporte" class="hidden space-y-5">
-        <div id="my-kpis" class="grid grid-cols-2 md:grid-cols-5 gap-3"></div>
+        <div id="my-kpis" class="grid grid-cols-2 md:grid-cols-6 gap-3"></div>
 
         <div class="border border-slate-200 rounded-2xl p-5 space-y-3">
           <div class="flex flex-wrap justify-between items-center gap-2">
@@ -1384,8 +1388,10 @@
               <h3 class="text-sm font-bold text-slate-800">¿Qué asientos son manuales y cuáles automáticos?</h3>
               <p class="text-[11px] text-slate-500">Marca como «manual» los tipos que los registra una persona a mano (por ejemplo diario general o ajustes). Los que genera el sistema (facturas, cobros, roles) déjalos sin marcar. Las pruebas de NIA 240 se concentran en los manuales.</p>
             </div>
-            <button onclick="mayorRecalcular()" class="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-xs font-bold">Recalcular</button>
+            <div class="flex gap-2"><button onclick="mayorRecalcular()" class="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-xs font-bold">Recalcular</button>
+            <button onclick="mayorGuardarTipos()" class="px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-bold">Guardar para este cliente</button></div>
           </div>
+          <p id="my-msg-tipos" class="text-[11px] text-slate-400">Se guardan el significado de cada tipo y cuáles son manuales, y quedan para ese cliente en los próximos análisis.</p>
           <div id="my-tipos" class="overflow-x-auto border border-slate-200 rounded-lg"></div>
         </div>
 
@@ -2576,6 +2582,7 @@
     });
 
     function navegarMenu(seccion, sub, cuenta) {
+      if (seccion === 'mayor') { try { mayorPoblarClientes(); } catch (e) { } }
       if (seccion === 'visitas') { fechaCalendarioActual = new Date(); renderizarCalendarioLineal(); setTimeout(posicionarCalendarioHoy, 60); }
       // Clientes y Usuarios solo se abren con ingreso de Socio o Supervisor
       if ((seccion === 'clientes' || seccion === 'usuarios' || seccion === 'cuentas' || seccion === 'habilitar' || seccion === 'historial' || seccion === 'medidor') && !puedeConfigurar()) {
@@ -12783,7 +12790,59 @@ ${cont.innerHTML}
     // MOTOR-FIN
 
     // ===== MAYOR CONTABLE: PANTALLA =====
-    const MYS = { fuente: null, headers: [], mapa: {}, hdrIdx: 0, A: null, res: null, manuales: new Set(), tab: 'resumen', bfSel: 'todos', ocupado: false, sort: null };
+    const MYS = { fuente: null, headers: [], mapa: {}, hdrIdx: 0, A: null, res: null, manuales: new Set(), tab: 'resumen', bfSel: 'todos', ocupado: false, sort: null, sig: {}, guardados: {} };
+    function mayorGuardarSig(tk, v) {
+      v = String(v || '').trim(); if (v) MYS.sig[tk] = v; else delete MYS.sig[tk];
+      mayorPanel();
+    }
+    function mayorPoblarClientes() {
+      const sel = myEl('my-cliente'); if (!sel || typeof listaClientesCache === 'undefined') return;
+      const previo = sel.value || ((myEl('select-cliente') || {}).value || '');
+      if (sel.options.length > 1 && sel.dataset.n === String(listaClientesCache.length)) return;
+      sel.innerHTML = '<option value="">-- Selecciona un cliente --</option>';
+      ordenarClientes(listaClientesCache).forEach(c => {
+        const id = c.cliente_id || c.id, completo = c.nombre_completo || c.razon_social || c.nombre || '';
+        sel.innerHTML += `<option value="${escapeHtml(String(id))}">${escapeHtml(c.nombre_corto ? c.nombre_corto + ' (' + completo + ')' : completo)}</option>`;
+      });
+      sel.dataset.n = String(listaClientesCache.length);
+      if (previo) sel.value = previo;
+    }
+    const mayorClienteId = () => (myEl('my-cliente') || {}).value || '';
+    function mayorClienteNombre() { const sel = myEl('my-cliente'); return sel && sel.selectedIndex > 0 ? sel.options[sel.selectedIndex].text : ''; }
+    async function mayorCargarTipos() {
+      MYS.sig = {}; MYS.guardados = {};
+      const cid = mayorClienteId(); if (!cid) return;
+      try {
+        const { data, error } = await supabaseClient.from('mayor_tipos_cliente').select('tipo,significado,manual').eq('cliente_id', cid);
+        if (error) throw error;
+        (data || []).forEach(r => { MYS.guardados[r.tipo] = r; if (r.significado) MYS.sig[r.tipo] = r.significado; });
+      } catch (e) { mayorMsgTipos('No se pudo leer lo guardado del cliente: ' + (e.message || e), true); }
+    }
+    function mayorAplicarGuardados() {
+      if (!MYS.A) return;
+      MYS.manuales = new Set();
+      MYS.A.tipos.forEach((v, tk) => { const g = MYS.guardados[tk]; if (g ? g.manual : MYM.adivinaManual(tk)) MYS.manuales.add(tk); });
+    }
+    async function mayorCambioCliente() {
+      await mayorCargarTipos();
+      if (MYS.A) { mayorAplicarGuardados(); mayorCalcular(); mayorPintar(); }
+    }
+    function mayorMsgTipos(t, err) { const e = myEl('my-msg-tipos'); if (e) { e.textContent = t; e.className = 'text-[11px] ' + (err ? 'text-red-700' : 'text-emerald-700'); } }
+    async function mayorGuardarTipos() {
+      const cid = mayorClienteId();
+      if (!cid) { mayorMsgTipos('Elige primero el cliente (arriba, en el paso 1).', true); return; }
+      const sel = new Set(); document.querySelectorAll('.my-chk-man').forEach(c => { if (c.checked) sel.add(c.dataset.tk); });
+      MYS.manuales = sel;
+      const email = (typeof usuarioActivo !== 'undefined' && usuarioActivo && usuarioActivo.email) || null;
+      const filas = []; MYS.A.tipos.forEach((v, tk) => filas.push({ cliente_id: cid, tipo: tk, significado: MYS.sig[tk] || '', manual: sel.has(tk), actualizado_por: email, actualizado_en: new Date().toISOString() }));
+      try {
+        const { error } = await supabaseClient.from('mayor_tipos_cliente').upsert(filas, { onConflict: 'cliente_id,tipo' });
+        if (error) throw error;
+        filas.forEach(f => { MYS.guardados[f.tipo] = f; });
+        mayorMsgTipos('Guardado para ' + mayorClienteNombre() + ': ' + filas.length + ' tipos. La próxima vez se cargan solos.', false);
+        mayorCalcular(); mayorPintar(); mayorMsgTipos('Guardado para ' + mayorClienteNombre() + ': ' + filas.length + ' tipos. La próxima vez se cargan solos.', false);
+      } catch (e) { mayorMsgTipos('No se pudo guardar: ' + (e.message || e) + (/row-level|permission/i.test(String(e.message || e)) ? ' (no tienes permiso de edición sobre este cliente)' : ''), true); }
+    }
     const myEl = id => document.getElementById(id);
     const myTick = () => new Promise(r => setTimeout(r, 0));
     const myMoney = v => (v < 0 ? '-' : '') + '$' + Math.abs(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -12817,6 +12876,7 @@ ${cont.innerHTML}
 
     async function mayorElegirArchivo(e) {
       const file = e.target.files[0]; if (!file) return;
+      mayorPoblarClientes();
       myEl('my-archivo').textContent = 'Leyendo ' + file.name + '…';
       myEl('my-reporte').classList.add('hidden'); myEl('my-config').classList.add('hidden');
       MYS.A = null; MYS.res = null;
@@ -12918,7 +12978,8 @@ ${cont.innerHTML}
         });
         myEl('my-barra').style.width = '100%'; myEl('my-prog-txt').textContent = 'Calculando pruebas…'; await myTick();
         MYS.A = A;
-        MYS.manuales = new Set(); A.tipos.forEach((v, tk) => { if (MYM.adivinaManual(tk)) MYS.manuales.add(tk); });
+        if (mayorClienteId()) await mayorCargarTipos(); else { MYS.sig = {}; MYS.guardados = {}; }
+        mayorAplicarGuardados();
         if (isFinite(A.maxDia) && !myEl('my-p-cierre').value) { /* se mostrará el cierre supuesto en la prueba de corte */ }
         mayorCalcular();
         MYS.tab = 'resumen';
@@ -12951,14 +13012,14 @@ ${cont.innerHTML}
     function mayorPintar() {
       const R = MYS.res, K = R.kpis, A = MYS.A;
       const kp = (l, v) => `<div class="bg-white p-3 rounded-xl border border-slate-200"><span class="block text-[10px] font-bold text-slate-400">${l}</span><span class="text-base font-bold text-slate-800">${v}</span></div>`;
-      myEl('my-kpis').innerHTML = kp('Líneas leídas', myInt(K.lineas)) + kp('Asientos', myInt(K.asientos)) + kp('Suma debe', myMoney(K.debe)) + kp('Suma haber', myMoney(K.haber)) + kp('Período', MYM.fmtDia(K.desde) + ' – ' + MYM.fmtDia(K.hasta));
+      myEl('my-kpis').innerHTML = kp('Cliente', escapeHtml(mayorClienteNombre() || '(sin elegir)')) + kp('Líneas leídas', myInt(K.lineas)) + kp('Asientos', myInt(K.asientos)) + kp('Suma debe', myMoney(K.debe)) + kp('Suma haber', myMoney(K.haber)) + kp('Período', MYM.fmtDia(K.desde) + ' – ' + MYM.fmtDia(K.hasta));
 
       const tipos = [...A.tipos.entries()].sort((a, b) => b[1].lineas - a[1].lineas);
       const usrTipo = new Map();
       A.users.forEach((mp, u) => mp.forEach((v, tk) => { let x = usrTipo.get(tk); if (!x) { x = []; usrTipo.set(tk, x); } x.push([u, v.l]); }));
-      myEl('my-tipos').innerHTML = `<table class="w-full text-xs text-slate-700"><thead class="bg-slate-100 text-[10px] font-bold text-slate-600"><tr><th class="p-2 text-left">Tipo</th><th class="p-2 text-right">Asientos</th><th class="p-2 text-right">Líneas</th><th class="p-2 text-right">Importe</th><th class="p-2 text-left">Usuarios principales</th><th class="p-2 text-center">¿Manual?</th></tr></thead><tbody>${tipos.slice(0, 60).map(([tk, v]) => {
+      myEl('my-tipos').innerHTML = `<table class="w-full text-xs text-slate-700"><thead class="bg-slate-100 text-[10px] font-bold text-slate-600"><tr><th class="p-2 text-left">Tipo</th><th class="p-2 text-left">Significado (escríbelo tú)</th><th class="p-2 text-right">Asientos</th><th class="p-2 text-right">Líneas</th><th class="p-2 text-right">Importe</th><th class="p-2 text-left">Usuarios principales</th><th class="p-2 text-center">¿Manual?</th></tr></thead><tbody>${tipos.slice(0, 60).map(([tk, v]) => {
         const us = (usrTipo.get(tk) || []).sort((a, b) => b[1] - a[1]).slice(0, 3).map(x => escapeHtml(x[0])).join(', ');
-        return `<tr class="border-t"><td class="p-2 font-mono font-bold">${escapeHtml(tk)}</td><td class="p-2 text-right">${myInt(v.asientos)}</td><td class="p-2 text-right">${myInt(v.lineas)}</td><td class="p-2 text-right">${myMoney(v.deb)}</td><td class="p-2 text-slate-500">${us}</td><td class="p-2 text-center"><input type="checkbox" class="my-chk-man" data-tk="${escapeHtml(tk)}" ${MYS.manuales.has(tk) ? 'checked' : ''}></td></tr>`;
+        return `<tr class="border-t"><td class="p-2 font-mono font-bold">${escapeHtml(tk)}</td><td class="p-2"><input type="text" value="${escapeHtml(MYS.sig[tk] || '')}" placeholder="Ej. Devolución ventas" onchange="mayorGuardarSig(decodeURIComponent('${encodeURIComponent(tk)}'), this.value)" class="w-full min-w-[170px] border rounded px-2 py-1 text-xs"></td><td class="p-2 text-right">${myInt(v.asientos)}</td><td class="p-2 text-right">${myInt(v.lineas)}</td><td class="p-2 text-right">${myMoney(v.deb)}</td><td class="p-2 text-slate-500">${us}</td><td class="p-2 text-center"><input type="checkbox" class="my-chk-man" data-tk="${escapeHtml(tk)}" ${MYS.manuales.has(tk) ? 'checked' : ''}></td></tr>`;
       }).join('')}</tbody></table>${tipos.length > 60 ? `<p class="p-2 text-[10px] text-slate-400">Se muestran los 60 tipos con más líneas de ${tipos.length}.</p>` : ''}`;
 
       const tabs = [['resumen', 'Resumen']].concat(R.tests.map(t => [t.id, t.titulo]));
@@ -12995,6 +13056,7 @@ ${cont.innerHTML}
         default: return escapeHtml(v);
       }
     }
+    const myTipoSig = v => (MYS.sig && MYS.sig[v]) ? `<div class="text-[10px] text-slate-400 font-sans">${escapeHtml(MYS.sig[v])}</div>` : '';
 
     function mayorPanel() {
       const R = MYS.res, p = myEl('my-panel');
@@ -13028,7 +13090,7 @@ ${cont.innerHTML}
       if (srt) filasV = t.filas.slice().sort((a, b) => { const x = a[srt.col], y = b[srt.col]; const r = (typeof x === 'number' && typeof y === 'number') ? ((x !== x ? -Infinity : x) - (y !== y ? -Infinity : y)) : String(x == null ? '' : x).localeCompare(String(y == null ? '' : y), 'es', { numeric: true }); return r * srt.dir; });
       if (!t.filas.length) h += '<div class="p-4 text-center text-slate-400 text-xs border border-dashed rounded-xl">Sin partidas para mostrar.</div>';
       else {
-        h += `<div class="overflow-x-auto border border-slate-200 rounded-xl bg-white shadow-sm"><table class="w-full text-left text-xs text-slate-700"><thead class="bg-slate-100 text-[10px] font-bold text-slate-600 border-b"><tr>${t.cols.map((c, ci) => `<th onclick="mayorOrdenar(${ci})" title="Clic para ordenar" class="p-2 cursor-pointer select-none hover:bg-slate-200 ${['m', 'i', 'p'].includes(c.t) ? 'text-right' : ''} whitespace-nowrap">${escapeHtml(c.h)}${srt && srt.col === ci ? (srt.dir === 1 ? ' ▲' : ' ▼') : ''}</th>`).join('')}</tr></thead><tbody class="divide-y divide-slate-100">${filasV.slice(0, MAXV).map(r => `<tr class="hover:bg-slate-50">${r.map((v, i) => `<td class="p-2 ${['m', 'i', 'p'].includes(t.cols[i].t) ? 'text-right whitespace-nowrap' : (t.cols[i].t === 's' && String(v).length > 60 ? 'min-w-[260px]' : 'whitespace-nowrap')}">${myCelda(v, t.cols[i].t)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+        h += `<div class="overflow-x-auto border border-slate-200 rounded-xl bg-white shadow-sm"><table class="w-full text-left text-xs text-slate-700"><thead class="bg-slate-100 text-[10px] font-bold text-slate-600 border-b"><tr>${t.cols.map((c, ci) => `<th onclick="mayorOrdenar(${ci})" title="Clic para ordenar" class="p-2 cursor-pointer select-none hover:bg-slate-200 ${['m', 'i', 'p'].includes(c.t) ? 'text-right' : ''} whitespace-nowrap">${escapeHtml(c.h)}${srt && srt.col === ci ? (srt.dir === 1 ? ' ▲' : ' ▼') : ''}</th>`).join('')}</tr></thead><tbody class="divide-y divide-slate-100">${filasV.slice(0, MAXV).map(r => `<tr class="hover:bg-slate-50">${r.map((v, i) => `<td class="p-2 ${['m', 'i', 'p'].includes(t.cols[i].t) ? 'text-right whitespace-nowrap' : (t.cols[i].t === 's' && String(v).length > 60 ? 'min-w-[260px]' : 'whitespace-nowrap')}">${myCelda(v, t.cols[i].t)}${t.cols[i].h === 'Tipo' ? myTipoSig(v) : ''}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
         h += `<p class="text-[10px] text-slate-400">Haz clic en el título de una columna para ordenar. Mostrando ${Math.min(MAXV, t.filas.length)} de ${myInt(t.total)} casos${t.filas.length < t.total ? ' (el Excel trae hasta ' + myInt(t.filas.length) + ')' : t.filas.length > MAXV ? ' (el Excel trae todos)' : ''}.</p>`;
       }
       p.innerHTML = h;
@@ -13038,9 +13100,11 @@ ${cont.innerHTML}
       if (!MYS.res) return;
       const R = MYS.res, wb = XLSX.utils.book_new(), K = R.kpis;
       const P = mayorParams();
-      const resumen = [['Análisis de mayor contable', MYS.fuente.nombre], ['Líneas', K.lineas], ['Asientos', K.asientos], ['Período', MYM.fmtDia(K.desde) + ' – ' + MYM.fmtDia(K.hasta)], ['Materialidad usada', P.mat], ['Fecha de cierre usada', MYM.fmtDia(K.cierre)], ['Tipos manuales', [...MYS.manuales].join(', ')], [], ['Prueba', 'Norma', 'Semáforo', 'Resultado']]
+      const resumen = [['Análisis de mayor contable', MYS.fuente.nombre], ['Cliente', mayorClienteNombre()], ['Líneas', K.lineas], ['Asientos', K.asientos], ['Período', MYM.fmtDia(K.desde) + ' – ' + MYM.fmtDia(K.hasta)], ['Materialidad usada', P.mat], ['Fecha de cierre usada', MYM.fmtDia(K.cierre)], ['Tipos manuales', [...MYS.manuales].join(', ')], [], ['Prueba', 'Norma', 'Semáforo', 'Resultado']]
         .concat(R.tests.map(t => [t.titulo, t.nia, MY_NIVEL[t.nivel][1], t.resumen]));
       XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(resumen), 'Resumen');
+      const tp = [['Tipo', 'Significado', 'Asientos', 'Líneas', 'Importe', 'Manual']]; MYS.A.tipos.forEach((v, tk) => tp.push([tk, MYS.sig[tk] || '', v.asientos, v.lineas, v.deb, MYS.manuales.has(tk) ? 'Sí' : 'No']));
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(tp), 'Tipos de asiento');
       R.tests.forEach(t => {
         let aoa;
         if (t.vista === 'benford') {
@@ -13053,7 +13117,7 @@ ${cont.innerHTML}
         }
         XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(aoa), t.titulo.replace(/[\[\]\*\?\/\\:]/g, '').slice(0, 31));
       });
-      XLSX.writeFile(wb, 'Analisis_mayor_' + MYS.fuente.nombre.replace(/\.[^.]+$/, '').replace(/[^\w\-]+/g, '_') + '.xlsx');
+      XLSX.writeFile(wb, 'Analisis_mayor_' + (mayorClienteNombre() ? mayorClienteNombre().split(' (')[0].replace(/[^\w\-]+/g, '_') + '_' : '') + MYS.fuente.nombre.replace(/\.[^.]+$/, '').replace(/[^\w\-]+/g, '_') + '.xlsx');
     }
 
   </script>
