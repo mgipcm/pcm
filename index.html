@@ -1392,6 +1392,7 @@
             <button onclick="mayorGuardarTipos()" class="px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-bold">Guardar para este cliente</button></div>
           </div>
           <p id="my-msg-tipos" class="text-[11px] text-slate-400">Se guardan el significado de cada tipo y cuáles son manuales, y quedan para ese cliente en los próximos análisis.</p>
+          <div id="my-partes" class="space-y-1"></div>
           <div id="my-tipos" class="overflow-x-auto border border-slate-200 rounded-lg"></div>
         </div>
 
@@ -12790,7 +12791,18 @@ ${cont.innerHTML}
     // MOTOR-FIN
 
     // ===== MAYOR CONTABLE: PANTALLA =====
-    const MYS = { fuente: null, headers: [], mapa: {}, hdrIdx: 0, A: null, res: null, manuales: new Set(), tab: 'resumen', bfSel: 'todos', ocupado: false, sort: null, sig: {}, guardados: {} };
+    const MYS = { fuente: null, headers: [], mapa: {}, hdrIdx: 0, A: null, res: null, manuales: new Set(), tab: 'resumen', bfSel: 'todos', ocupado: false, sort: null, sig: {}, parte1: {}, parte2: {}, guardados: {} };
+    function mayorPartes(tk) { const x = String(tk).split('·'); return [x[0] || '', x.slice(1).join('·')]; }
+    function sigDe(tk) {
+      if (MYS.sig[tk]) return MYS.sig[tk];
+      const [a, b] = mayorPartes(tk);
+      return [MYS.parte1[a], b ? MYS.parte2[b] : ''].filter(Boolean).join(' - ');
+    }
+    function mayorGuardarParte(n, cod, v) {
+      v = String(v || '').trim(); const m = n === 1 ? MYS.parte1 : MYS.parte2;
+      if (v) m[cod] = v; else delete m[cod];
+      mayorPanel(); mayorPintarTipos();
+    }
     function mayorGuardarSig(tk, v) {
       v = String(v || '').trim(); if (v) MYS.sig[tk] = v; else delete MYS.sig[tk];
       mayorPanel();
@@ -12810,12 +12822,12 @@ ${cont.innerHTML}
     const mayorClienteId = () => (myEl('my-cliente') || {}).value || '';
     function mayorClienteNombre() { const sel = myEl('my-cliente'); return sel && sel.selectedIndex > 0 ? sel.options[sel.selectedIndex].text : ''; }
     async function mayorCargarTipos() {
-      MYS.sig = {}; MYS.guardados = {};
+      MYS.sig = {}; MYS.parte1 = {}; MYS.parte2 = {}; MYS.guardados = {};
       const cid = mayorClienteId(); if (!cid) return;
       try {
         const { data, error } = await supabaseClient.from('mayor_tipos_cliente').select('tipo,significado,manual').eq('cliente_id', cid);
         if (error) throw error;
-        (data || []).forEach(r => { MYS.guardados[r.tipo] = r; if (r.significado) MYS.sig[r.tipo] = r.significado; });
+        (data || []).forEach(r => { if (r.tipo.startsWith('#1:')) { if (r.significado) MYS.parte1[r.tipo.slice(3)] = r.significado; return; } if (r.tipo.startsWith('#2:')) { if (r.significado) MYS.parte2[r.tipo.slice(3)] = r.significado; return; } MYS.guardados[r.tipo] = r; if (r.significado) MYS.sig[r.tipo] = r.significado; });
       } catch (e) { mayorMsgTipos('No se pudo leer lo guardado del cliente: ' + (e.message || e), true); }
     }
     function mayorAplicarGuardados() {
@@ -12835,12 +12847,14 @@ ${cont.innerHTML}
       MYS.manuales = sel;
       const email = (typeof usuarioActivo !== 'undefined' && usuarioActivo && usuarioActivo.email) || null;
       const filas = []; MYS.A.tipos.forEach((v, tk) => filas.push({ cliente_id: cid, tipo: tk, significado: MYS.sig[tk] || '', manual: sel.has(tk), actualizado_por: email, actualizado_en: new Date().toISOString() }));
+      Object.keys(MYS.parte1).forEach(c => filas.push({ cliente_id: cid, tipo: '#1:' + c, significado: MYS.parte1[c], manual: false, actualizado_por: email, actualizado_en: new Date().toISOString() }));
+      Object.keys(MYS.parte2).forEach(c => filas.push({ cliente_id: cid, tipo: '#2:' + c, significado: MYS.parte2[c], manual: false, actualizado_por: email, actualizado_en: new Date().toISOString() }));
       try {
         const { error } = await supabaseClient.from('mayor_tipos_cliente').upsert(filas, { onConflict: 'cliente_id,tipo' });
         if (error) throw error;
-        filas.forEach(f => { MYS.guardados[f.tipo] = f; });
-        mayorMsgTipos('Guardado para ' + mayorClienteNombre() + ': ' + filas.length + ' tipos. La próxima vez se cargan solos.', false);
-        mayorCalcular(); mayorPintar(); mayorMsgTipos('Guardado para ' + mayorClienteNombre() + ': ' + filas.length + ' tipos. La próxima vez se cargan solos.', false);
+        filas.forEach(f => { if (f.tipo[0] !== '#') MYS.guardados[f.tipo] = f; });
+        mayorMsgTipos('Guardado para ' + mayorClienteNombre() + ': ' + MYS.A.tipos.size + ' tipos. La próxima vez se cargan solos.', false);
+        mayorCalcular(); mayorPintar(); mayorMsgTipos('Guardado para ' + mayorClienteNombre() + ': ' + MYS.A.tipos.size + ' tipos. La próxima vez se cargan solos.', false);
       } catch (e) { mayorMsgTipos('No se pudo guardar: ' + (e.message || e) + (/row-level|permission/i.test(String(e.message || e)) ? ' (no tienes permiso de edición sobre este cliente)' : ''), true); }
     }
     const myEl = id => document.getElementById(id);
@@ -12978,7 +12992,7 @@ ${cont.innerHTML}
         });
         myEl('my-barra').style.width = '100%'; myEl('my-prog-txt').textContent = 'Calculando pruebas…'; await myTick();
         MYS.A = A;
-        if (mayorClienteId()) await mayorCargarTipos(); else { MYS.sig = {}; MYS.guardados = {}; }
+        if (mayorClienteId()) await mayorCargarTipos(); else { MYS.sig = {}; MYS.parte1 = {}; MYS.parte2 = {}; MYS.guardados = {}; }
         mayorAplicarGuardados();
         if (isFinite(A.maxDia) && !myEl('my-p-cierre').value) { /* se mostrará el cierre supuesto en la prueba de corte */ }
         mayorCalcular();
@@ -13014,14 +13028,27 @@ ${cont.innerHTML}
       const kp = (l, v) => `<div class="bg-white p-3 rounded-xl border border-slate-200"><span class="block text-[10px] font-bold text-slate-400">${l}</span><span class="text-base font-bold text-slate-800">${v}</span></div>`;
       myEl('my-kpis').innerHTML = kp('Cliente', escapeHtml(mayorClienteNombre() || '(sin elegir)')) + kp('Líneas leídas', myInt(K.lineas)) + kp('Asientos', myInt(K.asientos)) + kp('Suma debe', myMoney(K.debe)) + kp('Suma haber', myMoney(K.haber)) + kp('Período', MYM.fmtDia(K.desde) + ' – ' + MYM.fmtDia(K.hasta));
 
+      mayorPintarTipos();
+      const tabs0 = null;
+      mayorPintarTabs();
+    }
+    function mayorPintarTipos() {
+      const A = MYS.A;
+      const chk = document.querySelectorAll('.my-chk-man'); if (chk.length) { MYS.manuales = new Set(); chk.forEach(c => { if (c.checked) MYS.manuales.add(c.dataset.tk); }); }
       const tipos = [...A.tipos.entries()].sort((a, b) => b[1].lineas - a[1].lineas);
+      const p1 = new Set(), p2 = new Set(); A.tipos.forEach((v, tk) => { const [a, b] = mayorPartes(tk); p1.add(a); if (b) p2.add(b); });
+      const caja = (n, c) => `<label class="flex items-center gap-1 text-[11px]"><span class="font-mono font-bold w-12 shrink-0">${escapeHtml(c)}</span><input type="text" value="${escapeHtml((n === 1 ? MYS.parte1 : MYS.parte2)[c] || '')}" placeholder="Significado" onchange="mayorGuardarParte(${n}, decodeURIComponent('${encodeURIComponent(c)}'), this.value)" class="w-full border rounded px-2 py-1 text-xs"></label>`;
+      myEl('my-partes').innerHTML = `<div class="text-[11px] font-bold text-slate-600">Atajo: escribe una sola vez qué significa cada código. Los tipos de abajo se arman solos (por ejemplo DV + PR = «Diario de ventas - Protesto»). Si escribes algo directo en un tipo, ese texto manda.</div><div class="grid grid-cols-1 md:grid-cols-2 gap-4"><div class="space-y-1"><div class="text-[10px] font-bold text-slate-500">TIPO 1</div>${[...p1].sort().map(c => caja(1, c)).join('')}</div><div class="space-y-1"><div class="text-[10px] font-bold text-slate-500">TIPO 2</div>${[...p2].sort().map(c => caja(2, c)).join('')}</div></div>`;
       const usrTipo = new Map();
       A.users.forEach((mp, u) => mp.forEach((v, tk) => { let x = usrTipo.get(tk); if (!x) { x = []; usrTipo.set(tk, x); } x.push([u, v.l]); }));
       myEl('my-tipos').innerHTML = `<table class="w-full text-xs text-slate-700"><thead class="bg-slate-100 text-[10px] font-bold text-slate-600"><tr><th class="p-2 text-left">Tipo</th><th class="p-2 text-left">Significado (escríbelo tú)</th><th class="p-2 text-right">Asientos</th><th class="p-2 text-right">Líneas</th><th class="p-2 text-right">Importe</th><th class="p-2 text-left">Usuarios principales</th><th class="p-2 text-center">¿Manual?</th></tr></thead><tbody>${tipos.slice(0, 60).map(([tk, v]) => {
         const us = (usrTipo.get(tk) || []).sort((a, b) => b[1] - a[1]).slice(0, 3).map(x => escapeHtml(x[0])).join(', ');
-        return `<tr class="border-t"><td class="p-2 font-mono font-bold">${escapeHtml(tk)}</td><td class="p-2"><input type="text" value="${escapeHtml(MYS.sig[tk] || '')}" placeholder="Ej. Devolución ventas" onchange="mayorGuardarSig(decodeURIComponent('${encodeURIComponent(tk)}'), this.value)" class="w-full min-w-[170px] border rounded px-2 py-1 text-xs"></td><td class="p-2 text-right">${myInt(v.asientos)}</td><td class="p-2 text-right">${myInt(v.lineas)}</td><td class="p-2 text-right">${myMoney(v.deb)}</td><td class="p-2 text-slate-500">${us}</td><td class="p-2 text-center"><input type="checkbox" class="my-chk-man" data-tk="${escapeHtml(tk)}" ${MYS.manuales.has(tk) ? 'checked' : ''}></td></tr>`;
+        return `<tr class="border-t"><td class="p-2 font-mono font-bold">${escapeHtml(tk)}</td><td class="p-2"><input type="text" value="${escapeHtml(MYS.sig[tk] || '')}" placeholder="${escapeHtml(sigDe(tk) || 'Ej. Devolución ventas')}" onchange="mayorGuardarSig(decodeURIComponent('${encodeURIComponent(tk)}'), this.value)" class="w-full min-w-[170px] border rounded px-2 py-1 text-xs"></td><td class="p-2 text-right">${myInt(v.asientos)}</td><td class="p-2 text-right">${myInt(v.lineas)}</td><td class="p-2 text-right">${myMoney(v.deb)}</td><td class="p-2 text-slate-500">${us}</td><td class="p-2 text-center"><input type="checkbox" class="my-chk-man" data-tk="${escapeHtml(tk)}" ${MYS.manuales.has(tk) ? 'checked' : ''}></td></tr>`;
       }).join('')}</tbody></table>${tipos.length > 60 ? `<p class="p-2 text-[10px] text-slate-400">Se muestran los 60 tipos con más líneas de ${tipos.length}.</p>` : ''}`;
 
+      }
+    function mayorPintarTabs() {
+      const R = MYS.res;
       const tabs = [['resumen', 'Resumen']].concat(R.tests.map(t => [t.id, t.titulo]));
       myEl('my-tabs').innerHTML = tabs.map(([id, nom]) => {
         const t = R.tests.find(x => x.id === id);
@@ -13056,7 +13083,7 @@ ${cont.innerHTML}
         default: return escapeHtml(v);
       }
     }
-    const myTipoSig = v => (MYS.sig && MYS.sig[v]) ? `<div class="text-[10px] text-slate-400 font-sans">${escapeHtml(MYS.sig[v])}</div>` : '';
+    const myTipoSig = v => sigDe(v) ? `<div class="text-[10px] text-slate-400 font-sans">${escapeHtml(sigDe(v))}</div>` : '';
 
     function mayorPanel() {
       const R = MYS.res, p = myEl('my-panel');
@@ -13103,7 +13130,7 @@ ${cont.innerHTML}
       const resumen = [['Análisis de mayor contable', MYS.fuente.nombre], ['Cliente', mayorClienteNombre()], ['Líneas', K.lineas], ['Asientos', K.asientos], ['Período', MYM.fmtDia(K.desde) + ' – ' + MYM.fmtDia(K.hasta)], ['Materialidad usada', P.mat], ['Fecha de cierre usada', MYM.fmtDia(K.cierre)], ['Tipos manuales', [...MYS.manuales].join(', ')], [], ['Prueba', 'Norma', 'Semáforo', 'Resultado']]
         .concat(R.tests.map(t => [t.titulo, t.nia, MY_NIVEL[t.nivel][1], t.resumen]));
       XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(resumen), 'Resumen');
-      const tp = [['Tipo', 'Significado', 'Asientos', 'Líneas', 'Importe', 'Manual']]; MYS.A.tipos.forEach((v, tk) => tp.push([tk, MYS.sig[tk] || '', v.asientos, v.lineas, v.deb, MYS.manuales.has(tk) ? 'Sí' : 'No']));
+      const tp = [['Tipo', 'Significado', 'Asientos', 'Líneas', 'Importe', 'Manual']]; MYS.A.tipos.forEach((v, tk) => tp.push([tk, sigDe(tk), v.asientos, v.lineas, v.deb, MYS.manuales.has(tk) ? 'Sí' : 'No']));
       XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(tp), 'Tipos de asiento');
       R.tests.forEach(t => {
         let aoa;
