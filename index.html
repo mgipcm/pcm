@@ -301,9 +301,6 @@
             <button onclick="navegarMenu('flujo')" id="nav-flujo" class="w-full text-left px-2 py-1 rounded-lg text-xs font-medium text-slate-400 hover:bg-slate-800 hover:text-white transition flex items-center gap-2">
               <span style="white-space:nowrap">d) Flujo de efectivo</span>
             </button>
-            <button onclick="navegarMenu('arrend')" id="nav-arrend" class="w-full text-left px-2 py-1 rounded-lg text-xs font-medium text-slate-400 hover:bg-slate-800 hover:text-white transition flex items-center gap-2">
-              <span style="white-space:nowrap">e) Arrendamientos NIIF 16</span>
-            </button>
             <button onclick="navegarMenu('pce')" id="nav-pce" class="w-full text-left px-2 py-1 rounded-lg text-xs font-medium text-slate-400 hover:bg-slate-800 hover:text-white transition flex items-center gap-2">
               <span style="white-space:nowrap">f) Matriz de transición - PCE</span>
             </button>
@@ -1538,11 +1535,11 @@
 
     <section id="sec-arrend" class="hidden bg-white rounded-2xl shadow-xl border border-slate-200 p-3 min-h-[92vh] space-y-2">
       <div class="flex flex-wrap items-center gap-x-3 gap-y-1.5 border-b pb-2">
-        <h1 class="text-sm font-bold text-slate-800 whitespace-nowrap">Arrendamientos NIIF 16</h1>
+        <h1 id="ar-titulo" class="text-sm font-bold text-slate-800 whitespace-nowrap">Arrendamientos NIIF 16</h1>
         <label for="ar-cliente" class="text-[11px] font-semibold text-slate-600 sm:ml-16">Cliente</label>
         <select id="ar-cliente" onchange="cargarArrend()" class="w-64 max-w-full px-2 py-1 bg-white border border-slate-300 rounded-lg text-[11px] focus:ring-2 focus:ring-indigo-500 outline-none">
           <option value="">-- Selecciona un Cliente --</option>
-        </select>
+        </select><button type="button" onclick="arrNuevaEntidad()" title="Para calcular una empresa que no es cliente: no tiene sumarias, los saldos del balance se ponen a mano" class="px-2 py-1 bg-white text-indigo-700 border border-indigo-300 hover:bg-indigo-50 rounded-lg text-[11px] font-bold transition">+ Empresa que no es cliente de auditoría</button>
         <label for="ar-timp" class="text-[11px] font-semibold text-slate-600">Impuesto diferido %</label>
         <input id="ar-timp" type="text" inputmode="decimal" value="25" onchange="arrConfig('tasaImp', this)" class="w-14 h-6 px-1.5 text-right text-[11px] border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
         <span id="ar-estado" class="text-[11px] text-slate-500"></span>
@@ -2607,7 +2604,7 @@
       if (!['clientes', 'usuarios', 'cuentas', 'habilitar', 'historial', 'medidor'].includes(seccion)) guardarVista({ seccion: seccion, sub: sub || null, cuenta: cuenta || null });
 
       const secciones = ['desarrollo', 'clientes', 'usuarios', 'cuentas', 'habilitar', 'historial', 'medidor', 'sumarias', 'pendientes', 'flujo', 'auditoria', 'analisis', 'visitas', 'asignacion', 'indices', 'mayor', 'contratos', 'arrend', 'pce', 'reuniones', 'mas-herramientas'];
-      const grupoSubmenu = sec => ['indices', 'mayor', 'contratos', 'flujo', 'arrend', 'pce', 'reuniones', 'mas-herramientas'].includes(sec)
+      const grupoSubmenu = sec => ['indices', 'mayor', 'contratos', 'flujo', 'pce', 'reuniones', 'mas-herramientas'].includes(sec)
         ? 'herramientas'
         : (['clientes', 'usuarios', 'cuentas', 'habilitar', 'historial', 'medidor'].includes(sec) ? 'config' : (['sumarias', 'pendientes'].includes(sec) ? 'analisis' : null));
       const esSubmenu = sec => grupoSubmenu(sec) !== null;
@@ -2659,8 +2656,18 @@
         abrirAnalisis(rubro, cuentaElegida);
       }
 
+      const desdeAnalisis = (seccion === 'arrend' && sub === 'analisis');
+      if (seccion === 'arrend') { const t = document.getElementById('ar-titulo'); if (t) t.textContent = desdeAnalisis ? 'Activos por derecho de uso y pasivos por arrendamiento (NIIF 16)' : 'Arrendamientos NIIF 16'; }
+      if (desdeAnalisis) {
+        const bx = document.getElementById('nav-cuenta-extra-activos-arrend');
+        if (bx) bx.className = "w-full text-left px-3 py-1.5 rounded-lg text-xs font-bold bg-indigo-600 text-white shadow-md transition flex items-center gap-2";
+        document.getElementById('submenu-analisis').classList.remove('hidden');
+        document.getElementById('icon-analisis').classList.add('rotate-180');
+        const cj = document.getElementById('submenu-rubro-activos'); if (cj) cj.classList.remove('hidden');
+        const fl = document.getElementById('icon-rubro-activos'); if (fl) fl.classList.add('rotate-180');
+      }
       const activeBtn = document.getElementById(`nav-${seccion}`);
-      if (activeBtn && seccion !== 'analisis') {
+      if (activeBtn && seccion !== 'analisis' && !desdeAnalisis) {
         if (esSubmenu(seccion)) {
           activeBtn.className = "w-full text-left px-3 py-1.5 rounded-lg text-xs font-bold bg-indigo-600 text-white shadow-md transition flex items-center gap-2";
           if (grupoSubmenu(seccion) === 'config') {
@@ -2682,6 +2689,10 @@
     // ===== 2. AUDITORÍA/ANÁLISIS (por rubro y cuenta) =====
     const FUNCION_ANALISIS_CUENTA = 'dynamic-handler'; // nombre con el que quedó publicada la función en Supabase
 
+    // Herramientas que también se abren desde el menú de Análisis (misma herramienta y mismos datos que en Herramientas)
+    const EXTRAS_ANALISIS = {
+      'activos': [{ id: 'arrend', nombre: 'Activos por derecho de uso y pasivos por arrendamiento' }]
+    };
     const RUBROS_ANALISIS = {
       'activos': { titulo: 'Activos', cuentas: [{ clave: 'inversiones_corrientes', nombre: 'Inversiones corrientes', sumariaCorto: 'AB', sumariaLargo: 'AS' }] },
       'pasivos': { titulo: 'Pasivos', cuentas: [] },
@@ -2753,14 +2764,18 @@
               <button type="button" onclick="navegarMenu('analisis', '${r}', '${c.clave}')" id="nav-cuenta-${r}-${c.clave}" class="w-full text-left px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:bg-slate-800 hover:text-white transition flex items-center gap-2">
                 <span>${escapeHtml(c.nombre)}</span>
               </button>`).join('')
-          : '<p class="px-3 py-1 text-[11px] italic text-slate-400">Aún sin cuentas</p>';
+          : ((EXTRAS_ANALISIS[r] || []).length ? '' : '<p class="px-3 py-1 text-[11px] italic text-slate-400">Aún sin cuentas</p>');
+        const extras = (EXTRAS_ANALISIS[r] || []).map(x => `
+              <button type="button" onclick="navegarMenu('${x.id}', 'analisis')" id="nav-cuenta-extra-${r}-${x.id}" class="w-full text-left px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:bg-slate-800 hover:text-white transition flex items-center gap-2">
+                <span>${escapeHtml(x.nombre)}</span>
+              </button>`).join('');
         return `
           <div class="space-y-1">
             <button type="button" onclick="toggleRubroAnalisis('${r}')" id="nav-rubro-${r}" class="w-full flex items-center justify-between px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-500 hover:bg-slate-800 hover:text-white transition">
               <span>${letras[i] || ''}) ${escapeHtml(def.titulo)}</span>
               <span id="icon-rubro-${r}" class="inline-block text-[11px] leading-none transition-transform duration-200">▾</span>
             </button>
-            <div id="submenu-rubro-${r}" class="hidden pl-4 space-y-1">${cuentas}</div>
+            <div id="submenu-rubro-${r}" class="hidden pl-4 space-y-1">${cuentas}${extras}</div>
           </div>`;
       }).join('');
     }
@@ -8295,7 +8310,34 @@
       return m || 'Error desconocido';
     }
 
-    function abrirArrend() { asegurarClientesEn('ar-cliente'); cargarArrend(); }
+    async function abrirArrend() {
+      asegurarClientesEn('ar-cliente');
+      await arrCargarLibres();
+      cargarArrend();
+    }
+    const arrEsLibre = id => String(id || '').startsWith('libre:');
+    async function arrCargarLibres() {
+      const sel = document.getElementById('ar-cliente'); if (!sel) return;
+      try {
+        const { data } = await supabaseClient.from('arrendamientos_config').select('cliente_id, verificaciones').like('cliente_id', 'libre:%');
+        const previo = sel.value;
+        (data || []).forEach(r => {
+          if ([...sel.options].some(o => o.value === r.cliente_id)) return;
+          const nom = (r.verificaciones && r.verificaciones.__nombre) || r.cliente_id.slice(6);
+          const o = document.createElement('option'); o.value = r.cliente_id; o.textContent = nom + ' (no es cliente de auditoría)'; sel.appendChild(o);
+        });
+        if (previo) sel.value = previo;
+      } catch (e) { console.error(e); }
+    }
+    async function arrNuevaEntidad() {
+      const nom = (prompt('Nombre de la empresa (no es cliente). No tendrá sumarias: los saldos del balance se ingresan a mano.') || '').trim();
+      if (!nom) return;
+      const id = 'libre:' + nom.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60);
+      const { error } = await supabaseClient.from('arrendamientos_config').upsert([{ cliente_id: id, verificaciones: { __nombre: nom }, actualizado_por: nombreUsuarioActivo() || null, updated_at: new Date().toISOString() }], { onConflict: 'cliente_id' });
+      if (error) { arrEstadoMsg('No se pudo crear: ' + textoErrorArr(error), 'text-red-600 font-bold'); return; }
+      await arrCargarLibres();
+      document.getElementById('ar-cliente').value = id; cargarArrend();
+    }
 
     async function cargarArrend() {
       const cliente = valorAnalisis('ar-cliente');
@@ -8362,7 +8404,7 @@
       else if (arrEstado.tab === 'revel') { p.innerHTML = arrHtmlRevelaciones(); notas.innerHTML = '<div class="mb-2"><div class="font-bold text-slate-700">Pagos futuros sin descontar</div><ul class="list-disc pl-5"><li>Salen de la tabla de amortización del contrato como estaba a cada 31 de diciembre; las modificaciones posteriores no cuentan.</li><li>Cada mes se clasifica según cuánto falta desde el 31 de diciembre: hasta 1 año, de 1 a 5 años, más de 5 años.</li></ul></div><div class="mb-2"><div class="font-bold text-slate-700">Intereses por devengar</div><ul class="list-disc pl-5"><li>Pagos sin descontar − pasivo (valor actual).</li></ul></div><div class="mb-2"><div class="font-bold text-slate-700">No incluidos en el detalle</div><ul class="list-disc pl-5"><li>Contratos de corto plazo y de bajo valor: su gasto y sus pagos se revelan aparte.</li></ul></div>'; }
       else if (arrEstado.tab === 'verif') { p.innerHTML = arrHtmlVerificaciones(); notas.innerHTML = '<div class="mb-2"><div class="font-bold text-slate-700">Verificaciones automáticas</div><ul class="list-disc pl-5"><li>Se recalculan con los contratos cargados.</li></ul></div><div class="mb-2"><div class="font-bold text-slate-700">Evaluaciones del auditor</div><ul class="list-disc pl-5"><li>Se guardan por cliente.</li><li>Elige el estado y escribe el comentario o la referencia al papel de trabajo.</li></ul></div><div class="mb-2"><div class="font-bold text-slate-700">Impuesto diferido activo</div><ul class="list-disc pl-5"><li>La herramienta reconoce el 100 %.</li><li>Si concluyes reconocer menos, se ajusta con tu asiento.</li></ul></div>'; }
       else if (arrEstado.tab === 'cuadre') { p.innerHTML = arrHtmlCuadre(); notas.innerHTML = '<div class="mb-2"><div class="font-bold text-slate-700">Qué comprueba</div><ul class="list-disc pl-5"><li>Que lo reconocido en resultados (depreciación + interés) frente a lo pagado se explique por partidas conocidas.</li><li>Si el contrato ya terminó y no tuvo nada adicional, depreciación + interés = pagos.</li></ul></div><div class="mb-2"><div class="font-bold text-slate-700">Partidas que explican la diferencia</div><ul class="list-disc pl-5"><li>Costos iniciales: se deprecian, pero no son canon.</li><li>Saldo traído de un contrato anterior: activo − pasivo.</li><li>Pasivo y activo que siguen abiertos al corte (contratos vigentes).</li></ul></div><div class="mb-2"><div class="font-bold text-slate-700">Cómo leerla</div><ul class="list-disc pl-5"><li>"Toda la vida": desde el inicio hasta el fin de cada contrato.</li><li>"Hasta el mes de consulta": acumulado al último día del mes de la conciliación con el balance.</li><li>La diferencia sin explicar debe ser cero.</li></ul></div>'; }
-      else if (arrEstado.tab === 'concil') { p.innerHTML = arrHtmlConcil(); notas.innerHTML = '<div class="mb-2"><div class="font-bold text-slate-700">Cómo usarla</div><ul class="list-disc pl-5"><li>Elige el mes de corte de los estados financieros; la herramienta calcula al último día de ese mes.</li><li>Escribe en "Según el balance" el valor de tu contabilidad a esa fecha.</li><li>Puedes consultar cualquier mes sin que se guarde nada. Si quieres conservar el corte, presiona "Guardar este corte".</li><li>La diferencia es herramienta − balance: positiva si la herramienta es mayor y falta registrar; negativa si el balance es mayor.</li></ul></div><div class="mb-2"><div class="font-bold text-slate-700">Cómo se calcula</div><ul class="list-disc pl-5"><li>Corto plazo: lo que se amortiza en los 12 meses siguientes al corte; largo plazo: el resto.</li><li>Interés, depreciación y pagos: de enero al mes de corte del mismo año.</li><li>Impuesto diferido activo = tasa × pasivo; pasivo = tasa × derecho de uso neto (tasa de la parte superior).</li><li>Gasto del activo = tasa × (pagos − interés) del año; ingreso del pasivo = tasa × depreciación del año (menos costos iniciales si los hay). Son los mismos movimientos de "Estados e impuestos diferidos", sin altas ni remediciones.</li><li>La flecha ▸ despliega el detalle por contrato; la comparación es solo con el total.</li></ul></div><div class="mb-2"><div class="font-bold text-slate-700">Se guarda</div><ul class="list-disc pl-5"><li>Solo se guardan los cortes que tú guardas, por cliente. Cada mes tiene sus propios valores del balance.</li><li>Al elegir un mes con corte guardado se cargan sus valores.</li></ul></div>'; }
+      else if (arrEstado.tab === 'concil') { p.innerHTML = arrHtmlConcil(); arrAutoSum(); notas.innerHTML = '<div class="mb-2"><div class="font-bold text-slate-700">Cómo usarla</div><ul class="list-disc pl-5"><li>Elige el mes de corte de los estados financieros; la herramienta calcula al último día de ese mes.</li><li>Escribe en "Según el balance" el valor de tu contabilidad a esa fecha.</li><li>Puedes consultar cualquier mes sin que se guarde nada. Si quieres conservar el corte, presiona "Guardar este corte".</li><li>La diferencia es herramienta − balance: positiva si la herramienta es mayor y falta registrar; negativa si el balance es mayor.</li></ul></div><div class="mb-2"><div class="font-bold text-slate-700">Cómo se calcula</div><ul class="list-disc pl-5"><li>Corto plazo: lo que se amortiza en los 12 meses siguientes al corte; largo plazo: el resto.</li><li>Interés, depreciación y pagos: de enero al mes de corte del mismo año.</li><li>Impuesto diferido activo = tasa × pasivo; pasivo = tasa × derecho de uso neto (tasa de la parte superior).</li><li>Gasto del activo = tasa × (pagos − interés) del año; ingreso del pasivo = tasa × depreciación del año (menos costos iniciales si los hay). Son los mismos movimientos de "Estados e impuestos diferidos", sin altas ni remediciones.</li><li>La flecha ▸ despliega el detalle por contrato; la comparación es solo con el total.</li></ul></div><div class="mb-2"><div class="font-bold text-slate-700">Se guarda</div><ul class="list-disc pl-5"><li>Solo se guardan los cortes que tú guardas, por cliente. Cada mes tiene sus propios valores del balance.</li><li>Al elegir un mes con corte guardado se cargan sus valores.</li></ul></div>'; }
     }
 
     // ----- Contratos (captura) -----
@@ -9054,6 +9096,7 @@
       const sin = arrConcSinGuardar(), mesTxt = k => new Date(Number(k.slice(0, 4)), Number(k.slice(5, 7)) - 1, 1).toLocaleDateString('es-EC', { month: 'short', year: 'numeric' });
       const estado = gc ? (sin ? '<span class="text-amber-700 font-bold">Hay cambios sin guardar</span>' : '<span class="text-emerald-700 font-bold">Corte guardado' + (gc.g ? ' el ' + new Date(gc.g).toLocaleDateString('es-EC') : '') + '</span>') : '<span class="text-slate-500">Consulta sin guardar</span>';
       let h = `<div class="flex flex-wrap items-center gap-2 px-2 py-2 border-b border-slate-200 text-[11px]"><span class="font-semibold text-slate-600">Mes de consulta</span><input type="month" value="${corte}" onchange="arrConcCorteEditar(this.value)" class="w-36 h-6 px-1.5 text-[11px] border border-slate-300 rounded"><span class="text-slate-500">Saldos al ${escapeHtml(fecha)}</span><button type="button" onclick="arrConcGuardar()" class="px-2.5 py-1 bg-indigo-600 text-white hover:bg-indigo-700 rounded-lg text-[11px] font-bold transition">Guardar este corte</button>${gc ? '<button type="button" onclick="arrConcEliminar()" class="px-2.5 py-1 bg-white text-red-600 hover:bg-red-50 border border-red-400 rounded-lg text-[11px] font-bold transition">Eliminar corte guardado</button>' : ''}${estado}${ks.length ? `<span class="text-slate-500 ml-2">Cortes guardados</span><select onchange="arrConcCorteEditar(this.value)" class="h-6 px-1 text-[11px] border border-slate-300 rounded bg-white"><option value="">Elegir...</option>${ks.map(k => `<option value="${k}">${escapeHtml(mesTxt(k))}</option>`).join('')}</select>` : ''}</div>`;
+      h += arrHtmlSumariaConc();
       h += `<table class="w-full text-[11px] leading-tight border-collapse"><thead class="bg-slate-50 text-slate-600"><tr><th class="px-2 py-1 border-b border-slate-200 text-left">Concepto</th><th class="px-2 py-1 border-b border-slate-200 text-right">Según la herramienta</th><th class="px-2 py-1 border-b border-slate-200 text-right">Según el balance</th><th class="px-2 py-1 border-b border-slate-200 text-right">Diferencia (herramienta − balance)</th></tr></thead><tbody>`;
       ARR_CONC_FILAS.forEach(([k, t]) => {
         const abierto = ab.has(k), b = cv[k], hay = b !== undefined && b !== null && b !== '', d = hay ? r2f(C.tot[k] - Number(b)) : null;
@@ -9062,6 +9105,38 @@
         if (abierto) C.filas.forEach(f => { h += `<tr class="bg-slate-50 border-b border-slate-100"><td class="pl-9 pr-2 py-0.5 text-slate-600">${escapeHtml(arrNombre(f.c))}</td><td class="px-2 py-0.5 text-right text-slate-600 whitespace-nowrap">${arrFmt(f[k])}</td><td></td><td></td></tr>`; });
       });
       return h + '</tbody></table>';
+    }
+    // Saldos del balance traídos de la sumaria del cliente (derecho de uso, pasivo corto y largo). Los impuestos diferidos siempre son manuales.
+    function arrMapaSum() { const c = arrEstado.verif.__concil || (arrEstado.verif.__concil = {}); return c.mapa || (c.mapa = { uso: '', corto: '', largo: '' }); }
+    function arrHtmlSumariaConc() {
+      if (arrEsLibre(arrEstado.cliente)) return '<p class="px-3 py-1.5 text-[11px] text-slate-500 border-b border-slate-200">Empresa que no es cliente: no hay sumarias. Escribe a mano los saldos del balance.</p>';
+      const mp = arrMapaSum(), inp = (k, t) => `<label class="flex items-center gap-1"><span class="text-slate-600">${t}</span><input type="text" value="${escapeHtml(mp[k] || '')}" onchange="arrMapaEditar('${k}', this.value)" placeholder="ej. AI" class="w-24 h-6 px-1.5 uppercase text-[11px] border border-slate-300 rounded"></label>`;
+      return `<div class="flex flex-wrap items-center gap-3 px-3 py-1.5 border-b border-slate-200 text-[11px] bg-slate-50"><span class="font-semibold text-slate-600">Sumarias del cliente (códigos, separados por coma)</span>${inp('uso', 'Derecho de uso')}${inp('corto', 'Pasivo corto')}${inp('largo', 'Pasivo largo')}<button type="button" onclick="arrTraerSumaria(true)" class="px-2.5 py-1 bg-white text-indigo-700 border border-indigo-300 hover:bg-indigo-50 rounded-lg font-bold">Traer saldos de la sumaria</button><span id="ar-sum-msg" class="text-slate-500">${escapeHtml(arrEstado.sumMsg || '')}</span></div>`;
+    }
+    function arrAutoSum() {
+      if (arrEsLibre(arrEstado.cliente) || !arrEstado.contratos.length) return;
+      const k = arrEstado.cliente + '|' + arrConcCorte(); if (arrEstado.sumHecho === k) return;
+      arrEstado.sumHecho = k; arrTraerSumaria(false);
+    }
+    function arrMapaEditar(k, v) { arrMapaSum()[k] = String(v || '').toUpperCase().replace(/\s+/g, ''); arrGuardarVerif(); }
+    async function arrTraerSumaria(manual) {
+      if (arrEsLibre(arrEstado.cliente)) return;
+      const mp = arrMapaSum(); if (!mp.uso && !mp.corto && !mp.largo) { if (manual) { arrEstado.sumMsg = 'Escribe primero el código de la sumaria de cada concepto.'; arrConcRender(); } return; }
+      const ctx = arrEstado.cliente, corte = arrConcCorte(), anio = Number(corte.slice(0, 4));
+      const { data, error } = await supabaseClient.from('balance_comprobacion').select('sumaria, saldo, visita, created_at').eq('cliente_id', ctx).eq('anio', anio).limit(20000);
+      if (ctx !== arrEstado.cliente) return;
+      if (error || !data || !data.length) { arrEstado.sumMsg = error ? 'No se pudo leer la sumaria.' : `No hay sumaria cargada de ${anio}: ingresa los saldos a mano.`; arrConcRender(); return; }
+      const visitas = [...new Set(data.map(r => r.visita))], mes = Number(corte.slice(5, 7));
+      let vis = visitas.includes('final') && mes === 12 ? 'final' : null;
+      if (!vis) { const ult = {}; data.forEach(r => { if (!ult[r.visita] || r.created_at > ult[r.visita]) ult[r.visita] = r.created_at; }); vis = Object.keys(ult).sort((a, b) => ult[b].localeCompare(ult[a]))[0]; }
+      const filas = data.filter(r => r.visita === vis);
+      const suma = cods => { const set = new Set(String(cods || '').split(',').map(normSumaria).filter(Boolean)); return set.size ? Math.abs(Math.round(filas.filter(r => set.has(normSumaria(r.sumaria))).reduce((a, r) => a + (Number(r.saldo) || 0), 0) * 100) / 100) : null; };
+      const b = arrConcValores(), puesto = [];
+      [['uso', mp.uso], ['corto', mp.corto], ['largo', mp.largo]].forEach(([k, c]) => { const v = suma(c); if (v !== null && (manual || b[k] === undefined || b[k] === null || b[k] === '')) { b[k] = v; puesto.push(k); } });
+      if (b.corto !== undefined && b.largo !== undefined && (puesto.includes('corto') || puesto.includes('largo'))) b.pasivo = Math.round((Number(b.corto) + Number(b.largo)) * 100) / 100;
+      arrEstado.sumMsg = puesto.length ? `Saldos traídos de la sumaria ${anio} (${visita(vis)}). Revísalos y guarda el corte.` : 'No se encontraron esos códigos en la sumaria.';
+      function visita(v) { return v === 'final' ? 'visita final' : String(v); }
+      arrConcRender();
     }
     function arrConcRender() { const p = document.getElementById('ar-panel'), st = p.scrollTop; arrRender(); p.scrollTop = st; }
     function arrConcCorteEditar(v) {
@@ -11867,7 +11942,6 @@ ${cont.innerHTML}
       { clave: 'mayor', nombre: '5b) Análisis de mayor contable', btn: 'nav-mayor' },
       { clave: 'contratos', nombre: '5c) Resumen de contratos', btn: 'nav-contratos' },
       { clave: 'flujo', nombre: '5d) Flujo de efectivo', btn: 'nav-flujo' },
-      { clave: 'arrend', nombre: '5e) Arrendamientos NIIF 16', btn: 'nav-arrend' },
       { clave: 'pce', nombre: '5f) Matriz de transición - PCE', btn: 'nav-pce' },
       { clave: 'reuniones', nombre: '5g) Resumen de reuniones', btn: 'nav-reuniones' }
     ];
