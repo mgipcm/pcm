@@ -9114,8 +9114,20 @@
       const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - 1);
       return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
     }
+    // Borrador automático: lo que se escribe a mano o se trae de la sumaria queda guardado por cliente y mes, aunque se salga de la pantalla
+    function arrBorradores() { const c = arrEstado.verif.__concil || (arrEstado.verif.__concil = {}); return c.borr || (c.borr = {}); }
+    function arrGuardarBorrador() {
+      const k = arrConcCorte(), b = arrConcValores();
+      arrBorradores()[k] = { v: { ...b }, m: { ...(arrEstado.concManual || {}) } };
+      arrGuardarVerif();
+    }
     function arrConcValores() {
-      if (!arrEstado.concBorrador) { const g = arrConcCortes()[arrConcCorte()]; arrEstado.concBorrador = g ? { ...g.v } : {}; }
+      if (!arrEstado.concBorrador) {
+        const k = arrConcCorte(), g = arrConcCortes()[k], bo = arrBorradores()[k];
+        // Si hay valores escritos y no guardados (borrador automático), se retoman; si no, los del corte guardado
+        arrEstado.concBorrador = bo && bo.v ? { ...bo.v } : (g ? { ...g.v } : {});
+        arrEstado.concManual = bo && bo.m ? { ...bo.m } : {};
+      }
       return arrEstado.concBorrador;
     }
     function arrConcSinGuardar() {
@@ -9180,11 +9192,13 @@
       let vis = visitas.includes('final') && mes === 12 ? 'final' : null;
       if (!vis) { const ult = {}; data.forEach(r => { if (!ult[r.visita] || r.created_at > ult[r.visita]) ult[r.visita] = r.created_at; }); vis = Object.keys(ult).sort((a, b) => ult[b].localeCompare(ult[a]))[0]; }
       const filas = data.filter(r => r.visita === vis);
-      const suma = cods => { const set = new Set(String(cods || '').split(',').map(normSumaria).filter(Boolean)); return set.size ? Math.abs(Math.round(filas.filter(r => set.has(normSumaria(r.sumaria))).reduce((a, r) => a + (Number(r.saldo) || 0), 0) * 100) / 100) : null; };
+      const suma = cods => { const set = new Set(String(cods || '').split(',').map(normSumaria).filter(Boolean)); if (!set.size) return null; const hallados = filas.filter(r => set.has(normSumaria(r.sumaria))); return hallados.length ? Math.abs(Math.round(hallados.reduce((a, r) => a + (Number(r.saldo) || 0), 0) * 100) / 100) : null; }; // sin cuentas en esa sumaria: no se toca la casilla
       const b = arrConcValores(), puesto = [], guardado = !!arrConcCortes()[corte];
-      [['uso', mp.uso], ['corto', mp.corto], ['largo', mp.largo]].forEach(([k, c]) => { const v = suma(c); if (v !== null && (manual || !guardado || b[k] === undefined || b[k] === null || b[k] === '')) { b[k] = v; puesto.push(k); } });
+      [['uso', mp.uso], ['corto', mp.corto], ['largo', mp.largo]].forEach(([k, c]) => { const v = suma(c); if (v !== null && (manual || ((!guardado || b[k] === undefined || b[k] === null || b[k] === '') && !(arrEstado.concManual || {})[k]))) { b[k] = v; puesto.push(k); if (manual && arrEstado.concManual) delete arrEstado.concManual[k]; } });
       if (b.corto !== undefined && b.largo !== undefined && (puesto.includes('corto') || puesto.includes('largo'))) b.pasivo = Math.round((Number(b.corto) + Number(b.largo)) * 100) / 100;
-      arrEstado.sumMsg = puesto.length ? `Saldos traídos de la sumaria ${anio} (${visita(vis)}). Revísalos y guarda el corte.` : 'No se encontraron esos códigos en la sumaria.';
+      if (puesto.length) arrGuardarBorrador();
+      const sinDato = [['uso', 'derecho de uso'], ['corto', 'pasivo corto'], ['largo', 'pasivo largo']].filter(([k]) => mp[k] && suma(mp[k]) === null).map(x => x[1]);
+      arrEstado.sumMsg = puesto.length ? `Saldos traídos de la sumaria ${anio} (${visita(vis)}). Revísalos y guarda el corte.${sinDato.length ? ' Sin saldo en la sumaria (se dejó como estaba): ' + sinDato.join(', ') + '.' : ''}` : 'Esos códigos no tienen saldo en la sumaria: se dejaron las casillas como estaban.';
       function visita(v) { return v === 'final' ? 'visita final' : String(v); }
       arrConcRender();
     }
@@ -9195,15 +9209,19 @@
     }
     function arrConcEditar(k, el) {
       const b = arrConcValores(), n = arrNum(el.value); if (n === null) delete b[k]; else b[k] = n;
+      if (!arrEstado.concManual) arrEstado.concManual = {};
+      if (n === null) delete arrEstado.concManual[k]; else arrEstado.concManual[k] = true; // lo escrito a mano no lo pisa la sumaria
+      arrGuardarBorrador();
       arrConcRender();
     }
     function arrConcGuardar() {
       const corte = arrConcCorte(); arrConcCortes()[corte] = { v: { ...arrConcValores() }, g: new Date().toISOString() };
+      delete arrBorradores()[corte];
       arrGuardarVerif(); arrConcRender();
     }
     function arrConcEliminar() {
       const corte = arrConcCorte(); if (!confirm('¿Eliminar el corte guardado de ' + corte + '? Los valores del balance de ese mes se borran.')) return;
-      delete arrConcCortes()[corte]; arrEstado.concBorrador = {}; arrGuardarVerif(); arrConcRender();
+      delete arrConcCortes()[corte]; delete arrBorradores()[corte]; arrEstado.concBorrador = {}; arrEstado.concManual = {}; arrGuardarVerif(); arrConcRender();
     }
     function arrConcToggle(k) { const s = arrEstado.concAbiertos || (arrEstado.concAbiertos = new Set()); if (s.has(k)) s.delete(k); else s.add(k); arrConcRender(); }
     function arrVerifEditar(k, campo, el) {
