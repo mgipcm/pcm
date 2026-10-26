@@ -12761,7 +12761,7 @@ ${cont.innerHTML}
           if (saldo * esp < -O.natMin) {
             const reg = CONTRA.test(c.nom);
             if (!reg) natContra++;
-            nat.push([cod, c.nom, esp === 1 ? 'Deudora' : 'Acreedora', c.ini, c.deb, c.hab, saldo, reg ? 'Posible regularizadora' : 'Revisar']);
+            nat.push([cod, c.nom, esp === 1 ? 'Deudora' : 'Acreedora', c.ini, c.deb, c.hab, saldo, reg ? 'Posible regularizadora' : 'Revisar', { cta: cod }]);
           }
         });
         nat.sort((a, b) => (a[7] === b[7] ? Math.abs(b[6]) - Math.abs(a[6]) : (a[7] === 'Revisar' ? -1 : 1)));
@@ -12942,7 +12942,7 @@ ${cont.innerHTML}
       myEl('my-archivo').textContent = 'Leyendo ' + file.name + '…';
       myEl('my-reporte').classList.add('hidden'); myEl('my-config').classList.add('hidden');
       MYS.A = null; MYS.res = null;
-      MYS.lineasAs = new Map(); MYS.tksEsc = new Set();
+      MYS.lineasAs = new Map(); MYS.tksEsc = new Set(); MYS.movCuentas = new Map();
       try {
         const nombre = file.name.toLowerCase();
         let muestra = [];
@@ -13028,7 +13028,7 @@ ${cont.innerHTML}
       if (MYS.ocupado || !MYS.fuente) return;
       const m = mayorLeerMapa(); if (m.cod < 0 || m.debe < 0 || m.haber < 0) return;
       MYS.ocupado = true; MYS.mapa = m;
-      MYS.lineasAs = new Map(); MYS.tksEsc = new Set();
+      MYS.lineasAs = new Map(); MYS.tksEsc = new Set(); MYS.movCuentas = new Map();
       const P = mayorParams();
       const btn = myEl('my-btn-analizar'); btn.disabled = true; btn.classList.add('opacity-50');
       myEl('my-progreso').classList.remove('hidden'); myEl('my-reporte').classList.add('hidden');
@@ -13155,6 +13155,27 @@ ${cont.innerHTML}
       const f0 = ls[0];
       caja(cab + (f0 ? `<p class="text-[11px] text-slate-600">Fecha ${MYM.fmtDia(f0.d)} · Usuario ${escapeHtml(f0.u || '(sin usuario)')} · ${ls.length} líneas</p>` : '') + (ls.length ? `<div class="overflow-x-auto border border-slate-200 rounded-xl"><table class="w-full text-left text-xs text-slate-700"><thead class="bg-slate-100 text-[10px] font-bold text-slate-600"><tr><th class="p-2">Código</th><th class="p-2">Cuenta</th><th class="p-2 text-right">Debe</th><th class="p-2 text-right">Haber</th><th class="p-2">Concepto</th></tr></thead><tbody class="divide-y divide-slate-100">${ls.map(l => `<tr><td class="p-2 font-mono">${escapeHtml(l.cod)}</td><td class="p-2">${escapeHtml(l.cu)}</td><td class="p-2 text-right whitespace-nowrap">${l.deb ? myMoney(l.deb) : ''}</td><td class="p-2 text-right whitespace-nowrap">${l.hab ? myMoney(l.hab) : ''}</td><td class="p-2">${escapeHtml(l.con)}</td></tr>`).join('')}<tr class="font-bold bg-slate-50"><td class="p-2" colspan="2">Totales ${Math.abs(td - th) < 0.005 ? '(cuadra)' : '(diferencia ' + myMoney(td - th) + ')'}</td><td class="p-2 text-right">${myMoney(td)}</td><td class="p-2 text-right">${myMoney(th)}</td><td></td></tr></tbody></table></div>` : '<p class="text-xs text-slate-500">No se encontraron líneas de este asiento en el archivo.</p>'));
     }
+    MYS.movCuentas = new Map();
+    async function mayorVerCuenta(cod) {
+      let m = myEl('my-modal-ch'); if (!m) { m = document.createElement('div'); m.id = 'my-modal-ch'; m.className = 'fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4'; m.onclick = e => { if (e.target === m) m.remove(); }; document.body.appendChild(m); }
+      const ct = MYS.A.ctas.get(cod) || { nom: '', ini: 0 };
+      const caja = inner => { m.innerHTML = `<div class="bg-white rounded-2xl shadow-2xl max-w-6xl w-full max-h-[85vh] overflow-auto p-5 space-y-3">${inner}</div>`; };
+      const cab = `<div class="flex justify-between items-start gap-3"><div><h3 class="text-sm font-bold text-slate-800">Movimiento de la cuenta ${escapeHtml(cod)} · ${escapeHtml(ct.nom)}</h3><p class="text-[11px] text-slate-500">Todas las líneas del mayor de esta cuenta, en orden de fecha, con el saldo acumulado.</p></div><button onclick="document.getElementById('my-modal-ch').remove()" class="px-3 py-1.5 bg-slate-800 text-white rounded-lg text-xs font-bold">Cerrar</button></div>`;
+      if (!MYS.movCuentas.has(cod)) {
+        caja(cab + '<p id="my-asiento-prog" class="text-xs text-slate-600">Buscando los movimientos en el archivo… 0%</p>');
+        const hi = MYS.hdrIdx; let k = 0; const arr = []; let tot = 0;
+        try {
+          await MYS.fuente.recorrer(r => { if (k++ <= hi) return; const c = String(MYS.mapa.cod >= 0 && r[MYS.mapa.cod] != null ? r[MYS.mapa.cod] : '').trim(); if (c !== cod) return; const l = mayorLineaDe(r); if (!l.deb && !l.hab) return; tot++; if (arr.length < 6000) { l.i = arr.length; arr.push(l); } },
+            p => { const e = myEl('my-asiento-prog'); if (e) e.textContent = 'Buscando los movimientos en el archivo… ' + Math.round(p * 100) + '%'; });
+        } catch (e) { caja(cab + '<p class="text-xs text-red-700">No se pudo leer el archivo de nuevo: ' + escapeHtml(e.message || e) + '</p>'); return; }
+        arr.sort((a, b) => ((a.d === a.d ? a.d : 0) - (b.d === b.d ? b.d : 0)) || a.i - b.i);
+        MYS.movCuentas.set(cod, { arr, tot });
+      }
+      const { arr, tot } = MYS.movCuentas.get(cod);
+      let sal = ct.ini, td = 0, th = 0;
+      const filas = arr.map(l => { sal += l.deb - l.hab; td += l.deb; th += l.hab; return `<tr><td class="p-2 whitespace-nowrap">${MYM.fmtDia(l.d)}</td><td class="p-2 font-mono whitespace-nowrap">${escapeHtml(l.tk)} ${escapeHtml(l.num)}</td><td class="p-2">${escapeHtml(l.u)}</td><td class="p-2">${escapeHtml(l.con)}</td><td class="p-2 text-right whitespace-nowrap">${l.deb ? myMoney(l.deb) : ''}</td><td class="p-2 text-right whitespace-nowrap">${l.hab ? myMoney(l.hab) : ''}</td><td class="p-2 text-right whitespace-nowrap font-semibold">${myMoney(sal)}</td></tr>`; }).join('');
+      caja(cab + `<p class="text-[11px] text-slate-600">Saldo inicial ${myMoney(ct.ini)} · Debe ${myMoney(td)} · Haber ${myMoney(th)} · <span class="font-bold">Saldo final ${myMoney(sal)}</span> · ${myInt(tot)} movimientos${tot > arr.length ? ' (se muestran los primeros ' + myInt(arr.length) + ')' : ''}</p><div class="overflow-x-auto border border-slate-200 rounded-xl"><table class="w-full text-left text-xs text-slate-700"><thead class="bg-slate-100 text-[10px] font-bold text-slate-600"><tr><th class="p-2">Fecha</th><th class="p-2">Documento</th><th class="p-2">Usuario</th><th class="p-2">Concepto</th><th class="p-2 text-right">Debe</th><th class="p-2 text-right">Haber</th><th class="p-2 text-right">Saldo</th></tr></thead><tbody class="divide-y divide-slate-100"><tr class="bg-slate-50 font-semibold"><td class="p-2" colspan="6">Saldo inicial</td><td class="p-2 text-right">${myMoney(ct.ini)}</td></tr>${filas}</tbody></table></div>`);
+    }
     async function mayorVerAsientos(keys) {
       let m = myEl('my-modal-ch'); if (!m) { m = document.createElement('div'); m.id = 'my-modal-ch'; m.className = 'fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4'; m.onclick = e => { if (e.target === m) m.remove(); }; document.body.appendChild(m); }
       const caja = inner => { m.innerHTML = `<div class="bg-white rounded-2xl shadow-2xl max-w-6xl w-full max-h-[85vh] overflow-auto p-5 space-y-4">${inner}</div>`; };
@@ -13234,8 +13255,8 @@ ${cont.innerHTML}
       if (srt) filasV = t.filas.slice().sort((a, b) => { const x = a[srt.col], y = b[srt.col]; const r = (typeof x === 'number' && typeof y === 'number') ? ((x !== x ? -Infinity : x) - (y !== y ? -Infinity : y)) : String(x == null ? '' : x).localeCompare(String(y == null ? '' : y), 'es', { numeric: true }); return r * srt.dir; });
       if (!t.filas.length) h += '<div class="p-4 text-center text-slate-400 text-xs border border-dashed rounded-xl">Sin partidas para mostrar.</div>';
       else {
-        h += `<div class="overflow-x-auto border border-slate-200 rounded-xl bg-white shadow-sm"><table class="w-full text-left text-xs text-slate-700"><thead class="bg-slate-100 text-[10px] font-bold text-slate-600 border-b"><tr>${t.cols.map((c, ci) => `<th onclick="mayorOrdenar(${ci})" title="Clic para ordenar" class="p-2 cursor-pointer select-none hover:bg-slate-200 ${['m', 'i', 'p', 'v'].includes(c.t) ? 'text-right' : ''} whitespace-nowrap">${escapeHtml(c.h)}${srt && srt.col === ci ? (srt.dir === 1 ? ' ▲' : ' ▼') : ''}</th>`).join('')}</tr></thead><tbody class="divide-y divide-slate-100">${filasV.slice(0, MAXV).map(r => `<tr class="hover:bg-slate-50${(iTipo >= 0 || Array.isArray(r[t.cols.length])) ? ' cursor-pointer' : ''}"${Array.isArray(r[t.cols.length]) ? ` onclick="mayorVerAsientos(JSON.parse(decodeURIComponent('${encodeURIComponent(JSON.stringify(r[t.cols.length]))}')))" title="Clic para ver los asientos"` : iTipo >= 0 ? ` onclick="mayorVerAsiento(decodeURIComponent('${encodeURIComponent(r[iTipo])}'), decodeURIComponent('${encodeURIComponent(r[iNum])}'))" title="Clic para ver el asiento contable"` : ''}>${r.slice(0, t.cols.length).map((v, i) => `<td class="p-2 ${['m', 'i', 'p', 'v'].includes(t.cols[i].t) ? 'text-right whitespace-nowrap' : (t.cols[i].t === 's' && String(v).length > 60 ? 'min-w-[260px]' : 'whitespace-nowrap')}">${myCelda(v, t.cols[i].t)}${t.cols[i].h === 'Tipo' ? myTipoSig(v) : ''}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
-        h += `<p class="text-[10px] text-slate-400">Haz clic en el título de una columna para ordenar${iTipo >= 0 ? ' y en una fila para ver el asiento contable completo' : (t.filas.length && Array.isArray(t.filas[0][t.cols.length]) ? ' y en una fila para ver los asientos' : '')}. Mostrando ${Math.min(MAXV, t.filas.length)} de ${myInt(t.total)} casos${t.filas.length < t.total ? ' (el Excel trae hasta ' + myInt(t.filas.length) + ')' : t.filas.length > MAXV ? ' (el Excel trae todos)' : ''}.</p>`;
+        h += `<div class="overflow-x-auto border border-slate-200 rounded-xl bg-white shadow-sm"><table class="w-full text-left text-xs text-slate-700"><thead class="bg-slate-100 text-[10px] font-bold text-slate-600 border-b"><tr>${t.cols.map((c, ci) => `<th onclick="mayorOrdenar(${ci})" title="Clic para ordenar" class="p-2 cursor-pointer select-none hover:bg-slate-200 ${['m', 'i', 'p', 'v'].includes(c.t) ? 'text-right' : ''} whitespace-nowrap">${escapeHtml(c.h)}${srt && srt.col === ci ? (srt.dir === 1 ? ' ▲' : ' ▼') : ''}</th>`).join('')}</tr></thead><tbody class="divide-y divide-slate-100">${filasV.slice(0, MAXV).map(r => `<tr class="hover:bg-slate-50${(iTipo >= 0 || r[t.cols.length]) ? ' cursor-pointer' : ''}"${(r[t.cols.length] && r[t.cols.length].cta !== undefined) ? ` onclick="mayorVerCuenta(decodeURIComponent('${encodeURIComponent(r[t.cols.length].cta)}'))" title="Clic para ver el movimiento de la cuenta"` : Array.isArray(r[t.cols.length]) ? ` onclick="mayorVerAsientos(JSON.parse(decodeURIComponent('${encodeURIComponent(JSON.stringify(r[t.cols.length]))}')))" title="Clic para ver los asientos"` : iTipo >= 0 ? ` onclick="mayorVerAsiento(decodeURIComponent('${encodeURIComponent(r[iTipo])}'), decodeURIComponent('${encodeURIComponent(r[iNum])}'))" title="Clic para ver el asiento contable"` : ''}>${r.slice(0, t.cols.length).map((v, i) => `<td class="p-2 ${['m', 'i', 'p', 'v'].includes(t.cols[i].t) ? 'text-right whitespace-nowrap' : (t.cols[i].t === 's' && String(v).length > 60 ? 'min-w-[260px]' : 'whitespace-nowrap')}">${myCelda(v, t.cols[i].t)}${t.cols[i].h === 'Tipo' ? myTipoSig(v) : ''}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+        h += `<p class="text-[10px] text-slate-400">Haz clic en el título de una columna para ordenar${iTipo >= 0 ? ' y en una fila para ver el asiento contable completo' : (t.filas.length && Array.isArray(t.filas[0][t.cols.length]) ? ' y en una fila para ver los asientos' : (t.filas.length && t.filas[0][t.cols.length] ? ' y en una fila para ver el movimiento de la cuenta' : ''))}. Mostrando ${Math.min(MAXV, t.filas.length)} de ${myInt(t.total)} casos${t.filas.length < t.total ? ' (el Excel trae hasta ' + myInt(t.filas.length) + ')' : t.filas.length > MAXV ? ' (el Excel trae todos)' : ''}.</p>`;
       }
       p.innerHTML = h;
     }
