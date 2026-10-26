@@ -2597,6 +2597,8 @@
         return;
       }
 
+      const claveLinea = (seccion === 'analisis' && cuenta) ? 'cta:' + cuenta : seccion;
+      if ((seccion === 'sumarias' || seccion === 'pendientes' || seccion === 'arrend' || (seccion === 'analisis' && cuenta)) && !herramientaHabilitada(claveLinea)) { avisarEnDesarrollo(); return; }
       if (!herramientaHabilitada(seccion)) {
         if (seccion === 'auditoria') seccion = 'desarrollo'; // pantalla principal: se muestra un aviso en vez de un mensaje emergente
         else { avisarEnDesarrollo(); return; }
@@ -2778,6 +2780,7 @@
             <div id="submenu-rubro-${r}" class="hidden pl-4 space-y-1">${cuentas}${extras}</div>
           </div>`;
       }).join('');
+      if (typeof aplicarEstadoMenu === 'function') aplicarEstadoMenu();
     }
 
     function toggleRubroAnalisis(rubro) {
@@ -11936,6 +11939,10 @@ ${cont.innerHTML}
     const HERRAMIENTAS_MENU = [
       { clave: 'auditoria', nombre: '1. Auditoría/Planificación', btn: 'nav-auditoria' },
       { clave: 'analisis', nombre: '2. Auditoría/Análisis Claves', btn: 'nav-analisis' },
+      { clave: 'sumarias', nombre: '     ↳ 2. Análisis Claves › Sumarias', btn: 'nav-sumarias', defecto: false },
+      { clave: 'pendientes', nombre: '     ↳ 2. Análisis Claves › To/Do - Quick Lett - Opinión', btn: 'nav-pendientes', defecto: false },
+      { clave: 'cta:inversiones_corrientes', nombre: '     ↳ 2. Análisis Claves › Activos › Inversiones corrientes', btn: 'nav-cuenta-activos-inversiones_corrientes', defecto: false },
+      { clave: 'arrend', nombre: '     ↳ 2. Análisis Claves › Activos › Activos por derecho de uso y pasivos por arrendamiento', btn: 'nav-cuenta-extra-activos-arrend', defecto: false },
       { clave: 'visitas', nombre: '3. Visitas (Calendario)', btn: 'nav-visitas' },
       { clave: 'asignacion', nombre: '4. Asignación de Cuentas', btn: 'nav-asignacion' },
       { clave: 'indices', nombre: '5a) Índices financieros', btn: 'nav-indices' },
@@ -11953,7 +11960,13 @@ ${cont.innerHTML}
     }
     function herramientaHabilitada(clave) {
       if (!HERRAMIENTAS_MENU.some(h => h.clave === clave)) return true;
-      return estadoHerramientas[clave] !== false || esSocioSesion();
+      return herramientaOn(clave) || esSocioSesion();
+    }
+    // Una línea sin registro en Supabase queda habilitada, salvo las que se crearon "apagadas" por defecto
+    function herramientaOn(clave) {
+      if (estadoHerramientas[clave] !== undefined) return estadoHerramientas[clave] !== false;
+      const h = HERRAMIENTAS_MENU.find(x => x.clave === clave);
+      return !(h && h.defecto === false);
     }
     function avisarEnDesarrollo() {
       alert('Esta herramienta está en desarrollo y todavía no está habilitada. Se activará cuando esté probada.');
@@ -11973,7 +11986,7 @@ ${cont.innerHTML}
         const suelta = btn.nextElementSibling;
         if (suelta && suelta.classList.contains('etiqueta-desarrollo')) suelta.remove();
         btn.style.opacity = '';
-        if (estadoHerramientas[h.clave] === false) {
+        if (!herramientaOn(h.clave)) {
           // etiqueta corta "Off" en la misma línea del nombre
           const et = document.createElement('span');
           et.className = 'etiqueta-desarrollo';
@@ -11996,9 +12009,9 @@ ${cont.innerHTML}
       aviso.innerHTML = '';
       await cargarEstadoHerramientas();
       lista.innerHTML = HERRAMIENTAS_MENU.map(h => {
-        const on = estadoHerramientas[h.clave] !== false;
+        const on = herramientaOn(h.clave);
         return `<label class="flex items-center justify-between gap-3 px-3 py-2 border rounded-lg cursor-pointer select-none ${on ? 'border-emerald-400 bg-emerald-50' : 'border-slate-300 bg-white'}">
-          <span class="text-xs font-bold text-slate-700">${escapeHtml(h.nombre)}</span>
+          <span class="text-xs font-bold text-slate-700 whitespace-pre-wrap">${escapeHtml(h.nombre)}</span>
           <span class="flex items-center gap-2"><span class="text-[11px] font-bold ${on ? 'text-emerald-800' : 'text-slate-500'}">${on ? 'Habilitada para auditores' : 'En desarrollo'}</span>
           <input type="checkbox" class="sr-only" ${on ? 'checked' : ''} onchange="cambiarHabilitacion('${h.clave}', this.checked)">
           <span class="w-9 h-5 rounded-full relative transition ${on ? 'bg-emerald-500' : 'bg-slate-300'}"><span class="absolute top-0.5 ${on ? 'left-4' : 'left-0.5'} w-4 h-4 bg-white rounded-full shadow"></span></span></span>
