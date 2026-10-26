@@ -8422,7 +8422,7 @@
       if (miId !== arrEstado.cargaId) return;
       if (rK && rK.data) { arrEstado.tasaImp = rK.data.tasa_impuesto === null || rK.data.tasa_impuesto === undefined ? 0.25 : Number(rK.data.tasa_impuesto); arrEstado.tasaDef = rK.data.tasa_defecto === null || rK.data.tasa_defecto === undefined ? 0.071 : Number(rK.data.tasa_defecto); arrEstado.verif = (rK.data.verificaciones && typeof rK.data.verificaciones === 'object') ? rK.data.verificaciones : {}; }
       else { arrEstado.tasaImp = 0.25; arrEstado.tasaDef = 0.071; arrEstado.verif = {}; }
-      arrEstado.concCorte = null; arrEstado.concBorrador = null;
+      arrEstado.concCorte = null; arrEstado.concBorrador = null; arrEstado.sumHecho = null; arrEstado.sumMsg = '';
       document.getElementById('ar-timp').value = r2f(arrEstado.tasaImp * 100);
       arrEstadoMsg('');
       arrRender();
@@ -9181,8 +9181,8 @@
       if (!vis) { const ult = {}; data.forEach(r => { if (!ult[r.visita] || r.created_at > ult[r.visita]) ult[r.visita] = r.created_at; }); vis = Object.keys(ult).sort((a, b) => ult[b].localeCompare(ult[a]))[0]; }
       const filas = data.filter(r => r.visita === vis);
       const suma = cods => { const set = new Set(String(cods || '').split(',').map(normSumaria).filter(Boolean)); return set.size ? Math.abs(Math.round(filas.filter(r => set.has(normSumaria(r.sumaria))).reduce((a, r) => a + (Number(r.saldo) || 0), 0) * 100) / 100) : null; };
-      const b = arrConcValores(), puesto = [];
-      [['uso', mp.uso], ['corto', mp.corto], ['largo', mp.largo]].forEach(([k, c]) => { const v = suma(c); if (v !== null && (manual || b[k] === undefined || b[k] === null || b[k] === '')) { b[k] = v; puesto.push(k); } });
+      const b = arrConcValores(), puesto = [], guardado = !!arrConcCortes()[corte];
+      [['uso', mp.uso], ['corto', mp.corto], ['largo', mp.largo]].forEach(([k, c]) => { const v = suma(c); if (v !== null && (manual || !guardado || b[k] === undefined || b[k] === null || b[k] === '')) { b[k] = v; puesto.push(k); } });
       if (b.corto !== undefined && b.largo !== undefined && (puesto.includes('corto') || puesto.includes('largo'))) b.pasivo = Math.round((Number(b.corto) + Number(b.largo)) * 100) / 100;
       arrEstado.sumMsg = puesto.length ? `Saldos traídos de la sumaria ${anio} (${visita(vis)}). Revísalos y guarda el corte.` : 'No se encontraron esos códigos en la sumaria.';
       function visita(v) { return v === 'final' ? 'visita final' : String(v); }
