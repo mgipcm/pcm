@@ -12496,8 +12496,8 @@ ${cont.innerHTML}
           if (f === undefined) A.seen.set(dk, doc);
           else if (f !== doc) {
             let h = A.dups.get(dk);
-            if (!h) { h = { n: 2, docs: [f, doc], cod, cu: ct.nom, d, lado, mon: monto, con, tk: f.split('|')[0], k: monto }; A.dups.set(dk, h); }
-            else { h.n++; if (h.docs.length < 6 && !h.docs.includes(doc)) h.docs.push(doc); }
+            if (!h) { h = { ds: new Set([f, doc]), cod, cu: ct.nom, d, lado, mon: monto, con, tk: f.split('|')[0], k: monto }; A.dups.set(dk, h); }
+            else if (h.ds.size < 500) h.ds.add(doc); else h.mas = true;
           }
         }
         if (m.cheque >= 0 && A.chLinN < 400000) {
@@ -12511,8 +12511,8 @@ ${cont.innerHTML}
             if (f === undefined) A.chSeen.set(ck, doc);
             else if (f !== doc) {
               let h = A.chHits.get(ck);
-              if (!h) { h = { n: 2, docs: [f, doc], cod, cu: ct.nom, ch, lado, mon: monto, tk: f.split('|')[0], d, k: monto }; A.chHits.set(ck, h); }
-              else { h.n++; if (h.docs.length < 6 && !h.docs.includes(doc)) h.docs.push(doc); }
+              if (!h) { h = { ds: new Set([f, doc]), cod, cu: ct.nom, ch, lado, mon: monto, tk: f.split('|')[0], d, k: monto }; A.chHits.set(ck, h); }
+              else if (h.ds.size < 500) h.ds.add(doc); else h.mas = true;
             }
           }
         }
@@ -12723,19 +12723,20 @@ ${cont.innerHTML}
         });
 
         // ---- Duplicados
-        const dp = []; A.dups.forEach(h => dp.push(h)); dp.sort((a, b) => b.k - a.k);
-        const dpF = dp.slice(0, 1000).map(h => [h.cod, h.cu, h.lado, h.d, h.mon, h.n, h.docs.map(docDeKey).join(' · '), esMan(h.tk) ? 'Manual' : 'Automático', h.con, h.docs]);
+        const dp = []; A.dups.forEach(h => { h.docs = [...h.ds]; h.n = h.ds.size; dp.push(h); }); dp.sort((a, b) => b.k - a.k);
+        const dpF = dp.slice(0, 1000).map(h => [h.cod, h.cu, h.lado, h.d, h.mon, h.n, h.docs.slice(0, 6).map(docDeKey).join(' · ') + (h.n > 6 ? ' · … y ' + (h.n - 6) + (h.mas ? '+' : '') + ' más' : ''), esMan(h.tk) ? 'Manual' : 'Automático', h.con, h.docs.slice(0, 60)]);
         add({
           id: 'duplicados', titulo: 'Posibles duplicados', nia: 'NIA 240 · NIA 330',
           que: 'Misma cuenta, misma fecha, mismo lado (débito con débito, crédito con crédito) e igual importe en documentos distintos. Pueden ser pagos o facturas registrados dos veces. Haz clic en una fila para ver los asientos involucrados. Solo se revisan importes desde el mínimo que fijaste (' + O.dupMin + ').',
           nivel: dp.length ? 'warn' : 'ok',
           resumen: dp.length ? dp.length + ' grupos con el mismo importe, cuenta y fecha en distintos documentos' : 'No se encontraron',
-          cols: [{ h: 'Código', t: 's' }, { h: 'Cuenta', t: 's' }, { h: 'Lado', t: 's' }, { h: 'Fecha', t: 'f' }, { h: 'Importe', t: 'm' }, { h: 'Veces', t: 'i' }, { h: 'Documentos', t: 's' }, { h: 'Origen (1.º)', t: 'b' }, { h: 'Concepto', t: 's' }],
+          cols: [{ h: 'Código', t: 's' }, { h: 'Cuenta', t: 's' }, { h: 'Lado', t: 's' }, { h: 'Fecha', t: 'f' }, { h: 'Importe', t: 'm' }, { h: 'Documentos distintos', t: 'v' }, { h: 'Documentos', t: 's' }, { h: 'Origen (1.º)', t: 'b' }, { h: 'Concepto', t: 's' }],
           filas: dpF, total: dp.length
         });
         if (A.m.cheque >= 0) {
           const grp = new Map();
           A.chHits.forEach(h => {
+            h.docs = [...h.ds]; h.n = h.ds.size;
             const gk = h.ch + '|' + h.docs.slice().sort().join(',') + '|' + h.mon;
             let g = grp.get(gk);
             if (!g) { g = { ch: h.ch, docs: h.docs, mon: h.mon, d: h.d, n: h.n, k: h.k, ctas: [] }; grp.set(gk, g); }
@@ -12746,8 +12747,8 @@ ${cont.innerHTML}
             id: 'cheques', titulo: 'Cheques repetidos', nia: 'NIA 240 · NIA 330',
             que: 'El mismo número de cheque, en la misma cuenta y del mismo lado (débito con débito o crédito con crédito), en documentos diferentes. Puede ser un pago registrado dos veces o un cheque reutilizado. Si el mismo par de documentos repite el cheque en varias cuentas (por ejemplo banco y clientes), se muestra una sola vez con todas las cuentas. No se comparan un débito con un crédito del mismo cheque, porque eso es lo normal en una anulación o un reverso.',
             nivel: ch.length ? 'warn' : 'ok', resumen: ch.length ? ch.length + ' cheques repetidos en documentos distintos' : 'No se encontraron',
-            cols: [{ h: 'Cheque (clic para ver todo)', t: 'q' }, { h: 'Mes (1.º)', t: 's' }, { h: 'Fecha (1.º)', t: 'f' }, { h: 'Importe', t: 'm' }, { h: 'Veces', t: 'i' }, { h: 'Documentos', t: 's' }, { h: 'Cuentas donde se repite', t: 's' }],
-            filas: ch.slice(0, 1000).map(g => [g.ch, (g.d === g.d ? MYM.isoDia(g.d).slice(0, 7) : ''), g.d, g.mon, g.n, g.docs.map(docDeKey).join(' · '), g.ctas.join(' · '), g.docs]), total: ch.length
+            cols: [{ h: 'Cheque (clic para ver todo)', t: 'q' }, { h: 'Mes (1.º)', t: 's' }, { h: 'Fecha (1.º)', t: 'f' }, { h: 'Importe', t: 'm' }, { h: 'Documentos distintos', t: 'v' }, { h: 'Documentos', t: 's' }, { h: 'Cuentas donde se repite', t: 's' }],
+            filas: ch.slice(0, 1000).map(g => [g.ch, (g.d === g.d ? MYM.isoDia(g.d).slice(0, 7) : ''), g.d, g.mon, g.n, g.docs.slice(0, 6).map(docDeKey).join(' · ') + (g.n > 6 ? ' · … y ' + (g.n - 6) + ' más' : ''), g.ctas.join(' · '), g.docs.slice(0, 60)]), total: ch.length
           });
         }
 
@@ -13157,7 +13158,7 @@ ${cont.innerHTML}
     async function mayorVerAsientos(keys) {
       let m = myEl('my-modal-ch'); if (!m) { m = document.createElement('div'); m.id = 'my-modal-ch'; m.className = 'fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4'; m.onclick = e => { if (e.target === m) m.remove(); }; document.body.appendChild(m); }
       const caja = inner => { m.innerHTML = `<div class="bg-white rounded-2xl shadow-2xl max-w-6xl w-full max-h-[85vh] overflow-auto p-5 space-y-4">${inner}</div>`; };
-      const cab = `<div class="flex justify-between items-start gap-3"><div><h3 class="text-sm font-bold text-slate-800">Asientos involucrados (${keys.length})</h3><p class="text-[11px] text-slate-500">Compara las líneas de cada documento para confirmar si es un duplicado real.</p></div><button onclick="document.getElementById('my-modal-ch').remove()" class="px-3 py-1.5 bg-slate-800 text-white rounded-lg text-xs font-bold">Cerrar</button></div>`;
+      const cab = `<div class="flex justify-between items-start gap-3"><div><h3 class="text-sm font-bold text-slate-800">Asientos involucrados (${keys.length}${keys.length >= 60 ? ', se muestran los primeros 60' : ''})</h3><p class="text-[11px] text-slate-500">Compara las líneas de cada documento para confirmar si es un duplicado real.</p></div><button onclick="document.getElementById('my-modal-ch').remove()" class="px-3 py-1.5 bg-slate-800 text-white rounded-lg text-xs font-bold">Cerrar</button></div>`;
       const faltan = keys.filter(k => !MYS.lineasAs.has(k));
       if (faltan.length) {
         caja(cab + '<p id="my-asiento-prog" class="text-xs text-slate-600">Buscando los asientos en el archivo… 0%</p>');
@@ -13188,6 +13189,7 @@ ${cont.innerHTML}
         case 'i': return myInt(v);
         case 'f': return MYM.fmtDia(v);
         case 'p': return (v * 100).toFixed(1) + '%';
+        case 'v': return myInt(v) + (v > 10 ? ' <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-200 text-slate-600" title="Muchas repeticiones iguales suelen ser pagos masivos (roles, participación, beneficios). Confirma que cada pago vaya a un beneficiario distinto.">¿pago masivo?</span>' : '');
         case 'g': return `<a href="#" onclick="event.stopPropagation();mayorVerConcepto(decodeURIComponent('${encodeURIComponent(v)}'));return false" class="font-bold text-indigo-700 underline">${escapeHtml(v)}</a>`;
         case 'q': return `<a href="#" onclick="event.stopPropagation();mayorVerCheque(decodeURIComponent('${encodeURIComponent(v)}'));return false" class="font-mono font-bold text-indigo-700 underline">${escapeHtml(v)}</a>`;
         case 'b': { const c = v === 'Manual' || v === 'Revisar' ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-600'; return `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${c}">${escapeHtml(v)}</span>`; }
@@ -13232,7 +13234,7 @@ ${cont.innerHTML}
       if (srt) filasV = t.filas.slice().sort((a, b) => { const x = a[srt.col], y = b[srt.col]; const r = (typeof x === 'number' && typeof y === 'number') ? ((x !== x ? -Infinity : x) - (y !== y ? -Infinity : y)) : String(x == null ? '' : x).localeCompare(String(y == null ? '' : y), 'es', { numeric: true }); return r * srt.dir; });
       if (!t.filas.length) h += '<div class="p-4 text-center text-slate-400 text-xs border border-dashed rounded-xl">Sin partidas para mostrar.</div>';
       else {
-        h += `<div class="overflow-x-auto border border-slate-200 rounded-xl bg-white shadow-sm"><table class="w-full text-left text-xs text-slate-700"><thead class="bg-slate-100 text-[10px] font-bold text-slate-600 border-b"><tr>${t.cols.map((c, ci) => `<th onclick="mayorOrdenar(${ci})" title="Clic para ordenar" class="p-2 cursor-pointer select-none hover:bg-slate-200 ${['m', 'i', 'p'].includes(c.t) ? 'text-right' : ''} whitespace-nowrap">${escapeHtml(c.h)}${srt && srt.col === ci ? (srt.dir === 1 ? ' ▲' : ' ▼') : ''}</th>`).join('')}</tr></thead><tbody class="divide-y divide-slate-100">${filasV.slice(0, MAXV).map(r => `<tr class="hover:bg-slate-50${(iTipo >= 0 || Array.isArray(r[t.cols.length])) ? ' cursor-pointer' : ''}"${Array.isArray(r[t.cols.length]) ? ` onclick="mayorVerAsientos(JSON.parse(decodeURIComponent('${encodeURIComponent(JSON.stringify(r[t.cols.length]))}')))" title="Clic para ver los asientos"` : iTipo >= 0 ? ` onclick="mayorVerAsiento(decodeURIComponent('${encodeURIComponent(r[iTipo])}'), decodeURIComponent('${encodeURIComponent(r[iNum])}'))" title="Clic para ver el asiento contable"` : ''}>${r.slice(0, t.cols.length).map((v, i) => `<td class="p-2 ${['m', 'i', 'p'].includes(t.cols[i].t) ? 'text-right whitespace-nowrap' : (t.cols[i].t === 's' && String(v).length > 60 ? 'min-w-[260px]' : 'whitespace-nowrap')}">${myCelda(v, t.cols[i].t)}${t.cols[i].h === 'Tipo' ? myTipoSig(v) : ''}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+        h += `<div class="overflow-x-auto border border-slate-200 rounded-xl bg-white shadow-sm"><table class="w-full text-left text-xs text-slate-700"><thead class="bg-slate-100 text-[10px] font-bold text-slate-600 border-b"><tr>${t.cols.map((c, ci) => `<th onclick="mayorOrdenar(${ci})" title="Clic para ordenar" class="p-2 cursor-pointer select-none hover:bg-slate-200 ${['m', 'i', 'p', 'v'].includes(c.t) ? 'text-right' : ''} whitespace-nowrap">${escapeHtml(c.h)}${srt && srt.col === ci ? (srt.dir === 1 ? ' ▲' : ' ▼') : ''}</th>`).join('')}</tr></thead><tbody class="divide-y divide-slate-100">${filasV.slice(0, MAXV).map(r => `<tr class="hover:bg-slate-50${(iTipo >= 0 || Array.isArray(r[t.cols.length])) ? ' cursor-pointer' : ''}"${Array.isArray(r[t.cols.length]) ? ` onclick="mayorVerAsientos(JSON.parse(decodeURIComponent('${encodeURIComponent(JSON.stringify(r[t.cols.length]))}')))" title="Clic para ver los asientos"` : iTipo >= 0 ? ` onclick="mayorVerAsiento(decodeURIComponent('${encodeURIComponent(r[iTipo])}'), decodeURIComponent('${encodeURIComponent(r[iNum])}'))" title="Clic para ver el asiento contable"` : ''}>${r.slice(0, t.cols.length).map((v, i) => `<td class="p-2 ${['m', 'i', 'p', 'v'].includes(t.cols[i].t) ? 'text-right whitespace-nowrap' : (t.cols[i].t === 's' && String(v).length > 60 ? 'min-w-[260px]' : 'whitespace-nowrap')}">${myCelda(v, t.cols[i].t)}${t.cols[i].h === 'Tipo' ? myTipoSig(v) : ''}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
         h += `<p class="text-[10px] text-slate-400">Haz clic en el título de una columna para ordenar${iTipo >= 0 ? ' y en una fila para ver el asiento contable completo' : (t.filas.length && Array.isArray(t.filas[0][t.cols.length]) ? ' y en una fila para ver los asientos' : '')}. Mostrando ${Math.min(MAXV, t.filas.length)} de ${myInt(t.total)} casos${t.filas.length < t.total ? ' (el Excel trae hasta ' + myInt(t.filas.length) + ')' : t.filas.length > MAXV ? ' (el Excel trae todos)' : ''}.</p>`;
       }
       p.innerHTML = h;
