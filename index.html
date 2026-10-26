@@ -907,6 +907,12 @@
         </div>
 
         <div id="su-alertas" class="space-y-1.5"></div>
+        <div id="su-filtro-caja" class="hidden flex flex-wrap items-center gap-2">
+          <label for="su-filtro" class="text-[11px] font-semibold text-slate-600">Buscar en todas las sumarias</label>
+          <input id="su-filtro" type="text" autocomplete="off" placeholder="Ej. derecho de uso, arrendamiento, impuesto diferido..." oninput="filtrarSumarias(this.value)" class="w-96 max-w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-indigo-500 outline-none">
+          <button type="button" onclick="filtrarSumarias(''); document.getElementById('su-filtro').value=''" class="px-2.5 py-1 bg-white text-slate-600 hover:bg-slate-50 border border-slate-300 rounded-lg text-[11px] font-bold">Limpiar</button>
+          <span id="su-filtro-info" class="text-[11px] text-slate-500"></span>
+        </div>
         <div id="su-resultado"></div>
       </div>
     </section>
@@ -7611,7 +7617,7 @@
     // ===== SUMARIAS Y CATÁLOGO DE CUENTAS =====
     let catalogoCuentas = [];
     let catalogoCargado = false;
-    let sumEstado = { registros: [], archivo: '', fecha: '', prev: { registros: [], archivo: '', fecha: '' }, abiertas: new Set(), cargaId: 0, sinColumnaFecha: false };
+    let sumEstado = { registros: [], archivo: '', fecha: '', prev: { registros: [], archivo: '', fecha: '' }, abiertas: new Set(), cargaId: 0, sinColumnaFecha: false, filtro: '' };
 
     function normSumaria(v) { return String(v === null || v === undefined ? '' : v).trim().toUpperCase(); }
     function textoCelda(v) { return v === null || v === undefined ? '' : String(v).trim(); }
@@ -11106,7 +11112,7 @@
       document.getElementById('su-btn-borrar-prev').classList.toggle('hidden', !verPrev);
       alertas.innerHTML = '';
       if (sumEstado.sinColumnaFecha) alertas.innerHTML += '<p class="text-[11px] border rounded-lg px-3 py-2 border-amber-400 text-amber-800">Falta ejecutar en Supabase el SQL de la fecha de corte (archivo sql-fecha-corte-balance.sql). Mientras tanto la fecha no se guarda.</p>';
-      if (!regs.length && !verPrev) { cont.innerHTML = ''; return; }
+      if (!regs.length && !verPrev) { cont.innerHTML = ''; const cf = document.getElementById('su-filtro-caja'); if (cf) cf.classList.add('hidden'); return; }
       const grupos = agruparSumarias(regs);
       if (verPrev) {
         const gPrev = agruparSumarias(regsPrev);
@@ -11122,9 +11128,25 @@
       if (noCat.length) alertas.innerHTML += aviso(`Sumarias que no están en Configuración › Cuentas: ${noCat.map(g => escapeHtml(g.sumaria)).join(', ')}.`, 'border-amber-400 text-amber-800');
       if (!catalogoCuentas.length) alertas.innerHTML += aviso('Todavía no se ha cargado el catálogo de cuentas (Configuración › Cuentas); por eso no se muestran nombres.', 'border-amber-400 text-amber-800');
 
+      // Filtro de búsqueda: deja solo las cuentas cuyo código o nombre contienen las palabras escritas (sin importar mayúsculas ni tildes)
+      const normTxt = t => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+      const palabras = normTxt(sumEstado.filtro).split(/\s+/).filter(Boolean), filtrando = palabras.length > 0;
+      const cajaF = document.getElementById('su-filtro-caja'); if (cajaF) cajaF.classList.toggle('hidden', false);
+      let grupos2 = grupos;
+      if (filtrando) {
+        const cumple = t => { const n = normTxt(t); return palabras.every(w => n.includes(w)); };
+        const sumar = a => Math.round(a.reduce((x, r) => x + (Number(r.saldo) || 0), 0) * 100) / 100;
+        grupos2 = grupos.map(g => {
+          const ca = g.cuentas.filter(r => cumple((r.codigo || '') + ' ' + (r.cuenta || ''))), cp = (g.cuentasPrev || []).filter(r => cumple((r.codigo || '') + ' ' + (r.cuenta || '')));
+          if (ca.length || cp.length) return { ...g, cuentas: ca, cuentasPrev: cp, saldo: sumar(ca), prev: verPrev ? sumar(cp) : g.prev };
+          return cumple(g.sumaria + ' ' + (g.nombre || '') + ' ' + (g.clasificacion || '') + ' ' + (g.grupo || '')) ? g : null;
+        }).filter(Boolean);
+      }
+      const info = document.getElementById('su-filtro-info');
+      if (info) info.textContent = filtrando ? `${grupos2.reduce((n, g) => n + g.cuentas.length, 0)} cuentas en ${grupos2.length} sumarias` : '';
       const r2 = n => Math.round(n * 100) / 100;
-      const total = r2(grupos.reduce((s, g) => s + g.saldo, 0));
-      const totalPrev = r2(grupos.reduce((s, g) => s + (g.prev || 0), 0));
+      const total = r2(grupos2.reduce((s, g) => s + g.saldo, 0));
+      const totalPrev = r2(grupos2.reduce((s, g) => s + (g.prev || 0), 0));
       const nf = n => `<span class="${n < 0 ? 'text-red-700' : ''}">${formatoNumeroAnexo(n)}</span>`;
       const fechaAct = sumEstado.fecha ? formatoFechaAnexo(sumEstado.fecha) : '';
       const fechaPrev = sumEstado.prev.fecha ? formatoFechaAnexo(sumEstado.prev.fecha) : `31/12/${Number(valorAnalisis('su-anio')) - 1}`;
@@ -11143,11 +11165,11 @@
         if (claveGrupo === null) return;
         html += `<tr class="bg-slate-100 font-bold text-slate-800"><td colspan="3" class="p-2.5">${escapeHtml(claveGrupo || 'Sin clasificar')}</td><td class="p-2.5 text-right">${nf(r2(sub))}</td>${celdasPrev(sub, subPrev, '')}</tr>` + buffer.join('');
       };
-      grupos.forEach(g => {
+      grupos2.forEach(g => {
         const k = g.enCatalogo ? [g.clasificacion, g.grupo].filter(Boolean).join(' › ') : '';
         if (k !== claveGrupo) { cerrar(); claveGrupo = k; sub = 0; subPrev = 0; buffer = []; }
         sub += g.saldo; subPrev += (g.prev || 0);
-        const abierta = sumEstado.abiertas.has(g.sumaria);
+        const abierta = filtrando || sumEstado.abiertas.has(g.sumaria);
         const seguro = escapeHtml(g.sumaria).replace(/'/g, '&#39;');
         buffer.push(`<tr class="border-b border-slate-200 cursor-pointer hover:bg-slate-50" onclick="alternarDetalleSumaria('${seguro}')">
           <td class="p-2.5 font-bold text-slate-800 whitespace-nowrap"><span class="flecha-caja ${abierta ? 'abierta' : ''}">${abierta ? '▾' : '▸'}</span>${escapeHtml(g.sumaria)}</td>
@@ -11170,11 +11192,17 @@
         }
       });
       cerrar();
-      html += `<tr class="bg-slate-800 text-white font-bold"><td colspan="3" class="p-2.5">Suma de todos los saldos del balance</td><td class="p-2.5 text-right">${formatoNumeroAnexo(total)}</td>${verPrev ? `<td class="p-2.5 text-right">${formatoNumeroAnexo(totalPrev)}</td><td class="p-2.5 text-right">${formatoNumeroAnexo(r2(total - totalPrev))}</td>` : ''}</tr></tbody></table></div>
+      html += `<tr class="bg-slate-800 text-white font-bold"><td colspan="3" class="p-2.5">${filtrando ? 'Suma de las cuentas encontradas' : 'Suma de todos los saldos del balance'}</td><td class="p-2.5 text-right">${formatoNumeroAnexo(total)}</td>${verPrev ? `<td class="p-2.5 text-right">${formatoNumeroAnexo(totalPrev)}</td><td class="p-2.5 text-right">${formatoNumeroAnexo(r2(total - totalPrev))}</td>` : ''}</tr></tbody></table></div>
         <p class="text-[11px] text-slate-500">Toca una sumaria para ver las cuentas que la forman${verPrev ? ' (el detalle incluye las dos fechas)' : ''}. En un balance de comprobación completo, la suma de todos los saldos debería ser cero.</p>`;
       cont.innerHTML = html;
     }
 
+    let filtroSumTimer = null;
+    function filtrarSumarias(v) {
+      sumEstado.filtro = v || '';
+      clearTimeout(filtroSumTimer);
+      filtroSumTimer = setTimeout(renderSumarias, 150);
+    }
     function alternarDetalleSumaria(s) {
       if (sumEstado.abiertas.has(s)) sumEstado.abiertas.delete(s); else sumEstado.abiertas.add(s);
       renderSumarias();
