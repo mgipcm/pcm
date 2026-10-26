@@ -1337,8 +1337,9 @@
           Lo mejor es guardar el mayor como <span class="font-bold">CSV</span> (en Excel: Guardar como → CSV). Así se pueden cargar cientos de miles de líneas sin que el navegador se trabe. También acepta .xlsx / .xls, pero solo para archivos pequeños.
         </p>
         <label class="block max-w-md space-y-1">
-          <span class="font-bold text-[11px] text-slate-600 block">Cliente que vas a analizar <span data-tip="Con el cliente elegido, el significado de los tipos de asiento y cuáles son manuales se guardan y se cargan solos la próxima vez." class="ayuda inline-flex items-center justify-center w-4 h-4 rounded-full bg-slate-200 text-slate-600 text-[10px] cursor-help align-middle">?</span></span>
+          <span class="font-bold text-[11px] text-slate-600 block">Cliente que vas a analizar</span>
           <select id="my-cliente" onmousedown="mayorPoblarClientes()" onchange="mayorCambioCliente()" class="w-full border rounded-lg px-2 py-1.5 text-xs bg-white"><option value="">-- Selecciona un cliente --</option></select>
+          <span class="block text-[11px] text-slate-500">Con el cliente elegido, el significado de los tipos de asiento y cuáles son manuales se guardan y se cargan solos la próxima vez.</span>
         </label>
         <div class="flex flex-wrap items-center gap-3">
           <label class="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold cursor-pointer transition shadow">
