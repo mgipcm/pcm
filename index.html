@@ -13102,7 +13102,7 @@ ${cont.innerHTML}
       myEl('my-archivo').textContent = 'Leyendo ' + file.name + '…';
       myEl('my-reporte').classList.add('hidden'); myEl('my-config').classList.add('hidden');
       MYS.A = null; MYS.res = null;
-      MYS.lineasAs = new Map(); MYS.tksEsc = new Set(); MYS.movCuentas = new Map();
+      MYS.lineasAs = new Map(); MYS.tksEsc = new Set(); MYS.movCuentas = new Map(); if (MYS.cons) { MYS.cons.cod = ''; MYS.cons.error = ''; }
       try {
         const nombre = file.name.toLowerCase();
         let muestra = [];
@@ -13188,7 +13188,7 @@ ${cont.innerHTML}
       if (MYS.ocupado || !MYS.fuente) return;
       const m = mayorLeerMapa(); if (m.cod < 0 || m.debe < 0 || m.haber < 0) return;
       MYS.ocupado = true; MYS.mapa = m;
-      MYS.lineasAs = new Map(); MYS.tksEsc = new Set(); MYS.movCuentas = new Map();
+      MYS.lineasAs = new Map(); MYS.tksEsc = new Set(); MYS.movCuentas = new Map(); if (MYS.cons) { MYS.cons.cod = ''; MYS.cons.error = ''; }
       const P = mayorParams();
       const btn = myEl('my-btn-analizar'); btn.disabled = true; btn.classList.add('opacity-50');
       myEl('my-progreso').classList.remove('hidden'); myEl('my-reporte').classList.add('hidden');
@@ -13268,7 +13268,7 @@ ${cont.innerHTML}
       }
     function mayorPintarTabs() {
       const R = MYS.res;
-      const tabs = [['resumen', 'Resumen']].concat(R.tests.filter(t => !t.oculto).map(t => [t.id, t.titulo]));
+      const tabs = [['resumen', 'Resumen'], ['consulta', 'Consulta por cuenta']].concat(R.tests.filter(t => !t.oculto).map(t => [t.id, t.titulo]));
       myEl('my-tabs').innerHTML = tabs.map(([id, nom]) => {
         const t = R.tests.find(x => x.id === id);
         return `<button onclick="mayorTab('${id}')" class="px-3 py-1.5 text-xs font-bold rounded-lg ${MYS.tab === id ? 'bg-white text-indigo-900 shadow' : 'text-slate-600 hover:text-slate-900'} flex items-center gap-1.5">${t ? myPunto(t.nivel) : ''}${escapeHtml(nom)}</button>`;
@@ -13323,7 +13323,7 @@ ${cont.innerHTML}
       const f0 = ls[0];
       caja(cab + (f0 ? `<p class="text-[11px] text-slate-600">Fecha ${MYM.fmtDia(f0.d)} · Usuario ${escapeHtml(f0.u || '(sin usuario)')} · ${ls.length} líneas</p>` : '') + (ls.length ? `<div class="overflow-x-auto border border-slate-200 rounded-xl"><table class="w-full text-left text-xs text-slate-700"><thead class="bg-slate-100 text-[10px] font-bold text-slate-600"><tr><th class="p-2">Código</th><th class="p-2">Cuenta</th><th class="p-2 text-right">Debe</th><th class="p-2 text-right">Haber</th><th class="p-2">Concepto</th></tr></thead><tbody class="divide-y divide-slate-100">${ls.map(l => `<tr><td class="p-2 font-mono">${escapeHtml(l.cod)}</td><td class="p-2">${escapeHtml(l.cu)}</td><td class="p-2 text-right whitespace-nowrap">${l.deb ? myMoney(l.deb) : ''}</td><td class="p-2 text-right whitespace-nowrap">${l.hab ? myMoney(l.hab) : ''}</td><td class="p-2">${escapeHtml(l.con)}</td></tr>`).join('')}<tr class="font-bold bg-slate-50"><td class="p-2" colspan="2">Totales ${Math.abs(td - th) < 0.005 ? '(cuadra)' : '(diferencia ' + myMoney(td - th) + ')'}</td><td class="p-2 text-right">${myMoney(td)}</td><td class="p-2 text-right">${myMoney(th)}</td><td></td></tr></tbody></table></div>` : '<p class="text-xs text-slate-500">No se encontraron líneas de este asiento en el archivo.</p>'));
     }
-    MYS.movCuentas = new Map(); MYS.volver = null;
+    MYS.movCuentas = new Map(); if (MYS.cons) { MYS.cons.cod = ''; MYS.cons.error = ''; } MYS.volver = null;
     function mayorVerUsuario(u) {
       const ls = []; let tot = 0;
       MYS.A.asientos.forEach(a => { if (MYS.manuales.has(a.tk) && (a.u || '(sin usuario)') === u) { ls.push(a); tot += a.deb; } });
@@ -13331,6 +13331,73 @@ ${cont.innerHTML}
       let m = myEl('my-modal-ch'); if (!m) { m = document.createElement('div'); m.id = 'my-modal-ch'; m.className = 'fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4'; m.onclick = e => { if (e.target === m) m.remove(); }; document.body.appendChild(m); }
       MYS.volverU = u;
       m.innerHTML = `<div class="bg-white rounded-2xl shadow-2xl max-w-6xl w-full max-h-[85vh] overflow-auto p-5 space-y-3"><div class="flex justify-between items-start gap-3"><div><h3 class="text-sm font-bold text-slate-800">Asientos manuales de ${escapeHtml(u)}</h3><p class="text-[11px] text-slate-500">${myInt(ls.length)} asientos por ${myMoney(tot)}, de mayor a menor importe${ls.length > 1000 ? ' (se muestran los primeros 1.000)' : ''}. Haz clic en uno para ver el asiento completo.</p></div><button onclick="MYS.volver=null;document.getElementById('my-modal-ch').remove()" class="px-3 py-1.5 bg-slate-800 text-white rounded-lg text-xs font-bold">Cerrar</button></div>${ls.length ? `<div class="overflow-x-auto border border-slate-200 rounded-xl"><table class="w-full text-left text-xs text-slate-700"><thead class="bg-slate-100 text-[10px] font-bold text-slate-600"><tr><th class="p-2">Tipo</th><th class="p-2">Número</th><th class="p-2">Fecha</th><th class="p-2 text-right">Líneas</th><th class="p-2 text-right">Importe</th><th class="p-2">Concepto</th></tr></thead><tbody class="divide-y divide-slate-100">${ls.slice(0, 1000).map(a => `<tr class="cursor-pointer hover:bg-slate-50" onclick="MYS.volver=function(){mayorVerUsuario(MYS.volverU)};mayorVerAsiento(decodeURIComponent('${encodeURIComponent(a.tk)}'), decodeURIComponent('${encodeURIComponent(a.num)}'))"><td class="p-2 font-mono whitespace-nowrap">${escapeHtml(a.tk)}${myTipoSig(a.tk)}</td><td class="p-2">${escapeHtml(a.num)}</td><td class="p-2 whitespace-nowrap">${MYM.fmtDia(a.d)}</td><td class="p-2 text-right">${a.n}</td><td class="p-2 text-right whitespace-nowrap">${myMoney(a.deb)}</td><td class="p-2">${escapeHtml(a.c)}</td></tr>`).join('')}</tbody></table></div>` : '<p class="text-xs text-slate-500">Esta persona no tiene asientos manuales con los tipos marcados como manuales.</p>'}</div>`;
+    }
+    // ===== Consulta por cuenta: elegir una cuenta y ver todo lo que tiene =====
+    MYS.cons = { cod: '', txt: '', mes: '', lado: '', soloMan: false, min: 0, cargando: '' };
+    function mayorConsCuenta(v) {
+      const cod = String(v || '').split(' · ')[0].trim();
+      if (!MYS.A.ctas.has(cod)) { MYS.cons.cod = ''; mayorPanelConsulta(); return; }
+      Object.assign(MYS.cons, { cod, txt: '', mes: '', lado: '', soloMan: false, min: 0 });
+      mayorPanelConsulta();
+    }
+    function mayorConsFiltro(k, v) { MYS.cons[k] = v; mayorPanelConsulta(); }
+    async function mayorConsCargar(cod) {
+      if (MYS.movCuentas.has(cod) || MYS.cons.cargando === cod) return;
+      MYS.cons.cargando = cod;
+      const hi = MYS.hdrIdx; let k = 0; const arr = []; let tot = 0;
+      try {
+        await MYS.fuente.recorrer(r => { if (k++ <= hi) return; const c = String(MYS.mapa.cod >= 0 && r[MYS.mapa.cod] != null ? r[MYS.mapa.cod] : '').trim(); if (c !== cod) return; const l = mayorLineaDe(r); if (!l.deb && !l.hab) return; tot++; if (arr.length < 50000) { l.i = arr.length; arr.push(l); } },
+          p => { const e = myEl('my-cons-prog'); if (e) e.textContent = 'Buscando los movimientos en el archivo… ' + Math.round(p * 100) + '%'; });
+        arr.sort((a, b) => ((a.d === a.d ? a.d : 0) - (b.d === b.d ? b.d : 0)) || a.i - b.i);
+        MYS.movCuentas.set(cod, { arr, tot });
+      } catch (e) { MYS.cons.error = e.message || String(e); }
+      MYS.cons.cargando = '';
+      if (MYS.tab === 'consulta' && MYS.cons.cod === cod) mayorPanelConsulta();
+    }
+    function mayorPanelConsulta() {
+      const p = myEl('my-panel'), A = MYS.A, C = MYS.cons;
+      const lista = [...A.ctas.entries()].sort((a, b) => String(a[0]).localeCompare(String(b[0]), 'es', { numeric: true }));
+      let h = `<div class="space-y-1"><div class="text-sm font-bold text-slate-800">Consulta por cuenta</div><p class="text-[11px] text-slate-500">Escribe el código o parte del nombre de la cuenta y elígela de la lista. Verás sus movimientos con saldo acumulado, el resumen por mes, y puedes filtrar. Haz clic en un movimiento para ver el asiento completo.</p></div>
+        <div class="flex flex-wrap items-center gap-2"><input id="my-cons-in" list="my-cons-lista" autocomplete="off" value="${C.cod ? escapeHtml(C.cod + ' · ' + (A.ctas.get(C.cod) || {}).nom) : ''}" placeholder="Ej. 1010101 o Bancos" onchange="mayorConsCuenta(this.value)" class="w-[28rem] max-w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-indigo-500 outline-none">
+        <datalist id="my-cons-lista">${lista.map(([c, x]) => `<option value="${escapeHtml(c + ' · ' + x.nom)}"></option>`).join('')}</datalist></div>`;
+      if (!C.cod) {
+        const top = lista.slice().sort((a, b) => b[1].n - a[1].n).slice(0, 12);
+        h += `<div class="text-[11px] text-slate-500">Cuentas con más movimientos (clic para consultar):</div><div class="flex flex-wrap gap-1.5">${top.map(([c, x]) => `<button type="button" onclick="mayorConsCuenta(decodeURIComponent('${encodeURIComponent(c)}'))" class="px-2.5 py-1 bg-white border border-slate-300 hover:bg-slate-50 rounded-lg text-[11px]"><span class="font-mono font-bold">${escapeHtml(c)}</span> ${escapeHtml(String(x.nom).slice(0, 40))} <span class="text-slate-400">· ${myInt(x.n)}</span></button>`).join('')}</div>`;
+        p.innerHTML = h; return;
+      }
+      const ct = A.ctas.get(C.cod);
+      if (!MYS.movCuentas.has(C.cod)) {
+        h += `<p id="my-cons-prog" class="text-xs text-slate-600">${C.error ? 'No se pudo leer el archivo de nuevo: ' + escapeHtml(C.error) : 'Buscando los movimientos en el archivo… 0%'}</p>`;
+        p.innerHTML = h; if (!C.error) mayorConsCargar(C.cod); return;
+      }
+      const { arr, tot } = MYS.movCuentas.get(C.cod);
+      let sal = ct.ini, td = 0, th = 0; const mes = new Map(), todas = [];
+      arr.forEach(l => {
+        sal += l.deb - l.hab; td += l.deb; th += l.hab;
+        const dt = l.d === l.d ? new Date(l.d * 864e5) : null, mk = dt ? dt.getUTCFullYear() + '-' + String(dt.getUTCMonth() + 1).padStart(2, '0') : 'sin fecha';
+        let m = mes.get(mk); if (!m) { m = { deb: 0, hab: 0, n: 0, fin: 0 }; mes.set(mk, m); } m.deb += l.deb; m.hab += l.hab; m.n++; m.fin = sal;
+        todas.push({ l, mk, sal });
+      });
+      const txt = C.txt.trim().toLowerCase(), min = Number(C.min) || 0;
+      const filas = todas.filter(x => (!C.mes || x.mk === C.mes) && (!C.lado || (C.lado === 'D' ? x.l.deb : x.l.hab)) && (!C.soloMan || MYS.manuales.has(x.l.tk)) && (Math.max(x.l.deb, x.l.hab) >= min) && (!txt || (x.l.con + ' ' + x.l.num + ' ' + x.l.u + ' ' + x.l.tk).toLowerCase().includes(txt)));
+      const kp = (t, v) => `<div class="bg-white p-3 rounded-xl border border-slate-200"><span class="block text-[10px] font-bold text-slate-400">${t}</span><span class="text-sm font-bold text-slate-800">${v}</span></div>`;
+      h += `<div class="text-xs font-bold text-slate-800">${escapeHtml(C.cod)} · ${escapeHtml(ct.nom)}</div><div class="grid grid-cols-2 md:grid-cols-5 gap-3">${kp('Saldo inicial', myMoney(ct.ini))}${kp('Debe', myMoney(ct.deb))}${kp('Haber', myMoney(ct.hab))}${kp('Saldo final', myMoney(ct.ini + ct.deb - ct.hab))}${kp('Movimientos', myInt(tot))}</div>`;
+      if (tot > arr.length) h += `<p class="text-[11px] text-amber-700">La cuenta tiene ${myInt(tot)} movimientos; aquí se listan los primeros ${myInt(arr.length)} (los totales de arriba son de toda la cuenta; el resumen por mes y el saldo de cada línea cubren solo lo listado).</p>`;
+      const meses = [...mes.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+      h += `<div class="text-xs font-bold text-slate-800 pt-1">Resumen por mes <span class="font-normal text-slate-400">(clic en un mes para filtrar)</span></div><div class="overflow-x-auto border border-slate-200 rounded-xl bg-white"><table class="w-full text-xs text-slate-700"><thead class="bg-slate-100 text-[10px] font-bold text-slate-600"><tr><th class="p-2 text-left">Mes</th><th class="p-2 text-right">Movimientos</th><th class="p-2 text-right">Debe</th><th class="p-2 text-right">Haber</th><th class="p-2 text-right">Saldo al cierre del mes</th></tr></thead><tbody class="divide-y divide-slate-100">${meses.map(([k, m]) => `<tr class="cursor-pointer hover:bg-slate-50 ${C.mes === k ? 'bg-indigo-50' : ''}" onclick="mayorConsFiltro('mes', '${C.mes === k ? '' : k}')"><td class="p-2 font-mono">${k}</td><td class="p-2 text-right">${myInt(m.n)}</td><td class="p-2 text-right">${myMoney(m.deb)}</td><td class="p-2 text-right">${myMoney(m.hab)}</td><td class="p-2 text-right font-semibold">${myMoney(m.fin)}</td></tr>`).join('')}</tbody></table></div>`;
+      const inp = 'h-7 px-2 border border-slate-300 rounded-lg text-xs bg-white';
+      h += `<div class="flex flex-wrap items-center gap-2 pt-1 text-[11px]"><span class="font-semibold text-slate-600">Filtrar</span>
+        <input type="text" value="${escapeHtml(C.txt)}" placeholder="Texto (concepto, documento, usuario)" onchange="mayorConsFiltro('txt', this.value)" class="${inp} w-64">
+        <select onchange="mayorConsFiltro('lado', this.value)" class="${inp}"><option value="">Debe y haber</option><option value="D"${C.lado === 'D' ? ' selected' : ''}>Solo débitos</option><option value="H"${C.lado === 'H' ? ' selected' : ''}>Solo créditos</option></select>
+        <input type="text" inputmode="decimal" value="${C.min || ''}" placeholder="Importe mínimo" onchange="mayorConsFiltro('min', parseFloat(this.value) || 0)" class="${inp} w-32">
+        <label class="flex items-center gap-1"><input type="checkbox" ${C.soloMan ? 'checked' : ''} onchange="mayorConsFiltro('soloMan', this.checked)"> Solo asientos manuales</label>
+        ${(C.txt || C.mes || C.lado || C.soloMan || C.min) ? `<button type="button" onclick="Object.assign(MYS.cons, { txt: '', mes: '', lado: '', soloMan: false, min: 0 }); mayorPanelConsulta()" class="px-2.5 py-1 bg-white border border-slate-300 rounded-lg font-bold">Quitar filtros</button>` : ''}
+        <span class="text-slate-500">${myInt(filas.length)} de ${myInt(arr.length)} movimientos · Debe ${myMoney(filas.reduce((a, x) => a + x.l.deb, 0))} · Haber ${myMoney(filas.reduce((a, x) => a + x.l.hab, 0))}</span></div>`;
+      const MAXF = 1000;
+      h += `<div class="overflow-x-auto border border-slate-200 rounded-xl bg-white"><table class="w-full text-left text-xs text-slate-700"><thead class="bg-slate-100 text-[10px] font-bold text-slate-600"><tr><th class="p-2">Fecha</th><th class="p-2">Documento</th><th class="p-2">Usuario</th><th class="p-2">Concepto</th><th class="p-2 text-right">Debe</th><th class="p-2 text-right">Haber</th><th class="p-2 text-right">Saldo</th></tr></thead><tbody class="divide-y divide-slate-100"><tr class="bg-slate-50 font-semibold"><td class="p-2" colspan="6">Saldo inicial</td><td class="p-2 text-right">${myMoney(ct.ini)}</td></tr>` +
+        filas.slice(0, MAXF).map(x => { const l = x.l; return `<tr class="cursor-pointer hover:bg-slate-50" onclick="MYS.volver=null;mayorVerAsiento(decodeURIComponent('${encodeURIComponent(l.tk)}'), decodeURIComponent('${encodeURIComponent(l.num)}'))"><td class="p-2 whitespace-nowrap">${MYM.fmtDia(l.d)}</td><td class="p-2 font-mono whitespace-nowrap">${escapeHtml(l.tk)} ${escapeHtml(l.num)}${MYS.manuales.has(l.tk) ? ' <span class="px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-amber-100 text-amber-800">Manual</span>' : ''}</td><td class="p-2">${escapeHtml(l.u)}</td><td class="p-2">${escapeHtml(l.con)}</td><td class="p-2 text-right whitespace-nowrap">${l.deb ? myMoney(l.deb) : ''}</td><td class="p-2 text-right whitespace-nowrap">${l.hab ? myMoney(l.hab) : ''}</td><td class="p-2 text-right whitespace-nowrap font-semibold">${myMoney(x.sal)}</td></tr>`; }).join('') + '</tbody></table></div>' +
+        (filas.length > MAXF ? `<p class="text-[11px] text-slate-500">Se muestran los primeros ${myInt(MAXF)}; usa los filtros o el mes para acotar.</p>` : '');
+      p.innerHTML = h;
     }
     async function mayorVerCuenta(cod) {
       let m = myEl('my-modal-ch'); if (!m) { m = document.createElement('div'); m.id = 'my-modal-ch'; m.className = 'fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4'; m.onclick = e => { if (e.target === m) m.remove(); }; document.body.appendChild(m); }
@@ -13341,7 +13408,7 @@ ${cont.innerHTML}
         caja(cab + '<p id="my-asiento-prog" class="text-xs text-slate-600">Buscando los movimientos en el archivo… 0%</p>');
         const hi = MYS.hdrIdx; let k = 0; const arr = []; let tot = 0;
         try {
-          await MYS.fuente.recorrer(r => { if (k++ <= hi) return; const c = String(MYS.mapa.cod >= 0 && r[MYS.mapa.cod] != null ? r[MYS.mapa.cod] : '').trim(); if (c !== cod) return; const l = mayorLineaDe(r); if (!l.deb && !l.hab) return; tot++; if (arr.length < 6000) { l.i = arr.length; arr.push(l); } },
+          await MYS.fuente.recorrer(r => { if (k++ <= hi) return; const c = String(MYS.mapa.cod >= 0 && r[MYS.mapa.cod] != null ? r[MYS.mapa.cod] : '').trim(); if (c !== cod) return; const l = mayorLineaDe(r); if (!l.deb && !l.hab) return; tot++; if (arr.length < 50000) { l.i = arr.length; arr.push(l); } },
             p => { const e = myEl('my-asiento-prog'); if (e) e.textContent = 'Buscando los movimientos en el archivo… ' + Math.round(p * 100) + '%'; });
         } catch (e) { caja(cab + '<p class="text-xs text-red-700">No se pudo leer el archivo de nuevo: ' + escapeHtml(e.message || e) + '</p>'); return; }
         arr.sort((a, b) => ((a.d === a.d ? a.d : 0) - (b.d === b.d ? b.d : 0)) || a.i - b.i);
@@ -13405,6 +13472,7 @@ ${cont.innerHTML}
           <p>Estas pruebas son un apoyo para seleccionar partidas con criterio y documentar la respuesta a NIA 240.33; el juicio sobre cada hallazgo sigue siendo del auditor.</p></div>`;
         p.innerHTML = h; return;
       }
+      if (MYS.tab === 'consulta') { mayorPanelConsulta(); return; }
       let t = R.tests.find(x => x.id === MYS.tab); if (!t) return;
       const tConcBase = t;
       if (t.id === 'conc_man' && MYS.concVista === 'lista') t = Object.assign({}, t.lista, { id: 'conc_man', titulo: t.titulo, que: t.que });
