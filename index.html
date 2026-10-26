@@ -4792,6 +4792,7 @@
         const ok = tipoArchivoContrato(f) !== null;
         return `<li class="flex items-center justify-between gap-2 px-3 py-1.5 rounded-lg border ${ok ? 'border-slate-200 bg-slate-50' : 'border-red-400 bg-white'} text-xs">
           <span class="truncate text-slate-700">${escapeHtml(f.name)} <span class="text-slate-400">· ${formatoTamanio(f.size)}</span>${ok ? '' : ' <span class="text-red-600 font-bold">· formato no compatible</span>'}</span>
+          ${archivosContrato.length > 1 ? `<select onchange="contrCambiarBase(${i}, this.value)" title="Si este archivo es una adenda, elige a qué contrato pertenece: se resume junto con él" class="h-6 max-w-[11rem] text-[11px] border border-slate-300 rounded bg-white shrink-0"><option value="">Contrato aparte</option>${archivosContrato.map((g, k) => (k !== i && !g._base) ? `<option value="${uidArchivoContrato(g)}"${f._base === uidArchivoContrato(g) ? ' selected' : ''}>Adenda de: ${escapeHtml(g.name.slice(0, 24))}</option>` : '').join('')}</select>` : ''}
           <button type="button" onclick="quitarArchivoContrato(${i})" class="text-slate-400 hover:text-red-600 font-bold shrink-0" title="Quitar">✕</button>
         </li>`;
       }).join('');
@@ -5027,6 +5028,26 @@
       resultado.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
 
+    // ----- Contratos y adendas: cada archivo es un contrato aparte, salvo que se marque como adenda de otro -----
+    function uidArchivoContrato(f) { if (!f._uid) f._uid = 'f' + Math.random().toString(36).slice(2, 10); return f._uid; }
+    function contrRaiz(f) {
+      const vistos = new Set(); let a = f;
+      while (a._base && !vistos.has(a._uid)) {
+        vistos.add(a._uid);
+        const b = archivosContrato.find(x => uidArchivoContrato(x) === a._base);
+        if (!b) return a; a = b;
+      }
+      return a;
+    }
+    // Devuelve [[contrato, adenda1, adenda2], [otro contrato], ...] en el orden en que se subieron
+    function gruposContrato() {
+      const g = new Map();
+      archivosContrato.forEach(f => { const r = contrRaiz(f); const k = uidArchivoContrato(r); if (!g.has(k)) g.set(k, [r]); if (r !== f) g.get(k).push(f); });
+      return [...g.values()];
+    }
+    function contrCambiarBase(i, val) { archivosContrato[i]._base = val || ''; renderListaArchivosContrato(); }
+    function nombreGrupoContrato(grupo) { return grupo[0].name + (grupo.length > 1 ? ' + ' + (grupo.length - 1) + (grupo.length === 2 ? ' adenda' : ' adendas') : ''); }
+
     async function generarResumenContrato(forzar) {
       const clienteId = document.getElementById('contr-cliente').value;
       const instruccion = document.getElementById('contr-instruccion').value.trim();
@@ -5051,79 +5072,78 @@
 
       const cli = buscarCliente(clienteId);
       const nombreCliente = cli ? `${cli.nombre_corto || ''} ${cli.nombre_completo ? '(' + cli.nombre_completo + ')' : ''}`.trim() : clienteId;
+      const grupos = gruposContrato();
 
       boton.disabled = true;
       btnCopiar.classList.add('hidden');
       resultado.innerHTML = '<p class="text-slate-400">Preparando el resumen...</p>';
+      const bloques = [], textos = []; let huboError = false, huboGuardado = false;
 
       try {
         estado.textContent = 'Leyendo los archivos...';
         contAvance('Leyendo archivos · 5 %', 5);
+        for (let n = 0; n < grupos.length; n++) {
+          const grupo = grupos[n], nombreGr = nombreGrupoContrato(grupo);
+          const pref = grupos.length > 1 ? `Contrato ${n + 1} de ${grupos.length}: ` : '';
+          const base = 5 + Math.round(90 * n / grupos.length);
+          contAvance(pref + 'leyendo · ' + base + ' %', base);
+          const infoArchivos = [];
+          for (const f of grupo) infoArchivos.push({ nombre: f.name, tamano: f.size, hash: await huellaArchivo(f) });
+          const hashes = infoArchivos.map(a => a.hash).filter(Boolean);
 
-        // Huella de cada archivo y revisión de duplicados
-        const infoArchivos = [];
-        for (const f of archivosContrato) infoArchivos.push({ nombre: f.name, tamano: f.size, hash: await huellaArchivo(f) });
-        const hashes = infoArchivos.map(a => a.hash).filter(Boolean);
-
-        if (forzar !== true && hashes.length > 0) {
-          estado.textContent = 'Revisando si el contrato ya fue subido...';
-          const { data: previos, error: errPrevios } = await supabaseClient
-            .from('resumenes_contratos')
-            .select('id, created_at, cliente_id, cliente_nombre, archivos')
-            .overlaps('hashes', hashes)
-            .order('created_at', { ascending: false });
-
-          if (errPrevios) {
-            console.warn('No se pudo revisar duplicados:', errPrevios);
-          } else if (previos && previos.length > 0) {
-            mostrarAlertaDuplicado(previos, hashes);
-            estado.textContent = '';
-            return;
+          if (forzar !== true && hashes.length > 0) {
+            estado.textContent = pref + 'revisando si el contrato ya fue subido...';
+            const { data: previos, error: errPrevios } = await supabaseClient
+              .from('resumenes_contratos').select('id, created_at, cliente_id, cliente_nombre, archivos')
+              .overlaps('hashes', hashes).order('created_at', { ascending: false });
+            if (errPrevios) console.warn('No se pudo revisar duplicados:', errPrevios);
+            else if (previos && previos.length > 0) {
+              const p = previos[0];
+              bloques.push(`<details open class="mb-4"><summary class="cursor-pointer font-bold text-slate-800">${escapeHtml(nombreGr)}</summary>
+                <div class="border-2 border-red-400 rounded-xl p-3 bg-white space-y-2 mt-2"><p class="text-sm font-bold text-red-600">⚠ Este contrato ya fue subido</p>
+                <p>Resumido el <span class="font-bold">${escapeHtml(formatoFechaContrato(p.created_at))}</span> para el cliente <span class="font-bold">${escapeHtml(p.cliente_nombre || p.cliente_id)}</span>.</p>
+                <button type="button" onclick="verResumenGuardado('${escapeHtml(p.id)}')" class="px-3 py-1.5 bg-white text-slate-700 hover:bg-slate-50 border border-slate-400 rounded-lg text-xs font-bold transition">Ver resumen guardado</button></div></details>`);
+              resultado.innerHTML = bloques.join('');
+              continue;
+            }
           }
+
+          const archivos = [];
+          for (const f of grupo) archivos.push(await prepararArchivoContrato(f));
+          estado.textContent = pref + 'Claude está analizando el contrato. Puede tardar hasta un par de minutos...';
+          contAvanceAnalizando(pref + 'Claude analizando', base + 5);
+          const instr = (grupo.length > 1 ? 'Los archivos son un solo contrato y sus adendas (el primero es el contrato original; los demás lo modifican). Resume el contrato vigente indicando qué cambió cada adenda. ' : '') + instruccion;
+          const { data, error } = await supabaseClient.functions.invoke(FUNCION_RESUMEN_CONTRATOS, { body: { cliente: nombreCliente, instruccion: instr.trim(), archivos } });
+          if (error) throw error;
+          if (!data || data.error) throw new Error((data && data.error) || 'La función no devolvió ningún resumen.');
+          const resumen = data.resumen || '';
+
+          estado.textContent = pref + 'guardando el resumen...';
+          const { error: errGuardar } = await supabaseClient.from('resumenes_contratos').insert([{
+            cliente_id: clienteId, cliente_nombre: nombreCliente, archivos: infoArchivos, hashes,
+            instruccion: instruccion || null, resumen, truncado: !!data.truncado, modelo: data.modelo || null
+          }]);
+          if (errGuardar) { console.error('No se pudo guardar el resumen:', errGuardar); huboError = true; } else huboGuardado = true;
+
+          textos.push((grupos.length > 1 ? nombreGr + '\n' : '') + resumen);
+          bloques.push(`<details open class="mb-5"><summary class="cursor-pointer font-bold text-slate-800 text-sm">${escapeHtml(nombreGr)}</summary>
+            <p class="my-2 text-[11px] text-slate-500">Cliente: <span class="font-bold text-slate-700">${escapeHtml(nombreCliente)}</span> · Archivos: ${escapeHtml(grupo.map(f => f.name).join(', '))}</p>` +
+            renderTextoResumenContrato(resumen) +
+            (data.truncado ? '<p class="mt-3 text-[11px] text-red-600 font-bold">El resumen se cortó por su extensión. Vuelve a generarlo con un enfoque más específico.</p>' : '') +
+            (errGuardar ? `<p class="mt-3 text-[11px] text-red-600 font-bold">El resumen NO se guardó: ${escapeHtml(textoErrorTablaContratos(errGuardar))} Cópialo antes de salir.</p>` : '') + '</details>');
+          resultado.innerHTML = bloques.join('<hr class="my-3 border-slate-200">');
         }
-
-        const archivos = [];
-        for (const f of archivosContrato) archivos.push(await prepararArchivoContrato(f));
-
-        estado.textContent = 'Claude está analizando el contrato. Puede tardar hasta un par de minutos...';
-        contAvanceAnalizando('Claude analizando', 15);
-        resultado.innerHTML = '<p class="text-slate-400">Preparando el resumen...</p>';
-        const { data, error } = await supabaseClient.functions.invoke(FUNCION_RESUMEN_CONTRATOS, {
-          body: { cliente: nombreCliente, instruccion, archivos }
-        });
-
-        if (error) throw error;
-        if (!data || data.error) throw new Error((data && data.error) || 'La función no devolvió ningún resumen.');
-
-        ultimoResumenContrato = data.resumen || '';
-
-        // Guardar el resumen en Supabase
-        estado.textContent = 'Guardando el resumen...';
-        contAvance('Guardando · 95 %', 95);
-        const { error: errGuardar } = await supabaseClient.from('resumenes_contratos').insert([{
-          cliente_id: clienteId,
-          cliente_nombre: nombreCliente,
-          archivos: infoArchivos,
-          hashes,
-          instruccion: instruccion || null,
-          resumen: ultimoResumenContrato,
-          truncado: !!data.truncado,
-          modelo: data.modelo || null
-        }]);
-        if (errGuardar) console.error('No se pudo guardar el resumen:', errGuardar);
-
-        resultado.innerHTML =
-          `<p class="mb-2 text-[11px] text-slate-500">Cliente: <span class="font-bold text-slate-700">${escapeHtml(nombreCliente)}</span> · Archivos: ${escapeHtml(archivosContrato.map(f => f.name).join(', '))}</p>` +
-          renderTextoResumenContrato(ultimoResumenContrato) +
-          (data.truncado ? '<p class="mt-3 text-[11px] text-red-600 font-bold">El resumen se cortó por su extensión. Vuelve a generarlo con un enfoque más específico o sube el contrato por partes.</p>' : '') +
-          (errGuardar ? `<p class="mt-3 text-[11px] text-red-600 font-bold">El resumen NO se guardó: ${escapeHtml(textoErrorTablaContratos(errGuardar))} Cópialo antes de salir.</p>` : '');
-        btnCopiar.classList.remove('hidden');
-        estado.textContent = errGuardar ? 'Resumen listo, pero no se pudo guardar.' : 'Resumen listo y guardado.';
-        if (!errGuardar) cargarResumenesGuardados();
+        ultimoResumenContrato = textos.join('\n\n----------\n\n');
+        resultado.innerHTML = bloques.join('<hr class="my-3 border-slate-200">');
+        if (ultimoResumenContrato) btnCopiar.classList.remove('hidden');
+        estado.textContent = huboError ? 'Resumen listo, pero no se pudo guardar.' : (huboGuardado ? (grupos.length > 1 ? 'Resúmenes listos y guardados (uno por contrato).' : 'Resumen listo y guardado.') : '');
+        if (huboGuardado) cargarResumenesGuardados();
       } catch (err) {
         console.error('Error en resumen de contrato:', err);
         const msg = await mensajeErrorContratos(err);
-        resultado.innerHTML = `<p class="text-red-600 font-bold">No se pudo generar el resumen.</p><p class="mt-1">${escapeHtml(msg)}</p>`;
+        resultado.innerHTML = bloques.join('<hr class="my-3 border-slate-200">') + `<p class="text-red-600 font-bold mt-3">No se pudo generar el resumen${grupos.length > 1 ? ' de uno de los contratos' : ''}.</p><p class="mt-1">${escapeHtml(msg)}</p>`;
+        ultimoResumenContrato = textos.join('\n\n----------\n\n');
+        if (ultimoResumenContrato) btnCopiar.classList.remove('hidden');
         estado.textContent = '';
       } finally {
         contAvance(null);
@@ -5240,16 +5260,23 @@
       try {
         estado.textContent = 'Leyendo los archivos...';
         contAvance('Leyendo archivos · 5 %', 5);
-        const archivos = [];
-        for (const f of archivosContrato) archivos.push(await prepararArchivoContrato(f));
-        estado.textContent = 'Claude está preparando la versión informe...';
-        contAvanceAnalizando('Preparando versión informe', 15);
-        const { data, error } = await supabaseClient.functions.invoke(FUNCION_RESUMEN_CONTRATOS, { body: { cliente: nombreCliente, archivos, modo: 'informe' } });
-        if (error) throw error;
-        if (!data || data.error) throw new Error((data && data.error) || 'La función no devolvió resultado.');
-        const nuevas = (data.filas || []).map(f => { const o = {}; COLS_INFORME.forEach(c => { o[c[0]] = String((f && f[c[0]]) ?? 'N/A'); }); return o; });
-        filasInformeContratos.push(...nuevas);
-        renderInformeContratos();
+        const grupos = gruposContrato(); let agregadas = 0;
+        for (let n = 0; n < grupos.length; n++) {
+          const grupo = grupos[n], pref = grupos.length > 1 ? `Contrato ${n + 1} de ${grupos.length}: ` : '';
+          const archivos = [];
+          for (const f of grupo) archivos.push(await prepararArchivoContrato(f));
+          estado.textContent = pref + 'Claude está preparando la versión informe...';
+          contAvanceAnalizando(pref + 'Preparando versión informe', 15);
+          const body = { cliente: nombreCliente, archivos, modo: 'informe' };
+          if (grupo.length > 1) body.instruccion = 'Los archivos son un solo contrato y sus adendas: presenta UNA sola fila con el contrato vigente e indica las modificaciones de las adendas en la columna Otros.';
+          const { data, error } = await supabaseClient.functions.invoke(FUNCION_RESUMEN_CONTRATOS, { body });
+          if (error) throw error;
+          if (!data || data.error) throw new Error((data && data.error) || 'La función no devolvió resultado.');
+          const nuevas = (data.filas || []).map(f => { const o = {}; COLS_INFORME.forEach(c => { o[c[0]] = String((f && f[c[0]]) ?? 'N/A'); }); return o; });
+          filasInformeContratos.push(...nuevas); agregadas += nuevas.length;
+          renderInformeContratos();
+        }
+        const nuevas = { length: agregadas };
         estado.textContent = `Versión informe lista: ${nuevas.length} contrato(s) agregado(s) a la tabla de abajo.`;
       } catch (err) {
         estado.textContent = '';
