@@ -12477,7 +12477,7 @@ ${cont.innerHTML}
 
         const monto = debe > haber ? debe : haber;
         const mk = () => ({ cod, cu: ct.nom, d, doc: numRaw, tk, con, deb: debe, hab: haber, u: usuario });
-        if (A.topAt.ok(monto)) { const it = mk(); it.k = monto; A.topAt.push(it); }
+        if (debe > 0 && A.topAt.ok(debe)) { const it = mk(); it.k = debe; A.topAt.push(it); }
         if (monto >= P.red && Math.abs(monto / P.red - Math.round(monto / P.red)) < 1e-9) {
           A.redCnt.set(tk, (A.redCnt.get(tk) || 0) + 1);
           if (A.topRed.ok(monto)) { const it = mk(); it.k = monto; A.topRed.push(it); }
@@ -12711,14 +12711,14 @@ ${cont.innerHTML}
 
         // ---- Partidas atípicas
         const at = A.topAt.lista().filter(it => it.k >= mat);
-        const atF = at.slice(0, 1000).map(it => [it.cod, it.cu, it.tk + ' ' + it.doc, it.d, esMan(it.tk) ? 'Manual' : 'Automático', it.u, it.deb, it.hab, it.con]);
+        const atF = at.slice(0, 1000).map(it => [it.cod, it.cu, it.tk, it.doc, it.d, esMan(it.tk) ? 'Manual' : 'Automático', it.u, it.deb, it.con]);
         const atMan = at.filter(it => esMan(it.tk)).length;
         add({
           id: 'atipicas', titulo: 'Partidas sobre la materialidad', nia: 'NIA 500 A52 · NIA 530 · NIA 320',
-          que: 'Líneas individuales iguales o mayores a la materialidad de ejecución. Según la NIA 500 puedes examinar el 100% de estas partidas clave y muestrear el resto. La lista guarda las 3.000 líneas de mayor importe del archivo.',
+          que: 'Líneas del DEBE iguales o mayores a la materialidad de ejecución (se miran solo los débitos para no repetir cada asiento por su contrapartida). Según la NIA 500 puedes examinar el 100% de estas partidas clave y muestrear el resto. Haz clic en una fila para ver el asiento completo. La lista guarda las 3.000 líneas de mayor importe del archivo.',
           nivel: at.length ? 'info' : 'ok',
-          resumen: at.length + ' líneas ≥ US$ ' + mat.toLocaleString('en-US') + (atMan ? ' (' + atMan + ' manuales)' : '') + (A.topAt.a.length >= 3000 && at.length >= 3000 ? ' · mostrando las 3.000 mayores' : ''),
-          cols: [{ h: 'Código', t: 's' }, { h: 'Cuenta', t: 's' }, { h: 'Documento', t: 's' }, { h: 'Fecha', t: 'f' }, { h: 'Origen', t: 'b' }, { h: 'Usuario', t: 's' }, { h: 'Debe', t: 'm' }, { h: 'Haber', t: 'm' }, { h: 'Concepto', t: 's' }],
+          resumen: at.length + ' débitos ≥ US$ ' + mat.toLocaleString('en-US') + (atMan ? ' (' + atMan + ' manuales)' : '') + (A.topAt.a.length >= 3000 && at.length >= 3000 ? ' · mostrando las 3.000 mayores' : ''),
+          cols: [{ h: 'Código', t: 's' }, { h: 'Cuenta', t: 's' }, { h: 'Tipo', t: 's' }, { h: 'Número', t: 's' }, { h: 'Fecha', t: 'f' }, { h: 'Origen', t: 'b' }, { h: 'Usuario', t: 's' }, { h: 'Debe', t: 'm' }, { h: 'Concepto', t: 's' }],
           filas: atF, total: at.length
         });
 
