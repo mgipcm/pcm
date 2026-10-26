@@ -2096,6 +2096,18 @@
     let listaClientesCache = [];
 
     // Busca un cliente por su ID con prioridad: 1) cliente_id exacto, 2) id interno, 3) nombre corto
+    // Nombres de TODOS los clientes (solo código y nombre) para rotular el calendario: un auditor ve visitas de clientes a los que no tiene acceso
+    let nombresClientesTodos = {};
+    async function cargarNombresClientes() {
+      try {
+        const { data, error } = await supabaseClient.rpc('nombres_clientes');
+        if (error || !data) return;
+        nombresClientesTodos = {}; data.forEach(c => { nombresClientesTodos[String(c.cliente_id || '').trim()] = c; });
+      } catch (e) { /* sin la función: se muestra el código */ }
+    }
+    function buscarClienteNombre(valor) {
+      return buscarCliente(valor) || nombresClientesTodos[String(valor ?? '').trim()] || null;
+    }
     function buscarCliente(valor) {
       const v = String(valor ?? '').trim();
       if (!v) return null;
@@ -5736,6 +5748,7 @@
       }
 
       listaVisitasCache = visitas || [];
+      await cargarNombresClientes();
       renderizarCalendarioLineal();
     }
 
@@ -5977,7 +5990,7 @@
 
               const colorEstilo = colorPastelCliente(vis.cliente_id);
 
-              const cli = buscarCliente(vis.cliente_id);
+              const cli = buscarClienteNombre(vis.cliente_id);
               const nombreCliente = (clienteIdRepetido(vis.cliente_id) ? '⚠ ' : '') + (cli ? (cli.nombre_corto || cli.nombre_completo) : (vis.cliente_id || 'Cliente'));
 
               const topOffset = ((carrilDe.get(vis) || 0) * 17) + 3;
@@ -6154,7 +6167,7 @@
       const vis = listaVisitasCache.find(v => String(v.id || v.visita_id) === String(visitaId));
       if (!vis) return;
 
-      const cli = buscarCliente(vis.cliente_id);
+      const cli = buscarClienteNombre(vis.cliente_id);
       const nombreCliente = cli ? `${cli.nombre_corto || ''} (${cli.nombre_completo || ''})` : vis.cliente_id;
 
       document.getElementById('modal-visita-id').value = visitaId;
@@ -10874,7 +10887,7 @@
         return;
       }
       tb.innerHTML = filas.map((r, i) => {
-        const cli = buscarCliente(r.cliente_id);
+        const cli = buscarClienteNombre(r.cliente_id);
         const nombreCli = cli ? (cli.nombre_corto || cli.nombre_completo || r.cliente_id) : r.cliente_id;
         const crit = String(r.criterio || '').trim();
         const corto = crit.length > 180 ? crit.slice(0, 180) + '…' : crit;
