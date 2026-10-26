@@ -1393,6 +1393,7 @@
           </div>
           <div id="my-tipos-cuerpo" class="space-y-3">
             <p class="text-[11px] text-slate-500">Marca como «manual» los tipos que los registra una persona a mano (por ejemplo diario general o ajustes). Los que genera el sistema (facturas, cobros, roles) déjalos sin marcar. Las pruebas de NIA 240 se concentran en los manuales.</p>
+            <div id="my-nat" class="space-y-1"></div>
             <div id="my-partes" class="space-y-1"></div>
             <div id="my-tipos" class="overflow-x-auto border border-slate-200 rounded-lg"></div>
             <div class="flex flex-wrap justify-end gap-2 pt-1">
@@ -12854,7 +12855,8 @@ ${cont.innerHTML}
         }
 
         // ---- Naturaleza contraria
-        const NAT = { 1: 1, 2: -1, 3: -1, 4: -1, 5: 1, 6: 1, 7: 1, 8: 1, 9: 1 };
+        const NAT = { 1: 1, 2: -1, 3: -1, 4: -1, 5: 1, 6: 1, 7: -1, 8: 1, 9: 1 };
+        if (O.nat) for (const d in O.nat) NAT[d] = O.nat[d] === 'C' ? -1 : 1;
         const nat = []; let natContra = 0;
         A.ctas.forEach((c, cod) => {
           const p = +String(cod).charAt(0); if (!NAT[p]) return;
@@ -12868,7 +12870,7 @@ ${cont.innerHTML}
         nat.sort((a, b) => (a[7] === b[7] ? Math.abs(b[6]) - Math.abs(a[6]) : (a[7] === 'Revisar' ? -1 : 1)));
         add({
           id: 'naturaleza', titulo: 'Saldos de naturaleza contraria', nia: 'NIA 315 · NIA 330 · NIIF',
-          que: 'Cuentas cuyo saldo final es contrario a su naturaleza por el primer dígito del código (1 activo, 2 pasivo, 3 patrimonio, 4 ingresos, 5 al 9 costos y gastos). Ejemplos: una cuenta por cobrar con saldo acreedor suele ser un anticipo mal clasificado. Las cuentas regularizadoras (depreciación, provisiones, devoluciones) se marcan aparte porque su saldo contrario es normal.',
+          que: 'Cuentas cuyo saldo final es contrario a su naturaleza por el primer dígito del código (por defecto: 1 activo débito, 2 pasivo crédito, 3 patrimonio crédito, 4 ingresos crédito, 5 costos débito, 6 gastos débito, 7 crédito; se puede cambiar y queda guardado por cliente). Ejemplos: una cuenta por cobrar con saldo acreedor suele ser un anticipo mal clasificado. Las cuentas regularizadoras (depreciación, provisiones, devoluciones) se marcan aparte porque su saldo contrario es normal.',
           nivel: natContra ? 'warn' : 'ok',
           resumen: natContra ? natContra + ' cuentas con saldo contrario por revisar' + (nat.length - natContra ? ' (+' + (nat.length - natContra) + ' regularizadoras)' : '') : 'Sin saldos contrarios',
           cols: [{ h: 'Código', t: 's' }, { h: 'Cuenta', t: 's' }, { h: 'Naturaleza', t: 's' }, { h: 'Saldo inicial', t: 'm' }, { h: 'Debe', t: 'm' }, { h: 'Haber', t: 'm' }, { h: 'Saldo final', t: 'm' }, { h: 'Clasificación', t: 'b' }],
@@ -12935,7 +12937,8 @@ ${cont.innerHTML}
     // MOTOR-FIN
 
     // ===== MAYOR CONTABLE: PANTALLA =====
-    const MYS = { fuente: null, headers: [], mapa: {}, hdrIdx: 0, A: null, res: null, manuales: new Set(), tab: 'resumen', bfSel: 'todos', concVista: 'grupos', ocupado: false, sort: null, sig: {}, parte1: {}, parte2: {}, guardados: {} };
+    const MYS = { fuente: null, headers: [], mapa: {}, hdrIdx: 0, A: null, res: null, manuales: new Set(), tab: 'resumen', bfSel: 'todos', concVista: 'grupos', ocupado: false, sort: null, sig: {}, parte1: {}, parte2: {}, guardados: {}, nat: { 1: 'D', 2: 'C', 3: 'C', 4: 'C', 5: 'D', 6: 'D', 7: 'C', 8: 'D', 9: 'D' } };
+    const MY_NAT_DEF = { 1: 'D', 2: 'C', 3: 'C', 4: 'C', 5: 'D', 6: 'D', 7: 'C', 8: 'D', 9: 'D' };
     function mayorPartes(tk) { const x = String(tk).split('·'); return [x[0] || '', x.slice(1).join('·')]; }
     function sigDe(tk) {
       if (MYS.sig[tk]) return MYS.sig[tk];
@@ -12971,12 +12974,12 @@ ${cont.innerHTML}
     const mayorClienteId = () => (myEl('my-cliente') || {}).value || '';
     function mayorClienteNombre() { const sel = myEl('my-cliente'); return sel && sel.selectedIndex > 0 ? sel.options[sel.selectedIndex].text : ''; }
     async function mayorCargarTipos() {
-      MYS.sig = {}; MYS.parte1 = {}; MYS.parte2 = {}; MYS.guardados = {};
+      MYS.sig = {}; MYS.parte1 = {}; MYS.parte2 = {}; MYS.guardados = {}; MYS.nat = { ...MY_NAT_DEF };
       const cid = mayorClienteId(); if (!cid) return;
       try {
         const { data, error } = await supabaseClient.from('mayor_tipos_cliente').select('tipo,significado,manual').eq('cliente_id', cid);
         if (error) throw error;
-        (data || []).forEach(r => { if (r.tipo.startsWith('#1:')) { if (r.significado) MYS.parte1[r.tipo.slice(3)] = r.significado; return; } if (r.tipo.startsWith('#2:')) { if (r.significado) MYS.parte2[r.tipo.slice(3)] = r.significado; return; } MYS.guardados[r.tipo] = r; if (r.significado) MYS.sig[r.tipo] = r.significado; });
+        (data || []).forEach(r => { if (/^#N:[1-9]$/.test(r.tipo)) { if (r.significado === 'D' || r.significado === 'C') MYS.nat[r.tipo.slice(3)] = r.significado; return; } if (r.tipo.startsWith('#1:')) { if (r.significado) MYS.parte1[r.tipo.slice(3)] = r.significado; return; } if (r.tipo.startsWith('#2:')) { if (r.significado) MYS.parte2[r.tipo.slice(3)] = r.significado; return; } MYS.guardados[r.tipo] = r; if (r.significado) MYS.sig[r.tipo] = r.significado; });
       } catch (e) { mayorMsgTipos('No se pudo leer lo guardado del cliente: ' + (e.message || e), true); }
     }
     function mayorAplicarGuardados() {
@@ -12996,6 +12999,7 @@ ${cont.innerHTML}
       MYS.manuales = sel;
       const email = (typeof usuarioActivo !== 'undefined' && usuarioActivo && usuarioActivo.email) || null;
       const filas = []; MYS.A.tipos.forEach((v, tk) => filas.push({ cliente_id: cid, tipo: tk, significado: MYS.sig[tk] || '', manual: sel.has(tk), actualizado_por: email, actualizado_en: new Date().toISOString() }));
+      Object.keys(MYS.nat).forEach(d => filas.push({ cliente_id: cid, tipo: '#N:' + d, significado: MYS.nat[d], manual: false, actualizado_por: email, actualizado_en: new Date().toISOString() }));
       Object.keys(MYS.parte1).forEach(c => filas.push({ cliente_id: cid, tipo: '#1:' + c, significado: MYS.parte1[c], manual: false, actualizado_por: email, actualizado_en: new Date().toISOString() }));
       Object.keys(MYS.parte2).forEach(c => filas.push({ cliente_id: cid, tipo: '#2:' + c, significado: MYS.parte2[c], manual: false, actualizado_por: email, actualizado_en: new Date().toISOString() }));
       try {
@@ -13143,7 +13147,7 @@ ${cont.innerHTML}
         });
         myEl('my-barra').style.width = '100%'; myEl('my-prog-txt').textContent = 'Calculando pruebas…'; await myTick();
         MYS.A = A;
-        if (mayorClienteId()) await mayorCargarTipos(); else { MYS.sig = {}; MYS.parte1 = {}; MYS.parte2 = {}; MYS.guardados = {}; }
+        if (mayorClienteId()) await mayorCargarTipos(); else { MYS.sig = {}; MYS.parte1 = {}; MYS.parte2 = {}; MYS.guardados = {}; MYS.nat = { ...MY_NAT_DEF }; }
         mayorAplicarGuardados();
         if (isFinite(A.maxDia) && !myEl('my-p-cierre').value) { /* se mostrará el cierre supuesto en la prueba de corte */ }
         mayorCalcular();
@@ -13163,7 +13167,7 @@ ${cont.innerHTML}
 
     function mayorCalcular() {
       const P = mayorParams();
-      MYS.res = MYM.finalizar(MYS.A, { manuales: MYS.manuales, mat: P.mat, cierre: P.cierre, dias: P.dias, tol: P.tol, natMin: P.natMin, red: MYS.A.P.red, dupMin: MYS.A.P.dup });
+      MYS.res = MYM.finalizar(MYS.A, { manuales: MYS.manuales, mat: P.mat, cierre: P.cierre, dias: P.dias, tol: P.tol, natMin: P.natMin, nat: MYS.nat, red: MYS.A.P.red, dupMin: MYS.A.P.dup });
     }
 
     function mayorRecalcular() {
@@ -13184,7 +13188,15 @@ ${cont.innerHTML}
       const tabs0 = null;
       mayorPintarTabs();
     }
+    function mayorPintarNat() {
+      const el = myEl('my-nat'); if (!el) return;
+      const nom = { 1: 'Activos', 2: 'Pasivos', 3: 'Patrimonio', 4: 'Ingresos', 5: 'Costos', 6: 'Gastos', 7: 'Otros (7)', 8: 'Otros (8)', 9: 'Otros (9)' };
+      el.innerHTML = '<div class="text-[11px] font-bold text-slate-600">Naturaleza de las cuentas según el primer dígito del código (sirve para revisar los signos). Se guarda por cliente.</div><div class="flex flex-wrap gap-2">' +
+        [1, 2, 3, 4, 5, 6, 7, 8, 9].map(d => `<label class="flex items-center gap-1 px-2 py-1 border border-slate-200 rounded-lg text-[11px]"><span class="font-bold text-slate-700">${d} ${nom[d]}</span><select onchange="mayorCambiarNat(${d}, this.value)" class="h-6 border border-slate-300 rounded bg-white text-[11px]"><option value="D"${MYS.nat[d] === 'D' ? ' selected' : ''}>Débito</option><option value="C"${MYS.nat[d] === 'C' ? ' selected' : ''}>Crédito</option></select></label>`).join('') + '</div>';
+    }
+    function mayorCambiarNat(d, v) { MYS.nat[d] = v; if (MYS.A) { mayorCalcular(); mayorPintar(); } }
     function mayorPintarTipos() {
+      mayorPintarNat();
       const A = MYS.A;
       const chk = document.querySelectorAll('.my-chk-man'); if (chk.length) { MYS.manuales = new Set(); chk.forEach(c => { if (c.checked) MYS.manuales.add(c.dataset.tk); }); }
       const tipos = [...A.tipos.entries()].sort((a, b) => b[1].lineas - a[1].lineas);
