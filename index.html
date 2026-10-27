@@ -1547,17 +1547,49 @@
       </div>
     </section>
 
-    <section id="sec-arrend" class="hidden bg-white rounded-2xl shadow-xl border border-slate-200 p-3 min-h-[92vh] space-y-2">
-      <div class="flex flex-wrap items-center gap-x-3 gap-y-1.5 border-b pb-2">
-        <h1 id="ar-titulo" class="text-sm font-bold text-slate-800 whitespace-nowrap">Arrendamientos NIIF 16</h1>
-        <label for="ar-cliente" class="text-[11px] font-semibold text-slate-600 sm:ml-16">Cliente</label>
-        <select id="ar-cliente" onchange="cargarArrend()" class="w-64 max-w-full px-2 py-1 bg-white border border-slate-300 rounded-lg text-[11px] focus:ring-2 focus:ring-indigo-500 outline-none">
-          <option value="">-- Selecciona un Cliente --</option>
-        </select><button type="button" onclick="arrNuevaEntidad()" title="Para calcular una empresa que no es cliente: no tiene sumarias, los saldos del balance se ponen a mano" class="px-2 py-1 bg-white text-indigo-700 border border-indigo-300 hover:bg-indigo-50 rounded-lg text-[11px] font-bold transition">+ Empresa que no es cliente de auditoría</button>
-        <label for="ar-timp" class="text-[11px] font-semibold text-slate-600">Impuesto diferido %</label>
-        <input id="ar-timp" type="text" inputmode="decimal" value="25" onchange="arrConfig('tasaImp', this)" class="w-14 h-6 px-1.5 text-right text-[11px] border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
+    <section id="sec-arrend" class="hidden bg-white rounded-2xl shadow-xl border border-slate-200 p-6 min-h-[92vh] space-y-5">
+      <div class="border-b pb-4">
+        <h1 id="ar-titulo" class="text-xl font-bold text-slate-800">Arrendamientos NIIF 16</h1>
+        <p class="text-xs text-slate-500">Cálculo NIIF 16 contrato por contrato: pasivo, derecho de uso, impuestos diferidos y conciliación con el balance. Sirve para clientes y para empresas que no son clientes</p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-5 gap-4">
+        <div class="md:col-span-2 xl:col-span-2">
+          <label for="ar-cliente" class="block text-xs font-semibold text-slate-600 mb-1">Cliente</label>
+          <div class="flex flex-wrap items-center gap-2">
+            <select id="ar-cliente" onchange="cargarArrend()" class="flex-1 min-w-[12rem] p-2 bg-white border border-slate-300 rounded-lg text-xs sm:text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+              <option value="">-- Selecciona un Cliente --</option>
+            </select>
+            <button type="button" onclick="arrNuevaEntidad()" title="Para calcular una empresa que no es cliente: no tiene sumarias, los saldos del balance se ponen a mano" class="px-3 py-2 bg-white text-slate-700 hover:bg-slate-50 border border-slate-400 rounded-lg text-xs font-bold transition whitespace-nowrap">+ Empresa que no es cliente de auditoría</button>
+          </div>
+        </div>
+        <div>
+          <label for="ar-anio" class="block text-xs font-semibold text-slate-600 mb-1">Año a Evaluar</label>
+          <select id="ar-anio" onchange="arrCambiarPeriodo()" class="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs sm:text-sm focus:ring-2 focus:ring-indigo-500 outline-none"></select>
+        </div>
+        <div>
+          <label for="ar-visita" class="block text-xs font-semibold text-slate-600 mb-1">Visita</label>
+          <select id="ar-visita" onchange="arrCambiarPeriodo()" class="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs sm:text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+            <option value="preliminar">Visita preliminar</option>
+            <option value="final">Visita final</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Auditor responsable</label>
+          <input type="text" id="ar-auditor" readonly tabindex="-1" placeholder="Sin identificar" class="w-full p-2 bg-slate-100 border border-slate-300 rounded-lg text-xs sm:text-sm text-slate-700 outline-none cursor-default">
+        </div>
+        <div>
+          <label for="ar-timp" class="block text-xs font-semibold text-slate-600 mb-1">Impuesto diferido %</label>
+          <input id="ar-timp" type="text" inputmode="decimal" value="25" onchange="arrConfig('tasaImp', this)" class="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs sm:text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Actualizado por</label>
+          <input type="text" id="ar-actualizado" readonly tabindex="-1" placeholder="Aún sin cambios guardados" class="w-full p-2 bg-slate-100 border border-slate-300 rounded-lg text-xs sm:text-sm text-slate-700 outline-none cursor-default">
+        </div>
+      </div>
+      <div class="flex flex-wrap items-center justify-between gap-2">
         <span id="ar-estado" class="text-[11px] text-slate-500"></span>
-        <button type="button" id="ar-descargar" onclick="arrDescargar()" class="hidden ml-auto px-2.5 py-1 bg-white text-slate-700 hover:bg-slate-50 border border-slate-400 rounded-lg text-[11px] font-bold transition">Descargar todo (Excel)</button>
+        <button type="button" id="ar-descargar" onclick="arrDescargar()" class="hidden px-2.5 py-1 bg-white text-slate-700 hover:bg-slate-50 border border-slate-400 rounded-lg text-[11px] font-bold transition">Descargar todo (Excel)</button>
       </div>
 
       <p id="ar-aviso" class="text-xs text-slate-500 border border-dashed border-slate-300 rounded-xl p-4">Selecciona el cliente para comenzar.</p>
@@ -2685,7 +2717,7 @@
       }
 
       const desdeAnalisis = (seccion === 'arrend' && sub === 'analisis');
-      if (seccion === 'arrend') { const t = document.getElementById('ar-titulo'); if (t) t.textContent = desdeAnalisis ? 'Activos por derecho de uso y pasivos por arrendamiento (NIIF 16)' : 'Arrendamientos NIIF 16'; }
+      if (seccion === 'arrend') { const t = document.getElementById('ar-titulo'); if (t) t.textContent = desdeAnalisis ? '2. Auditoría/Análisis Claves: Activos › Activos por derecho de uso y pasivos por arrendamiento' : 'Arrendamientos NIIF 16'; }
       if (desdeAnalisis) {
         const bx = document.getElementById('nav-cuenta-extra-activos-arrend');
         if (bx) bx.className = "w-full text-left px-3 py-1.5 rounded-lg text-xs font-bold bg-indigo-600 text-white shadow-md transition flex items-center gap-2";
@@ -8387,6 +8419,23 @@
       return m || 'Error desconocido';
     }
 
+    function arrPoblarPeriodo() {
+      const sa = document.getElementById('ar-anio'), sv = document.getElementById('ar-visita'); if (!sa || !sv) return;
+      const v = arrEstado.verif || {}, hoy = new Date().getFullYear();
+      if (!sa.options.length) for (let y = hoy + 1; y >= hoy - 4; y--) sa.add(new Option('Año ' + y, String(y)));
+      sa.value = String(v.__anio || (document.getElementById('an-anio') || {}).value || hoy);
+      if (![...sa.options].some(o => o.value === sa.value)) sa.add(new Option('Año ' + sa.value, sa.value));
+      sv.value = v.__visita || 'final';
+      const au = document.getElementById('ar-auditor'); if (au) au.value = v.__resp || (typeof nombreUsuarioActivo === 'function' ? nombreUsuarioActivo() : '') || '';
+    }
+    // Al cambiar el año o la visita, la conciliación se ubica en el corte correspondiente (final: diciembre; preliminar: el mismo mes, en ese año)
+    function arrCambiarPeriodo() {
+      const anio = document.getElementById('ar-anio').value, vis = document.getElementById('ar-visita').value;
+      arrEstado.verif.__anio = anio; arrEstado.verif.__visita = vis;
+      const mes = vis === 'final' ? '12' : (arrConcCorte().slice(5, 7) === '12' ? '09' : arrConcCorte().slice(5, 7));
+      arrEstado.concCorte = anio + '-' + mes; arrEstado.concBorrador = null; arrEstado.sumHecho = null;
+      arrGuardarVerif(); arrRender();
+    }
     async function abrirArrend() {
       asegurarClientesEn('ar-cliente');
       await arrCargarLibres();
@@ -8451,6 +8500,9 @@
       else { arrEstado.tasaImp = 0.25; arrEstado.tasaDef = 0.071; arrEstado.verif = {}; }
       arrEstado.concCorte = null; arrEstado.concBorrador = null; arrEstado.sumHecho = null; arrEstado.sumMsg = '';
       document.getElementById('ar-timp').value = r2f(arrEstado.tasaImp * 100);
+      arrPoblarPeriodo();
+      { const ac = document.getElementById('ar-actualizado'), d = rK && rK.data;
+        if (ac) ac.value = d && d.actualizado_por ? d.actualizado_por + (d.updated_at ? ' · ' + new Date(d.updated_at).toLocaleString('es-EC', { day: '2-digit', month: '2-digit', year: '2-digit', hour: 'numeric', minute: '2-digit' }) : '') : ''; }
       arrEstadoMsg('');
       arrRender();
     }
@@ -9137,6 +9189,11 @@
     }
     function arrConcCorte() {
       if (arrEstado.concCorte && /^\d{4}-\d{2}$/.test(arrEstado.concCorte)) return arrEstado.concCorte;
+      const vp = arrEstado.verif || {};
+      if (vp.__anio) { // año y visita elegidos: el último corte guardado de ese año, o diciembre (final) / septiembre (preliminar)
+        const delAnio = Object.keys(arrConcCortes()).filter(k => k.slice(0, 4) === String(vp.__anio)).sort();
+        return delAnio.length ? delAnio[delAnio.length - 1] : vp.__anio + '-' + (vp.__visita === 'preliminar' ? '09' : '12');
+      }
       const ks = Object.keys(arrConcCortes()).sort(); if (ks.length) return ks[ks.length - 1];
       const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - 1);
       return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
@@ -9260,6 +9317,7 @@
     function arrGuardarVerif() {
       arrEstadoMsg('Guardando...');
       clearTimeout(arrEstado.temporizadores.__verif);
+      if (!arrEstado.verif.__resp && typeof nombreUsuarioActivo === 'function' && nombreUsuarioActivo()) arrEstado.verif.__resp = nombreUsuarioActivo();
       const ctx = arrEstado.cliente, v = arrEstado.verif, ti = arrEstado.tasaImp, td = arrEstado.tasaDef;
       arrEstado.temporizadores.__verif = setTimeout(async () => {
         const { error } = await supabaseClient.from('arrendamientos_config').upsert([{ cliente_id: ctx, tasa_impuesto: ti, tasa_defecto: td, verificaciones: v, actualizado_por: nombreUsuarioActivo() || null, updated_at: new Date().toISOString() }], { onConflict: 'cliente_id' });
