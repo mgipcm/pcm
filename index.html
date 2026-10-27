@@ -1065,10 +1065,16 @@
 
         <!-- 1. Anexo y cálculos programados -->
         <div id="an-panel-anexo" class="space-y-5">
+          <div class="flex flex-wrap items-center gap-1.5 p-2 bg-slate-100 border border-slate-300 rounded-xl">
+            <button type="button" id="an-sub-btn-subir" onclick="anexoSub('subir')" class="px-3 py-1 rounded-lg text-[11px] font-bold border transition">Subir anexo (Excel o CSV)</button>
+            <button type="button" id="an-sub-btn-docs" onclick="anexoSub('docs')" class="px-3 py-1 rounded-lg text-[11px] font-bold border transition">¿No te entregaron el anexo? Armarlo desde documentos escaneados</button>
+          </div>
           <!-- Opción: armar el anexo desde documentos escaneados (pólizas, certificados, estados de cuenta) -->
-          <details id="an-doc-box" class="border border-slate-300 rounded-xl">
-            <summary class="px-4 py-2.5 text-xs font-bold text-slate-700 cursor-pointer select-none">¿No te entregaron el anexo? Arma el anexo desde documentos escaneados (pólizas, certificados, estados de cuenta)</summary>
-            <div class="px-4 pb-4 pt-1 space-y-3">
+
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <div class="lg:col-span-2 space-y-2">
+          <div id="an-sub-docs" class="hidden border border-slate-300 rounded-xl">
+            <div class="p-4 space-y-3">
               <p class="text-[11px] text-slate-500 leading-relaxed">Sube las pólizas o los certificados en PDF o fotografía. Claude lee cada documento y propone las inversiones (operación, fechas, tasa y valor). Tú revisas y corriges contra el documento antes de usarlas como anexo.</p>
               <label for="an-doc-archivos" ondragover="event.preventDefault()" ondrop="event.preventDefault(); agregarArchivosDocAnexo(event.dataTransfer.files)"
                      class="block border-2 border-dashed border-slate-300 hover:border-indigo-400 hover:bg-slate-50 rounded-xl p-4 text-center cursor-pointer transition">
@@ -1083,10 +1089,8 @@
               </div>
               <div id="an-doc-revision" class="hidden space-y-2"></div>
             </div>
-          </details>
-
-          <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            <div class="lg:col-span-2 space-y-2">
+          </div>
+              <div id="an-sub-subir" class="space-y-2">
               <h2 class="text-xs font-bold text-slate-600">Anexo de inversiones</h2>
               <label for="an-anexo-archivo" ondragover="event.preventDefault()" ondrop="event.preventDefault(); alElegirArchivoAnexo(event.dataTransfer.files)"
                      class="block border-2 border-dashed border-slate-300 hover:border-indigo-400 hover:bg-slate-50 rounded-xl p-4 text-center cursor-pointer transition">
@@ -1097,6 +1101,7 @@
               <div class="flex flex-wrap items-center justify-between gap-2">
                 <p id="an-anexo-archivo-nombre" class="text-[11px] text-slate-500"></p>
                 <button type="button" onclick="descargarPlantillaAnexo()" class="px-2.5 py-1 bg-white text-slate-700 hover:bg-slate-50 border border-slate-400 rounded text-[11px] font-bold transition">Descargar plantilla</button>
+              </div>
               </div>
             </div>
             <div class="space-y-3">
@@ -3076,8 +3081,19 @@
       cambiarPestanaAnalisis(analisisEstado.pestana);
     }
 
+    function anexoSub(k) {
+      analisisEstado.sub = k === 'docs' ? 'docs' : 'subir';
+      const docs = analisisEstado.sub === 'docs';
+      document.getElementById('an-sub-docs').classList.toggle('hidden', !docs);
+      document.getElementById('an-sub-subir').classList.toggle('hidden', docs);
+      [['subir', !docs], ['docs', docs]].forEach(([id, on]) => {
+        const b = document.getElementById('an-sub-btn-' + id);
+        if (b) b.className = 'px-3 py-1 rounded-lg text-[11px] font-bold border transition ' + (on ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-indigo-700 border-indigo-500 hover:bg-indigo-50');
+      });
+    }
     function cambiarPestanaAnalisis(p) {
       analisisEstado.pestana = p;
+      anexoSub(analisisEstado.sub);
       // Hojas hechas: más oscuras; hojas por llenar: más claras
       const rp = document.getElementById('an-prog-responsable');
       const hechas = { programa: !!(rp && rp.value.trim()), anexo: anexoEstado.registros.length > 0, claude: analisisEstado.analisis.length > 0, criterio: !!(analisisEstado.criterio && analisisEstado.criterio.conclusion) };
