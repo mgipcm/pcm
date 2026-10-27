@@ -1022,10 +1022,18 @@
       <div id="an-espacio" class="hidden space-y-4">
         <p id="an-error-tablas" class="hidden text-xs font-bold text-red-600 border border-red-300 rounded-lg p-3"></p>
 
+
+        <div class="flex flex-wrap gap-1.5 border-b-2 border-slate-200">
+          <button type="button" id="an-tab-programa" onclick="cambiarPestanaAnalisis('programa')" class="px-4 py-2 text-xs transition">1. Programa de trabajo</button>
+          <button type="button" id="an-tab-anexo" onclick="cambiarPestanaAnalisis('anexo')" class="px-4 py-2 text-xs transition">2. Anexo y cálculos</button>
+          <button type="button" id="an-tab-claude" onclick="cambiarPestanaAnalisis('claude')" class="px-4 py-2 text-xs transition">3. Análisis de Claude</button>
+          <button type="button" id="an-tab-criterio" onclick="cambiarPestanaAnalisis('criterio')" class="px-4 py-2 text-xs transition">4. Criterio final del auditor</button>
+        </div>
+
         <!-- Programa de trabajo de la cuenta (texto predeterminado, editable) -->
-        <details id="an-programa" open class="border border-slate-300 rounded-xl">
-          <summary class="px-4 py-2.5 text-xs font-bold text-slate-700 cursor-pointer select-none">Programa de trabajo de la cuenta</summary>
-          <div class="px-4 pb-4 pt-1 space-y-3">
+        <div id="an-panel-programa" class="space-y-3 max-w-4xl">
+          <h3 class="text-sm font-bold text-slate-800">Programa de trabajo de la cuenta</h3><p class="text-[11px] text-slate-500">Texto predeterminado editable. Se guarda por cliente y año.</p>
+          <div class="space-y-3">
             <div>
               <label class="block text-xs font-bold text-slate-600 mb-1" for="an-prog-objetivo">Objetivo</label>
               <textarea id="an-prog-objetivo" rows="3" oninput="programarGuardadoPrograma()" class="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-indigo-500 outline-none"></textarea>
@@ -1053,12 +1061,6 @@
               <p id="an-prog-estado" class="text-[11px] text-slate-400 min-h-[1rem]"></p>
             </div>
           </div>
-        </details>
-
-        <div class="flex flex-wrap gap-1.5 border-b-2 border-slate-200">
-          <button type="button" id="an-tab-anexo" onclick="cambiarPestanaAnalisis('anexo')" class="px-4 py-2 text-xs transition">1. Anexo y cálculos</button>
-          <button type="button" id="an-tab-claude" onclick="cambiarPestanaAnalisis('claude')" class="px-4 py-2 text-xs transition">2. Análisis de Claude</button>
-          <button type="button" id="an-tab-criterio" onclick="cambiarPestanaAnalisis('criterio')" class="px-4 py-2 text-xs transition">3. Criterio final del auditor</button>
         </div>
 
         <!-- 1. Anexo y cálculos programados -->
@@ -2731,7 +2733,7 @@
     const SEP_CONCLUSION = ' ; ';
 
     let analisisEstado = {
-      rubro: 'activos', cuenta: '', clave: '', pestana: 'anexo',
+      rubro: 'activos', cuenta: '', clave: '', pestana: 'programa',
       analisis: [], criterio: null, cargaId: 0, responsable: '', actualizado: null
     };
     let archivosAnalisis = [];
@@ -2920,6 +2922,7 @@
       document.getElementById('an-prog-estado').textContent = '';
     }
     function programarGuardadoPrograma() {
+      actualizarInsigniasAnalisis();
       if (!valorAnalisis('an-cliente') || !valorAnalisis('an-anio')) return;
       clearTimeout(guardadoPrograma.timer);
       const p = leerPrograma();
@@ -3075,25 +3078,32 @@
 
     function cambiarPestanaAnalisis(p) {
       analisisEstado.pestana = p;
-      ['anexo', 'claude', 'criterio'].forEach(t => {
+      // Hojas hechas: más oscuras; hojas por llenar: más claras
+      const rp = document.getElementById('an-prog-responsable');
+      const hechas = { programa: !!(rp && rp.value.trim()), anexo: anexoEstado.registros.length > 0, claude: analisisEstado.analisis.length > 0, criterio: !!(analisisEstado.criterio && analisisEstado.criterio.conclusion) };
+      ['programa', 'anexo', 'claude', 'criterio'].forEach(t => {
         const panel = document.getElementById('an-panel-' + t);
         const tab = document.getElementById('an-tab-' + t);
         if (panel) panel.classList.toggle('hidden', t !== p);
         if (tab) {
           tab.className = 'px-5 py-2.5 text-sm transition rounded-t-lg border border-b-4 -mb-px ' +
-            (t === p ? 'border-slate-300 border-b-indigo-600 bg-indigo-50 text-indigo-800 font-bold' : 'border-transparent bg-slate-50 text-slate-500 hover:bg-slate-100 hover:text-slate-800 font-semibold');
+            (t === p ? 'border-slate-300 border-b-indigo-600 bg-indigo-50 text-indigo-800 font-bold'
+              : (hechas[t] ? 'border-transparent bg-slate-200 text-slate-900 hover:bg-slate-300 font-bold' : 'border-transparent bg-slate-50 text-slate-400 hover:bg-slate-100 hover:text-slate-700 font-medium'));
         }
       });
       ajustarTextareasRespuesta();
     }
 
     function actualizarInsigniasAnalisis() {
+      const tabP = document.getElementById('an-tab-programa');
+      if (tabP) { const rp = document.getElementById('an-prog-responsable'); tabP.textContent = '1. Programa de trabajo' + (rp && rp.value.trim() ? ' ✓' : ''); }
       const tabA = document.getElementById('an-tab-anexo');
-      if (tabA) tabA.textContent = '1. Anexo y cálculos' + (anexoEstado.registros.length > 0 ? ' ✓' : '');
+      setTimeout(() => cambiarPestanaAnalisis(analisisEstado.pestana), 0);
+      if (tabA) tabA.textContent = '2. Anexo y cálculos' + (anexoEstado.registros.length > 0 ? ' ✓' : '');
       const tabC = document.getElementById('an-tab-claude');
-      if (tabC) tabC.textContent = '2. Análisis de Claude' + (analisisEstado.analisis.length > 0 ? ' ✓' : '');
+      if (tabC) tabC.textContent = '3. Análisis de Claude' + (analisisEstado.analisis.length > 0 ? ' ✓' : '');
       const tabK = document.getElementById('an-tab-criterio');
-      if (tabK) tabK.textContent = '3. Criterio final del auditor' + (analisisEstado.criterio && analisisEstado.criterio.conclusion ? ' ✓' : '');
+      if (tabK) tabK.textContent = '4. Criterio final del auditor' + (analisisEstado.criterio && analisisEstado.criterio.conclusion ? ' ✓' : '');
     }
 
     // ----- 2. Análisis de Claude (usa automáticamente los resultados de la comparación) -----
