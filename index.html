@@ -3140,7 +3140,7 @@
         if (tab) {
           tab.className = 'px-3 py-1.5 text-xs transition rounded-lg ' +
             (t === p ? 'bg-slate-200 text-slate-900 font-semibold'
-              : (hechas[t] ? 'text-slate-900 hover:bg-slate-100 font-semibold' : 'text-slate-400 hover:bg-slate-100 hover:text-slate-700 font-medium'));
+              : 'text-slate-600 hover:bg-slate-100 font-medium');
         }
       });
       ajustarTextareasRespuesta();
@@ -3149,14 +3149,14 @@
     const PUNTO_HECHO = ' <span style="color:#000;font-size:9px;vertical-align:middle">●</span>';
     function actualizarInsigniasAnalisis() {
       const tabP = document.getElementById('an-tab-programa');
-      if (tabP) { const rp = document.getElementById('an-prog-responsable'); tabP.innerHTML = '1. Programa de trabajo' + (rp && rp.value.trim() ? PUNTO_HECHO : ''); }
+      if (tabP) { const rp = document.getElementById('an-prog-responsable'); tabP.innerHTML = '1. Programa de trabajo' + ''; }
       const tabA = document.getElementById('an-tab-anexo');
       setTimeout(() => cambiarPestanaAnalisis(analisisEstado.pestana), 0);
-      if (tabA) tabA.innerHTML = '2. Anexo y cálculos' + (anexoEstado.registros.length > 0 ? PUNTO_HECHO : '');
+      if (tabA) tabA.innerHTML = '2. Anexo y cálculos' + '';
       const tabC = document.getElementById('an-tab-claude');
-      if (tabC) tabC.innerHTML = '3. Análisis de Claude' + (analisisEstado.analisis.length > 0 ? PUNTO_HECHO : '');
+      if (tabC) tabC.innerHTML = '3. Análisis de Claude' + '';
       const tabK = document.getElementById('an-tab-criterio');
-      if (tabK) tabK.innerHTML = '4. Criterio final del auditor' + (analisisEstado.criterio && analisisEstado.criterio.conclusion ? PUNTO_HECHO : '');
+      if (tabK) tabK.innerHTML = '4. Criterio final del auditor' + '';
     }
 
     // ----- 2. Análisis de Claude (usa automáticamente los resultados de la comparación) -----
