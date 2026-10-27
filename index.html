@@ -392,7 +392,7 @@
           <input type="text" id="cli-nombre-completo" required placeholder="Ej. Corporación ABC S.A." class="w-full p-2 border border-slate-300 rounded-lg text-xs outline-none focus:ring-2 focus:ring-indigo-500 bg-white">
         </div>
         <div class="flex items-end gap-2">
-          <button type="submit" id="btn-guardar-cli" class="w-full py-2 bg-indigo-600 text-white rounded-lg text-xs font-bold hover:bg-indigo-700 transition shadow">
+          <button type="submit" id="btn-guardar-cli" class="w-full py-2 rounded-lg text-xs transition bg-slate-200 text-slate-900 hover:bg-slate-300 font-semibold">
             + Crear Cliente
           </button>
           <div id="box-cancelar-edicion" class="hidden w-full">
@@ -463,7 +463,7 @@
           </select>
         </div>
         <div class="flex items-end">
-          <button type="submit" class="w-full py-2 bg-indigo-600 text-white rounded-lg text-xs font-bold hover:bg-indigo-700 transition shadow">
+          <button type="submit" class="w-full py-2 rounded-lg text-xs transition bg-slate-200 text-slate-900 hover:bg-slate-300 font-semibold">
             + Crear Auditor
           </button>
         </div>
@@ -473,7 +473,7 @@
         <h2 class="text-xs font-bold text-slate-700">Acceso a la aplicación (correo y clave)</h2>
         <p class="text-[11px] text-slate-500">Cada persona de la lista necesita su acceso para ingresar. Al crearlo, la aplicación genera una clave temporal que debes entregarle; después ella puede cambiarla con "Cambiar mi clave" en el menú lateral.</p>
         <div class="flex flex-wrap items-center gap-2">
-          <button type="button" onclick="crearAccesosFaltantes()" class="px-3 py-1.5 bg-white text-indigo-700 hover:bg-indigo-50 border border-indigo-500 rounded-lg text-xs font-bold transition">Crear acceso a quienes no tienen</button>
+          <button type="button" onclick="crearAccesosFaltantes()" class="px-3 py-1.5 rounded-lg text-xs transition bg-slate-100 text-slate-800 hover:bg-slate-200 font-medium">Crear acceso a quienes no tienen</button>
           <button type="button" onclick="refrescarAccesos()" class="px-3 py-1.5 bg-white text-slate-700 hover:bg-slate-50 border border-slate-400 rounded-lg text-xs font-bold transition">Actualizar estado</button>
         </div>
         <label class="inline-flex items-center gap-2 px-3 py-1.5 border rounded-lg cursor-pointer text-xs font-bold select-none border-emerald-500 bg-emerald-50 text-emerald-800">
@@ -565,7 +565,7 @@
               <label class="block text-xs font-semibold text-slate-600 mb-1">Crear / Añadir Año</label>
               <div class="flex items-center gap-1">
                 <input type="number" id="input-nuevo-anio" placeholder="Ej. 2028" min="2000" max="2100" class="w-full p-2 border border-slate-300 rounded-lg text-xs outline-none focus:ring-2 focus:ring-indigo-500 bg-white">
-                <button type="button" onclick="agregarNuevoAnioAuditoria()" class="px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg text-xs transition shadow shrink-0">
+                <button type="button" onclick="agregarNuevoAnioAuditoria()" class="px-3 py-2 rounded-lg text-xs transition shrink-0 bg-slate-200 text-slate-900 hover:bg-slate-300 font-semibold">
                   + Añadir
                 </button>
               </div>
@@ -738,7 +738,7 @@
             </label>
           </div>
           <div class="pt-4 shrink-0">
-            <button type="submit" class="px-5 py-2 bg-indigo-600 text-white rounded-lg text-xs font-bold hover:bg-indigo-700 transition shadow flex items-center gap-1.5">
+            <button type="submit" class="px-5 py-2 rounded-lg text-xs transition flex items-center gap-1.5 bg-slate-200 text-slate-900 hover:bg-slate-300 font-semibold">
               <span>+ Agendar Visita</span>
             </button>
           </div>
@@ -879,7 +879,7 @@
               <label class="block text-[11px] font-bold text-slate-600 mb-1">Fecha de corte del balance</label>
               <input type="date" id="su-fecha" onchange="guardarFechaCorteSumarias(false)" class="p-2 bg-white border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-indigo-500 outline-none">
             </div>
-            <label class="px-3 py-1.5 bg-white text-indigo-700 hover:bg-indigo-50 border border-indigo-500 rounded-lg text-xs font-bold cursor-pointer transition">
+            <label class="px-3 py-1.5 rounded-lg text-xs cursor-pointer transition bg-slate-100 text-slate-800 hover:bg-slate-200 font-medium">
               Subir balance (Excel)
               <input type="file" id="su-archivo" accept=".xlsx,.xls,.csv" class="hidden" onchange="subirBalanceSumarias(this, false)">
             </label>
@@ -897,7 +897,7 @@
               <label class="block text-[11px] font-bold text-slate-600 mb-1">Fecha de corte del periodo anterior</label>
               <input type="date" id="su-fecha-prev" onchange="guardarFechaCorteSumarias(true)" class="p-2 bg-white border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-indigo-500 outline-none">
             </div>
-            <label class="px-3 py-1.5 bg-white text-indigo-700 hover:bg-indigo-50 border border-indigo-500 rounded-lg text-xs font-bold cursor-pointer transition">
+            <label class="px-3 py-1.5 rounded-lg text-xs cursor-pointer transition bg-slate-100 text-slate-800 hover:bg-slate-200 font-medium">
               Subir balance del periodo anterior (Excel)
               <input type="file" id="su-archivo-prev" accept=".xlsx,.xls,.csv" class="hidden" onchange="subirBalanceSumarias(this, true)">
             </label>
@@ -927,7 +927,7 @@
       <div class="border border-slate-300 rounded-xl p-4 space-y-2">
         <h2 class="text-xs font-bold text-slate-700">Cargar desde Excel</h2>
         <p class="text-[11px] text-slate-500">Columnas: <b>Sumaria</b>, <b>Cuenta</b>, <b>Clasificación</b> y <b>Grupo</b>. Las sumarias que ya existen se actualizan y las nuevas se agregan; no se borra nada.</p>
-        <label class="inline-block px-3 py-1.5 bg-white text-indigo-700 hover:bg-indigo-50 border border-indigo-500 rounded-lg text-xs font-bold cursor-pointer transition">
+        <label class="inline-block px-3 py-1.5 rounded-lg text-xs cursor-pointer transition bg-slate-100 text-slate-800 hover:bg-slate-200 font-medium">
           Subir catálogo (Excel)
           <input type="file" id="cu-archivo" accept=".xlsx,.xls,.csv" class="hidden" onchange="subirCatalogoCuentas(this)">
         </label>
@@ -952,7 +952,7 @@
           <input type="text" id="cu-grupo" placeholder="Ej. Activos" class="w-full p-2 border border-slate-300 rounded-lg text-xs outline-none focus:ring-2 focus:ring-indigo-500 bg-white">
         </div>
         <div class="flex items-end">
-          <button type="submit" class="w-full py-2 bg-white text-indigo-700 hover:bg-indigo-50 border border-indigo-500 rounded-lg text-xs font-bold transition">Guardar cuenta</button>
+          <button type="submit" class="w-full py-2 rounded-lg text-xs transition bg-slate-100 text-slate-800 hover:bg-slate-200 font-medium">Guardar cuenta</button>
         </div>
       </form>
 
@@ -1084,7 +1084,7 @@
               <input type="file" id="an-doc-archivos" multiple class="hidden" accept=".pdf,.png,.jpg,.jpeg,.webp,.gif" onchange="agregarArchivosDocAnexo(this.files)">
               <ul id="an-doc-lista" class="space-y-1"></ul>
               <div class="flex flex-wrap items-center gap-3">
-                <button type="button" id="an-doc-btn" onclick="extraerAnexoDesdeDocumentos()" class="px-4 py-2 bg-white text-indigo-700 hover:bg-indigo-50 border border-indigo-500 rounded-lg text-xs font-bold transition disabled:opacity-60 disabled:cursor-not-allowed">Leer documentos y proponer inversiones</button>
+                <button type="button" id="an-doc-btn" onclick="extraerAnexoDesdeDocumentos()" class="px-4 py-2 rounded-lg text-xs transition disabled:opacity-60 disabled:cursor-not-allowed bg-slate-100 text-slate-800 hover:bg-slate-200 font-medium">Leer documentos y proponer inversiones</button>
                 <p id="an-doc-estado" class="text-xs text-slate-500 min-h-[1rem]"></p>
               </div>
               <div id="an-doc-revision" class="hidden space-y-2"></div>
@@ -1228,7 +1228,7 @@
                           class="w-full p-2.5 border border-slate-300 rounded-lg text-xs outline-none focus:ring-2 focus:ring-indigo-500 bg-white leading-relaxed text-slate-800 resize-none"></textarea>
               </div>
 
-              <button id="an-btn-analizar" onclick="generarAnalisisCuenta()" class="w-full py-2.5 bg-indigo-600 text-white rounded-lg text-xs font-bold hover:bg-indigo-700 transition shadow disabled:opacity-60 disabled:cursor-not-allowed">
+              <button id="an-btn-analizar" onclick="generarAnalisisCuenta()" class="w-full py-2.5 rounded-lg text-xs transition disabled:opacity-60 disabled:cursor-not-allowed bg-slate-200 text-slate-900 hover:bg-slate-300 font-semibold">
                 Analizar con Claude
               </button>
               <p id="an-estado" class="text-xs text-slate-500 min-h-[1rem]"></p>
@@ -1267,7 +1267,7 @@
             <textarea id="an-criterio" data-min="140" rows="7" oninput="autoajustarTextarea(this)" placeholder="Describe el trabajo realizado, los hallazgos, los ajustes propuestos y el fundamento de tu conclusión..."
                       class="ta-respuesta w-full p-2.5 border border-slate-300 rounded-lg text-xs outline-none focus:ring-2 focus:ring-indigo-500 bg-white leading-relaxed text-slate-800 resize-none overflow-hidden" style="min-height:140px"></textarea>
             <div class="flex flex-wrap items-center gap-2 mt-2">
-              <button type="button" id="an-btn-mejorar" onclick="mejorarRedaccionCriterio()" class="px-3 py-1.5 bg-white text-slate-700 hover:bg-indigo-50 border border-indigo-500 rounded-lg text-[11px] font-bold transition disabled:opacity-60 disabled:cursor-not-allowed">Mejorar redacción con Claude</button>
+              <button type="button" id="an-btn-mejorar" onclick="mejorarRedaccionCriterio()" class="px-3 py-1.5 rounded-lg text-[11px] transition disabled:opacity-60 disabled:cursor-not-allowed bg-slate-100 text-slate-800 hover:bg-slate-200 font-medium">Mejorar redacción con Claude</button>
               <span id="an-mejorar-estado" class="text-[11px] text-slate-500"></span>
             </div>
             <div id="an-mejorar-panel" class="hidden mt-2 border border-indigo-300 bg-indigo-50/40 rounded-lg p-3 space-y-2">
@@ -1309,7 +1309,7 @@
             </div>
             <input type="text" id="an-asiento-glosa" oninput="asientoEstado.glosa = this.value" placeholder="Glosa o concepto del asiento (opcional)" class="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-indigo-500 outline-none">
           </div>
-          <button id="an-btn-criterio" onclick="guardarCriterioAnalisis()" class="px-5 py-2.5 bg-indigo-600 text-white rounded-lg text-xs font-bold hover:bg-indigo-700 transition shadow disabled:opacity-60 disabled:cursor-not-allowed">
+          <button id="an-btn-criterio" onclick="guardarCriterioAnalisis()" class="px-5 py-2.5 rounded-lg text-xs transition disabled:opacity-60 disabled:cursor-not-allowed bg-slate-200 text-slate-900 hover:bg-slate-300 font-semibold">
             Guardar criterio final
           </button>
           <p id="an-criterio-estado" class="text-xs text-slate-500 min-h-[1rem]"></p>
@@ -1352,7 +1352,7 @@
           <span class="block text-[11px] text-slate-500">Con el cliente elegido, el significado de los tipos de asiento y cuáles son manuales se guardan y se cargan solos la próxima vez.</span>
         </label>
         <div class="flex flex-wrap items-center gap-3">
-          <label class="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold cursor-pointer transition shadow">
+          <label class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs cursor-pointer transition bg-slate-200 text-slate-900 hover:bg-slate-300 font-semibold">
             <span>Seleccionar archivo</span>
             <input type="file" id="my-file" accept=".csv,.txt,.tsv,.xlsx,.xls" onchange="mayorElegirArchivo(event)" class="hidden">
           </label>
@@ -1384,7 +1384,7 @@
           </div>
           <p class="text-[11px] text-slate-400">Materialidad, fecha de cierre, días de corte, tolerancia y saldo contrario se pueden cambiar después sin volver a leer el archivo (botón «Recalcular»).</p>
           <div class="pt-1">
-            <button id="my-btn-analizar" onclick="mayorAnalizar()" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow">Analizar mayor</button>
+            <button id="my-btn-analizar" onclick="mayorAnalizar()" class="px-5 py-2.5 rounded-xl text-xs bg-slate-200 text-slate-900 hover:bg-slate-300 font-semibold">Analizar mayor</button>
           </div>
           <div id="my-progreso" class="hidden space-y-1">
             <div class="h-2 bg-slate-100 rounded-full overflow-hidden"><div id="my-barra" class="h-2 bg-indigo-600 rounded-full" style="width:0%"></div></div>
@@ -1461,10 +1461,10 @@
                       class="w-full p-2.5 border border-slate-300 rounded-lg text-xs outline-none focus:ring-2 focus:ring-indigo-500 bg-white leading-relaxed text-slate-800 resize-none"></textarea>
           </div>
 
-          <button id="contr-btn-generar" onclick="generarResumenContrato()" class="w-full py-2.5 bg-indigo-600 text-white rounded-lg text-xs font-bold hover:bg-indigo-700 transition shadow disabled:opacity-60 disabled:cursor-not-allowed">
+          <button id="contr-btn-generar" onclick="generarResumenContrato()" class="w-full py-2.5 rounded-lg text-xs transition disabled:opacity-60 disabled:cursor-not-allowed bg-slate-200 text-slate-900 hover:bg-slate-300 font-semibold">
             Generar resumen con Claude
           </button>
-          <button id="contr-btn-informe" onclick="generarInformeContrato()" class="w-full py-2.5 bg-white text-indigo-700 border border-indigo-500 rounded-lg text-xs font-bold hover:bg-indigo-50 transition disabled:opacity-60 disabled:cursor-not-allowed">
+          <button id="contr-btn-informe" onclick="generarInformeContrato()" class="w-full py-2.5 rounded-lg text-xs transition disabled:opacity-60 disabled:cursor-not-allowed bg-slate-100 text-slate-800 hover:bg-slate-200 font-medium">
             Generar versión informe (tabla de la nota Contratos suscritos)
           </button>
           <button id="contr-btn-reiniciar" onclick="reiniciarContratos()" class="w-full py-2 bg-white text-slate-600 border border-slate-300 rounded-lg text-xs font-bold hover:bg-slate-50 transition">
@@ -1498,7 +1498,7 @@
           <h2 class="text-xs font-bold text-slate-600">Versión informe · Contratos suscritos (cada contrato que generes se agrega como una fila)</h2>
           <div class="flex gap-1.5">
             <button id="inf-btn-copiar" onclick="copiarInformeContrato()" class="hidden px-2.5 py-1 bg-white text-slate-700 hover:bg-slate-50 border border-slate-400 rounded text-[11px] font-bold transition">Copiar tabla</button>
-            <button id="inf-btn-word" onclick="descargarInformeContrato()" class="hidden px-2.5 py-1 bg-white text-indigo-700 hover:bg-indigo-50 border border-indigo-500 rounded text-[11px] font-bold transition">Descargar Word</button>
+            <button id="inf-btn-word" onclick="descargarInformeContrato()" class="hidden px-2.5 py-1 rounded-lg text-[11px] transition bg-slate-100 text-slate-800 hover:bg-slate-200 font-medium">Descargar Word</button>
             <button id="inf-btn-vaciar" onclick="vaciarInformeContrato()" class="hidden px-2.5 py-1 bg-white text-rose-600 hover:bg-rose-50 border border-rose-300 rounded text-[11px] font-bold transition">Vaciar tabla</button>
           </div>
         </div>
@@ -1530,7 +1530,7 @@
           <option value="2026">Año 2026</option>
         </select>
         <button type="button" id="fl-btn-descargar" onclick="descargarFlujo()" class="hidden px-2.5 py-1 bg-white text-slate-700 hover:bg-slate-50 border border-slate-400 rounded-lg text-[11px] font-bold transition">Descargar (Excel)</button>
-        <button type="button" id="fl-btn-libro" onclick="alternarLibroAjustes()" class="hidden px-2.5 py-1 bg-white text-indigo-700 hover:bg-indigo-50 border border-indigo-500 rounded-lg text-[11px] font-bold transition">Ver libro de ajustes</button>
+        <button type="button" id="fl-btn-libro" onclick="alternarLibroAjustes()" class="hidden px-2.5 py-1 rounded-lg text-[11px] transition bg-slate-100 text-slate-800 hover:bg-slate-200 font-medium">Ver libro de ajustes</button>
         <span id="fl-estado" class="text-[11px] text-slate-500"></span>
       </div>
 
@@ -1711,7 +1711,7 @@
             <textarea id="reu-enfoque" rows="2" placeholder="Ej. Dar más atención a inventarios y a partes relacionadas..." class="w-full p-2.5 border border-slate-300 rounded-lg text-xs outline-none focus:ring-2 focus:ring-indigo-500 bg-white leading-relaxed text-slate-800 resize-none"></textarea>
           </div>
 
-          <button id="reu-btn-generar" onclick="generarResumenReunion()" class="w-full py-2.5 bg-indigo-600 text-white rounded-lg text-xs font-bold hover:bg-indigo-700 transition shadow disabled:opacity-50">
+          <button id="reu-btn-generar" onclick="generarResumenReunion()" class="w-full py-2.5 rounded-lg text-xs transition disabled:opacity-50 bg-slate-200 text-slate-900 hover:bg-slate-300 font-semibold">
             Generar análisis de la reunión con Claude
           </button>
           <button id="reu-btn-reiniciar" onclick="reiniciarReunion()" class="w-full py-2 bg-white text-slate-600 border border-slate-300 rounded-lg text-xs font-bold hover:bg-slate-50 transition">
@@ -1733,7 +1733,7 @@
             </div>
             <div class="flex gap-1.5">
               <button id="reu-btn-copiar" onclick="copiarResumenReunion()" class="hidden px-2.5 py-1 bg-white text-slate-700 hover:bg-slate-50 border border-slate-400 rounded text-[11px] font-bold transition">Copiar</button>
-              <button id="reu-btn-word" onclick="descargarResumenReunion()" class="hidden px-2.5 py-1 bg-white text-indigo-700 hover:bg-indigo-50 border border-indigo-500 rounded text-[11px] font-bold transition">Descargar en Word</button>
+              <button id="reu-btn-word" onclick="descargarResumenReunion()" class="hidden px-2.5 py-1 rounded-lg text-[11px] transition bg-slate-100 text-slate-800 hover:bg-slate-200 font-medium">Descargar en Word</button>
             </div>
           </div>
           <div id="reu-resultado" class="p-4 text-xs text-slate-700 leading-relaxed overflow-y-auto flex-1">
@@ -1765,7 +1765,7 @@
         <div><label class="block text-[10px] font-bold text-slate-500 mb-1">Usuario</label><select id="his-usuario" onchange="pintarHistorial()" class="w-full p-2 border border-slate-300 rounded-lg text-xs bg-white"><option value="">Todos</option></select></div>
         <div><label class="block text-[10px] font-bold text-slate-500 mb-1">Acción</label><select id="his-accion" onchange="pintarHistorial()" class="w-full p-2 border border-slate-300 rounded-lg text-xs bg-white"><option value="">Todas</option></select></div>
         <div><label class="block text-[10px] font-bold text-slate-500 mb-1">Buscar</label><input type="text" id="his-buscar" oninput="pintarHistorial()" placeholder="Cliente, pregunta, pantalla..." class="w-full p-2 border border-slate-300 rounded-lg text-xs bg-white"></div>
-        <button type="button" onclick="cargarHistorial()" class="px-3 py-2 text-xs font-bold text-white bg-indigo-600 rounded-lg">Consultar</button>
+        <button type="button" onclick="cargarHistorial()" class="px-3 py-2 text-xs rounded-lg transition bg-slate-200 text-slate-900 hover:bg-slate-300 font-semibold">Consultar</button>
       </div>
       <div id="his-borrar-caja" class="hidden flex flex-wrap items-end gap-2 p-3 bg-slate-50 border border-slate-200 rounded-lg">
         <div class="text-[11px] text-slate-600 mr-2">Se conserva el periodo del <b>1 de septiembre al 31 de agosto</b>; lo anterior se borra solo cada día. También puedes borrar a mano:</div>
@@ -1849,7 +1849,7 @@
       <p id="acc-cli-estado" class="text-[11px] text-slate-500 min-h-[1rem]"></p>
       <div class="flex items-center justify-end gap-2 pt-2 border-t">
         <button type="button" onclick="cerrarModal('modal-accesos-clientes')" class="px-3 py-1.5 bg-white text-slate-700 hover:bg-slate-50 border border-slate-400 rounded-lg text-xs font-bold">Cancelar</button>
-        <button type="button" id="acc-cli-guardar" onclick="guardarAccesosClientes()" class="px-4 py-1.5 bg-indigo-600 text-white font-bold rounded-lg text-xs hover:bg-indigo-700 transition">Guardar accesos</button>
+        <button type="button" id="acc-cli-guardar" onclick="guardarAccesosClientes()" class="px-4 py-1.5 rounded-lg text-xs transition bg-slate-200 text-slate-900 hover:bg-slate-300 font-semibold">Guardar accesos</button>
       </div>
     </div>
   </div>
@@ -2110,7 +2110,7 @@
         <div class="flex flex-wrap justify-end gap-2">
           <button id="modal-visita-avisar" onclick="avisarVisitaPorCorreo()" class="px-3 py-1.5 text-xs font-bold text-emerald-700 hover:bg-emerald-50 border border-emerald-300 rounded-lg transition" title="Envía al auditor un correo con el cliente, las fechas y quién le asignó la visita">Avisar por correo</button>
           <button onclick="cerrarModal('modal-apuntes-visita')" class="px-3 py-1.5 text-xs font-bold text-slate-600 hover:bg-slate-100 border border-slate-200 rounded-lg transition">Cancelar</button>
-          <button onclick="guardarApuntesVisita()" class="px-4 py-1.5 bg-indigo-600 text-white font-bold rounded-lg text-xs hover:bg-indigo-700 transition">Guardar cambios</button>
+          <button onclick="guardarApuntesVisita()" class="px-4 py-1.5 rounded-lg text-xs transition bg-slate-200 text-slate-900 hover:bg-slate-300 font-semibold">Guardar cambios</button>
         </div>
       </div>
     </div>
@@ -4082,7 +4082,7 @@
         <p class="text-[11px] text-slate-500">Las filas en naranja tienen datos dudosos o faltantes: confírmalas con el documento. Claude puede equivocarse al leer escaneos; lo que apruebes aquí es responsabilidad del auditor.</p>
         <div class="flex flex-wrap items-center gap-2">
           <button type="button" onclick="agregarFilaDoc()" class="px-2.5 py-1 bg-white text-slate-700 hover:bg-slate-50 border border-slate-400 rounded text-[11px] font-bold transition">+ Agregar fila</button>
-          <button type="button" onclick="usarRevisionComoAnexo()" class="px-4 py-1.5 bg-white text-indigo-700 hover:bg-indigo-50 border border-indigo-500 rounded-lg text-xs font-bold transition">Usar estas inversiones como anexo</button>
+          <button type="button" onclick="usarRevisionComoAnexo()" class="px-4 py-1.5 rounded-lg text-xs transition bg-slate-100 text-slate-800 hover:bg-slate-200 font-medium">Usar estas inversiones como anexo</button>
           <button type="button" onclick="descartarRevisionDoc()" class="px-2.5 py-1 bg-white text-slate-500 hover:bg-slate-50 border border-slate-300 rounded text-[11px] font-bold transition">Descartar</button>
         </div>`;
     }
@@ -5516,7 +5516,7 @@
 
       const btnGuardar = document.getElementById('btn-guardar-cli');
       btnGuardar.textContent = "+ Crear Cliente";
-      btnGuardar.className = "w-full py-2 bg-indigo-600 text-white rounded-lg text-xs font-bold hover:bg-indigo-700 transition shadow";
+      btnGuardar.className = "w-full py-2 rounded-lg text-xs transition bg-slate-200 text-slate-900 hover:bg-slate-300 font-semibold";
 
       document.getElementById('box-cancelar-edicion').classList.add('hidden');
     }
@@ -5618,7 +5618,7 @@
       const resumen = (ed + le) === 0
         ? '<span class="text-amber-700 font-semibold">Ninguno</span>'
         : `<span class="text-slate-700">${ed} edición · ${le} lectura</span>`;
-      return `${resumen} <button type="button" onclick="abrirAccesosClientes('${escapeHtml(email)}')" class="ml-1 px-2 py-0.5 bg-white text-indigo-700 hover:bg-indigo-50 border border-indigo-500 rounded text-[10px] font-bold">Asignar clientes</button>`;
+      return `${resumen} <button type="button" onclick="abrirAccesosClientes('${escapeHtml(email)}')" class="ml-1 px-2 py-0.5 rounded-lg text-[10px] bg-slate-100 text-slate-800 hover:bg-slate-200 font-medium">Asignar clientes</button>`;
     }
 
     async function abrirAccesosClientes(email) {
@@ -7994,7 +7994,7 @@
           <div class="block"><span class="font-bold text-indigo-900">Asigna</span><div class="mt-1 p-2 border border-indigo-200 rounded-lg bg-white min-w-[200px] font-semibold text-slate-700">${escapeHtml(asigNombreAuditor(usuarioSesionEmail) || (usuarioActivo ? usuarioActivo.nombre : ''))}</div></div>
           <label class="block"><span class="font-bold text-indigo-900">Cuentas marcadas para</span>
             <select id="as-destino" class="block mt-1 p-2 border border-indigo-300 rounded-lg bg-white min-w-[220px]"><option value="">-- Elige a quién se asigna --</option>${auds.map(u => `<option value="${escapeHtml(emailDeUsuario(u))}">${escapeHtml(asigNombreAuditor(emailDeUsuario(u)))}</option>`).join('')}</select></label>
-          <button type="button" onclick="asigAsignarMarcadas()" class="px-4 py-2 bg-indigo-700 text-white font-bold rounded-lg hover:bg-indigo-800">Asignar marcadas (<span id="as-nsel">${asigSel.size}</span>)</button>
+          <button type="button" onclick="asigAsignarMarcadas()" class="px-4 py-2 text-xs rounded-lg transition bg-slate-200 text-slate-900 hover:bg-slate-300 font-semibold">Asignar marcadas (<span id="as-nsel">${asigSel.size}</span>)</button>
           <button type="button" onclick="asigMarcarTodas(true)" class="px-3 py-2 border border-slate-300 bg-white rounded-lg">Marcar todas</button>
           <button type="button" onclick="asigMarcarTodas(false)" class="px-3 py-2 border border-slate-300 bg-white rounded-lg">Desmarcar</button>
           <button type="button" id="as-avisar" onclick="asigAvisarPorCorreo('mias')" class="px-3 py-2 bg-emerald-700 text-white font-bold rounded-lg hover:bg-emerald-800" title="Envía el correo solo con las cuentas que TÚ asignaste y que todavía no has avisado">✉ Avisar mis asignaciones</button>
@@ -8141,7 +8141,7 @@
           <td class="p-3">${escapeHtml(c.clasificacion || '')}</td>
           <td class="p-3">${escapeHtml(c.grupo || '')}</td>
           <td class="p-3 text-center whitespace-nowrap">
-            <button type="button" onclick="editarCuentaCatalogo('${escapeHtml(c.sumaria).replace(/'/g, '&#39;')}')" class="px-2 py-1 bg-white text-indigo-700 hover:bg-indigo-50 border border-indigo-400 rounded text-[11px] font-bold transition">Editar</button>
+            <button type="button" onclick="editarCuentaCatalogo('${escapeHtml(c.sumaria).replace(/'/g, '&#39;')}')" class="px-2 py-1 rounded-lg text-[11px] transition bg-slate-100 text-slate-800 hover:bg-slate-200 font-medium">Editar</button>
             <button type="button" onclick="borrarCuentaCatalogo('${escapeHtml(c.sumaria).replace(/'/g, '&#39;')}')" class="px-2 py-1 bg-white text-red-700 hover:bg-red-50 border border-red-400 rounded text-[11px] font-bold transition">Borrar</button>
           </td>
         </tr>`).join('');
@@ -8561,7 +8561,7 @@
     }
     function arrHtmlContratos() {
       const L = arrEstado.contratos;
-      const barra = `<div class="flex flex-wrap items-center gap-2 px-2 py-2 border-b border-slate-200"><button type="button" onclick="arrAnadir()" class="px-2.5 py-1 bg-indigo-600 text-white hover:bg-indigo-700 rounded-lg text-[11px] font-bold transition">+ Añadir contrato</button><label class="px-2.5 py-1 bg-white text-indigo-700 hover:bg-indigo-50 border border-indigo-500 rounded-lg text-[11px] font-bold transition cursor-pointer">Cargar desde Excel<input type="file" accept=".xlsx,.xls,.csv" class="hidden" onchange="arrImportar(this)"></label><button type="button" onclick="arrPlantilla()" class="px-2.5 py-1 bg-white text-slate-700 hover:bg-slate-50 border border-slate-400 rounded-lg text-[11px] font-bold transition">Plantilla de Excel</button></div>`;
+      const barra = `<div class="flex flex-wrap items-center gap-2 px-2 py-2 border-b border-slate-200"><button type="button" onclick="arrAnadir()" class="px-2.5 py-1 rounded-lg text-[11px] transition bg-slate-200 text-slate-900 hover:bg-slate-300 font-semibold">+ Añadir contrato</button><label class="px-2.5 py-1 rounded-lg text-[11px] transition cursor-pointer bg-slate-100 text-slate-800 hover:bg-slate-200 font-medium">Cargar desde Excel<input type="file" accept=".xlsx,.xls,.csv" class="hidden" onchange="arrImportar(this)"></label><button type="button" onclick="arrPlantilla()" class="px-2.5 py-1 bg-white text-slate-700 hover:bg-slate-50 border border-slate-400 rounded-lg text-[11px] font-bold transition">Plantilla de Excel</button></div>`;
       if (!L.length) return barra + '<p class="p-6 text-xs text-slate-400 text-center">Todavía no hay contratos. Usa "+ Añadir contrato" o "Cargar desde Excel".</p>';
       const th = (t, cls = '') => `<th class="px-2 py-1 border-b border-slate-200 text-left whitespace-nowrap ${cls}">${t}</th>`;
       const num = v => v === '' || v === null || v === undefined ? '' : formatoNumeroAnexo(v);
@@ -8589,8 +8589,8 @@
             <div class="flex flex-wrap items-center gap-2 pb-1.5 border-b border-slate-200"><span class="font-semibold text-slate-600">• Saldos con los que inicia (solo si viene de un contrato anterior; en cero el contrato empieza nuevo):</span><span class="text-slate-500">Activo neto anterior</span>${ent('activo_ini', 'w-28')}<span class="text-slate-500">Pasivo anterior</span>${ent('pasivo_ini', 'w-28')}<span id="ar-ini-${i}" class="text-slate-600 font-semibold"></span></div>
             <div class="flex flex-wrap items-center gap-2 pb-1.5 border-b border-slate-200"><span class="font-semibold text-slate-600">• Costos iniciales del activo (opcionales):</span><span class="text-slate-500">Anticipos o pagos hechos antes del inicio</span>${ent('anticipos')}<span class="text-slate-500">Costos directos iniciales</span>${ent('costos_directos')}<span class="text-slate-500">Desmantelamiento o restauración estimado</span>${ent('desmantelamiento')}<span class="text-slate-500">Incentivos recibidos (restan)</span>${ent('incentivos')}</div>
             <div class="flex flex-wrap items-center gap-3 pb-1.5 border-b border-slate-200"><span class="font-semibold text-slate-600">• Condiciones de pago:</span><label class="inline-flex items-center gap-1.5 text-slate-600 cursor-pointer"><input type="checkbox" ${c.pago_inicio ? 'checked' : ''} onchange="arrEditar(${i}, 'pago_inicio', this)"> Se paga al inicio de cada mes (si no, a fin de mes)</label><span class="text-slate-500">IVA que no es crédito tributario (% sobre el canon, ej. 15)</span><input type="text" inputmode="decimal" value="${c.iva_no_rec === '' || c.iva_no_rec === null || c.iva_no_rec === undefined ? '' : r2f(c.iva_no_rec * 100)}" onchange="arrEditar(${i}, 'iva_no_rec', this)" class="w-14 h-6 px-1.5 text-right text-[11px] border border-slate-300 rounded"><span class="text-slate-400">El IVA se suma al canon solo si no se recupera: escribe la tarifa completa (15) si nada se recupera; si se recupera una parte, escribe solo la parte que no (ej. 7,5). Si el pago es al inicio, el primer pago ya está dentro del valor actual: no lo repitas en anticipos.</span></div>
-            <div><span class="font-semibold text-slate-600 mb-1 block">• Modificaciones del contrato (se vuelve a calcular desde ese mes; lo anterior queda fijo y la diferencia se ajusta al activo)</span>${mod || '<span class="text-slate-400 mr-2">ninguna</span>'}<button type="button" onclick="arrAnadirMod(${i})" class="px-2 py-0.5 bg-white text-indigo-700 hover:bg-indigo-50 border border-indigo-500 rounded text-[11px] font-bold">+ Añadir modificación</button><span class="block text-slate-400 mt-0.5">Renovación, plazo o canon: si dejas vacía la nueva fecha final o la nueva tasa, se mantienen las anteriores. Índice o IPC: siempre la misma tasa. Reducción de alcance: escribe el % del contrato que termina; si dejas vacío el nuevo canon, baja en la misma proporción.</span></div>
-            <div><span class="font-semibold text-slate-600 mr-2">• Aumentos pactados desde el inicio (calendario ya firmado en el contrato original):</span>${cam || '<span class="text-slate-400 mr-2">ninguno</span>'}<button type="button" onclick="arrAnadirCambio(${i})" class="px-2 py-0.5 bg-white text-indigo-700 hover:bg-indigo-50 border border-indigo-500 rounded text-[11px] font-bold">+ Añadir cambio</button></div></td></tr>`;
+            <div><span class="font-semibold text-slate-600 mb-1 block">• Modificaciones del contrato (se vuelve a calcular desde ese mes; lo anterior queda fijo y la diferencia se ajusta al activo)</span>${mod || '<span class="text-slate-400 mr-2">ninguna</span>'}<button type="button" onclick="arrAnadirMod(${i})" class="px-2 py-0.5 rounded-lg text-[11px] bg-slate-100 text-slate-800 hover:bg-slate-200 font-medium">+ Añadir modificación</button><span class="block text-slate-400 mt-0.5">Renovación, plazo o canon: si dejas vacía la nueva fecha final o la nueva tasa, se mantienen las anteriores. Índice o IPC: siempre la misma tasa. Reducción de alcance: escribe el % del contrato que termina; si dejas vacío el nuevo canon, baja en la misma proporción.</span></div>
+            <div><span class="font-semibold text-slate-600 mr-2">• Aumentos pactados desde el inicio (calendario ya firmado en el contrato original):</span>${cam || '<span class="text-slate-400 mr-2">ninguno</span>'}<button type="button" onclick="arrAnadirCambio(${i})" class="px-2 py-0.5 rounded-lg text-[11px] bg-slate-100 text-slate-800 hover:bg-slate-200 font-medium">+ Añadir cambio</button></div></td></tr>`;
         }
       });
       html += `</tbody><tfoot class="bg-slate-100 font-bold text-slate-800"><tr><td colspan="4" class="px-2 py-1">Total (${L.length} contratos)</td><td id="ar-tot-canon" class="px-2 py-1 text-right"></td><td colspan="5"></td><td id="ar-tot-va" class="px-2 py-1 text-right"></td><td id="ar-tot-sal" class="px-2 py-1 text-right"></td><td></td></tr></tfoot></table>`;
@@ -8975,7 +8975,7 @@
         const sig = meses[k + 1];
         if (!sig || sig.y !== m.y) cols.push({ t: 'a', y: m.y, ms: meses.filter(x => x.y === m.y) });
       });
-      let html = `<div class="p-2 flex items-center gap-2 border-b border-slate-200 sticky left-0"><label class="text-[11px] font-semibold text-slate-600">Contrato</label><select onchange="arrEstado.mesSel = this.value; arrRender()" class="w-80 max-w-full px-2 py-1 bg-white border border-slate-300 rounded-lg text-[11px] outline-none">${ops}</select><button type="button" onclick="arrTodosAnios(true)" class="px-2.5 py-1 bg-white text-indigo-700 hover:bg-indigo-50 border border-indigo-500 rounded-lg text-[11px] font-bold">Ver todos los meses</button><button type="button" onclick="arrTodosAnios(false)" class="px-2.5 py-1 bg-white text-indigo-700 hover:bg-indigo-50 border border-indigo-500 rounded-lg text-[11px] font-bold">Solo totales por año</button><span class="text-[11px] text-slate-500">Toca la flecha de cada año para ver u ocultar sus meses.</span></div>
+      let html = `<div class="p-2 flex items-center gap-2 border-b border-slate-200 sticky left-0"><label class="text-[11px] font-semibold text-slate-600">Contrato</label><select onchange="arrEstado.mesSel = this.value; arrRender()" class="w-80 max-w-full px-2 py-1 bg-white border border-slate-300 rounded-lg text-[11px] outline-none">${ops}</select><button type="button" onclick="arrTodosAnios(true)" class="px-2.5 py-1 rounded-lg text-[11px] bg-slate-100 text-slate-800 hover:bg-slate-200 font-medium">Ver todos los meses</button><button type="button" onclick="arrTodosAnios(false)" class="px-2.5 py-1 rounded-lg text-[11px] bg-slate-100 text-slate-800 hover:bg-slate-200 font-medium">Solo totales por año</button><span class="text-[11px] text-slate-500">Toca la flecha de cada año para ver u ocultar sus meses.</span></div>
         <table class="w-auto text-[11px] leading-tight border-collapse"><thead class="bg-slate-50 text-slate-600 sticky top-0 z-10"><tr><th class="px-2 py-1 border-b border-slate-200 text-left sticky left-0 z-20 bg-slate-50 min-w-[260px]"></th>${cols.map(c => c.t === 'm' ? `<th class="px-2 py-1 border-b border-slate-200 text-right whitespace-nowrap">${ARR_MESES[c.m.m - 1]}-${String(c.m.y).slice(2)}</th>` : `<th class="px-2 py-1 border-b border-slate-200 text-right whitespace-nowrap bg-slate-200 cursor-pointer select-none text-[10px] align-middle" onclick="arrAlternarAnio(${c.y})" title="Clic para ${arrEstado.mesAbiertos.has(c.y) ? 'ocultar' : 'ver'} los meses de ${c.y}"><span class="flecha-caja flecha-mini ${arrEstado.mesAbiertos.has(c.y) ? 'abierta' : ''}">${arrEstado.mesAbiertos.has(c.y) ? '▾' : '▸'}</span>Año ${c.y} (31 dic.)</th>`).join('')}</tr></thead><tbody>`;
       filas.forEach(([tipo, t, k, signo]) => {
         if (tipo === 'h') { html += `<tr class="bg-slate-200"><td colspan="${cols.length + 1}" class="px-2 py-1 font-bold text-slate-700 sticky left-0">${t}</td></tr>`; return; }
@@ -9259,7 +9259,7 @@
       const fecha = new Date(C.Y, C.M, 0).toLocaleDateString('es-EC', { day: 'numeric', month: 'long', year: 'numeric' });
       const sin = arrConcSinGuardar(), mesTxt = k => new Date(Number(k.slice(0, 4)), Number(k.slice(5, 7)) - 1, 1).toLocaleDateString('es-EC', { month: 'short', year: 'numeric' });
       const estado = gc ? (sin ? '<span class="text-amber-700 font-bold">Hay cambios sin guardar</span>' : '<span class="text-emerald-700 font-bold">Corte guardado' + (gc.g ? ' el ' + new Date(gc.g).toLocaleDateString('es-EC') : '') + '</span>') : '<span class="text-slate-500">Consulta sin guardar</span>';
-      let h = `<div class="flex flex-wrap items-center gap-2 px-2 py-2 border-b border-slate-200 text-[11px]"><span class="font-semibold text-slate-600">Mes de consulta</span><input type="month" value="${corte}" onchange="arrConcCorteEditar(this.value)" class="w-36 h-6 px-1.5 text-[11px] border border-slate-300 rounded"><span class="text-slate-500">Saldos al ${escapeHtml(fecha)}</span><button type="button" onclick="arrConcGuardar()" class="px-2.5 py-1 bg-indigo-600 text-white hover:bg-indigo-700 rounded-lg text-[11px] font-bold transition">Guardar este corte</button>${gc ? '<button type="button" onclick="arrConcEliminar()" class="px-2.5 py-1 bg-white text-red-600 hover:bg-red-50 border border-red-400 rounded-lg text-[11px] font-bold transition">Eliminar corte guardado</button>' : ''}${estado}${ks.length ? `<span class="text-slate-500 ml-2">Cortes guardados</span><select onchange="arrConcCorteEditar(this.value)" class="h-6 px-1 text-[11px] border border-slate-300 rounded bg-white"><option value="">Elegir...</option>${ks.map(k => `<option value="${k}">${escapeHtml(mesTxt(k))}</option>`).join('')}</select>` : ''}</div>`;
+      let h = `<div class="flex flex-wrap items-center gap-2 px-2 py-2 border-b border-slate-200 text-[11px]"><span class="font-semibold text-slate-600">Mes de consulta</span><input type="month" value="${corte}" onchange="arrConcCorteEditar(this.value)" class="w-36 h-6 px-1.5 text-[11px] border border-slate-300 rounded"><span class="text-slate-500">Saldos al ${escapeHtml(fecha)}</span><button type="button" onclick="arrConcGuardar()" class="px-2.5 py-1 rounded-lg text-[11px] transition bg-slate-200 text-slate-900 hover:bg-slate-300 font-semibold">Guardar este corte</button>${gc ? '<button type="button" onclick="arrConcEliminar()" class="px-2.5 py-1 bg-white text-red-600 hover:bg-red-50 border border-red-400 rounded-lg text-[11px] font-bold transition">Eliminar corte guardado</button>' : ''}${estado}${ks.length ? `<span class="text-slate-500 ml-2">Cortes guardados</span><select onchange="arrConcCorteEditar(this.value)" class="h-6 px-1 text-[11px] border border-slate-300 rounded bg-white"><option value="">Elegir...</option>${ks.map(k => `<option value="${k}">${escapeHtml(mesTxt(k))}</option>`).join('')}</select>` : ''}</div>`;
       h += arrHtmlSumariaConc();
       h += `<table class="w-full text-[11px] leading-tight border-collapse"><thead class="bg-slate-50 text-slate-600"><tr><th class="px-2 py-1 border-b border-slate-200 text-left">Concepto</th><th class="px-2 py-1 border-b border-slate-200 text-right">Según la herramienta</th><th class="px-2 py-1 border-b border-slate-200 text-right">Según el balance</th><th class="px-2 py-1 border-b border-slate-200 text-right">Diferencia (herramienta − balance)</th></tr></thead><tbody>`;
       ARR_CONC_FILAS.forEach(([k, t]) => {
@@ -9275,7 +9275,7 @@
     function arrHtmlSumariaConc() {
       if (arrEsLibre(arrEstado.cliente)) return '<p class="px-3 py-1.5 text-[11px] text-slate-500 border-b border-slate-200">Empresa que no es cliente: no hay sumarias. Escribe a mano los saldos del balance.</p>';
       const mp = arrMapaSum(), inp = (k, t) => `<label class="flex items-center gap-1"><span class="text-slate-600">${t}</span><input type="text" value="${escapeHtml(mp[k] || '')}" onchange="arrMapaEditar('${k}', this.value)" placeholder="ej. AI" class="w-24 h-6 px-1.5 uppercase text-[11px] border border-slate-300 rounded"></label>`;
-      return `<div class="flex flex-wrap items-center gap-3 px-3 py-1.5 border-b border-slate-200 text-[11px] bg-slate-50"><span class="font-semibold text-slate-600">Sumarias del cliente (códigos, separados por coma)</span>${inp('uso', 'Derecho de uso')}${inp('corto', 'Pasivo corto')}${inp('largo', 'Pasivo largo')}<button type="button" onclick="arrTraerSumaria(true)" class="px-2.5 py-1 bg-white text-indigo-700 border border-indigo-300 hover:bg-indigo-50 rounded-lg font-bold">Traer saldos de la sumaria</button><span id="ar-sum-msg" class="text-slate-500">${escapeHtml(arrEstado.sumMsg || '')}</span></div>`;
+      return `<div class="flex flex-wrap items-center gap-3 px-3 py-1.5 border-b border-slate-200 text-[11px] bg-slate-50"><span class="font-semibold text-slate-600">Sumarias del cliente (códigos, separados por coma)</span>${inp('uso', 'Derecho de uso')}${inp('corto', 'Pasivo corto')}${inp('largo', 'Pasivo largo')}<button type="button" onclick="arrTraerSumaria(true)" class="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-800 hover:bg-slate-200 font-medium">Traer saldos de la sumaria</button><span id="ar-sum-msg" class="text-slate-500">${escapeHtml(arrEstado.sumMsg || '')}</span></div>`;
     }
     function arrAutoSum() {
       if (arrEsLibre(arrEstado.cliente) || !arrEstado.contratos.length) return;
@@ -10075,12 +10075,12 @@
     function pceHtmlDatos() {
       const E = pceEstado, th = (x, c = '') => `<th class="px-2 py-1 border-b border-slate-200 text-left whitespace-nowrap ${c}">${x}</th>`;
       const sel = (campo, etq, req) => `<label class="flex flex-col gap-0.5 text-[11px] text-slate-600"><span class="font-semibold">${etq}${req ? ' *' : ''}</span><select onchange="pceMapa('${campo}', this)" class="w-56 max-w-full px-2 py-1 bg-white border border-slate-300 rounded-lg text-[11px] outline-none focus:ring-2 focus:ring-indigo-500"><option value="-1">(no usar)</option>${E.hdr.map((h, i) => h === '' ? '' : `<option value="${i}" ${E.mapa[campo] === i ? 'selected' : ''}>${escapeHtml(h)}</option>`).join('')}</select></label>`;
-      let h = `<div class="p-3 space-y-3"><div class="flex flex-wrap items-center gap-2"><label class="px-2.5 py-1 bg-indigo-600 text-white hover:bg-indigo-700 rounded-lg text-[11px] font-bold transition cursor-pointer">Cargar archivo de cartera<input type="file" accept=".xlsx,.xls,.csv" class="hidden" onchange="pceLeerArchivo(this)"></label>`;
+      let h = `<div class="p-3 space-y-3"><div class="flex flex-wrap items-center gap-2"><label class="px-2.5 py-1 rounded-lg text-[11px] transition cursor-pointer bg-slate-200 text-slate-900 hover:bg-slate-300 font-semibold">Cargar archivo de cartera<input type="file" accept=".xlsx,.xls,.csv" class="hidden" onchange="pceLeerArchivo(this)"></label>`;
       if (E.hojas.length) h += `<span class="text-[11px] text-slate-600">Archivo: <b>${escapeHtml(E.archivo)}</b></span><label class="text-[11px] font-semibold text-slate-600">Hoja</label><select onchange="pceCargarHoja(this.value)" class="px-2 py-1 bg-white border border-slate-300 rounded-lg text-[11px] outline-none">${E.hojas.map(n => `<option ${n === E.hoja ? 'selected' : ''}>${escapeHtml(n)}</option>`).join('')}</select><span class="text-[11px] text-slate-500">${E.filas.length.toLocaleString('en-US')} filas</span>`;
       h += '</div>';
       if (!E.hojas.length) return h + '<p class="text-xs text-slate-500 border border-dashed border-slate-300 rounded-xl p-4">Carga el archivo con las facturas pendientes de cada mes (ver las notas de abajo para saber qué columnas necesita).</p></div>';
       h += `<div><div class="text-[11px] font-bold text-slate-700 mb-1">Columnas del archivo <span class="font-normal text-slate-500">(* obligatorias; usa días vencidos o la fecha de vencimiento)</span></div><div class="flex flex-wrap gap-3">${sel('fac', 'Factura', 1)}${sel('cli', 'Cliente')}${sel('sal', 'Saldo', 1)}${sel('cor', 'Fecha de corte', 1)}${sel('dias', 'Días vencidos')}${sel('ven', 'Fecha de vencimiento')}</div></div>`;
-      h += `<div class="flex items-center gap-2"><button type="button" onclick="pceProcesar()" class="px-2.5 py-1 bg-indigo-600 text-white hover:bg-indigo-700 rounded-lg text-[11px] font-bold transition">Calcular matriz y PCE</button></div>`;
+      h += `<div class="flex items-center gap-2"><button type="button" onclick="pceProcesar()" class="px-2.5 py-1 rounded-lg text-[11px] transition bg-slate-200 text-slate-900 hover:bg-slate-300 font-semibold">Calcular matriz y PCE</button></div>`;
       const R = E.R, c = E.carga;
       if (c) {
         h += `<div class="text-[11px] text-slate-600">Filas leídas: <b>${c.leidas.toLocaleString('en-US')}</b> · usadas: <b>${E.regs.length.toLocaleString('en-US')}</b> · saldo negativo o en cero (excluidas): <b>${(c.negativas + c.nulas).toLocaleString('en-US')}</b> · sin datos válidos: <b>${(c.invalidas + c.sinDias).toLocaleString('en-US')}</b></div>`;
@@ -10677,14 +10677,14 @@
             <select id="fl-n-l-${i}" class="h-7 px-1 text-[11px] bg-white border border-slate-300 rounded outline-none"><option value="debe">en el Debe</option><option value="haber">en el Haber</option></select>
             <input type="text" inputmode="decimal" id="fl-n-m-${i}" placeholder="Importe" onkeydown="if(event.key==='Enter'){agregarAjusteFlujo(${i})}" class="w-28 h-7 px-2 text-right text-[11px] bg-white border border-slate-300 rounded focus:ring-2 focus:ring-indigo-500 outline-none">
             <select id="fl-n-k-${i}" class="h-7 max-w-[260px] px-1 text-[11px] bg-white border border-slate-300 rounded outline-none">${opcionesSumariasFlujo('', 'Contrapartida (elegir después)')}</select>
-            <button type="button" onclick="agregarAjusteFlujo(${i})" class="px-3 h-7 text-[11px] font-bold bg-white text-indigo-700 border border-indigo-500 rounded-lg hover:bg-indigo-50">Agregar</button>
+            <button type="button" onclick="agregarAjusteFlujo(${i})" class="px-3 h-7 text-[11px] rounded-lg bg-slate-100 text-slate-800 hover:bg-slate-200 font-medium">Agregar</button>
           </div>
           <p id="fl-n-msg-${i}" class="text-[11px] text-red-600 font-bold min-h-[1rem]"></p>
           <details>
             <summary class="text-[11px] text-indigo-700 font-semibold cursor-pointer">Pegar varios ajustes de una vez</summary>
             <p class="text-[11px] text-slate-500 mt-1">Una línea por ajuste: <b>concepto</b>, <b>importe</b> y, si quieres, la <b>sumaria de la contrapartida</b> (separados por tabulador o punto y coma; puedes copiarlos desde Excel). Usan el lado (Debe/Haber) elegido arriba; un importe negativo va al lado contrario.</p>
             <textarea id="fl-n-p-${i}" rows="4" placeholder="Compra de equipo de cómputo ; 1,200.00 ; AA&#10;Baja de mobiliario ; 350 ; GA" class="w-full mt-1 p-1.5 text-[11px] bg-white border border-slate-300 rounded outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
-            <button type="button" onclick="pegarAjustesFlujo(${i})" class="mt-1 px-3 h-7 text-[11px] font-bold bg-white text-indigo-700 border border-indigo-500 rounded-lg hover:bg-indigo-50">Agregar los pegados</button>
+            <button type="button" onclick="pegarAjustesFlujo(${i})" class="mt-1 px-3 h-7 text-[11px] rounded-lg bg-slate-100 text-slate-800 hover:bg-slate-200 font-medium">Agregar los pegados</button>
           </details>
         </div></div>`;
     }
@@ -11058,7 +11058,7 @@
           <td class="p-3 border-r border-slate-200">${marcas}</td>
           <td class="p-3 border-r border-slate-200 leading-relaxed">${criterioHtml}</td>
           <td class="p-3 border-r border-slate-200 text-[11px] text-slate-600">${escapeHtml(quien)}<div class="text-slate-400">${r.updated_at ? escapeHtml(formatoFechaContrato(r.updated_at)) : ''}</div></td>
-          <td class="p-3 text-center"><button type="button" onclick="irAlAnalisisDesdePendiente(${pendientesDatos.indexOf(r)})" class="px-3 py-1.5 text-[11px] font-bold rounded-lg border border-indigo-500 bg-white text-indigo-700 hover:bg-indigo-50 transition">Ir al análisis</button></td>
+          <td class="p-3 text-center"><button type="button" onclick="irAlAnalisisDesdePendiente(${pendientesDatos.indexOf(r)})" class="px-3 py-1.5 text-[11px] rounded-lg transition bg-slate-100 text-slate-800 hover:bg-slate-200 font-medium">Ir al análisis</button></td>
         </tr>`;
       }).join('');
     }
@@ -11604,7 +11604,7 @@
         ? `<span class="px-2 py-0.5 bg-white text-teal-700 rounded text-[10px] font-bold border border-teal-500">Con acceso</span>
            <button type="button" onclick="reiniciarClaveUno('${seguro}')" class="ml-1 px-2 py-0.5 bg-white text-slate-700 hover:bg-slate-50 border border-slate-400 rounded text-[10px] font-bold">Nueva clave</button>`
         : `<span class="px-2 py-0.5 bg-white text-amber-700 rounded text-[10px] font-bold border border-amber-500">Sin acceso</span>
-           <button type="button" onclick="crearAccesos(['${seguro}'], false)" class="ml-1 px-2 py-0.5 bg-white text-indigo-700 hover:bg-indigo-50 border border-indigo-500 rounded text-[10px] font-bold">Crear acceso</button>`;
+           <button type="button" onclick="crearAccesos(['${seguro}'], false)" class="ml-1 px-2 py-0.5 rounded-lg text-[10px] bg-slate-100 text-slate-800 hover:bg-slate-200 font-medium">Crear acceso</button>`;
     }
 
     function claveTemporal() {
@@ -11692,7 +11692,7 @@
         mensajesAccesos = [];
         clavesAccesosFila = [];
         filas.forEach(f => { f.idx = f.clave ? (clavesAccesosFila.push({ email: f.email, clave: f.clave }), mensajesAccesos.push(armarMensajeAcceso(f.nombre, f.email, f.clave)) - 1) : -1; });
-        const btnEnvio = 'px-2 py-0.5 bg-white text-indigo-700 hover:bg-indigo-50 border border-indigo-500 rounded text-[10px] font-bold';
+        const btnEnvio = 'px-2 py-0.5 bg-slate-100 text-slate-800 hover:bg-slate-200 rounded-lg text-[10px] font-medium';
         caja.innerHTML = `<div class="border border-slate-200 rounded-xl overflow-x-auto">
           <table class="w-full text-xs"><thead class="bg-slate-50 text-slate-600 text-left"><tr><th class="p-2">Nombre</th><th class="p-2">Correo</th><th class="p-2">Resultado</th><th class="p-2">Clave temporal</th><th class="p-2">Mensaje de bienvenida</th></tr></thead><tbody>
           ${filas.map(f => `<tr class="border-t border-slate-200"><td class="p-2">${escapeHtml(f.nombre)}</td><td class="p-2">${escapeHtml(f.email)}</td><td class="p-2 ${f.resultado === 'Error' || f.detalle ? 'text-red-600 font-bold' : ''}">${escapeHtml(f.resultado)}${f.detalle ? ': ' + escapeHtml(f.detalle) : ''}</td><td class="p-2 font-mono font-bold">${escapeHtml(f.clave)}</td><td class="p-2 whitespace-nowrap">${f.idx >= 0 ? `<button type="button" id="btn-correo-acceso-${f.idx}" onclick="enviarClaveFila(${f.idx})" class="${btnEnvio} mr-1">✉ Enviar por correo</button><button type="button" onclick="copiarMensajeAcceso(${f.idx})" class="${btnEnvio}">Copiar mensaje</button>` : ''}</td></tr>`).join('')}
