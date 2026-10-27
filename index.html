@@ -3102,7 +3102,7 @@
         const tab = document.getElementById('an-tab-' + t);
         if (panel) panel.classList.toggle('hidden', t !== p);
         if (tab) {
-          tab.className = 'px-5 py-2.5 text-sm transition rounded-t-lg border border-b-4 -mb-px ' +
+          tab.className = 'px-4 py-2 text-xs transition rounded-t-lg border border-b-4 -mb-px ' +
             (t === p ? 'border-slate-300 border-b-indigo-600 bg-indigo-50 text-indigo-800 font-bold'
               : (hechas[t] ? 'border-transparent bg-slate-200 text-slate-900 hover:bg-slate-300 font-bold' : 'border-transparent bg-slate-50 text-slate-400 hover:bg-slate-100 hover:text-slate-700 font-medium'));
         }
@@ -3110,16 +3110,17 @@
       ajustarTextareasRespuesta();
     }
 
+    const PUNTO_HECHO = ' <span style="color:#000;font-size:9px;vertical-align:middle">●</span>';
     function actualizarInsigniasAnalisis() {
       const tabP = document.getElementById('an-tab-programa');
-      if (tabP) { const rp = document.getElementById('an-prog-responsable'); tabP.textContent = '1. Programa de trabajo' + (rp && rp.value.trim() ? ' ✓' : ''); }
+      if (tabP) { const rp = document.getElementById('an-prog-responsable'); tabP.innerHTML = '1. Programa de trabajo' + (rp && rp.value.trim() ? PUNTO_HECHO : ''); }
       const tabA = document.getElementById('an-tab-anexo');
       setTimeout(() => cambiarPestanaAnalisis(analisisEstado.pestana), 0);
-      if (tabA) tabA.textContent = '2. Anexo y cálculos' + (anexoEstado.registros.length > 0 ? ' ✓' : '');
+      if (tabA) tabA.innerHTML = '2. Anexo y cálculos' + (anexoEstado.registros.length > 0 ? PUNTO_HECHO : '');
       const tabC = document.getElementById('an-tab-claude');
-      if (tabC) tabC.textContent = '3. Análisis de Claude' + (analisisEstado.analisis.length > 0 ? ' ✓' : '');
+      if (tabC) tabC.innerHTML = '3. Análisis de Claude' + (analisisEstado.analisis.length > 0 ? PUNTO_HECHO : '');
       const tabK = document.getElementById('an-tab-criterio');
-      if (tabK) tabK.textContent = '4. Criterio final del auditor' + (analisisEstado.criterio && analisisEstado.criterio.conclusion ? ' ✓' : '');
+      if (tabK) tabK.innerHTML = '4. Criterio final del auditor' + (analisisEstado.criterio && analisisEstado.criterio.conclusion ? PUNTO_HECHO : '');
     }
 
     // ----- 2. Análisis de Claude (usa automáticamente los resultados de la comparación) -----
