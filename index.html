@@ -1553,11 +1553,11 @@
         <p class="text-xs text-slate-500">Cálculo NIIF 16 contrato por contrato: pasivo, derecho de uso, impuestos diferidos y conciliación con el balance. Sirve para clientes y para empresas que no son clientes</p>
       </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-4 xl:grid-cols-8 gap-4">
+      <div class="grid grid-cols-1 md:grid-cols-4 xl:grid-cols-9 gap-4">
         <div class="md:col-span-2 xl:col-span-2">
           <label for="ar-cliente" class="block text-xs font-semibold text-slate-600 mb-1">Cliente</label>
           <div class="flex flex-wrap items-center gap-2">
-            <select id="ar-cliente" onchange="cargarArrend()" class="flex-1 min-w-[12rem] p-2 bg-white border border-slate-300 rounded-lg text-xs sm:text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+            <select id="ar-cliente" onchange="cargarArrend()" class="flex-1 min-w-[12rem] w-full p-2 bg-white border border-slate-300 rounded-lg text-xs sm:text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
               <option value="">-- Selecciona un Cliente --</option>
             </select>
             <button type="button" onclick="arrNuevaEntidad()" title="Para calcular una empresa que no es cliente: no tiene sumarias, los saldos del balance se ponen a mano" class="px-3 py-2 bg-white text-slate-700 hover:bg-slate-50 border border-slate-400 rounded-lg text-xs font-bold transition whitespace-nowrap">+ Empresa que no es cliente de auditoría</button>
@@ -1575,12 +1575,16 @@
           </select>
         </div>
         <div>
-          <label class="block text-xs font-semibold text-slate-600 mb-1">Auditor responsable</label>
-          <input type="text" id="ar-auditor" readonly tabindex="-1" placeholder="Sin identificar" class="w-full p-2 bg-slate-100 border border-slate-300 rounded-lg text-xs sm:text-sm text-slate-700 outline-none cursor-default">
+          <label for="ar-fecha" class="block text-xs font-semibold text-slate-600 mb-1">Fecha de corte</label>
+          <input type="date" id="ar-fecha" onchange="arrCambiarFechaCorte(this.value)" title="Fecha a la que se calculan los saldos y se concilia con el balance" class="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs sm:text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
         </div>
         <div>
           <label for="ar-timp" class="block text-xs font-semibold text-slate-600 mb-1">Impuesto diferido %</label>
           <input id="ar-timp" type="text" inputmode="decimal" value="25" onchange="arrConfig('tasaImp', this)" class="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs sm:text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Auditor responsable</label>
+          <input type="text" id="ar-auditor" readonly tabindex="-1" placeholder="Sin identificar" class="w-full p-2 bg-slate-100 border border-slate-300 rounded-lg text-xs sm:text-sm text-slate-700 outline-none cursor-default">
         </div>
         <div class="md:col-span-2 xl:col-span-2">
           <label class="block text-xs font-semibold text-slate-600 mb-1">Actualizado por</label>
@@ -8429,6 +8433,19 @@
       const au = document.getElementById('ar-auditor'); if (au) au.value = v.__resp || (typeof nombreUsuarioActivo === 'function' ? nombreUsuarioActivo() : '') || '';
     }
     // Al cambiar el año o la visita, la conciliación se ubica en el corte correspondiente (final: diciembre; preliminar: el mismo mes, en ese año)
+    function arrSyncCabecera() {
+      const k = arrConcCorte(), f = document.getElementById('ar-fecha'); if (!f || !/^\d{4}-\d{2}$/.test(k)) return;
+      const y = Number(k.slice(0, 4)), m = Number(k.slice(5, 7)), ult = new Date(y, m, 0).getDate();
+      f.value = k + '-' + String(ult).padStart(2, '0');
+      const sa = document.getElementById('ar-anio');
+      if (sa && sa.value !== String(y)) { if (![...sa.options].some(o => o.value === String(y))) sa.add(new Option('Año ' + y, String(y))); sa.value = String(y); }
+    }
+    function arrCambiarFechaCorte(v) {
+      if (!/^\d{4}-\d{2}/.test(v || '')) return;
+      arrEstado.verif.__anio = v.slice(0, 4);
+      arrConcCorteEditar(v.slice(0, 7)); // la conciliación se mueve a ese mes y se guarda el año
+      arrGuardarVerif();
+    }
     function arrCambiarPeriodo() {
       const anio = document.getElementById('ar-anio').value, vis = document.getElementById('ar-visita').value;
       arrEstado.verif.__anio = anio; arrEstado.verif.__visita = vis;
@@ -8519,6 +8536,7 @@
     function arrTab(t) { arrEstado.tab = t; arrRender(); }
 
     function arrRender() {
+      arrSyncCabecera();
       ['contratos', 'hist', 'anual', 'costo', 'mensual', 'estados', 'revel', 'verif', 'concil', 'cuadre'].forEach(t => {
         const b = document.getElementById('ar-tab-' + t); if (!b) return;
         b.className = 'px-3 py-1 rounded-lg text-[11px] font-bold border transition ' + (arrEstado.tab === t ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-indigo-700 border-indigo-500 hover:bg-indigo-50');
