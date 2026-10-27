@@ -512,8 +512,8 @@
           <p class="text-[11px] sm:text-xs text-slate-500">Planificación, Control, Monitoreo</p>
         </div>
         
-        <div class="flex flex-wrap bg-slate-100 p-1 rounded-xl border border-slate-200 gap-1">
-          <button id="tab-captura-btn" onclick="cambiarPestana('captura')" class="px-3 py-1.5 text-xs font-bold rounded-lg bg-white text-indigo-900 shadow">
+        <div class="flex flex-wrap bg-white p-1.5 rounded-2xl border border-slate-200 gap-1">
+          <button id="tab-captura-btn" onclick="cambiarPestana('captura')" class="px-3 py-1.5 text-xs rounded-lg transition bg-slate-200 text-slate-900 font-semibold">
             Captura por Año
           </button>
           <button id="tab-historico-btn" onclick="cambiarPestana('historico')" class="px-3 py-1.5 text-xs font-bold rounded-lg text-slate-600 hover:text-slate-900 transition">
@@ -583,10 +583,10 @@
           <div id="barra-captura" class="hidden flex-wrap items-center gap-2 bg-white border border-slate-200 rounded-xl p-2.5">
             <div id="cap-resumen" class="text-[11px] font-semibold text-slate-600"></div>
             <div id="cap-filtros" class="flex flex-wrap gap-1 sm:ml-auto">
-              <button type="button" data-f="todas" onclick="filtrarCaptura('todas')" class="cap-filtro px-2.5 py-1 text-[11px] rounded-lg border">Todas</button>
-              <button type="button" data-f="revisar" onclick="filtrarCaptura('revisar')" class="cap-filtro px-2.5 py-1 text-[11px] rounded-lg border">Por revisar</button>
-              <button type="button" data-f="vacias" onclick="filtrarCaptura('vacias')" class="cap-filtro px-2.5 py-1 text-[11px] rounded-lg border">Vacías</button>
-              <button type="button" data-f="modificadas" onclick="filtrarCaptura('modificadas')" class="cap-filtro px-2.5 py-1 text-[11px] rounded-lg border">Las que cambié</button>
+              <button type="button" data-f="todas" onclick="filtrarCaptura('todas')" class="cap-filtro px-2.5 py-1 text-[11px] rounded-lg transition">Todas</button>
+              <button type="button" data-f="revisar" onclick="filtrarCaptura('revisar')" class="cap-filtro px-2.5 py-1 text-[11px] rounded-lg transition">Por revisar</button>
+              <button type="button" data-f="vacias" onclick="filtrarCaptura('vacias')" class="cap-filtro px-2.5 py-1 text-[11px] rounded-lg transition">Vacías</button>
+              <button type="button" data-f="modificadas" onclick="filtrarCaptura('modificadas')" class="cap-filtro px-2.5 py-1 text-[11px] rounded-lg transition">Las que cambié</button>
             </div>
             <button type="button" id="cap-btn-copiar-todo" onclick="copiarTodoAnterior()" class="px-3 py-1 text-[11px] font-semibold rounded-lg border border-amber-500 bg-white text-slate-700 hover:bg-amber-50"></button>
           </div>
@@ -784,9 +784,9 @@
         <label id="as-auditor-box" class="block"><span class="font-bold text-slate-600">Auditor</span>
           <select id="as-auditor" onchange="asigRefrescar()" class="w-full mt-1 p-2 border border-slate-300 rounded-lg bg-white"></select></label>
       </div>
-      <div class="flex flex-wrap gap-2 text-xs font-bold" id="as-tabs">
-        <button type="button" data-tab="asignar" onclick="asigTab('asignar')" class="as-tab px-4 py-2 rounded-lg border">Asignar</button>
-        <button type="button" data-tab="consulta" onclick="asigTab('consulta')" class="as-tab px-4 py-2 rounded-lg border">Ver asignaciones</button>
+      <div class="flex flex-wrap items-center gap-1 p-1.5 bg-white border border-slate-200 rounded-2xl w-fit" id="as-tabs">
+        <button type="button" data-tab="asignar" onclick="asigTab('asignar')" class="as-tab px-3 py-1.5 text-xs rounded-lg transition">Asignar</button>
+        <button type="button" data-tab="consulta" onclick="asigTab('consulta')" class="as-tab px-3 py-1.5 text-xs rounded-lg transition">Ver asignaciones</button>
       </div>
       <div id="as-contenido" class="space-y-4"></div>
     </section>
@@ -1023,11 +1023,11 @@
         <p id="an-error-tablas" class="hidden text-xs font-bold text-red-600 border border-red-300 rounded-lg p-3"></p>
 
 
-        <div class="flex flex-wrap gap-1.5 border-b-2 border-slate-200">
-          <button type="button" id="an-tab-programa" onclick="cambiarPestanaAnalisis('programa')" class="px-4 py-2 text-xs transition">1. Programa de trabajo</button>
-          <button type="button" id="an-tab-anexo" onclick="cambiarPestanaAnalisis('anexo')" class="px-4 py-2 text-xs transition">2. Anexo y cálculos</button>
-          <button type="button" id="an-tab-claude" onclick="cambiarPestanaAnalisis('claude')" class="px-4 py-2 text-xs transition">3. Análisis de Claude</button>
-          <button type="button" id="an-tab-criterio" onclick="cambiarPestanaAnalisis('criterio')" class="px-4 py-2 text-xs transition">4. Criterio final del auditor</button>
+        <div class="flex flex-wrap items-center gap-1 p-1.5 bg-white border border-slate-200 rounded-2xl">
+          <button type="button" id="an-tab-programa" onclick="cambiarPestanaAnalisis('programa')" class="px-3 py-1.5 text-xs transition rounded-lg">1. Programa de trabajo</button>
+          <button type="button" id="an-tab-anexo" onclick="cambiarPestanaAnalisis('anexo')" class="px-3 py-1.5 text-xs transition rounded-lg">2. Anexo y cálculos</button>
+          <button type="button" id="an-tab-claude" onclick="cambiarPestanaAnalisis('claude')" class="px-3 py-1.5 text-xs transition rounded-lg">3. Análisis de Claude</button>
+          <button type="button" id="an-tab-criterio" onclick="cambiarPestanaAnalisis('criterio')" class="px-3 py-1.5 text-xs transition rounded-lg">4. Criterio final del auditor</button>
         </div>
 
         <!-- Programa de trabajo de la cuenta (texto predeterminado, editable) -->
@@ -1065,9 +1065,9 @@
 
         <!-- 1. Anexo y cálculos programados -->
         <div id="an-panel-anexo" class="space-y-5">
-          <div class="flex flex-wrap items-center gap-1.5 p-2 bg-slate-100 border border-slate-300 rounded-xl">
-            <button type="button" id="an-sub-btn-subir" onclick="anexoSub('subir')" class="px-3 py-1 rounded-lg text-[11px] font-bold border transition">Subir anexo (Excel o CSV)</button>
-            <button type="button" id="an-sub-btn-docs" onclick="anexoSub('docs')" class="px-3 py-1 rounded-lg text-[11px] font-bold border transition">Sin anexo. Armarlo desde documentos escaneados</button>
+          <div class="flex flex-wrap items-center gap-1 p-1.5 bg-white border border-slate-200 rounded-2xl">
+            <button type="button" id="an-sub-btn-subir" onclick="anexoSub('subir')" class="px-3 py-1.5 text-xs transition rounded-lg">Subir anexo (Excel o CSV)</button>
+            <button type="button" id="an-sub-btn-docs" onclick="anexoSub('docs')" class="px-3 py-1.5 text-xs transition rounded-lg">Sin anexo. Armarlo desde documentos escaneados</button>
           </div>
           <!-- Opción: armar el anexo desde documentos escaneados (pólizas, certificados, estados de cuenta) -->
 
@@ -1417,7 +1417,7 @@
         </div>
 
         <div class="flex flex-wrap justify-between items-center gap-2">
-          <div id="my-tabs" class="flex flex-wrap bg-slate-100 p-1 rounded-xl border border-slate-200 gap-1"></div>
+          <div id="my-tabs" class="flex flex-wrap bg-white p-1.5 rounded-2xl border border-slate-200 gap-1"></div>
           <button onclick="mayorExportar()" class="px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-bold">Descargar todo en Excel</button>
         </div>
         <div id="my-panel" class="space-y-3"></div>
@@ -1631,18 +1631,18 @@
       <p id="pce-aviso" class="text-xs text-slate-500 border border-dashed border-slate-300 rounded-xl p-4">Selecciona el cliente para comenzar.</p>
 
       <div id="pce-espacio" class="hidden space-y-2">
-        <div class="flex flex-wrap items-center gap-1.5">
-          <button type="button" id="pce-tab-datos" onclick="pceTab('datos')" class="px-3 py-1 rounded-lg text-[11px] font-bold border transition">1. Datos</button>
-          <button type="button" id="pce-tab-param" onclick="pceTab('param')" class="px-3 py-1 rounded-lg text-[11px] font-bold border transition">2. Parámetros</button>
-          <button type="button" id="pce-tab-matriz" onclick="pceTab('matriz')" class="px-3 py-1 rounded-lg text-[11px] font-bold border transition">3. Matriz de transición</button>
-          <button type="button" id="pce-tab-pi" onclick="pceTab('pi')" class="px-3 py-1 rounded-lg text-[11px] font-bold border transition">4. Probabilidad de incumplimiento</button>
-          <button type="button" id="pce-tab-pdi" onclick="pceTab('pdi')" class="px-3 py-1 rounded-lg text-[11px] font-bold border transition">5. Pérdida dado el incumplimiento</button>
-          <button type="button" id="pce-tab-pce" onclick="pceTab('pce')" class="px-3 py-1 rounded-lg text-[11px] font-bold border transition">6. Pérdida crediticia esperada</button>
-          <button type="button" id="pce-tab-conta" onclick="pceTab('conta')" class="px-3 py-1 rounded-lg text-[11px] font-bold border transition">7. Contabilidad e impuesto diferido</button>
-          <button type="button" id="pce-tab-verif" onclick="pceTab('verif')" class="px-3 py-1 rounded-lg text-[11px] font-bold border transition">8. Verificaciones</button>
-          <button type="button" id="pce-tab-valid" onclick="pceTab('valid')" class="px-3 py-1 rounded-lg text-[11px] font-bold border transition">9. Validación del modelo</button>
-          <button type="button" id="pce-tab-sens" onclick="pceTab('sens')" class="px-3 py-1 rounded-lg text-[11px] font-bold border transition">10. Sensibilidad</button>
-          <button type="button" id="pce-tab-memo" onclick="pceTab('memo')" class="px-3 py-1 rounded-lg text-[11px] font-bold border transition">11. Memorando</button>
+        <div class="flex flex-wrap items-center gap-1 p-1.5 bg-white border border-slate-200 rounded-2xl">
+          <button type="button" id="pce-tab-datos" onclick="pceTab('datos')" class="px-3 py-1.5 text-xs transition rounded-lg">1. Datos</button>
+          <button type="button" id="pce-tab-param" onclick="pceTab('param')" class="px-3 py-1.5 text-xs transition rounded-lg">2. Parámetros</button>
+          <button type="button" id="pce-tab-matriz" onclick="pceTab('matriz')" class="px-3 py-1.5 text-xs transition rounded-lg">3. Matriz de transición</button>
+          <button type="button" id="pce-tab-pi" onclick="pceTab('pi')" class="px-3 py-1.5 text-xs transition rounded-lg">4. Probabilidad de incumplimiento</button>
+          <button type="button" id="pce-tab-pdi" onclick="pceTab('pdi')" class="px-3 py-1.5 text-xs transition rounded-lg">5. Pérdida dado el incumplimiento</button>
+          <button type="button" id="pce-tab-pce" onclick="pceTab('pce')" class="px-3 py-1.5 text-xs transition rounded-lg">6. Pérdida crediticia esperada</button>
+          <button type="button" id="pce-tab-conta" onclick="pceTab('conta')" class="px-3 py-1.5 text-xs transition rounded-lg">7. Contabilidad e impuesto diferido</button>
+          <button type="button" id="pce-tab-verif" onclick="pceTab('verif')" class="px-3 py-1.5 text-xs transition rounded-lg">8. Verificaciones</button>
+          <button type="button" id="pce-tab-valid" onclick="pceTab('valid')" class="px-3 py-1.5 text-xs transition rounded-lg">9. Validación del modelo</button>
+          <button type="button" id="pce-tab-sens" onclick="pceTab('sens')" class="px-3 py-1.5 text-xs transition rounded-lg">10. Sensibilidad</button>
+          <button type="button" id="pce-tab-memo" onclick="pceTab('memo')" class="px-3 py-1.5 text-xs transition rounded-lg">11. Memorando</button>
         </div>
         <div id="pce-panel" class="border border-slate-200 rounded-xl overflow-auto max-h-[78vh]"></div>
         <div id="pce-notas" class="text-[11px] text-slate-500 leading-relaxed"></div>
@@ -2390,11 +2390,11 @@
 
         const activo = visibilidadAnios[anio];
         const btnClass = activo 
-          ? 'bg-indigo-600 text-white border-indigo-700 font-bold' 
-          : 'bg-slate-200 text-slate-600 border-slate-300 font-medium hover:bg-slate-300';
+          ? 'bg-slate-200 text-slate-900 font-semibold' 
+          : 'text-slate-400 hover:bg-slate-100 font-medium';
 
         cont.innerHTML += `
-          <button onclick="toggleColumnaAnio(${anio})" id="btn-col-${anio}" class="px-2.5 py-1 text-[11px] rounded-lg border transition ${btnClass}">
+          <button onclick="toggleColumnaAnio(${anio})" id="btn-col-${anio}" class="px-2.5 py-1 text-[11px] rounded-lg transition ${btnClass}">
             ${activo ? '✓ ' : ''}${anio}
           </button>
         `;
@@ -3124,7 +3124,7 @@
       document.getElementById('an-sub-subir').classList.toggle('hidden', docs);
       [['subir', !docs], ['docs', docs]].forEach(([id, on]) => {
         const b = document.getElementById('an-sub-btn-' + id);
-        if (b) b.className = 'px-3 py-1 rounded-lg text-[11px] font-bold border transition ' + (on ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-indigo-700 border-indigo-500 hover:bg-indigo-50');
+        if (b) b.className = 'px-3 py-1.5 text-xs transition rounded-lg ' + (on ? 'bg-slate-200 text-slate-900 font-semibold' : 'text-slate-600 hover:bg-slate-100 font-medium');
       });
     }
     function cambiarPestanaAnalisis(p) {
@@ -3138,9 +3138,9 @@
         const tab = document.getElementById('an-tab-' + t);
         if (panel) panel.classList.toggle('hidden', t !== p);
         if (tab) {
-          tab.className = 'px-4 py-2 text-xs transition rounded-t-lg border border-b-4 -mb-px ' +
-            (t === p ? 'border-slate-300 border-b-indigo-600 bg-indigo-50 text-indigo-800 font-bold'
-              : (hechas[t] ? 'border-transparent bg-slate-200 text-slate-900 hover:bg-slate-300 font-bold' : 'border-transparent bg-slate-50 text-slate-400 hover:bg-slate-100 hover:text-slate-700 font-medium'));
+          tab.className = 'px-3 py-1.5 text-xs transition rounded-lg ' +
+            (t === p ? 'bg-slate-200 text-slate-900 font-semibold'
+              : (hechas[t] ? 'text-slate-900 hover:bg-slate-100 font-semibold' : 'text-slate-400 hover:bg-slate-100 hover:text-slate-700 font-medium'));
         }
       });
       ajustarTextareasRespuesta();
@@ -6387,8 +6387,8 @@
       const boxCrearAnio = document.getElementById('box-crear-anio');
       const boxAspecto = document.getElementById('box-select-aspecto');
 
-      const activeClass = "px-3 py-1.5 text-xs font-bold rounded-lg bg-white text-indigo-900 shadow";
-      const inactiveClass = "px-3 py-1.5 text-xs font-bold rounded-lg text-slate-600 hover:text-slate-900 transition";
+      const activeClass = "px-3 py-1.5 text-xs rounded-lg transition bg-slate-200 text-slate-900 font-semibold";
+      const inactiveClass = "px-3 py-1.5 text-xs rounded-lg transition text-slate-600 hover:bg-slate-100 font-medium";
 
       btnCaptura.className = inactiveClass;
       btnHistorico.className = inactiveClass;
@@ -6983,9 +6983,9 @@
         ` · Confirmadas: ${c.confirmada} · Actualizadas: ${c.modificada} · Vacías: ${c.vacia}`;
       document.querySelectorAll('#cap-filtros .cap-filtro').forEach(b => {
         const act = b.dataset.f === capturaFiltro;
-        b.className = 'cap-filtro px-2.5 py-1 text-[11px] rounded-lg border ' + (act
-          ? 'border-indigo-600 bg-indigo-50 text-indigo-700 font-bold'
-          : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-100 font-semibold');
+        b.className = 'cap-filtro px-2.5 py-1 text-[11px] rounded-lg transition ' + (act
+          ? 'bg-slate-200 text-slate-900 font-semibold'
+          : 'text-slate-600 hover:bg-slate-100 font-medium');
       });
       const btn = document.getElementById('cap-btn-copiar-todo');
       btn.textContent = `Copiar todo lo del ${capturaCtx.prev} en las ${copiables} vacías`;
@@ -7848,7 +7848,7 @@
       if (!['asignar', 'consulta'].includes(asigTabActual)) asigTabActual = 'consulta';
       document.querySelectorAll('#as-tabs .as-tab').forEach(b => {
         const on = b.dataset.tab === asigTabActual;
-        b.className = 'as-tab px-4 py-2 rounded-lg border ' + (on ? 'bg-slate-800 text-white border-slate-800' : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50');
+        b.className = 'as-tab px-3 py-1.5 text-xs rounded-lg transition ' + (on ? 'bg-slate-200 text-slate-900 font-semibold' : 'text-slate-600 hover:bg-slate-100 font-medium');
       });
       const tabA = document.querySelector('#as-tabs [data-tab="asignar"]'); if (tabA) tabA.classList.toggle('hidden', !asigCargoAsigna());
       const cb = document.getElementById('as-auditor-box'); if (cb) cb.classList.toggle('hidden', asigTabActual === 'asignar');
@@ -8704,7 +8704,7 @@
     function arrHtmlCuadre() {
       if (!arrEstado.contratos.length) return '<p class="p-6 text-xs text-slate-400 text-center">Agrega contratos con canon, fechas y tasa para ver el cuadre general.</p>';
       const C = arrCuadreCols(); if (!C.cols.length) return '<p class="p-6 text-xs text-slate-400 text-center">Agrega contratos con canon, fechas y tasa para ver el cuadre general.</p>';
-      const btn = (k, t) => `<button type="button" onclick="arrCuadreModo('${k}')" class="px-2 py-0.5 rounded text-[11px] font-bold border ${C.modo === k ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-indigo-700 border-indigo-400 hover:bg-indigo-50'}">${t}</button>`;
+      const btn = (k, t) => `<button type="button" onclick="arrCuadreModo('${k}')" class="px-2.5 py-1 rounded-lg text-[11px] transition ${C.modo === k ? 'bg-slate-200 text-slate-900 font-semibold' : 'text-slate-600 hover:bg-slate-100 font-medium'}">${t}</button>`;
       const ok = o => Math.abs(o.sin) < 0.005;
       const th = t => `<th class="px-2 py-1 border-b border-slate-200 text-right whitespace-nowrap">${escapeHtml(t)}</th>`;
       let h = `<div class="p-2 flex flex-wrap items-center gap-1.5 border-b border-slate-200 sticky left-0">${btn('vida', 'Toda la vida de los contratos')}${btn('corte', 'Hasta el mes de consulta')}${C.modo === 'corte' ? `<span class="text-[11px] text-slate-600 ml-2">Acumulado al ${arrConcFechaTxt(C.corte)} (mes de la conciliación con el balance)</span>` : ''}</div>`;
@@ -10055,7 +10055,7 @@
     // ----- pantalla -----
     function pceNotasHtml(bloques) { return bloques.map(([t, li]) => `<div class="mb-2"><div class="font-bold text-slate-700">${t}</div><ul class="list-disc pl-5">${li.map(x => `<li>${x}</li>`).join('')}</ul></div>`).join(''); }
     function pceRender() {
-      PCE_TABS.forEach(([t]) => { const b = document.getElementById('pce-tab-' + t); if (!b) return; b.className = 'px-3 py-1 rounded-lg text-[11px] font-bold border transition ' + (pceEstado.tab === t ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-indigo-700 border-indigo-500 hover:bg-indigo-50'); });
+      PCE_TABS.forEach(([t]) => { const b = document.getElementById('pce-tab-' + t); if (!b) return; b.className = 'px-3 py-1.5 text-xs transition rounded-lg ' + (pceEstado.tab === t ? 'bg-slate-200 text-slate-900 font-semibold' : 'text-slate-600 hover:bg-slate-100 font-medium'); });
       const p = document.getElementById('pce-panel'), notas = document.getElementById('pce-notas'), t = pceEstado.tab, R = pceEstado.R;
       const sinR = '<p class="p-6 text-xs text-slate-400 text-center">Primero carga el archivo y presiona "Calcular matriz y PCE" en la pestaña Datos.</p>';
       if (t === 'datos') { p.innerHTML = pceHtmlDatos(); notas.innerHTML = pceNotasHtml([['Qué cargar', ['Un archivo con las facturas pendientes de cobro de cada mes: una fila por factura y por corte, con todos los meses en la misma hoja.', 'Columnas necesarias: factura, saldo, fecha de corte y días vencidos (o fecha de vencimiento). La columna de cliente es opcional, pero sirve para ver la concentración.', 'Las columnas se reconocen por el nombre del encabezado; si alguna quedó mal, corrígela con las listas.']], ['Cuántos meses', ['Se recomiendan al menos 12 cortes mensuales consecutivos; mientras más, más confiable la matriz.', 'La matriz sigue cada factura de un mes al siguiente, por eso el número de factura debe ser el mismo en todos los cortes.']], ['Qué se hace con los datos', ['Si una factura ya no aparece en el corte siguiente, se considera cobrada.', 'Los saldos negativos (notas de crédito) o en cero no entran al cálculo; se informan en Verificaciones.', 'El archivo no se guarda: se vuelve a cargar cada vez que abras la herramienta. Los parámetros sí se recuerdan en este navegador.']]]); }
@@ -13392,7 +13392,7 @@ ${cont.innerHTML}
       const tabs = [['resumen', 'Resumen'], ['consulta', 'Consulta por cuenta']].concat(R.tests.filter(t => !t.oculto).map(t => [t.id, t.titulo]));
       myEl('my-tabs').innerHTML = tabs.map(([id, nom]) => {
         const t = R.tests.find(x => x.id === id);
-        return `<button onclick="mayorTab('${id}')" class="px-3 py-1.5 text-xs font-bold rounded-lg ${MYS.tab === id ? 'bg-white text-indigo-900 shadow' : 'text-slate-600 hover:text-slate-900'} flex items-center gap-1.5">${t ? myPunto(t.nivel) : ''}${escapeHtml(nom)}</button>`;
+        return `<button onclick="mayorTab('${id}')" class="px-3 py-1.5 text-xs rounded-lg transition ${MYS.tab === id ? 'bg-slate-200 text-slate-900 font-semibold' : 'text-slate-600 hover:bg-slate-100 font-medium'} flex items-center gap-1.5">${t ? myPunto(t.nivel) : ''}${escapeHtml(nom)}</button>`;
       }).join('');
       mayorPanel();
     }
@@ -13599,11 +13599,11 @@ ${cont.innerHTML}
       if (t.id === 'conc_man' && MYS.concVista === 'lista') t = Object.assign({}, t.lista, { id: 'conc_man', titulo: t.titulo, que: t.que });
       let h = `<div class="flex items-start justify-between gap-3 flex-wrap"><div class="max-w-3xl"><h3 class="text-sm font-bold text-slate-800 flex items-center gap-2">${myPunto(t.nivel)} ${escapeHtml(t.titulo)} <span class="text-[10px] font-bold text-slate-500 bg-slate-100 rounded px-2 py-0.5">${escapeHtml(t.nia)}</span></h3><p class="text-[11px] text-slate-500 leading-relaxed mt-1">${escapeHtml(t.que)}</p></div></div>`;
       h += `<div class="text-xs font-semibold text-slate-700">${escapeHtml(t.resumen)}</div>`;
-      if (tConcBase.id === 'conc_man') h += `<div class="flex gap-1">${[['grupos', 'Agrupado por concepto'], ['lista', 'Lista de asientos']].map(([k, n]) => `<button onclick="MYS.concVista='${k}';MYS.sort=null;mayorPanel()" class="px-3 py-1 text-xs font-bold rounded-lg border ${MYS.concVista === k ? 'bg-slate-800 text-white border-slate-800' : 'bg-white text-slate-600 border-slate-200'}">${n}</button>`).join('')}</div>`;
+      if (tConcBase.id === 'conc_man') h += `<div class="flex gap-1">${[['grupos', 'Agrupado por concepto'], ['lista', 'Lista de asientos']].map(([k, n]) => `<button onclick="MYS.concVista='${k}';MYS.sort=null;mayorPanel()" class="px-3 py-1 text-xs rounded-lg transition ${MYS.concVista === k ? 'bg-slate-200 text-slate-900 font-semibold' : 'text-slate-600 hover:bg-slate-100 font-medium'}">${n}</button>`).join('')}</div>`;
       if (t.kpis) h += `<div class="grid grid-cols-2 md:grid-cols-4 gap-3">${t.kpis.map(k => `<div class="bg-white p-3 rounded-xl border border-slate-200"><span class="block text-[10px] font-bold text-slate-400">${escapeHtml(k.l)}</span><span class="text-sm font-bold text-slate-800">${escapeHtml(myCelda(k.v, k.t).replace(/<[^>]+>/g, ''))}</span></div>`).join('')}</div>`;
       if (t.vista === 'benford') {
         const sel = MYS.bfSel, b = t.benford[sel];
-        h += `<div class="flex gap-1">${[['todos', 'Todos'], ['manuales', 'Solo manuales'], ['automaticos', 'Solo automáticos']].map(([k, n]) => `<button onclick="mayorBenfordSel('${k}')" class="px-3 py-1 text-xs font-bold rounded-lg border ${sel === k ? 'bg-slate-800 text-white border-slate-800' : 'bg-white text-slate-600 border-slate-200'}">${n}</button>`).join('')}</div>`;
+        h += `<div class="flex gap-1">${[['todos', 'Todos'], ['manuales', 'Solo manuales'], ['automaticos', 'Solo automáticos']].map(([k, n]) => `<button onclick="mayorBenfordSel('${k}')" class="px-3 py-1 text-xs rounded-lg transition ${sel === k ? 'bg-slate-200 text-slate-900 font-semibold' : 'text-slate-600 hover:bg-slate-100 font-medium'}">${n}</button>`).join('')}</div>`;
         h += `<div class="text-xs text-slate-700">${myPunto(b.nivel)} <span class="font-bold">${escapeHtml(b.txt)}</span> · MAD ${b.mad.toFixed(4)} · ${myInt(b.N)} importes</div>`;
         const mx = Math.max(0.0001, ...b.filas.map(f => Math.max(f.obs, f.esp)));
         h += `<div class="overflow-x-auto border border-slate-200 rounded-xl bg-white"><table class="w-full text-xs text-slate-700"><thead class="bg-slate-100 text-[10px] font-bold text-slate-600"><tr><th class="p-2 text-center">Dígito</th><th class="p-2 text-right">Cantidad</th><th class="p-2 text-right">Observado</th><th class="p-2 text-right">Esperado</th><th class="p-2 text-right">Diferencia</th><th class="p-2 w-1/2">Observado (barra) frente a esperado (línea)</th><th class="p-2 text-center">Desvío</th></tr></thead><tbody>${b.filas.map(f => `<tr class="border-t"><td class="p-2 text-center font-bold">${f.dg}</td><td class="p-2 text-right">${myInt(f.n)}</td><td class="p-2 text-right">${(f.obs * 100).toFixed(1)}%</td><td class="p-2 text-right">${(f.esp * 100).toFixed(1)}%</td><td class="p-2 text-right ${f.sig ? 'font-bold text-red-700' : ''}">${f.dif >= 0 ? '+' : ''}${(f.dif * 100).toFixed(1)} pts</td><td class="p-2"><div class="relative h-3 bg-slate-100 rounded"><div class="absolute h-3 rounded ${f.sig ? 'bg-red-400' : 'bg-slate-500'}" style="width:${(f.obs / mx * 100).toFixed(1)}%"></div><div class="absolute top-[-2px] h-4 w-0.5 bg-slate-900" style="left:${(f.esp / mx * 100).toFixed(1)}%"></div></div></td><td class="p-2 text-center">${f.sig ? '<span class="text-red-700 font-bold">Significativo</span>' : ''}</td></tr>`).join('')}</tbody></table></div>`;
