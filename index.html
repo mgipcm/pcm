@@ -891,7 +891,7 @@
 
         <div id="su-card-prev" class="hidden border border-slate-300 rounded-xl p-4 space-y-2 bg-slate-50/60">
           <h2 id="su-titulo-prev" class="text-xs font-bold text-slate-700">Periodo anterior</h2>
-          <p class="text-[11px] text-slate-500">En la visita final se abre también el periodo anterior (balance al 31 de diciembre del año anterior). Es el punto de partida para comparar y, más adelante, para el flujo de efectivo. Mismo formato de 4 columnas.</p>
+          <p class="text-[11px] text-slate-500">Saldos iniciales: balance al 31 de diciembre del año anterior. Se sube una sola vez y queda disponible tanto en la visita preliminar como en la final. Es el punto de partida para comparar y, más adelante, para el flujo de efectivo. Mismo formato de 4 columnas.</p>
           <div class="flex flex-wrap items-end gap-3">
             <div>
               <label class="block text-[11px] font-bold text-slate-600 mb-1">Fecha de corte del periodo anterior</label>
@@ -11053,14 +11053,14 @@
       errEl.classList.add('hidden');
       const esFinal = visitaSumarias() === 'final';
       const anioPrev = Number(anio) - 1;
-      document.getElementById('su-card-prev').classList.toggle('hidden', !esFinal);
+      document.getElementById('su-card-prev').classList.toggle('hidden', false);
       document.getElementById('su-titulo-actual').textContent = `Balance de comprobación ${anio} – ${etiquetaVisita(visitaSumarias())} (Excel)`;
       document.getElementById('su-titulo-prev').textContent = `Periodo anterior: balance al 31/12/${anioPrev}`;
       mostrarEstadoSumarias('Cargando...');
       mostrarEstadoPrevSumarias('');
       try {
         const regs = await traerBalanceCompleto(cliente, anio, visitaSumarias(), COLUMNAS_BALANCE);
-        const regsPrev = esFinal ? await traerBalanceCompleto(cliente, anioPrev, 'final', COLUMNAS_BALANCE) : [];
+        const regsPrev = await traerBalanceCompleto(cliente, anioPrev, 'final', COLUMNAS_BALANCE); // saldos iniciales: el cierre del año anterior sirve para la visita preliminar y la final
         if (miId !== sumEstado.cargaId) return;
         sumEstado.registros = regs;
         sumEstado.archivo = regs.length ? (regs[0].archivo || '') : '';
@@ -11069,7 +11069,7 @@
         document.getElementById('su-fecha').value = sumEstado.fecha || (esFinal ? `${anio}-12-31` : '');
         document.getElementById('su-fecha-prev').value = sumEstado.prev.fecha || `${anioPrev}-12-31`;
         mostrarEstadoSumarias(regs.length ? `Balance cargado: ${regs.length} cuentas${sumEstado.archivo ? ' (archivo ' + sumEstado.archivo + ')' : ''}${sumEstado.fecha ? ', al ' + formatoFechaAnexo(sumEstado.fecha) : ''}.` : 'Aún no hay balance cargado para esta visita.');
-        if (esFinal) mostrarEstadoPrevSumarias(regsPrev.length ? `Balance cargado: ${regsPrev.length} cuentas${sumEstado.prev.archivo ? ' (archivo ' + sumEstado.prev.archivo + ')' : ''}${sumEstado.prev.fecha ? ', al ' + formatoFechaAnexo(sumEstado.prev.fecha) : ''}.` : `Aún no hay balance del periodo anterior (31/12/${anioPrev}).`);
+        mostrarEstadoPrevSumarias(regsPrev.length ? `Balance cargado: ${regsPrev.length} cuentas${sumEstado.prev.archivo ? ' (archivo ' + sumEstado.prev.archivo + ')' : ''}${sumEstado.prev.fecha ? ', al ' + formatoFechaAnexo(sumEstado.prev.fecha) : ''}.` : `Aún no hay balance del periodo anterior (31/12/${anioPrev}).`);
       } catch (e) {
         if (miId !== sumEstado.cargaId) return;
         console.error('Error cargando el balance:', e);
@@ -11123,7 +11123,7 @@
       const cont = document.getElementById('su-resultado'), alertas = document.getElementById('su-alertas');
       const regs = sumEstado.registros;
       const esFinal = visitaSumarias() === 'final';
-      const regsPrev = esFinal ? sumEstado.prev.registros : [];
+      const regsPrev = sumEstado.prev.registros;
       const verPrev = regsPrev.length > 0;
       document.getElementById('su-btn-descargar').classList.toggle('hidden', !regs.length && !verPrev);
       document.getElementById('su-btn-borrar').classList.toggle('hidden', !regs.length);
@@ -11310,7 +11310,7 @@
     }
 
     function descargarSumarias() {
-      const prevRegs = visitaSumarias() === 'final' ? sumEstado.prev.registros : [];
+      const prevRegs = sumEstado.prev.registros;
       if (!window.XLSX || (!sumEstado.registros.length && !prevRegs.length)) return;
       const anio = Number(valorAnalisis('su-anio'));
       const grupos = agruparSumarias(sumEstado.registros);
