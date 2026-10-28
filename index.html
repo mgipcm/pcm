@@ -321,9 +321,11 @@ main .bg-slate-200:not(thead):not(tr):not(th) { background-color:#cfcfcc; }
 /* Menú lateral: selección y cursor con el mismo gris oscuro del resto de la aplicación */
 #sidebar .hover\:bg-slate-800:hover { background-color:#bdbdba !important; }
 #sidebar .bg-indigo-600, #sidebar .bg-indigo-600:hover { background-color:#bdbdba !important; border-color:#aeaeab !important; }
-/* Encabezado de tablas del cuestionario con el mismo color del selector de año */
-main table thead.bg-slate-100, main table thead.bg-slate-100 tr, main table thead.bg-slate-100 th, main table thead#tabla-historico-head th { background-color:var(--acento) !important; color:#ffffff !important; border-color:rgba(255,255,255,.18) !important; }
-main table thead.bg-slate-100 th * { color:#ffffff; }
+/* Encabezado de tablas y selector de año con el gris de selección (un solo color) */
+main table thead.bg-slate-100, main table thead.bg-slate-100 tr, main table thead.bg-slate-100 th, main table thead#tabla-historico-head th { background-color:#bdbdba !important; color:#1f1f1e !important; border-color:#aeaeab !important; }
+main table thead.bg-slate-100 th * { color:#1f1f1e; }
+#select-anio { background-color:#bdbdba !important; color:#1f1f1e !important; }
+#select-anio option { background:#fff; color:#1f1f1e; }
 </style>
 </head>
 <body class="mgi-bg min-h-screen text-slate-800 font-sans flex relative">
