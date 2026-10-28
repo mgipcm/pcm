@@ -228,14 +228,14 @@ p, li { line-height: 1.4; }
 </style>
 <style id="estilo-limpio">
 /* ESTILO LIMPIO (como Claude): sin recuadros; todo separado por una línea fina; al pasar el cursor se "activa" */
-main section[id^="sec-"] { background-image:none !important; box-shadow:none !important; border:1px solid #e4e4e2; background-color:#fbfbfa; }
+main section[id^="sec-"] { background-image:none !important; box-shadow:none !important; border:1px solid #cdcdc9; background-color:#fbfbfa; }
 
 /* Recuadros neutros (bordes grises) -> solo una línea fina abajo, sin fondo ni esquinas */
 main .border.border-slate-100:not(.border-dashed):not(input):not(select):not(textarea):not(button),
 main .border.border-slate-200:not(.border-dashed):not(input):not(select):not(textarea):not(button),
 main .border.border-slate-300:not(.border-dashed):not(input):not(select):not(textarea):not(button),
 main .border.border-slate-400:not(.border-dashed):not(input):not(select):not(textarea):not(button) {
-  border-width:0 0 1px 0 !important; border-bottom-color:#e4e4e2 !important; border-radius:0 !important; box-shadow:none !important; background-color:transparent !important;
+  border-width:0 0 1px 0 !important; border-bottom-color:#cdcdc9 !important; border-radius:0 !important; box-shadow:none !important; background-color:transparent !important;
 }
 main .shadow-sm, main .shadow-xs, main .shadow { box-shadow:none !important; }
 main .bg-slate-50:not(thead):not(th):not(tr):not(button):not(input):not(select) { background-color:transparent; }
@@ -243,11 +243,11 @@ main .bg-slate-50:not(thead):not(th):not(tr):not(button):not(input):not(select) 
 /* Campos para escribir y listas: línea fina abajo; al pasar o escribir se marcan */
 main input.border:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]):not(#select-anio),
 main select.border:not(#select-anio), main textarea.border {
-  border-color:transparent !important; border-bottom:1px solid #d9d9d6 !important; border-radius:0 !important; background-color:transparent !important; box-shadow:none !important;
+  border-color:transparent !important; border-bottom:1px solid #bdbdb9 !important; border-radius:0 !important; background-color:transparent !important; box-shadow:none !important;
 }
 main input.border:hover, main select.border:hover, main textarea.border:hover,
 main input.border:focus, main select.border:focus, main textarea.border:focus {
-  background-color:#f1f1ef !important; border-radius:8px !important; border-color:#d9d9d6 !important; outline:none !important;
+  background-color:#f1f1ef !important; border-radius:8px !important; border-color:#bdbdb9 !important; outline:none !important;
 }
 
 /* Botones: sin recuadro; se activan al pasar el cursor */
@@ -256,14 +256,14 @@ main button.border, main button.bg-white, main button.bg-slate-50, main button.b
 }
 main button.bg-indigo-600, main button.bg-slate-200 { background-image:none !important; background-color:#e8e8e6 !important; color:#1f2937 !important; border-color:transparent !important; box-shadow:none !important; }
 main button:hover:not(:disabled) { background-color:#e8e8e6 !important; }
-main button.bg-indigo-600:hover:not(:disabled) { background-color:#d9d9d6 !important; background-image:none !important; }
+main button.bg-indigo-600:hover:not(:disabled) { background-color:#bdbdb9 !important; background-image:none !important; }
 
 /* Tablas: solo líneas horizontales finas, sin divisiones verticales; fila activa al pasar */
-main table td, main table th { border-left-width:0 !important; border-right-width:0 !important; border-color:#ececea; }
+main table td, main table th { border-left-width:0 !important; border-right-width:0 !important; border-color:#d0d0cc; }
 main table thead, main table thead tr, main table thead th { background-color:transparent !important; }
-main table thead th { border-bottom:1px solid #d9d9d6; font-weight:700; }
+main table thead th { border-bottom:1px solid #bdbdb9; font-weight:700; }
 main table tbody tr:hover > td { background-color:#f4f4f2; }
-main hr, main .divide-y > * { border-color:#e4e4e2; }
+main hr, main .divide-y > * { border-color:#cdcdc9; }
 /* Menú lateral: alineado a la izquierda y sin saltos de línea innecesarios */
 #sidebar nav button, #sidebar nav a { text-align:left !important; }
 #sidebar nav button .text-xs, #sidebar nav button.text-xs, #sidebar nav a.text-xs, #sidebar nav button span { font-size:12px !important; line-height:1.35 !important; }
@@ -272,9 +272,9 @@ main hr, main .divide-y > * { border-color:#e4e4e2; }
 #sidebar nav button > div, #sidebar nav button > span:first-child { min-width:0; text-align:left; }
 /* Columna To/Do - Quick Lett - Opinión: sin color de fondo, separada por líneas finas */
 tr[data-fila-cap], tr[data-fila-cap]:hover, main table tbody tr[data-fila-cap]:hover > td { background-color:transparent !important; }
-tr[data-fila-cap] > td:nth-child(2) { background-color:transparent !important; border-left:1px solid #ececea !important; border-right:1px solid #ececea !important; padding:0 !important; vertical-align:top; }
+tr[data-fila-cap] > td:nth-child(2) { background-color:transparent !important; border-left:1px solid #d0d0cc !important; border-right:1px solid #d0d0cc !important; padding:0 !important; vertical-align:top; }
 tr[data-fila-cap] > td:nth-child(2) > div { gap:0 !important; }
-tr[data-fila-cap] > td:nth-child(2) button { width:100%; border:0 !important; border-bottom:1px solid #ececea !important; border-radius:0 !important; background:transparent !important; box-shadow:none !important; padding:6px 12px !important; justify-content:space-between; color:#374151; }
+tr[data-fila-cap] > td:nth-child(2) button { width:100%; border:0 !important; border-bottom:1px solid #d0d0cc !important; border-radius:0 !important; background:transparent !important; box-shadow:none !important; padding:6px 12px !important; justify-content:space-between; color:#374151; }
 tr[data-fila-cap] > td:nth-child(2) button:last-child { border-bottom:0 !important; }
 tr[data-fila-cap] > td:nth-child(2) button:hover:not(:disabled) { background:transparent !important; color:#005cab; }
 /* Campos de escritura con la misma letra que el resto (tamaño, grosor y color) */
@@ -298,17 +298,19 @@ main .bg-slate-50, main .bg-slate-100 { --x:0; }
 body, button, input, select, textarea, table { letter-spacing:0; text-rendering:optimizeLegibility; font-kerning:normal; font-optical-sizing:auto; -webkit-font-smoothing:antialiased; }
 /* Fondo casi blanco y líneas de división más visibles */
 body.mgi-bg { background-color:#fefefe !important; }
-main section[id^="sec-"] { background-color:#ffffff !important; border-color:#d8d8d5 !important; }
+main section[id^="sec-"] { background-color:#ffffff !important; border-color:#c2c2be !important; }
 main thead.bg-slate-100, main table thead th.bg-slate-100, main table thead, main table thead th { background-color:#fbfbfb !important; }
-main table td, main table th { border-color:#dededa !important; }
-main table thead th { border-bottom:1px solid #cfcfcb !important; }
-tr[data-fila-cap] > td:nth-child(2) { border-left-color:#dededa !important; border-right-color:#dededa !important; }
-tr[data-fila-cap] > td:nth-child(2) button { border-bottom-color:#dededa !important; }
+main table td, main table th { border-color:#c7c7c3 !important; }
+main table thead th { border-bottom:1px solid #b5b5b1 !important; }
+tr[data-fila-cap] > td:nth-child(2) { border-left-color:#c7c7c3 !important; border-right-color:#c7c7c3 !important; }
+tr[data-fila-cap] > td:nth-child(2) button { border-bottom-color:#c7c7c3 !important; }
 main .border.border-slate-100:not(.border-dashed):not(input):not(select):not(textarea):not(button),
 main .border.border-slate-200:not(.border-dashed):not(input):not(select):not(textarea):not(button),
 main .border.border-slate-300:not(.border-dashed):not(input):not(select):not(textarea):not(button),
-main .border.border-slate-400:not(.border-dashed):not(input):not(select):not(textarea):not(button) { border-bottom-color:#d8d8d5 !important; }
-main input.border:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]):not(#select-anio), main select.border:not(#select-anio), main textarea.border { border-bottom-color:#cfcfcb !important; }
+main .border.border-slate-400:not(.border-dashed):not(input):not(select):not(textarea):not(button) { border-bottom-color:#c2c2be !important; }
+main input.border:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]):not(#select-anio), main select.border:not(#select-anio), main textarea.border { border-bottom-color:#b5b5b1 !important; }
+main .border-slate-100, main .border-slate-200 { border-color:#d0d0cc; }
+main .border-slate-300 { border-color:#bdbdb9; }
 </style>
 </head>
 <body class="mgi-bg min-h-screen text-slate-800 font-sans flex relative">
