@@ -228,6 +228,45 @@ th, td { word-break: normal; }
 button, label, input, select, textarea { line-height: 1.4; }
 p, li { line-height: 1.55; }
 </style>
+<style id="estilo-limpio">
+/* ESTILO LIMPIO (como Claude): sin recuadros; todo separado por una línea fina; al pasar el cursor se "activa" */
+main section[id^="sec-"] { background-image:none !important; box-shadow:none !important; border:1px solid #e4e4e2; background-color:#fbfbfa; }
+
+/* Recuadros neutros (bordes grises) -> solo una línea fina abajo, sin fondo ni esquinas */
+main .border.border-slate-100:not(.border-dashed):not(input):not(select):not(textarea):not(button),
+main .border.border-slate-200:not(.border-dashed):not(input):not(select):not(textarea):not(button),
+main .border.border-slate-300:not(.border-dashed):not(input):not(select):not(textarea):not(button),
+main .border.border-slate-400:not(.border-dashed):not(input):not(select):not(textarea):not(button) {
+  border-width:0 0 1px 0 !important; border-bottom-color:#e4e4e2 !important; border-radius:0 !important; box-shadow:none !important; background-color:transparent !important;
+}
+main .shadow-sm, main .shadow-xs, main .shadow { box-shadow:none !important; }
+main .bg-slate-50:not(thead):not(th):not(tr):not(button):not(input):not(select) { background-color:transparent; }
+
+/* Campos para escribir y listas: línea fina abajo; al pasar o escribir se marcan */
+main input.border:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]):not(#select-anio),
+main select.border:not(#select-anio), main textarea.border {
+  border-color:transparent !important; border-bottom:1px solid #d9d9d6 !important; border-radius:0 !important; background-color:transparent !important; box-shadow:none !important;
+}
+main input.border:hover, main select.border:hover, main textarea.border:hover,
+main input.border:focus, main select.border:focus, main textarea.border:focus {
+  background-color:#f1f1ef !important; border-radius:8px !important; border-color:#d9d9d6 !important; outline:none !important;
+}
+
+/* Botones: sin recuadro; se activan al pasar el cursor */
+main button.border, main button.bg-white, main button.bg-slate-50, main button.bg-slate-100 {
+  border-color:transparent !important; background-color:transparent !important; box-shadow:none !important;
+}
+main button.bg-indigo-600, main button.bg-slate-200 { background-image:none !important; background-color:#e8e8e6 !important; color:#1f2937 !important; border-color:transparent !important; box-shadow:none !important; }
+main button:hover:not(:disabled) { background-color:#e8e8e6 !important; }
+main button.bg-indigo-600:hover:not(:disabled) { background-color:#d9d9d6 !important; background-image:none !important; }
+
+/* Tablas: solo líneas horizontales finas, sin divisiones verticales; fila activa al pasar */
+main table td, main table th { border-left-width:0 !important; border-right-width:0 !important; border-color:#ececea; }
+main table thead, main table thead tr, main table thead th { background-color:transparent !important; }
+main table thead th { border-bottom:1px solid #d9d9d6; font-weight:700; }
+main table tbody tr:hover > td { background-color:#f4f4f2; }
+main hr, main .divide-y > * { border-color:#e4e4e2; }
+</style>
 </head>
 <body class="mgi-bg min-h-screen text-slate-800 font-sans flex relative">
 
