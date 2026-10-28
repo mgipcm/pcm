@@ -272,6 +272,13 @@ main hr, main .divide-y > * { border-color:#e4e4e2; }
 #sidebar nav > button, #sidebar nav > div > button { padding-left:12px !important; padding-right:10px !important; }
 #sidebar nav button > span:last-child:not(:first-child), #sidebar nav button > [id^="icon-"] { flex-shrink:0; margin-left:6px; }
 #sidebar nav button > div, #sidebar nav button > span:first-child { min-width:0; text-align:left; }
+/* Columna To/Do - Quick Lett - Opinión: sin color de fondo, separada por líneas finas */
+tr[data-fila-cap], tr[data-fila-cap]:hover, main table tbody tr[data-fila-cap]:hover > td { background-color:transparent !important; }
+tr[data-fila-cap] > td:nth-child(2) { background-color:transparent !important; border-left:1px solid #ececea !important; border-right:1px solid #ececea !important; padding:0 !important; vertical-align:top; }
+tr[data-fila-cap] > td:nth-child(2) > div { gap:0 !important; }
+tr[data-fila-cap] > td:nth-child(2) button { width:100%; border:0 !important; border-bottom:1px solid #ececea !important; border-radius:0 !important; background:transparent !important; box-shadow:none !important; padding:10px 14px !important; justify-content:space-between; color:#374151; }
+tr[data-fila-cap] > td:nth-child(2) button:last-child { border-bottom:0 !important; }
+tr[data-fila-cap] > td:nth-child(2) button:hover:not(:disabled) { background:transparent !important; color:#005cab; }
 </style>
 </head>
 <body class="mgi-bg min-h-screen text-slate-800 font-sans flex relative">
