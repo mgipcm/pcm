@@ -13890,7 +13890,7 @@ ${cont.innerHTML}
 
     // ---- Reconocimiento de la importación en el detalle del mayor ----
     const IMP_RUIDO = /^(DOC|DOCS|DOCUMENTO|DOCUMENTOS|DOCUMENTACION|DOCUMENTAION|DETALLE|FACT|FACTURA|FACTURAS|PRELIQ|PRELIQUIDACION|LIQUIDACION|IMPORTACION|IMP|PDF|COPIA|FINAL|DAI|DAU)$/;
-    function impAliasValido(n) { if (n.length < 3 || IMP_RUIDO.test(n)) return false; if (/^\d+$/.test(n.replace(/ /g, '')) && n.replace(/ /g, '').length < 3) return false; return true; }
+    function impAliasValido(n) { if (n.length < 3 || IMP_RUIDO.test(n)) return false; if (/^\d+$/.test(n.replace(/ /g, '')) && n.replace(/ /g, '').length < 4) return false; return true; }
     function impPatAlias(a) { // a ya normalizado; tolera espacios entre letras y números (H264 = H 264), ceros a la izquierda (HOLY 04 = HOLY 4) y una palabra intermedia (SOLAR GRUP 01)
       const num = d => (d.length <= 4 && d[0] !== '0') ? '0*' + d : d;
       let m = /^([A-Z]{4,}) ?(\d{1,4})$/.exec(a);
@@ -13919,7 +13919,7 @@ ${cont.innerHTML}
     }
     function impBuscarIds(comp, detalle) {
       if (!comp) return [];
-      let t = impNorm(detalle); if (!t) return [];
+      let t = impNorm(String(detalle == null ? '' : detalle).replace(/(?<![A-Za-z0-9])(?:DP|DI|DE|CE|EG|RC|PP)-\d+/gi, ' ')); if (!t) return [];
       if (comp.reLista) { comp.reLista.lastIndex = 0; let extra = '', m; while ((m = comp.reLista.exec(t))) extra += ' ' + m[2].split(/\s+/).map(n => m[1] + ' ' + n).join(' '); if (extra) t += extra; }
       const ids = new Set(); comp.re.lastIndex = 0; let m;
       while ((m = comp.re.exec(t))) {
