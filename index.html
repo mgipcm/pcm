@@ -204,13 +204,24 @@
     tr.fila-por-revisar > td { background-color:#f4f4f1 !important; }
   </style>
 <style id="tipografia-mgi">
-/* Tipografía unificada: títulos principales 18, encabezado superior 16, subtítulos/tarjetas/secciones 14 (negrita); resto 12 */
+/* Tipografía unificada: títulos principales 18, encabezado superior 16, subtítulos/tarjetas/secciones 14 (negrita); resto 13 */
 h1.text-xl, h1.sm\:text-xl { font-size: 18px !important; line-height: 1.35 !important; font-weight: 700 !important; }
 h1.text-base, h1.text-sm { font-size: 16px !important; line-height: 1.35 !important; font-weight: 700 !important; }
 h2.text-xs, h2.text-sm, h3.text-sm, h3.text-xs { font-size: 14px !important; line-height: 1.4 !important; font-weight: 700 !important; }
-.text-xs, .text-\[13px\], .text-\[11px\], .text-\[10px\], .text-\[9px\], .text-\[8px\] { font-size: 12px !important; line-height: 1.5 !important; }
-table td, table th { padding-top: 5px !important; padding-bottom: 5px !important; }
-table td:not(.p-0), table th:not(.p-0) { padding-left: 8px; padding-right: 8px; }
+.text-xs, .text-\[13px\], .text-\[11px\], .text-\[10px\], .text-\[9px\], .text-\[8px\] { font-size: 13px !important; line-height: 1.5 !important; }
+table td, table th { padding-top: 6px !important; padding-bottom: 6px !important; }
+table td:not(.p-0), table th:not(.p-0) { padding-left: 10px; padding-right: 10px; }
+/* recuadros, botones y campos con más aire para el texto de 13 */
+.p-2 { padding: 10px !important; }
+.p-3 { padding: 14px !important; }
+.py-1 { padding-top: 5px !important; padding-bottom: 5px !important; }
+.py-1\.5 { padding-top: 7px !important; padding-bottom: 7px !important; }
+.px-2 { padding-left: 10px !important; padding-right: 10px !important; }
+.px-3 { padding-left: 14px !important; padding-right: 14px !important; }
+input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]), select { min-height: 32px; padding-top: 5px; padding-bottom: 5px; }
+textarea { padding-top: 6px; padding-bottom: 6px; }
+button { min-height: 28px; }
+th, td { word-break: normal; }
 button, label, input, select, textarea { line-height: 1.4; }
 p, li { line-height: 1.55; }
 </style>
