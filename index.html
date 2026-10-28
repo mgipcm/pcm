@@ -285,6 +285,11 @@ main input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=fi
 tr[data-fila-cap] > td { background-color:transparent !important; }
 tr[data-fila-cap] *:hover:not(button), tr[data-fila-cap] textarea:focus, tr[data-fila-cap] input:focus, tr[data-fila-cap] select:focus { background-color:transparent !important; }
 tr[data-fila-cap] textarea, tr[data-fila-cap] input:not([type=checkbox]):not([type=radio]) { background-color:transparent !important; }
+/* Fondo general 20% más claro */
+body.mgi-bg { background-color:#f3f3f4;
+  background-image: radial-gradient(1100px 520px at 105% -10%, rgba(174,174,174,.24), transparent 60%), radial-gradient(900px 520px at -10% 110%, rgba(174,174,174,.22), transparent 60%), linear-gradient(135deg, #f2f2f3 0%, #f2f2f2 55%, #f6f6f7 100%); }
+main section[id^="sec-"] { background-color:#fcfcfb; }
+main thead.bg-slate-100, main table thead th.bg-slate-100 { background-color:#ececed !important; }
 </style>
 </head>
 <body class="mgi-bg min-h-screen text-slate-800 font-sans flex relative">
