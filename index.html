@@ -13893,6 +13893,7 @@ ${cont.innerHTML}
     function impAliasValido(n) { if (n.length < 3 || IMP_RUIDO.test(n)) return false; if (/^\d+$/.test(n.replace(/ /g, '')) && n.replace(/ /g, '').length < 4) return false; return true; }
     function impPatAlias(a) { // a ya normalizado; tolera espacios entre letras y números (H264 = H 264), ceros a la izquierda (HOLY 04 = HOLY 4) y una palabra intermedia (SOLAR GRUP 01)
       const num = d => (d.length <= 4 && d[0] !== '0') ? '0*' + d : d;
+      if (/^[A-Z]{2}\d{1,4}$/.test(a)) return a.replace(/^([A-Z]+)(\d+)$/, (_, l, d) => l + num(d)); // código corto (AL02, C35): pegado, sin espacio (evita 'AL 02 DE FEBRERO')
       let m = /^([A-Z]{4,}) ?(\d{1,4})$/.exec(a);
       if (m) return m[1] + '(?:\\s+[A-Z]{2,12})?\\s*' + num(m[2]);
       m = /^([A-Z]{3,}) ([A-Z]{5,}) ?(\d{1,4})$/.exec(a);
