@@ -7671,15 +7671,17 @@ tr[data-fila-cap] > td:nth-child(2) button[onclick^="abrirModalOpinion"].border-
       const { data: preguntas, error: errP } = await supabaseClient.from('preguntas_banco').select('*');
       if (errP) return { data: null, error: errP };
 
-      const mapa = {};
+      const mapa = {}, mapaAsp = {};
       (preguntas || []).forEach(p => {
         const pId = p.pregunta_id || p.id_pregunta || p.id || p.id_banco;
         mapa[String(pId)] = p.texto_pregunta || p.pregunta || '';
+        mapaAsp[String(pId)] = p.id_aspecto;
       });
 
       (resps || []).forEach(r => {
         const texto = mapa[String(r.pregunta_id)];
         r.preguntas_banco = texto ? { texto_pregunta: texto } : null;
+        r._aspecto = mapaAsp[String(r.pregunta_id)];
       });
 
       return { data: resps, error: null };
@@ -7733,6 +7735,7 @@ tr[data-fila-cap] > td:nth-child(2) button[onclick^="abrirModalOpinion"].border-
               </span>
             </div>
             <p class="text-xs font-bold text-slate-800">${escapeHtml(pregTexto)}</p>
+            <div><button type="button" onclick="irAPreguntaDesdeResumen('${p.pregunta_id}', ${p.anio}, '${p._aspecto}')" class="px-3 py-1 text-[11px] rounded-lg bg-slate-100 text-slate-800 hover:bg-slate-200 font-semibold">Ir al análisis →</button></div>
             <p class="text-xs text-slate-600 bg-slate-50 p-2.5 rounded-lg border leading-relaxed">${escapeHtml(p.detalle_todo || 'Sin detalle')}</p>
             <div class="text-[10px] text-slate-500 space-y-0.5 pt-1">
               <p><strong>A realizar en:</strong> ${[valorVerdadero(p.visita_preliminar_todo) ? 'Visita preliminar' : '', valorVerdadero(p.visita_final_todo) ? 'Visita final' : ''].filter(Boolean).join(' y ') || 'Sin definir'}</p>
@@ -7786,6 +7789,7 @@ tr[data-fila-cap] > td:nth-child(2) button[onclick^="abrirModalOpinion"].border-
               </span>
             </div>
             <p class="text-xs font-bold text-slate-800">${escapeHtml(pregTexto)}</p>
+            <div><button type="button" onclick="irAPreguntaDesdeResumen('${h.pregunta_id}', ${h.anio}, '${h._aspecto}')" class="px-3 py-1 text-[11px] rounded-lg bg-slate-100 text-slate-800 hover:bg-slate-200 font-semibold">Ir al análisis →</button></div>
             <p class="text-xs text-amber-900 bg-amber-50/50 p-2.5 rounded-lg border border-amber-200 leading-relaxed">${escapeHtml(h.detalle_quicklett || 'Sin detalle')}</p>
             <p class="text-[10px] text-slate-500 pt-1"><strong>Elaborado por:</strong> ${escapeHtml(h.elaborado_quicklett ? nombreDeUsuarioPorEmail(h.elaborado_quicklett) + ' (' + h.elaborado_quicklett + ')' : 'No especificado')}</p>
             ${valorVerdadero(h.revisado_quicklett) && h.revisado_por_quicklett ? `<p class="text-[10px] text-slate-500"><strong>Revisado por:</strong> ${escapeHtml(nombreDeUsuarioPorEmail(h.revisado_por_quicklett) + ' (' + h.revisado_por_quicklett + ')')}</p>` : ''}
@@ -7841,6 +7845,7 @@ tr[data-fila-cap] > td:nth-child(2) button[onclick^="abrirModalOpinion"].border-
               ${badgeDecisión}
             </div>
             <p class="text-xs font-bold text-slate-800">${escapeHtml(pregTexto)}</p>
+            <div><button type="button" onclick="irAPreguntaDesdeResumen('${c.pregunta_id}', ${c.anio}, '${c._aspecto}')" class="px-3 py-1 text-[11px] rounded-lg bg-slate-100 text-slate-800 hover:bg-slate-200 font-semibold">Ir al análisis →</button></div>
             <p class="text-xs text-rose-950 bg-rose-50/40 p-2.5 rounded-lg border border-rose-100 leading-relaxed">${escapeHtml(c.detalle_opinion || 'Sin detalle')}</p>
             ${c.comentario_opinion ? `<div class="p-2 bg-slate-50 rounded text-[11px] text-slate-700 border"><strong>Conclusión:</strong> ${escapeHtml(c.comentario_opinion)}</div>` : ''}
             <div class="text-[10px] text-slate-500 space-y-0.5 pt-1">
@@ -7852,7 +7857,26 @@ tr[data-fila-cap] > td:nth-child(2) button[onclick^="abrirModalOpinion"].border-
       });
     }
 
-    // ===== SUMARIAS Y CATÁLOGO DE CUENTAS =====
+    
+    // Lleva a la pregunta (Captura por Año) donde está la observación: mismo cliente, año y aspecto
+    async function irAPreguntaDesdeResumen(preguntaId, anio, idAspecto) {
+      const sa = document.getElementById('select-anio');
+      if (sa && anio) {
+        if (![...sa.options].some(o => o.value === String(anio))) sa.add(new Option('Año ' + anio, String(anio)));
+        sa.value = String(anio);
+      }
+      const sasp = document.getElementById('select-aspecto');
+      if (sasp && idAspecto && idAspecto !== 'undefined') sasp.value = String(idAspecto);
+      cambiarPestana('captura');
+      try { await cargarPreguntas(); } catch (e) { console.warn(e); }
+      const tr = document.querySelector(`tr[data-fila-cap="${preguntaId}"]`);
+      if (tr) {
+        tr.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        tr.style.transition = 'outline-color .3s'; tr.style.outline = '2px solid #bdbdba'; tr.style.outlineOffset = '-2px';
+        setTimeout(() => { tr.style.outline = ''; }, 2500);
+      }
+    }
+// ===== SUMARIAS Y CATÁLOGO DE CUENTAS =====
     let catalogoCuentas = [];
     let catalogoCargado = false;
     let sumEstado = { registros: [], archivo: '', fecha: '', prev: { registros: [], archivo: '', fecha: '' }, abiertas: new Set(), cargaId: 0, sinColumnaFecha: false, filtro: '' };
