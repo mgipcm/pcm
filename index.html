@@ -296,6 +296,19 @@ main thead.bg-slate-100, main table thead th.bg-slate-100, main table thead, mai
 main .bg-slate-50, main .bg-slate-100 { --x:0; }
 /* Letras algo más juntas y nítidas */
 body, button, input, select, textarea, table { letter-spacing:0; text-rendering:optimizeLegibility; font-kerning:normal; font-optical-sizing:auto; -webkit-font-smoothing:antialiased; }
+/* Fondo casi blanco y líneas de división más visibles */
+body.mgi-bg { background-color:#fcfcfc !important; }
+main section[id^="sec-"] { background-color:#ffffff !important; border-color:#d8d8d5 !important; }
+main thead.bg-slate-100, main table thead th.bg-slate-100, main table thead, main table thead th { background-color:#f8f8f8 !important; }
+main table td, main table th { border-color:#dededa !important; }
+main table thead th { border-bottom:1px solid #cfcfcb !important; }
+tr[data-fila-cap] > td:nth-child(2) { border-left-color:#dededa !important; border-right-color:#dededa !important; }
+tr[data-fila-cap] > td:nth-child(2) button { border-bottom-color:#dededa !important; }
+main .border.border-slate-100:not(.border-dashed):not(input):not(select):not(textarea):not(button),
+main .border.border-slate-200:not(.border-dashed):not(input):not(select):not(textarea):not(button),
+main .border.border-slate-300:not(.border-dashed):not(input):not(select):not(textarea):not(button),
+main .border.border-slate-400:not(.border-dashed):not(input):not(select):not(textarea):not(button) { border-bottom-color:#d8d8d5 !important; }
+main input.border:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]):not(#select-anio), main select.border:not(#select-anio), main textarea.border { border-bottom-color:#cfcfcb !important; }
 </style>
 </head>
 <body class="mgi-bg min-h-screen text-slate-800 font-sans flex relative">
