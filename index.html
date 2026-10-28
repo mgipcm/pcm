@@ -14069,12 +14069,12 @@ ${cont.innerHTML}
 
     // Parte las líneas de una página de la tabla en bloques de unos 25 ítems (cada bloque va con los encabezados)
     function impPartirLineas(lineas, maxItems) {
-      maxItems = maxItems || 25;
+      maxItems = maxItems || 12;
       const ctx = lineas.slice(0, 6).join('\n'), esIni = l => /^\s*\d{1,4}\s*(\||\s)/.test(l);
       const idx = lineas.map((l, i) => esIni(l) ? i : -1).filter(i => i >= 0);
-      if (lineas.length <= 34 || idx.length < 4 || idx.length / lineas.length < 0.5) {
-        if (lineas.length <= 40) return [lineas.join('\n')];
-        const out = []; for (let i = 0; i < lineas.length; i += 36) out.push((i ? ctx + '\n--- (continúa la tabla) ---\n' : '') + lineas.slice(i, i + 36).join('\n')); return out;
+      if (lineas.length <= 22 || idx.length < 4 || idx.length / lineas.length < 0.5) {
+        if (lineas.length <= 24) return [lineas.join('\n')];
+        const out = []; for (let i = 0; i < lineas.length; i += 20) out.push((i ? ctx + '\n--- (continúa la tabla) ---\n' : '') + lineas.slice(i, i + 20).join('\n')); return out;
       }
       const out = [];
       for (let b = 0; b * maxItems < idx.length; b++) {
@@ -14082,6 +14082,19 @@ ${cont.innerHTML}
         out.push((b ? ctx + '\n--- (continúa la tabla) ---\n' : '') + lineas.slice(a, z).join('\n'));
       }
       return out;
+    }
+    // Lee un bloque de la tabla; si Claude se queda sin espacio para responder, lo parte por la mitad y vuelve a intentar
+    async function impLeerBloque(base, texto, prof) {
+      let r = null, corto = false;
+      try { r = await impLlamar({ ...base, modo: 'items', paginas: [{ n: base.n, texto }] }, 2); corto = !!(r && r.truncado); }
+      catch (e) { if (/se cort/i.test(String(e.message || e))) corto = true; else throw e; }
+      if (!corto) return [r];
+      const L = texto.split('\n');
+      if (prof >= 4 || L.length < 8) throw new Error('El bloque es demasiado largo para leerlo por partes.');
+      const ctx = L.slice(0, 6).join('\n'), m = Math.ceil(L.length / 2);
+      const a = await impLeerBloque(base, L.slice(0, m).join('\n'), prof + 1);
+      const b = await impLeerBloque(base, ctx + '\n--- (continúa la tabla) ---\n' + L.slice(m).join('\n'), prof + 1);
+      return [...a, ...b];
     }
     function impClaveIndirecto(t) {
       t = impNorm(t);
@@ -14136,15 +14149,13 @@ ${cont.innerHTML}
             const t = cola.shift();
             msg(`Claude está leyendo la tabla de ítems (${hechas}/${tareas.length} bloques)…`);
             try {
-              const r = await impLlamar({ modo: 'items', nombre, cliente, paginas: [{ n: t.n, texto: t.texto }] });
-              if (r.truncado) avisos.push(`El bloque ${t.j + 1} de la página ${t.n} se cortó por ser muy largo: faltan filas.`);
-              res[t.i] = r;
+              res[t.i] = await impLeerBloque({ nombre, cliente, n: t.n }, t.texto, 0);
             } catch (e) { avisos.push(`No se pudo leer el bloque ${t.j + 1} de la página ${t.n}: ${e.message || e}`); res[t.i] = null; }
             hechas++;
           }
         };
         await Promise.all([trabajador(), trabajador()]);
-        res.forEach(r => { if (!r) return; impUnirItems(items, (r.rows || []).map(row => impFilaDe(r.cols || [], row))); (r.avisos || []).forEach(a => avisos.push(String(a))); });
+        res.forEach(lst => { (lst || []).forEach(r => { if (!r) return; impUnirItems(items, (r.rows || []).map(row => impFilaDe(r.cols || [], row))); (r.avisos || []).forEach(a => { if (!avisos.includes(String(a))) avisos.push(String(a)); }); }); });
         items.sort((a, b) => (a.no === null || a.no === undefined ? 1e9 : a.no) - (b.no === null || b.no === undefined ? 1e9 : b.no));
       } else if (H.existe && !conTexto) avisos.push('El PDF es un escaneo: no se leyó la tabla de ítems. Sube el Excel de la liquidación.');
       const T = cab.totales || {}, D = cab.dai || {};
