@@ -13789,7 +13789,7 @@ ${cont.innerHTML}
     ];
     // Palabras que ayudan a reconocer, en el detalle de un pago por anticipo, de qué concepto es
     const IMP_KW_DEF = {
-      isd: 'ISD|SALIDA DE DIVISAS', agente: 'AGENTE|ADUANER', manejo: 'NAVIERA|THC|PORTUARI|CONTENEDOR|MANEJO|BODEGAJE',
+      isd: 'ISD|SALIDA DE DIVISAS', agente: 'AGENTE|ADUANER', manejo: 'NAVIERA|THC|PORTUARI|CONTENEDOR|MANEJO|BODEGAJE|GASTOS LOCALES|GASTOS IMPORTACION|ALMACENAJE',
       seguro: 'SEGURO|POLIZA', flete_int: 'TRANSPORTE|FLETE INTERNO', logistico: 'CANDADO|TURNO|CUSTODIA|LOGISTIC', tributos: 'SENAE|ADUANA|ARANCEL|FODINFA|TRIBUTO', flete_ext: 'FLETE|BL|BILL OF LADING'
     };
     // Sugerencia de cuentas por rol según el nombre de la cuenta
@@ -13889,20 +13889,26 @@ ${cont.innerHTML}
     }
 
     // ---- Reconocimiento de la importación en el detalle del mayor ----
-    function impAliasValido(n) { if (n.length < 3) return false; if (/^\d+$/.test(n.replace(/ /g, '')) && n.replace(/ /g, '').length < 5) return false; return true; }
-    function impPatAlias(a) { // a ya normalizado; permite espacios entre letras y números (H264 = H 264)
-      let p = '', prev = '';
-      for (const ch of a) {
-        if (ch === ' ') { p += '\\s*'; prev = ' '; continue; }
-        const cl = /\d/.test(ch) ? 'd' : 'l';
+    const IMP_RUIDO = /^(DOC|DOCS|DOCUMENTO|DOCUMENTOS|DOCUMENTACION|DOCUMENTAION|DETALLE|FACT|FACTURA|FACTURAS|PRELIQ|PRELIQUIDACION|LIQUIDACION|IMPORTACION|IMP|PDF|COPIA|FINAL|DAI|DAU)$/;
+    function impAliasValido(n) { if (n.length < 3 || IMP_RUIDO.test(n)) return false; if (/^\d+$/.test(n.replace(/ /g, '')) && n.replace(/ /g, '').length < 3) return false; return true; }
+    function impPatAlias(a) { // a ya normalizado; tolera espacios entre letras y números (H264 = H 264), ceros a la izquierda (HOLY 04 = HOLY 4) y una palabra intermedia (SOLAR GRUP 01)
+      const num = d => (d.length <= 4 && d[0] !== '0') ? '0*' + d : d;
+      let m = /^([A-Z]{4,}) ?(\d{1,4})$/.exec(a);
+      if (m) return m[1] + '(?:\\s+[A-Z]{2,12})?\\s*' + num(m[2]);
+      m = /^([A-Z]{3,}) ([A-Z]{5,}) ?(\d{1,4})$/.exec(a);
+      if (m) return m[1] + '\\s+' + m[2].slice(0, 4) + '[A-Z]*\\s*' + num(m[3]);
+      const t = a.match(/[A-Z]+|\d+| /g) || []; let p = '', prev = '';
+      t.forEach(x => {
+        if (x === ' ') { p += '\\s*'; prev = ' '; return; }
+        const cl = /\d/.test(x[0]) ? 'd' : 'l';
         if (prev && prev !== ' ' && prev !== cl) p += '\\s*';
-        p += ch; prev = cl;
-      }
+        p += cl === 'd' ? num(x) : x; prev = cl;
+      });
       return p;
     }
     function impCompilarAlias(imports) {
       const mapa = new Map();
-      (imports || []).forEach(im => (im.aliases || []).forEach(a => { const n = impNorm(a); if (!impAliasValido(n)) return; if (!mapa.has(n)) mapa.set(n, []); const l = mapa.get(n); if (!l.includes(im.id)) l.push(im.id); }));
+      (imports || []).forEach(im => (im.aliases || []).concat(im.aprendidos || []).forEach(a => { const n = impNorm(a); if (!impAliasValido(n)) return; if (!mapa.has(n)) mapa.set(n, []); const l = mapa.get(n); if (!l.includes(im.id)) l.push(im.id); }));
       const lista = [...mapa.entries()].sort((a, b) => b[0].length - a[0].length);
       if (!lista.length) return null;
       const re = new RegExp(lista.map(([a]) => '(?<![A-Z0-9])(' + impPatAlias(a) + ')(?![A-Z0-9])').join('|'), 'g');
@@ -13952,13 +13958,13 @@ ${cont.innerHTML}
           const fuera = corte && l.d && l.d > corte;
           if (fuera) { posteriores.push({ ...l, id, rol }); }
           let k = null, via = false;
-          if (rol === 'anticipo') { via = true; const det = String(l.det || ''); k = Object.keys(kw).find(x => kw[x].test(det)) || null; }
+          if (rol === 'anticipo') { via = true; const det = String(l.det || ''), d1 = det.split(' / ')[0]; k = Object.keys(kw).find(x => kw[x].test(d1)) || Object.keys(kw).find(x => kw[x].test(det)) || null; }
           else if (rol === 'proveedores') return;
           else k = conceptoPorRol[rol];
           R[id].lin++;
           if (!k) { return; }
           const x = cell(k);
-          if (multi) { x.comp += Math.abs(net); return; }
+          if (multi) { x.comp += via ? (Number(l.deb) || 0) : Math.abs(net); return; }
           if (fuera) { x.post += net; return; }
           if (via) { x.via += Number(l.deb) || 0; x.viaHab += Number(l.hab) || 0; } else x.mayor += net;
           if (l.k) x.asientos.add(l.k); if (l.d) x.fechas.add(l.d); x.cuentas.add(l.cod);
@@ -13969,22 +13975,22 @@ ${cont.innerHTML}
         const liq = impValoresLiq(im);
         IMP_CONCEPTOS.forEach(k => {
           const x = R[im.id].c[k.k]; x.liq = impR2(liq[k.k] || 0); x.mayor = impR2(x.mayor); x.via = impR2(x.via); x.viaHab = impR2(x.viaHab); x.comp = impR2(x.comp); x.post = impR2(x.post);
-          const base = k.soloAnticipo ? x.via : x.mayor, dif = impR2(x.liq - base);
+          const total = k.soloAnticipo ? x.via : impR2(x.mayor + x.via + x.comp), base = total, dif = impR2(x.liq - base);
           let est = 'N/A';
-          if (x.liq || base || x.via || x.comp || x.post) { if (Math.abs(dif) <= tol) est = 'Cuadra'; else if (!base && !x.post && !x.via) est = 'Sin registro'; else est = 'Revisar'; }
+          if (x.liq || base || x.post) { if (Math.abs(dif) <= tol) est = 'Cuadra'; else if (!base && !x.post && !x.via) est = 'Sin registro'; else est = 'Revisar'; }
           const com = [];
           if (est !== 'Cuadra' && est !== 'N/A') {
             if (x.post) com.push(`Registrado después del corte (${impR2(x.post)}).`);
             if (!k.soloAnticipo && !x.mayor && x.via) com.push(`Solo aparece en pagos vía anticipo (${x.via}); no se ve reclasificado al corte.`);
             else if (!k.soloAnticipo && x.via && Math.abs(x.via - x.liq) <= tol) com.push(`Los pagos vía anticipo (${x.via}) igualan la liquidación.`);
-            if (x.comp) com.push(`Hay pagos conjuntos con otras importaciones por ${x.comp} (no asignados).`);
+            if (x.comp) com.push(`Incluye pagos conjuntos con otras importaciones por ${x.comp} (no se pueden separar).`);
             if (!x.liq && base) com.push('El mayor registra algo que la liquidación no tiene.');
             else if (x.liq && base && dif > 0) com.push('El mayor registra menos que la liquidación.');
             else if (x.liq && base && dif < 0) com.push('El mayor registra más que la liquidación.');
             if (est === 'Sin registro' && !x.post && !x.via && !x.comp) com.push(im.fecha && corte && im.fecha > corte ? 'La importación es posterior al corte.' : 'No se identificó en el mayor.');
           } else if (est === 'Cuadra' && x.viaHab > tol && k.soloAnticipo) com.push(`El anticipo tiene créditos por ${x.viaHab}.`);
           const fechas = [...x.fechas].sort();
-          filas.push({ id: im.id, k: k.k, concepto: k.t, liq: x.liq, mayor: k.soloAnticipo ? 0 : x.mayor, via: x.via, viaHab: x.viaHab, comp: x.comp, post: x.post, dif, estado: est, comentario: com.join(' '), cuentas: [...x.cuentas].join(', '), asientos: [...x.asientos].map(a => a.replace('|', ' ')).join('; '), fechas: fechas.length ? (fechas[0] === fechas[fechas.length - 1] ? fechas[0] : fechas[0] + ' a ' + fechas[fechas.length - 1]) : '' });
+          filas.push({ id: im.id, k: k.k, concepto: k.t, liq: x.liq, mayor: k.soloAnticipo ? 0 : impR2(x.mayor + x.comp), total, via: x.via, viaHab: x.viaHab, comp: x.comp, post: x.post, dif, estado: est, comentario: com.join(' '), cuentas: [...x.cuentas].join(', '), asientos: [...x.asientos].map(a => a.replace('|', ' ')).join('; '), fechas: fechas.length ? (fechas[0] === fechas[fechas.length - 1] ? fechas[0] : fechas[0] + ' a ' + fechas[fechas.length - 1]) : '' });
         });
       });
       return { filas, compartidas, posteriores, tol };
@@ -13996,7 +14002,7 @@ ${cont.innerHTML}
       const gast = IMP_CONCEPTOS.filter(k => k.gasto).map(k => k.k);
       const porImp = id => f.filter(x => x.id === id);
       // 1. Gastos de importación llevados al gasto
-      const gastoReg = f.filter(x => gast.includes(x.k)).reduce((t, x) => t + x.mayor, 0);
+      const gastoReg = f.filter(x => gast.includes(x.k)).reduce((t, x) => t + x.mayor - x.comp, 0);
       if (gastoReg > 0) H.push({ id: 'h_capitaliza', sev: 'alta', titulo: 'Gastos de importación registrados en resultados y no capitalizados al inventario', monto: impR2(gastoReg), detalle: `Los gastos identificados en las cuentas de gasto de las importaciones (ISD, agente aduanero, manejo de contenedor, seguro, transporte y custodia) suman ${fm(gastoReg)}. Conforme a la NIC 2 (párr. 10 y 11), los costos de transporte, manipulación y otros directamente atribuibles a la adquisición forman parte del costo del inventario. Revisar si el ISD se usa como crédito tributario (en ese caso no forma parte del costo).`, refs: [...new Set(f.filter(x => gast.includes(x.k) && x.mayor > 0).map(x => x.id))] });
       // 2. Posible duplicación del seguro
       const segDup = imports.filter(im => impSum(im.items || [], 'seguro') > 0 && (f.find(x => x.id === im.id && x.k === 'seguro') || {}).mayor > 0);
@@ -14115,14 +14121,29 @@ ${cont.innerHTML}
         Object.keys(o).forEach(k => { if ((ex[k] === null || ex[k] === undefined || ex[k] === '') && o[k] !== null && o[k] !== undefined && o[k] !== '') ex[k] = o[k]; });
       });
     }
+    const IMP_GEN_PROV = new Set(['CO','COMPANY','LTD','LIMITED','LLC','INC','CORP','CORPORATION','SA','SAS','SRL','BV','EXPORT','IMPORT','IMPORTADORA','EXPORTADORA','THE','DE','DEL','DO','DA','Y','AND','GROUP','GRUPO','CIA','LTDA','NEW','MATERIAL','MATERIALS','TRADING','INTERNATIONAL','TECHNOLOGY','ELECTRICAL','BUILDING','EUROPE','BENELUX','COLOMBIA','CHINA','BRASIL','ECUADOR','INDUSTRIAL','INDUSTRIES','SOURCING','GLOBAL','MUTUAL']);
+    function impPalabrasProv(im) { const pal = []; impNorm(im.proveedor || '').split(/[^A-Z0-9]+/).forEach(w => { if (/^[A-Z]{3,}$/.test(w) && !IMP_GEN_PROV.has(w) && !pal.includes(w)) pal.push(w); }); return pal; }
+    // Nombres con los que suele aparecer una importación en el mayor: código, factura, y "nombre del proveedor + número" (HOLY 264, VETO 13)
     function impAliasPorDefecto(im) {
-      const set = new Set(); const add = t => { const n = impNorm(t); if (impAliasValido(n)) set.add(n); };
+      const set = new Set(); const add = t => { const n = impNorm(t); if (impAliasValido(n) && !(/^\d+$/.test(n) && n.length < 5)) set.add(n); };
       add(im.id); add(im.nombre); (im.facturas || []).forEach(f => { add(f); (String(f).match(/\d{5,}/g) || []).forEach(add); });
       (im.items || []).forEach(x => { if (x.factura) { add(x.factura); (String(x.factura).match(/\d{5,}/g) || []).forEach(add); } });
-      return [...set].slice(0, 12);
+      const cod = impNorm(im.id).replace(/ /g, ''), md = /(?<!\d)(\d{1,4})$/.exec(cod), num = md ? String(parseInt(md[1], 10)) : '';
+      if (num && num !== '0') {
+        const pal = impPalabrasProv(im);
+        pal.slice(0, 3).forEach(w => add(w + ' ' + num));
+        if (pal.length > 1) add(pal[0] + ' ' + pal[1] + ' ' + num);
+      }
+      return [...set].slice(0, 14);
     }
     function impIdUnico(base, existentes) { let id = base || 'IMP', n = 2; while (existentes.includes(id)) id = (base || 'IMP') + '-' + n++; return id; }
-    function impIdDeArchivo(nombre) { const b = String(nombre).replace(/\.[^.]+$/, '').split(/[\s_\-.()]+/).filter(Boolean)[0] || 'IMP'; return b.toUpperCase().slice(0, 14); }
+    function impIdDeArchivo(nombre) {
+      const t = String(nombre).replace(/\.[^.]+$/, '').split(/[\s_\-.()]+/).filter(Boolean).filter(w => !IMP_RUIDO.test(impNorm(w)));
+      if (!t.length) return 'IMP';
+      const sinNum = t.filter(w => !/^\d{4,}$/.test(w)), hayOtro = t.some(w => /\d/.test(w) && !/^\d{4,}$/.test(w)), base = hayOtro ? sinNum : t, out = [];
+      for (const w of base) { out.push(w); if (/\d/.test(w)) break; }
+      return out.join('').toUpperCase().slice(0, 16);
+    }
 
     async function impExtraerPdf(nombre, buf, msg) {
       const cliente = impNombreCliente();
@@ -14243,17 +14264,22 @@ ${cont.innerHTML}
       return { file, nombre: file.name, fuente, hdrIdx: hi, headers, mapa: MYM.autoMapa(headers), muestra: muestra.slice(hi + 1, hi + 4) };
     }
     // Lee el mayor dos veces: 1) busca las líneas que nombran una importación; 2) trae los asientos completos de esas líneas
-    async function impLeerMayor(M, imports, onProg) {
+    async function impPasarMayor(M, imports, onProg, base) {
       const comp = impCompilarAlias(imports);
       if (!comp) throw new Error('Primero carga las liquidaciones: no hay nombres (alias) de importaciones para buscar en el mayor.');
       const m = M.mapa, g = (r, i) => (i >= 0 ? r[i] : ''), s = (r, i) => { const x = g(r, i); return x == null ? '' : String(x).trim(); };
-      const lineas = [], claves = new Set(), cuentas = {}; let fila = 0, n = 0, debe = 0, haber = 0, parar = false;
+      // Anclas por monto: el costo total y el IVA de cada liquidación (con ±1,00) para reconocer el asiento de compra aunque no nombre la importación
+      const objetivos = new Map();
+      imports.forEach(im => { const v = impValoresLiq(im); [['costo', v.costo], ['iva', v.iva]].forEach(([t, x]) => { if (x > 100) for (let c = -100; c <= 100; c++) { const key = Math.round(x * 100) + c; if (!objetivos.has(key)) objetivos.set(key, []); objetivos.get(key).push([im.id, t]); } }); });
+      const anclas = [], lineas = [], claves = new Set(), cuentas = {}; let fila = 0, n = 0, debe = 0, haber = 0, parar = false;
       const keyDe = r => { const tipo = m.tipo >= 0 ? s(r, m.tipo) : '', tipo2 = m.tipo2 >= 0 ? s(r, m.tipo2) : '', num = m.numero >= 0 ? s(r, m.numero) : ''; const tk = (tipo || tipo2) ? (tipo + (tipo2 ? '·' + tipo2 : '')) : '(sin tipo)'; return { tk, num, k: num && num !== '0' ? tk + '|' + num : null }; };
       await M.fuente.recorrer(r => {
         fila++; if (fila <= M.hdrIdx + 1) return;
         const d = MYM.num(g(r, m.debe)), h = MYM.num(g(r, m.haber)); if (!d && !h) return;
         n++; debe += d; haber += h;
         const c1 = m.con1 >= 0 ? s(r, m.con1) : '', c2 = m.con2 >= 0 ? s(r, m.con2) : '', det = c1 && c2 ? c1 + ' / ' + c2 : (c1 || c2);
+        const anc = d > 0 ? objetivos.get(Math.round(d * 100)) : null;
+        if (anc && anclas.length < 5000) { const ka = keyDe(r); if (ka.k) { claves.add(ka.k); anc.forEach(([id, t]) => anclas.push({ k: ka.k, id, t, cod: s(r, m.cod), deb: d })); } }
         if (!det) return;
         const ids = impBuscarIds(comp, det); if (!ids.length) return;
         const kk = keyDe(r), dd = MYM.dia(g(r, m.fecha)), cod = s(r, m.cod);
@@ -14261,9 +14287,9 @@ ${cont.innerHTML}
         if (m.cuenta >= 0) cuentas[cod] = s(r, m.cuenta);
         lineas.push({ k: kk.k, tk: kk.tk, num: kk.num, cod, deb: d, hab: h, d: isFinite(dd) ? MYM.isoDia(dd) : '', det: det.slice(0, 240), ids });
         if (lineas.length > 60000) { parar = true; return false; }
-      }, (p, f) => onProg && onProg(1, p, f));
+      }, (p, f) => onProg && onProg(base + 1, p, f));
       if (parar) throw new Error('Demasiadas líneas coinciden (más de 60.000). Algún nombre de importación es muy genérico: revísalos y vuelve a intentar.');
-      onProg && onProg(1, 1, n);
+      onProg && onProg(base + 1, 1, n);
       const as = new Map(); let fila2 = 0;
       if (claves.size) await M.fuente.recorrer(r => {
         fila2++; if (fila2 <= M.hdrIdx + 1) return;
@@ -14273,8 +14299,53 @@ ${cont.innerHTML}
         const c1 = m.con1 >= 0 ? s(r, m.con1) : '', c2 = m.con2 >= 0 ? s(r, m.con2) : '', dd = MYM.dia(g(r, m.fecha));
         let a = as.get(kk.k); if (!a) { a = { k: kk.k, tk: kk.tk, num: kk.num, d: isFinite(dd) ? MYM.isoDia(dd) : '', l: [] }; as.set(kk.k, a); }
         a.l.push([cod, nom, d, h, (c1 && c2 ? c1 + ' / ' + c2 : (c1 || c2)).slice(0, 200)]);
-      }, (p, f) => onProg && onProg(2, p, f));
-      return { archivo: M.nombre, fecha: new Date().toISOString(), lineasTot: n, debe: impR2(debe), haber: impR2(haber), lineas, asientos: [...as.values()], cuentas };
+      }, (p, f) => onProg && onProg(base + 2, p, f));
+      // Un asiento que tiene a la vez el costo total y el IVA de una liquidación es la compra de esa importación
+      const vistas = new Set(lineas.map(l => l.k + '|' + l.cod + '|' + l.deb + '|' + l.hab + '|' + (l.ids || []).join(',')));
+      const porImp = {}; anclas.forEach(x => { (porImp[x.id + '||' + x.k] ||= { id: x.id, k: x.k, t: new Set() }).t.add(x.t); });
+      Object.values(porImp).forEach(q => {
+        const im = imports.find(z => z.id === q.id), v = impValoresLiq(im), a = as.get(q.k); if (!a) return;
+        if (!q.t.has('costo') || (v.iva > 100 && !q.t.has('iva'))) return;
+        a.l.forEach(l => { const hit = (Math.abs(l[2] - v.costo) <= 1) || (v.iva > 100 && Math.abs(l[2] - v.iva) <= 1); if (!hit) return; const id = l[0] + '|' + l[2]; const key = q.k + '|' + l[0] + '|' + l[2] + '|' + l[3] + '|' + q.id; if (vistas.has(key)) return; vistas.add(key); lineas.push({ k: a.k, tk: a.tk, num: a.num, cod: l[0], deb: l[2], hab: l[3], d: a.d, det: String(l[4] || '').slice(0, 240), ids: [q.id], cr: 'monto' }); });
+      });
+      return { archivo: M.nombre, fecha: new Date().toISOString(), lineasTot: n, debe: impR2(debe), haber: impR2(haber), lineas, asientos: (() => { const us = new Set(lineas.map(l => l.k)); return [...as.values()].filter(a => us.has(a.k)); })(), cuentas };
+    }
+
+    // Aprende, de los asientos ya identificados, cómo escribe el cliente cada importación: nombre del proveedor + número (BELLOTA 13) y código (BE13)
+    function impAprender(res, imports) {
+      const porAs = new Map(res.asientos.map(a => [a.k, a])), semillas = {};
+      res.lineas.forEach(l => { if (l.k && (l.ids || []).length === 1) (semillas[l.ids[0]] || (semillas[l.ids[0]] = new Set())).add(l.k); });
+      let nuevos = 0;
+      imports.forEach(im => {
+        const S = semillas[im.id], previo = (im.aprendidos || []).slice(); im.aprendidos = [];
+        if (!S) return;
+        const pal = impPalabrasProv(im).slice(0, 3), pref = new Set(); pal.forEach(w => pref.add(w.slice(0, 2))); const lt = /^[A-Z]{2,4}/.exec(impNorm(im.id).replace(/ /g, '')); if (lt) pref.add(lt[0]);
+        const cuenta = {}, visto = { pal: new Set(), pref: new Set() };
+        const tomar = (re, tipo, W) => { re.lastIndex = 0; let q; while ((q = re.exec(this_t))) { const nn = String(parseInt(q[1], 10)); if (nn === '0') continue; cuenta[nn] = (cuenta[nn] || 0) + 1; visto[tipo].add(W); } };
+        let this_t = '';
+        S.forEach(k => { const a = porAs.get(k); if (!a) return; a.l.forEach(l => {
+          this_t = impNorm(l[4]); if (!this_t) return;
+          pal.forEach(W => tomar(new RegExp('(?<![A-Z0-9])' + W + '\\s*0*(\\d{1,3})(?![0-9]|\\s*[0-9])', 'g'), 'pal', W));
+          [...pref].forEach(P => tomar(new RegExp('(?<![A-Z0-9])' + P + '\\s*0*(\\d{1,3})(?![0-9A-Z]|\\s*[0-9])', 'g'), 'pref', P));
+        }); });
+        const orden = Object.entries(cuenta).sort((x, y) => y[1] - x[1]); if (!orden.length || (orden[1] && orden[1][1] === orden[0][1])) return;
+        const num = orden[0][0], nuevosAl = [];
+        pal.forEach(W => nuevosAl.push(W + ' ' + num)); [...visto.pref].forEach(P => nuevosAl.push(P + num));
+        const sinCeros = x => x.replace(/(^|[A-Z ])0+(?=\d)/g, '$1'), ya = new Set((im.aliases || []).map(x => sinCeros(impNorm(x))));
+        nuevosAl.map(impNorm).filter(x => impAliasValido(x) && !ya.has(sinCeros(x))).forEach(x => { if (!im.aprendidos.includes(x)) im.aprendidos.push(x); });
+        if (im.aprendidos.some(x => !previo.includes(x))) nuevos++;
+      });
+      return nuevos;
+    }
+    async function impLeerMayor(M, imports, onProg) {
+      const guardados = imports.map(im => (im.aprendidos || []).slice());
+      imports.forEach(im => { im.aprendidos = []; });
+      let res = await impPasarMayor(M, imports, onProg, 0);
+      if (impAprender(res, imports)) {
+        try { res = await impPasarMayor(M, imports, onProg, 2); res.aprendio = true; }
+        catch (e) { imports.forEach(im => { im.aprendidos = []; }); res.aviso = 'No se pudieron usar los nombres aprendidos: ' + (e.message || e); }
+      }
+      return res;
     }
 
     // ===== INVENTARIOS (IMPORTACIONES): pantalla =====
@@ -14353,7 +14424,7 @@ ${cont.innerHTML}
       const barra = `<div class="flex flex-wrap items-center gap-2 px-2 py-2 border-b border-slate-200">
         <label class="${impBtnP} cursor-pointer">Subir liquidaciones (PDF o ZIP)<input type="file" accept=".pdf,.zip" multiple class="hidden" onchange="impSubirPdf(this)"></label>
         <label class="${impBtn} cursor-pointer">Subir Excel de liquidación<input type="file" accept=".xlsx,.xls" multiple class="hidden" onchange="impSubirExcel(this)"></label>
-        <span class="text-[11px] text-slate-500">Si el cliente entrega el Excel original de la liquidación, es la forma más exacta.</span></div>`;
+        ${L.length ? `<button type="button" onclick="impRegenerarNombres()" class="${impBtn}" title="Vuelve a armar el código y los nombres de cada importación a partir del nombre del archivo y del proveedor">Regenerar nombres</button>` : ''}<span class="text-[11px] text-slate-500">Si el cliente entrega el Excel original de la liquidación, es la forma más exacta.</span></div>`;
       const proc = '<div id="im-proc" class="px-3 py-2 space-y-1"></div>';
       if (!L.length) return barra + proc + '<p class="p-6 text-xs text-slate-400 text-center">Todavía no hay liquidaciones. Sube los PDF de las importaciones (uno por importación, o un ZIP con todos) o el Excel de la liquidación.</p>';
       const th = (t, c) => `<th class="px-2 py-1 border-b border-slate-200 whitespace-nowrap ${c || 'text-right'}">${t}</th>`;
@@ -14376,7 +14447,8 @@ ${cont.innerHTML}
       let h = `<div class="space-y-3 text-xs text-slate-700">
         <div class="p-3 bg-white border border-slate-200 rounded-xl"><div class="text-[13px] font-semibold text-slate-800 mb-2">Datos de la importación</div><div class="flex flex-wrap items-end gap-3">${campo('Código de la importación', 'id', 'w-32')}${campo('Proveedor', 'proveedor', 'w-64')}${campo('Fecha', 'fecha', 'w-40', 'date')}${campo('N° DAU', 'dau', 'w-48')}
           <label class="flex flex-col gap-1 text-xs text-slate-600"><span>Valor en aduana (DAI)</span><input type="text" inputmode="decimal" value="${impE(impF((im.dai || {}).valor_aduana))}" onchange="impEditarDai(${i}, 'valor_aduana', this.value)" class="w-36 ${impIn} text-right"></label></div>
-          <label class="flex flex-col gap-1 text-xs text-slate-600 mt-2"><span>Nombres con los que aparece esta importación en el mayor (separados por coma): código, nombre del proveedor con número, N° de factura</span><input type="text" value="${impE(alias)}" onchange="impEditarAlias(${i}, this.value)" class="w-full ${impIn}"></label></div>
+          <label class="flex flex-col gap-1 text-xs text-slate-600 mt-2"><span>Nombres con los que aparece esta importación en el mayor (separados por coma): código, nombre del proveedor con número, N° de factura. Si el cliente usa otro número (por ejemplo BELLOTA 13 y BE13), agrégalo aquí</span><input type="text" value="${impE(alias)}" onchange="impEditarAlias(${i}, this.value)" class="w-full ${impIn}"></label></div>
+${(im.aprendidos || []).length ? `<p class="text-xs text-slate-600 bg-slate-50 border border-slate-200 rounded-xl p-3"><b>Nombres aprendidos del mayor:</b> ${impE(im.aprendidos.join(', '))}. Se encontraron en los asientos de esta importación; si alguno no corresponde, quítalo con "Regenerar nombres".</p>` : ''}
         <div class="p-3 bg-white border border-slate-200 rounded-xl"><div class="text-[13px] font-semibold text-slate-800 mb-2">Controles automáticos</div><div class="space-y-1">${ctrl.map(c => `<div class="flex gap-2"><span class="w-14 shrink-0 font-semibold ${c.est === 'ok' ? 'text-slate-500' : (c.est === 'rev' ? 'text-red-600' : 'text-slate-400')}">${c.est === 'ok' ? 'Cuadra' : (c.est === 'rev' ? 'Revisar' : 'Aviso')}</span><span><b>${impE(c.t)}.</b> ${impE(c.det)}</span></div>`).join('')}</div></div>`;
       if ((im.indirectos || []).length) h += `<div class="p-3 bg-white border border-slate-200 rounded-xl"><div class="text-[13px] font-semibold text-slate-800 mb-2">Costos indirectos (cuadro de la liquidación)</div><table class="text-[11px] border-collapse"><tbody>${im.indirectos.map(x => `<tr class="border-b border-slate-100"><td class="px-2 py-0.5">${impE(x.concepto)}</td><td class="px-2 text-slate-500">${impE(IMP_CLAVE_TXT[x.clave] || x.clave)}</td><td class="px-2 text-right">${impF(x.valor)}</td></tr>`).join('')}<tr class="font-semibold"><td class="px-2 py-0.5" colspan="2">Total</td><td class="px-2 text-right">${impF(im.indirectos.reduce((t, x) => t + (x.valor || 0), 0))}</td></tr></tbody></table></div>`;
       if ((im.items || []).length) {
@@ -14391,7 +14463,20 @@ ${cont.innerHTML}
     function impEditarCampo(i, k, v) {
       const im = impEstado.imports[i]; if (!im) return;
       if (k === 'id') { v = v.trim().toUpperCase(); if (!v) return; if (impEstado.imports.some((x, j) => j !== i && x.id === v)) { alert('Ya existe una importación con ese código.'); return impRender(); } impEstado.abierta = v; if (impEstado.cruce) impEstado.aliasCambio = true; }
-      im[k] = v; impReclasificar(); impGuardar('liquidaciones'); impRender();
+      if (k === 'id') { const viejo = im.id; const previos = (im.aliases || []).filter(a => impNorm(a) !== impNorm(viejo) && !impAliasPorDefecto({ ...im, id: viejo }).includes(impNorm(a))); im[k] = v; im.nombre = v; im.aliases = [...new Set([...impAliasPorDefecto(im), ...previos])]; }
+      else im[k] = v;
+      impReclasificar(); impGuardar('liquidaciones'); impRender();
+    }
+    function impRegenerarNombres() {
+      if (!confirm('Se volverán a armar el código y los nombres de búsqueda de todas las importaciones a partir del nombre del archivo y del proveedor. Los nombres que agregaste a mano se conservan. ¿Continuar?')) return;
+      const usados = [];
+      impEstado.imports.forEach(im => {
+        const viejo = im.id, previos = (im.aliases || []).filter(a => !impAliasPorDefecto({ ...im, id: viejo }).includes(impNorm(a)) && impNorm(a) !== impNorm(viejo));
+        const id = impIdUnico((im.codigoLeido && impNorm(im.codigoLeido).replace(/ /g, '').length >= 3 && !IMP_RUIDO.test(impNorm(im.codigoLeido)) ? impNorm(im.codigoLeido).replace(/ /g, '') : '') || impIdDeArchivo(im.archivo || im.id), usados);
+        usados.push(id); im.id = id; im.nombre = id; im.aprendidos = []; im.aliases = [...new Set([...impAliasPorDefecto(im), ...previos.filter(a => !usados.includes(impNorm(a)))])];
+      });
+      impEstado.abierta = null; if (impEstado.cruce) impEstado.aliasCambio = true;
+      impReclasificar(); impGuardar('liquidaciones'); impRender();
     }
     function impEditarDai(i, k, v) { const im = impEstado.imports[i]; if (!im) return; im.dai = im.dai || {}; im.dai[k] = impN(v); impGuardar('liquidaciones'); impRender(); }
     function impEditarAlias(i, v) { const im = impEstado.imports[i]; if (!im) return; im.aliases = v.split(/[,;]+/).map(x => x.trim()).filter(Boolean); if (impEstado.cruce) impEstado.aliasCambio = true; impGuardar('liquidaciones'); impRender(); }
@@ -14463,7 +14548,8 @@ ${cont.innerHTML}
     // ---------- 2. Cruce con el mayor ----------
     function impSugerirRoles() {
       const c = impEstado.cruce; if (!c) return; const R = impEstado.cfg.roles;
-      IMP_ROLES.forEach(([k]) => { if (impListaCtas(R[k]).length) return; const cods = Object.entries(c.cuentas || {}).filter(([cod, nom]) => IMP_SUG[k] && IMP_SUG[k].test(impNorm(nom))).map(([cod]) => cod); if (cods.length) R[k] = cods.slice(0, 6).join(', '); });
+      IMP_ROLES.forEach(([k]) => { if (impListaCtas(R[k]).length) return; const ok1 = cod => { const d = String(cod).charAt(0); return ['inventario', 'iva', 'anticipo'].includes(k) ? d === '1' : (k === 'proveedores' ? d === '2' : !['1', '2', '3'].includes(d)); };
+      const cods = Object.entries(c.cuentas || {}).filter(([cod, nom]) => ok1(cod) && IMP_SUG[k] && IMP_SUG[k].test(impNorm(nom))).map(([cod]) => cod); if (cods.length) R[k] = cods.slice(0, 6).join(', '); });
     }
     function impHtmlCruce() {
       const imp = impEstado.imports, C = impEstado.cruce, M = impEstado.mayor, cfg = impEstado.cfg;
@@ -14500,7 +14586,7 @@ ${cont.innerHTML}
         <div class="overflow-x-auto"><table class="w-full text-[11px] leading-tight border-collapse"><thead class="bg-slate-50 text-slate-600"><tr>${th('Importación', 'text-left')}${th('Costo liquidación')}${th('Costo mayor')}${th('Dif.')}${th('IVA liquidación')}${th('IVA mayor')}${th('Dif.')}${th('Gastos indirectos liquidación')}${th('Gastos indirectos mayor')}${th('Dif.')}${th('Cuadran')}${th('Por revisar')}</tr></thead><tbody>`;
       let T = { c1: 0, c2: 0, i1: 0, i2: 0, g1: 0, g2: 0 };
       imports.forEach(im => {
-        const co = g(im.id, 'costo'), iv = g(im.id, 'iva'), gs = por(im.id).filter(x => IMP_CONCEPTOS.find(k => k.k === x.k).gasto), g1 = impR2(gs.reduce((t, x) => t + x.liq, 0)), g2 = impR2(gs.reduce((t, x) => t + x.mayor, 0)), ok = por(im.id).filter(x => x.estado === 'Cuadra').length, rv = por(im.id).filter(x => x.estado === 'Revisar' || x.estado === 'Sin registro').length;
+        const co = g(im.id, 'costo'), iv = g(im.id, 'iva'), gs = por(im.id).filter(x => IMP_CONCEPTOS.find(k => k.k === x.k).gasto), g1 = impR2(gs.reduce((t, x) => t + x.liq, 0)), g2 = impR2(gs.reduce((t, x) => t + x.total, 0)), ok = por(im.id).filter(x => x.estado === 'Cuadra').length, rv = por(im.id).filter(x => x.estado === 'Revisar' || x.estado === 'Sin registro').length;
         T.c1 += co.liq || 0; T.c2 += co.mayor || 0; T.i1 += iv.liq || 0; T.i2 += iv.mayor || 0; T.g1 += g1; T.g2 += g2;
         const dc = x => `<td class="px-2 text-right ${Math.abs(x) > cl.tol ? 'text-red-600 font-semibold' : ''}">${impF(x)}</td>`;
         h += `<tr class="border-b border-slate-100"><td class="px-2 py-1 text-left font-semibold">${impE(im.id)}</td><td class="px-2 text-right">${impF(co.liq)}</td><td class="px-2 text-right">${impF(co.mayor)}</td>${dc(impR2((co.liq || 0) - (co.mayor || 0)))}<td class="px-2 text-right">${impF(iv.liq)}</td><td class="px-2 text-right">${impF(iv.mayor)}</td>${dc(impR2((iv.liq || 0) - (iv.mayor || 0)))}<td class="px-2 text-right">${impF(g1)}</td><td class="px-2 text-right">${impF(g2)}</td>${dc(impR2(g1 - g2))}<td class="px-2 text-right">${ok}</td><td class="px-2 text-right ${rv ? 'text-red-600 font-semibold' : ''}">${rv}</td></tr>`;
@@ -14509,7 +14595,7 @@ ${cont.innerHTML}
       const sel = (k, opts, v) => `<select onchange="impFiltro('${k}', this.value)" class="${impIn}">${opts.map(([a, b]) => `<option value="${impE(a)}"${v === a ? ' selected' : ''}>${impE(b)}</option>`).join('')}</select>`;
       let filas = f.filter(x => x.estado !== 'N/A' || x.liq); if (F.imp !== '__todos__') filas = filas.filter(x => x.id === F.imp); if (F.est !== '__todos__') filas = filas.filter(x => F.est === 'rev' ? (x.estado === 'Revisar' || x.estado === 'Sin registro') : x.estado === 'Cuadra');
       h += `<div class="p-4 bg-white border border-slate-200 rounded-xl space-y-2"><div class="text-[13px] font-semibold text-slate-800">4. Cruce por concepto</div><div class="flex flex-wrap items-center gap-2">${sel('imp', [['__todos__', 'Todas las importaciones'], ...imports.map(x => [x.id, x.id])], F.imp)}${sel('est', [['__todos__', 'Todos los estados'], ['rev', 'Solo por revisar'], ['ok', 'Solo los que cuadran']], F.est)}<span class="text-slate-500">${filas.length} filas</span></div>
-        <div class="overflow-auto max-h-[60vh] border border-slate-200 rounded-lg"><table class="w-full text-[11px] leading-tight border-collapse"><thead class="bg-slate-50 text-slate-600 sticky top-0"><tr>${th('Importación', 'text-left')}${th('Concepto', 'text-left')}${th('Liquidación')}${th('Mayor')}${th('Vía anticipo')}${th('Dif.')}${th('Estado', 'text-center')}${th('Comentario', 'text-left')}${th('Cuentas', 'text-left')}${th('Asientos', 'text-left')}${th('Fechas', 'text-left')}</tr></thead><tbody>${filas.map(x => `<tr class="border-b border-slate-100 align-top"><td class="px-2 py-0.5 font-semibold">${impE(x.id)}</td><td class="px-2 text-left">${impE(x.concepto)}</td><td class="px-2 text-right">${impF(x.liq)}</td><td class="px-2 text-right">${impF(x.mayor)}</td><td class="px-2 text-right">${impF(x.via)}</td><td class="px-2 text-right ${Math.abs(x.dif) > cl.tol ? 'text-red-600 font-semibold' : ''}">${impF(x.dif)}</td><td class="px-2 text-center ${x.estado === 'Cuadra' ? 'text-slate-600' : 'text-red-600 font-semibold'}">${impE(x.estado)}</td><td class="px-2 text-left min-w-[260px]">${impE(x.comentario)}</td><td class="px-2 text-left">${impE(x.cuentas)}</td><td class="px-2 text-left max-w-[220px] truncate" title="${impE(x.asientos)}">${impE(x.asientos)}</td><td class="px-2 text-left whitespace-nowrap">${impE(x.fechas)}</td></tr>`).join('')}</tbody></table></div></div>`;
+        <div class="overflow-auto max-h-[60vh] border border-slate-200 rounded-lg"><table class="w-full text-[11px] leading-tight border-collapse"><thead class="bg-slate-50 text-slate-600 sticky top-0"><tr>${th('Importación', 'text-left')}${th('Concepto', 'text-left')}${th('Liquidación')}${th('Mayor')}${th('Vía anticipo')}${th('Total mayor')}${th('Dif.')}${th('Estado', 'text-center')}${th('Comentario', 'text-left')}${th('Cuentas', 'text-left')}${th('Asientos', 'text-left')}${th('Fechas', 'text-left')}</tr></thead><tbody>${filas.map(x => `<tr class="border-b border-slate-100 align-top"><td class="px-2 py-0.5 font-semibold">${impE(x.id)}</td><td class="px-2 text-left">${impE(x.concepto)}</td><td class="px-2 text-right">${impF(x.liq)}</td><td class="px-2 text-right">${impF(x.mayor)}</td><td class="px-2 text-right">${impF(x.via)}</td><td class="px-2 text-right font-semibold">${impF(x.total)}</td><td class="px-2 text-right ${Math.abs(x.dif) > cl.tol ? 'text-red-600 font-semibold' : ''}">${impF(x.dif)}</td><td class="px-2 text-center ${x.estado === 'Cuadra' ? 'text-slate-600' : 'text-red-600 font-semibold'}">${impE(x.estado)}</td><td class="px-2 text-left min-w-[260px]">${impE(x.comentario)}</td><td class="px-2 text-left">${impE(x.cuentas)}</td><td class="px-2 text-left max-w-[220px] truncate" title="${impE(x.asientos)}">${impE(x.asientos)}</td><td class="px-2 text-left whitespace-nowrap">${impE(x.fechas)}</td></tr>`).join('')}</tbody></table></div></div>`;
       return h;
     }
     function impFiltro(k, v) { impEstado.filtro[k] = v; impRender(); }
@@ -14527,10 +14613,10 @@ ${cont.innerHTML}
       if (M.mapa.cod < 0 || M.mapa.debe < 0 || M.mapa.haber < 0) { alert('Falta indicar las columnas de código de cuenta, debe y haber.'); impEstado.verMapa = true; impRender(); return; }
       const b = $im('im-cruzar'), pr = $im('im-prog'); b.disabled = true;
       try {
-        const cruce = await impLeerMayor(M, impEstado.imports, (paso, p, n) => { pr.textContent = `Paso ${paso} de 2: leyendo el mayor ${Math.round((p || 0) * 100)}%${n ? ' (' + Number(n).toLocaleString('en-US') + ' líneas)' : ''}…`; });
-        impEstado.cruce = cruce; impEstado.aliasCambio = false; impSugerirRoles(); impReclasificar();
+        const cruce = await impLeerMayor(M, impEstado.imports, (paso, p, n) => { pr.textContent = `Paso ${paso}: leyendo el mayor ${Math.round((p || 0) * 100)}%${n ? ' (' + Number(n).toLocaleString('en-US') + ' líneas)' : ''}…`; });
+        impEstado.cruce = cruce; impEstado.aliasCambio = false; impGuardar('liquidaciones'); impSugerirRoles(); impReclasificar();
         impGuardar('cruce'); impGuardar('config'); impRender();
-        const e = $im('im-prog'); if (e) e.textContent = `Listo: ${cruce.lineas.length} líneas y ${cruce.asientos.length} asientos de importaciones.`;
+        const e = $im('im-prog'); if (e) e.textContent = `Listo: ${cruce.lineas.length} líneas y ${cruce.asientos.length} asientos de importaciones.${cruce.aprendio ? ' Se aprendieron nombres nuevos del mayor (ábrelos en la hoja 1).' : ''}${cruce.aviso ? ' ' + cruce.aviso : ''}`;
       } catch (e) { pr.textContent = ''; alert(e.message || e); b.disabled = false; }
     }
 
@@ -14603,11 +14689,11 @@ ${cont.innerHTML}
         const cl = impEstado.cl, f = cl.filas, C = impEstado.cruce, nota = ['Diferencia = liquidación − mayor. "Vía anticipo" son los pagos que pasaron por la cuenta de anticipos de importaciones. Los pagos que nombran varias importaciones no se asignan a ninguna.'];
         const g = (id, k) => f.find(x => x.id === id && x.k === k) || {};
         add('Resumen del cruce', [['Importación', 'Costo liquidación', 'Costo mayor', 'Diferencia', 'IVA liquidación', 'IVA mayor', 'Diferencia', 'Gastos indirectos liquidación', 'Gastos indirectos mayor', 'Diferencia', 'Conceptos que cuadran', 'Conceptos por revisar'],
-          ...L.map(im => { const co = g(im.id, 'costo'), iv = g(im.id, 'iva'), gs = f.filter(x => x.id === im.id && IMP_CONCEPTOS.find(k => k.k === x.k).gasto), g1 = impR2(gs.reduce((t, x) => t + x.liq, 0)), g2 = impR2(gs.reduce((t, x) => t + x.mayor, 0)); return [im.id, co.liq || 0, co.mayor || 0, impR2((co.liq || 0) - (co.mayor || 0)), iv.liq || 0, iv.mayor || 0, impR2((iv.liq || 0) - (iv.mayor || 0)), g1, g2, impR2(g1 - g2), f.filter(x => x.id === im.id && x.estado === 'Cuadra').length, f.filter(x => x.id === im.id && (x.estado === 'Revisar' || x.estado === 'Sin registro')).length]; })],
+          ...L.map(im => { const co = g(im.id, 'costo'), iv = g(im.id, 'iva'), gs = f.filter(x => x.id === im.id && IMP_CONCEPTOS.find(k => k.k === x.k).gasto), g1 = impR2(gs.reduce((t, x) => t + x.liq, 0)), g2 = impR2(gs.reduce((t, x) => t + x.total, 0)); return [im.id, co.liq || 0, co.mayor || 0, impR2((co.liq || 0) - (co.mayor || 0)), iv.liq || 0, iv.mayor || 0, impR2((iv.liq || 0) - (iv.mayor || 0)), g1, g2, impR2(g1 - g2), f.filter(x => x.id === im.id && x.estado === 'Cuadra').length, f.filter(x => x.id === im.id && (x.estado === 'Revisar' || x.estado === 'Sin registro')).length]; })],
           [{ wch: 14 }], { titulo: 'Cruce de importaciones contra el mayor', info: [...info, ['Mayor leído', C.archivo]], ent: [10, 11], totales: [1, 2, 3, 4, 5, 6, 7, 8, 9], notas: nota });
         const hs = impListaHall(); add('Hallazgos', [['Importancia', 'Hallazgo', 'Monto', 'Importaciones', 'Detalle', 'Redacción'], ...hs.map(x => [{ alta: 'Alta', media: 'Media', info: 'Informativo' }[x.sev] || '', x.titulo, x.monto || '', (x.refs || []).join(', '), x.detalle, impEstado.hall.notas[x.id] || ''])], [{ wch: 14 }, { wch: 50 }, { wch: 14 }, { wch: 24 }, { wch: 70 }, { wch: 70 }], { titulo: 'Hallazgos de auditoría: importaciones', info });
-        add('Cruce por concepto', [['Importación', 'Concepto', 'Liquidación', 'Mayor', 'Vía anticipo', 'Diferencia', 'Estado', 'Comentario', 'Cuentas', 'Asientos', 'Fechas'], ...f.filter(x => x.estado !== 'N/A' || x.liq).map(x => [x.id, x.concepto, x.liq, x.mayor, x.via, x.dif, x.estado === 'Cuadra' ? 'Cuadra' : 'Revisar', x.comentario, x.cuentas, x.asientos, x.fechas])], [{ wch: 14 }, { wch: 40 }, { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 12 }, { wch: 70 }, { wch: 24 }, { wch: 40 }, { wch: 24 }], { titulo: 'Cruce por concepto', info });
-        add('Líneas del mayor', [['Importación(es)', 'Asiento', 'Fecha', 'Cuenta', 'Nombre de la cuenta', 'Detalle', 'Debe', 'Haber', 'Compartida'], ...C.lineas.map(l => [(l.ids || []).join(', '), (l.tk || '') + ' ' + (l.num || ''), l.d, l.cod, (C.cuentas || {})[l.cod] || '', l.det, l.deb, l.hab, (l.ids || []).length > 1 ? 'Sí' : ''])], [{ wch: 16 }, { wch: 16 }, { wch: 12 }, { wch: 14 }, { wch: 34 }, { wch: 70 }, { wch: 14 }, { wch: 14 }, { wch: 11 }], { titulo: 'Líneas del mayor que nombran una importación', info, fecha: [2] });
+        add('Cruce por concepto', [['Importación', 'Concepto', 'Liquidación', 'Mayor', 'Vía anticipo', 'Total mayor', 'Diferencia', 'Estado', 'Comentario', 'Cuentas', 'Asientos', 'Fechas'], ...f.filter(x => x.estado !== 'N/A' || x.liq).map(x => [x.id, x.concepto, x.liq, x.mayor, x.via, x.total, x.dif, x.estado === 'Cuadra' ? 'Cuadra' : 'Revisar', x.comentario, x.cuentas, x.asientos, x.fechas])], [{ wch: 14 }, { wch: 40 }, { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 12 }, { wch: 70 }, { wch: 24 }, { wch: 40 }, { wch: 24 }], { titulo: 'Cruce por concepto', info });
+        add('Líneas del mayor', [['Importación(es)', 'Asiento', 'Fecha', 'Cuenta', 'Nombre de la cuenta', 'Detalle', 'Debe', 'Haber', 'Compartida', 'Cómo se identificó'], ...C.lineas.map(l => [(l.ids || []).join(', '), (l.tk || '') + ' ' + (l.num || ''), l.d, l.cod, (C.cuentas || {})[l.cod] || '', l.det, l.deb, l.hab, (l.ids || []).length > 1 ? 'Sí' : '', l.cr === 'monto' ? 'Por el monto de la liquidación' : 'Por nombre o factura'])], [{ wch: 16 }, { wch: 16 }, { wch: 12 }, { wch: 14 }, { wch: 34 }, { wch: 70 }, { wch: 14 }, { wch: 14 }, { wch: 11 }, { wch: 28 }], { titulo: 'Líneas del mayor que nombran una importación', info, fecha: [2] });
         const dd = [['Asiento', 'Fecha', 'Importaciones', 'Cuenta', 'Nombre de la cuenta', 'Detalle', 'Debe', 'Haber']];
         C.asientos.forEach(a => { const ids = [...new Set(C.lineas.filter(l => l.k === a.k).flatMap(l => l.ids || []))].join(', '); a.l.forEach(l => dd.push([a.tk + ' ' + a.num, a.d, ids, l[0], l[1], l[4], l[2], l[3]])); });
         add('Diario contable', dd, [{ wch: 16 }, { wch: 12 }, { wch: 16 }, { wch: 14 }, { wch: 34 }, { wch: 70 }, { wch: 14 }, { wch: 14 }], { titulo: 'Diario contable de los asientos de importaciones', info, fecha: [1] });
