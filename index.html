@@ -279,6 +279,12 @@ tr[data-fila-cap] > td:nth-child(2) > div { gap:0 !important; }
 tr[data-fila-cap] > td:nth-child(2) button { width:100%; border:0 !important; border-bottom:1px solid #ececea !important; border-radius:0 !important; background:transparent !important; box-shadow:none !important; padding:10px 14px !important; justify-content:space-between; color:#374151; }
 tr[data-fila-cap] > td:nth-child(2) button:last-child { border-bottom:0 !important; }
 tr[data-fila-cap] > td:nth-child(2) button:hover:not(:disabled) { background:transparent !important; color:#005cab; }
+/* Campos de escritura con la misma letra que el resto (tamaño, grosor y color) */
+main input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]), main select, main textarea { font-family:inherit; font-size:14px !important; font-weight:500; color:#1f2937; line-height:1.5; }
+/* Cuestionario: todas las columnas sin fondo y nada se colorea al pasar el cursor */
+tr[data-fila-cap] > td { background-color:transparent !important; }
+tr[data-fila-cap] *:hover:not(button), tr[data-fila-cap] textarea:focus, tr[data-fila-cap] input:focus, tr[data-fila-cap] select:focus { background-color:transparent !important; }
+tr[data-fila-cap] textarea, tr[data-fila-cap] input:not([type=checkbox]):not([type=radio]) { background-color:transparent !important; }
 </style>
 </head>
 <body class="mgi-bg min-h-screen text-slate-800 font-sans flex relative">
