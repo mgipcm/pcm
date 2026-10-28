@@ -266,6 +266,12 @@ main table thead, main table thead tr, main table thead th { background-color:tr
 main table thead th { border-bottom:1px solid #d9d9d6; font-weight:700; }
 main table tbody tr:hover > td { background-color:#f4f4f2; }
 main hr, main .divide-y > * { border-color:#e4e4e2; }
+/* Menú lateral: alineado a la izquierda y sin saltos de línea innecesarios */
+#sidebar nav button, #sidebar nav a { text-align:left !important; }
+#sidebar nav button .text-xs, #sidebar nav button.text-xs, #sidebar nav a.text-xs, #sidebar nav button span { font-size:13px !important; line-height:1.35 !important; }
+#sidebar nav > button, #sidebar nav > div > button { padding-left:12px !important; padding-right:10px !important; }
+#sidebar nav button > span:last-child:not(:first-child), #sidebar nav button > [id^="icon-"] { flex-shrink:0; margin-left:6px; }
+#sidebar nav button > div, #sidebar nav button > span:first-child { min-width:0; text-align:left; }
 </style>
 </head>
 <body class="mgi-bg min-h-screen text-slate-800 font-sans flex relative">
