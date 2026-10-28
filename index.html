@@ -208,23 +208,23 @@
 h1.text-xl, h1.sm\:text-xl { font-size: 18px !important; line-height: 1.35 !important; font-weight: 700 !important; }
 h1.text-base, h1.text-sm { font-size: 16px !important; line-height: 1.35 !important; font-weight: 700 !important; }
 h2.text-xs, h2.text-sm, h3.text-sm, h3.text-xs { font-size: 14px !important; line-height: 1.4 !important; font-weight: 700 !important; }
-.text-xs, .text-\[13px\], .text-\[11px\], .text-\[10px\], .text-\[9px\], .text-\[8px\] { font-size: 11pt !important; line-height: 1.45 !important; }
-table td, table th { padding-top: 6px !important; padding-bottom: 6px !important; }
-table td:not(.p-0), table th:not(.p-0) { padding-left: 10px; padding-right: 10px; }
-*:not(h1):not(h2):not(h3).text-sm { font-size: 11pt !important; line-height: 1.45 !important; }
+.text-xs, .text-\[13px\], .text-\[11px\], .text-\[10px\], .text-\[9px\], .text-\[8px\] { font-size: 11pt !important; line-height: 1.35 !important; }
+table td, table th { padding-top: 3px !important; padding-bottom: 3px !important; }
+table td:not(.p-0), table th:not(.p-0) { padding-left: 8px; padding-right: 8px; }
+*:not(h1):not(h2):not(h3).text-sm { font-size: 11pt !important; line-height: 1.35 !important; }
 /* recuadros, botones y campos con más aire para el texto de 13 */
-.p-2 { padding: 10px !important; }
-.p-3 { padding: 14px !important; }
-.py-1 { padding-top: 5px !important; padding-bottom: 5px !important; }
-.py-1\.5 { padding-top: 7px !important; padding-bottom: 7px !important; }
-.px-2 { padding-left: 10px !important; padding-right: 10px !important; }
-.px-3 { padding-left: 14px !important; padding-right: 14px !important; }
-input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]), select { min-height: 32px; padding-top: 5px; padding-bottom: 5px; }
-textarea { padding-top: 6px; padding-bottom: 6px; }
-button { min-height: 28px; }
+.p-2 { padding: 7px !important; }
+.p-3 { padding: 10px !important; }
+.py-1 { padding-top: 3px !important; padding-bottom: 3px !important; }
+.py-1\.5 { padding-top: 4px !important; padding-bottom: 4px !important; }
+.px-2 { padding-left: 8px !important; padding-right: 8px !important; }
+.px-3 { padding-left: 10px !important; padding-right: 10px !important; }
+input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]), select { min-height: 28px; padding-top: 3px; padding-bottom: 3px; }
+textarea { padding-top: 4px; padding-bottom: 4px; }
+button { min-height: 24px; }
 th, td { word-break: normal; }
 button, label, input, select, textarea { line-height: 1.4; }
-p, li { line-height: 1.55; }
+p, li { line-height: 1.4; }
 </style>
 <style id="estilo-limpio">
 /* ESTILO LIMPIO (como Claude): sin recuadros; todo separado por una línea fina; al pasar el cursor se "activa" */
@@ -274,7 +274,7 @@ main hr, main .divide-y > * { border-color:#e4e4e2; }
 tr[data-fila-cap], tr[data-fila-cap]:hover, main table tbody tr[data-fila-cap]:hover > td { background-color:transparent !important; }
 tr[data-fila-cap] > td:nth-child(2) { background-color:transparent !important; border-left:1px solid #ececea !important; border-right:1px solid #ececea !important; padding:0 !important; vertical-align:top; }
 tr[data-fila-cap] > td:nth-child(2) > div { gap:0 !important; }
-tr[data-fila-cap] > td:nth-child(2) button { width:100%; border:0 !important; border-bottom:1px solid #ececea !important; border-radius:0 !important; background:transparent !important; box-shadow:none !important; padding:10px 14px !important; justify-content:space-between; color:#374151; }
+tr[data-fila-cap] > td:nth-child(2) button { width:100%; border:0 !important; border-bottom:1px solid #ececea !important; border-radius:0 !important; background:transparent !important; box-shadow:none !important; padding:6px 12px !important; justify-content:space-between; color:#374151; }
 tr[data-fila-cap] > td:nth-child(2) button:last-child { border-bottom:0 !important; }
 tr[data-fila-cap] > td:nth-child(2) button:hover:not(:disabled) { background:transparent !important; color:#005cab; }
 /* Campos de escritura con la misma letra que el resto (tamaño, grosor y color) */
