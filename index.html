@@ -311,6 +311,10 @@ main .border.border-slate-400:not(.border-dashed):not(input):not(select):not(tex
 main input.border:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]):not(#select-anio), main select.border:not(#select-anio), main textarea.border { border-bottom-color:#b5b5b1 !important; }
 main .border-slate-100, main .border-slate-200 { border-color:#d0d0cc; }
 main .border-slate-300 { border-color:#bdbdb9; }
+/* Arrendamientos: encabezado con columnas a medida para que se vea completo y alineado */
+@media (min-width:1280px) { .grid:has(> div > #ar-timp) { grid-template-columns: minmax(200px,2.2fr) 120px 160px 160px 150px minmax(130px,1.3fr) minmax(130px,1.3fr) !important; } .grid:has(> div > #ar-timp) > div { grid-column:auto !important; } }
+.grid:has(> div > #ar-timp) :is(input,select) { height:34px; min-height:34px; padding-top:0 !important; padding-bottom:0 !important; box-sizing:border-box; }
+.grid:has(> div > #ar-timp) input[type=date] { padding-right:4px !important; }
 </style>
 </head>
 <body class="mgi-bg min-h-screen text-slate-800 font-sans flex relative">
