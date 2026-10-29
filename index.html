@@ -1093,6 +1093,91 @@ main select[id$="-anio"] option { background:#fff; color:#1f1f1e; font-weight:40
       </div>
     </section>
 
+    <section id="sec-pedidos-claude" class="hidden bg-white rounded-2xl shadow-xl border border-slate-200 p-6 min-h-[92vh] space-y-5">
+      <div class="border-b pb-4">
+        <h1 class="text-xl font-bold text-slate-800">Pedidos a Claude</h1>
+        <p class="text-xs text-slate-500">El auditor deja la documentación en la carpeta del cliente y solicita el análisis aquí. El Socio o el Supervisor lo autoriza. Claude solo trabaja los pedidos autorizados y deja el resultado en "Trabajo de Claude por revisar".</p>
+      </div>
+      <div class="border border-slate-300 rounded-xl p-4 space-y-3">
+        <h2 class="text-xs font-bold text-slate-700">Nuevo pedido</h2>
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">Cliente</label>
+            <select id="pc-cliente" class="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs sm:text-sm outline-none"></select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">Año a evaluar</label>
+            <select id="pc-anio" class="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs sm:text-sm outline-none"></select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">Visita</label>
+            <select id="pc-visita" class="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs sm:text-sm outline-none">
+              <option value="preliminar">Visita preliminar</option>
+              <option value="final">Visita final</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">Cuenta (sumaria)</label>
+            <select id="pc-sumaria" class="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs sm:text-sm outline-none"></select>
+          </div>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">Carpeta donde dejaste la documentación</label>
+            <input type="text" id="pc-carpeta" placeholder="Ej. Clientes\Summit Agro\2026\Arrendamientos" class="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs sm:text-sm outline-none">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">Nota para Claude (opcional)</label>
+            <input type="text" id="pc-nota" placeholder="Ej. Revisar también las renovaciones de los contratos" class="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs sm:text-sm outline-none">
+          </div>
+        </div>
+        <div class="flex flex-wrap items-center gap-3">
+          <button type="button" onclick="solicitarPedidoClaude()" class="px-3 py-2 rounded-lg text-xs transition bg-slate-200 text-slate-900 hover:bg-slate-300 font-semibold">Solicitar a Claude</button>
+          <span id="pc-msg" class="text-[11px] text-slate-500 min-h-[1rem]"></span>
+        </div>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Cliente</label>
+          <select id="pc-f-cliente" onchange="cargarPedidosClaude()" class="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs sm:text-sm outline-none"></select>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Estado</label>
+          <select id="pc-f-estado" onchange="pintarPedidosClaude()" class="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs sm:text-sm outline-none">
+            <option value="">Todos</option>
+            <option value="solicitado">Por autorizar</option>
+            <option value="autorizado">Autorizados (esperan a Claude)</option>
+            <option value="hecho">Hechos</option>
+            <option value="rechazado">Rechazados</option>
+            <option value="cancelado">Cancelados</option>
+          </select>
+        </div>
+      </div>
+      <div id="pc-aviso" class="hidden border border-slate-300 bg-slate-50 rounded-xl p-4 space-y-2">
+        <p id="pc-aviso-txt" class="text-xs text-slate-700"></p>
+        <div class="flex flex-wrap items-center gap-3">
+          <button type="button" onclick="copiarOrdenClaude()" class="px-3 py-2 rounded-lg text-xs transition bg-slate-200 text-slate-900 hover:bg-slate-300 font-semibold">Iniciar con Claude (copiar la orden)</button>
+          <span id="pc-aviso-msg" class="text-[11px] text-slate-500"></span>
+        </div>
+      </div>
+      <div id="pc-resumen" class="flex flex-wrap gap-2"></div>
+      <div class="overflow-x-auto border border-slate-200 rounded-xl shadow-sm bg-white">
+        <table class="w-full text-left text-xs text-slate-700 border-collapse">
+          <thead class="bg-slate-100 text-slate-600 text-[10px] font-bold border-b border-slate-200">
+            <tr>
+              <th class="p-3 border-r border-slate-200 min-w-[150px]">Cliente / Año</th>
+              <th class="p-3 border-r border-slate-200 min-w-[170px]">Cuenta</th>
+              <th class="p-3 border-r border-slate-200 min-w-[220px]">Carpeta y nota</th>
+              <th class="p-3 border-r border-slate-200 min-w-[160px]">Solicitó</th>
+              <th class="p-3 border-r border-slate-200 min-w-[190px]">Estado</th>
+              <th class="p-3 w-48 text-center">Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="pc-filas" class="divide-y divide-slate-200"></tbody>
+        </table>
+      </div>
+    </section>
+
     <section id="sec-sumarias" class="hidden bg-white rounded-2xl shadow-xl border border-slate-200 p-6 min-h-[92vh] space-y-5">
       <div class="border-b pb-4">
         <h1 class="text-xl font-bold text-slate-800">Sumarias</h1>
@@ -2743,6 +2828,7 @@ main select[id$="-anio"] option { background:#fff; color:#1f1f1e; font-weight:40
       pintarIdentidadAnalisis();
       pintarPanelUsuario();
       cargarEstadoHerramientas();
+      avisoPedidosClaude(true);
       return u;
     }
 
@@ -2965,17 +3051,17 @@ main select[id$="-anio"] option { background:#fff; color:#1f1f1e; font-weight:40
       }
 
       const claveLinea = (seccion === 'analisis' && cuenta) ? 'cta:' + cuenta : seccion;
-      if ((seccion === 'sumarias' || seccion === 'pendientes' || seccion === 'claude-revisar' || seccion === 'arrend' || seccion === 'import' || (seccion === 'analisis' && cuenta)) && !herramientaHabilitada(claveLinea)) { avisarEnDesarrollo(); return; }
+      if ((seccion === 'sumarias' || seccion === 'pendientes' || seccion === 'claude-revisar' || seccion === 'pedidos-claude' || seccion === 'arrend' || seccion === 'import' || (seccion === 'analisis' && cuenta)) && !herramientaHabilitada(claveLinea)) { avisarEnDesarrollo(); return; }
       if (!herramientaHabilitada(seccion)) {
         if (seccion === 'auditoria') seccion = 'desarrollo'; // pantalla principal: se muestra un aviso en vez de un mensaje emergente
         else { avisarEnDesarrollo(); return; }
       }
       if (!['clientes', 'usuarios', 'cuentas', 'habilitar', 'historial', 'medidor', 'programas'].includes(seccion)) guardarVista({ seccion: seccion, sub: sub || null, cuenta: cuenta || null });
 
-      const secciones = ['desarrollo', 'clientes', 'usuarios', 'cuentas', 'habilitar', 'historial', 'medidor', 'programas', 'sumarias', 'pendientes', 'claude-revisar', 'flujo', 'auditoria', 'analisis', 'visitas', 'asignacion', 'indices', 'mayor', 'contratos', 'arrend', 'import', 'pce', 'reuniones', 'mas-herramientas'];
+      const secciones = ['desarrollo', 'clientes', 'usuarios', 'cuentas', 'habilitar', 'historial', 'medidor', 'programas', 'sumarias', 'pendientes', 'claude-revisar', 'pedidos-claude', 'flujo', 'auditoria', 'analisis', 'visitas', 'asignacion', 'indices', 'mayor', 'contratos', 'arrend', 'import', 'pce', 'reuniones', 'mas-herramientas'];
       const grupoSubmenu = sec => ['indices', 'mayor', 'contratos', 'flujo', 'pce', 'reuniones', 'mas-herramientas'].includes(sec)
         ? 'herramientas'
-        : (['clientes', 'usuarios', 'cuentas', 'habilitar', 'historial', 'medidor', 'programas'].includes(sec) ? 'config' : (['sumarias', 'pendientes', 'claude-revisar'].includes(sec) ? 'analisis' : null));
+        : (['clientes', 'usuarios', 'cuentas', 'habilitar', 'historial', 'medidor', 'programas'].includes(sec) ? 'config' : (['sumarias', 'pendientes', 'claude-revisar', 'pedidos-claude'].includes(sec) ? 'analisis' : null));
       const esSubmenu = sec => grupoSubmenu(sec) !== null;
       
       secciones.forEach(sec => {
@@ -3002,6 +3088,7 @@ main select[id$="-anio"] option { background:#fff; color:#1f1f1e; font-weight:40
       if (seccion === 'sumarias') abrirSumarias();
       if (seccion === 'pendientes') abrirPendientes();
       if (seccion === 'claude-revisar') abrirClaudeRevisar();
+      if (seccion === 'pedidos-claude') abrirPedidosClaude();
       if (seccion === 'flujo') abrirFlujo();
       if (seccion === 'arrend') abrirArrend();
       if (seccion === 'import') abrirImport();
@@ -3132,6 +3219,9 @@ main select[id$="-anio"] option { background:#fff; color:#1f1f1e; font-weight:40
         </button>
         <button type="button" onclick="navegarMenu('claude-revisar')" id="nav-claude-revisar" class="w-full text-left px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:bg-slate-800 hover:text-white transition flex items-center gap-2">
           <span>Trabajo de Claude por revisar</span>
+        </button>
+        <button type="button" onclick="navegarMenu('pedidos-claude')" id="nav-pedidos-claude" class="w-full text-left px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:bg-slate-800 hover:text-white transition flex items-center gap-2">
+          <span>Pedidos a Claude</span><span id="badge-pedidos-claude" class="hidden ml-auto text-[10px] font-bold bg-slate-200 text-slate-900 rounded-full px-2 py-0.5"></span>
         </button>`;
       cont.innerHTML = botonSumarias + Object.entries(RUBROS_ANALISIS).map(([r, def], i) => {
         const cuentas = def.cuentas.length
@@ -3617,6 +3707,139 @@ main select[id$="-anio"] option { background:#fff; color:#1f1f1e; font-weight:40
       (arrEstado.contratos || []).forEach(c => { if (estadoOrigen(c) === 'pendiente') Object.assign(c, cambios); });
       pintarOrigenArrend();
       bitacoraClaude('Revisó trabajo de Claude', NOMBRE_ORIGEN.arrend, arrEstado.cliente, '');
+    }
+
+
+    // ===== Pedidos a Claude: el auditor solicita, el Socio o Supervisor autoriza, Claude hace y deja a revisión =====
+    let pedidosClaude = [];
+    function cargoUsuarioNorm() { return usuarioActivo ? String(usuarioActivo.cargo || '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, '').toLowerCase() : ''; }
+    function puedeAutorizarPedidos() { const c = cargoUsuarioNorm(); return c === 'socio' || c === 'supervisor'; }
+    const ESTADOS_PEDIDO = { solicitado: ['Por autorizar', 'pill-origen mod'], autorizado: ['Autorizado, espera a Claude', 'pill-origen'], hecho: ['Hecho, pasa a revisión', 'pill-origen rev'], rechazado: ['Rechazado', 'pill-origen'], cancelado: ['Cancelado', 'pill-origen'] };
+    async function abrirPedidosClaude() {
+      asegurarClientesEn('pc-cliente'); asegurarClientesEn('pc-f-cliente');
+      const fc = document.getElementById('pc-f-cliente'), previo = fc.value;
+      fc.innerHTML = '<option value="__todos__">Todos los clientes</option>' + fc.innerHTML.replace('<option value="">-- Selecciona un Cliente --</option>', '');
+      fc.value = (previo && [...fc.options].some(o => o.value === previo)) ? previo : '__todos__';
+      const sa = document.getElementById('pc-anio'), origen = document.getElementById('select-anio');
+      if (origen && !sa.options.length) sa.innerHTML = origen.innerHTML;
+      if (!catalogoCargado) await cargarCatalogoCuentas();
+      const ss = document.getElementById('pc-sumaria');
+      if (!ss.options.length) ss.innerHTML = '<option value="">-- Elige la cuenta --</option>' + catalogoCuentas.map(c => '<option value="' + escapeHtml(c.sumaria) + '">' + escapeHtml(c.cuenta || c.sumaria) + '</option>').join('');
+      cargarPedidosClaude();
+    }
+    async function cargarPedidosClaude() {
+      const cli = valorAnalisis('pc-f-cliente');
+      let q = supabaseClient.from('pedidos_claude').select('*').order('created_at', { ascending: false }).limit(300);
+      if (cli && cli !== '__todos__') q = q.eq('cliente_id', cli);
+      const { data, error } = await q;
+      const msg = document.getElementById('pc-msg');
+      if (error) { pedidosClaude = []; msg.textContent = 'No se pudo cargar: ' + (error.message || error); msg.className = 'text-[11px] min-h-[1rem] text-red-600 font-bold'; }
+      else pedidosClaude = data || [];
+      pintarPedidosClaude(); avisoPedidosClaude(false);
+    }
+    async function solicitarPedidoClaude() {
+      const msg = document.getElementById('pc-msg'), v = id => valorAnalisis(id).trim();
+      const err = t => { msg.textContent = t; msg.className = 'text-[11px] min-h-[1rem] text-red-600 font-bold'; };
+      if (!usuarioActivo || !nombreUsuarioActivo()) return err('Ingresa con tu usuario para solicitar.');
+      if (!v('pc-cliente')) return err('Elige el cliente.');
+      if (!v('pc-anio')) return err('Elige el año a evaluar.');
+      if (!v('pc-sumaria')) return err('Elige la cuenta (sumaria).');
+      if (!v('pc-carpeta')) return err('Indica la carpeta donde dejaste la documentación.');
+      const fila = { cliente_id: v('pc-cliente'), anio: Number(v('pc-anio')), visita: v('pc-visita') || 'final', sumaria: v('pc-sumaria'), carpeta: v('pc-carpeta'), nota: v('pc-nota') || null, solicitado_por: nombreUsuarioActivo(), solicitado_email: usuarioActivo.email || null };
+      const { data: ins, error } = await supabaseClient.from('pedidos_claude').insert([fila]).select('id').single();
+      if (error) return err('No se pudo enviar: ' + (error.message || error));
+      msg.textContent = 'Pedido enviado. Avisando por correo al Socio y al Supervisor…'; msg.className = 'text-[11px] min-h-[1rem] text-slate-500';
+      const av = await avisarPedidoCorreo(ins.id, 'solicitado');
+      msg.textContent = 'Pedido enviado. ' + av;
+      document.getElementById('pc-nota').value = '';
+      registrarActividad('Solicitó análisis a Claude', fila.sumaria + ' · ' + fila.visita, { cliente: fila.cliente_id, anio: String(fila.anio) });
+      cargarPedidosClaude();
+    }
+    function pintarPedidosClaude() {
+      const f = valorAnalisis('pc-f-estado'), n = e => pedidosClaude.filter(p => p.estado === e).length;
+      document.getElementById('pc-resumen').innerHTML = '<span class="pill-origen mod">Por autorizar: ' + n('solicitado') + '</span><span class="pill-origen">Autorizados, esperan a Claude: ' + n('autorizado') + '</span><span class="pill-origen rev">Hechos: ' + n('hecho') + '</span>';
+      const lista = pedidosClaude.filter(p => !f || p.estado === f), tb = document.getElementById('pc-filas');
+      if (!lista.length) { tb.innerHTML = '<tr><td colspan="6" class="p-8 text-center text-slate-400">No hay pedidos con este filtro.</td></tr>'; return; }
+      const aut = puedeAutorizarPedidos(), miNombre = nombreUsuarioActivo();
+      tb.innerHTML = lista.map(p => {
+        const cli = buscarClienteNombre(p.cliente_id), nom = cli ? (cli.nombre_corto || cli.nombre_completo || p.cliente_id) : p.cliente_id;
+        const c = catalogoCuentas.find(k => k.sumaria === p.sumaria), est = ESTADOS_PEDIDO[p.estado] || [p.estado, 'pill-origen'];
+        const detalle = p.estado === 'autorizado' || p.estado === 'hecho' ? 'Autorizó ' + escapeHtml(p.autorizado_por || '') + (p.autorizado_at ? ' · ' + fechaCortaOrigen(p.autorizado_at) : '') : (p.estado === 'rechazado' ? 'Motivo: ' + escapeHtml(p.motivo_rechazo || '—') : '');
+        let acc = '';
+        if (p.estado === 'solicitado') {
+          if (aut) acc += '<button type="button" onclick="autorizarPedidoClaude(\'' + p.id + '\')" class="px-3 py-1.5 text-[11px] rounded-lg transition bg-slate-200 text-slate-900 hover:bg-slate-300 font-semibold">Autorizar</button> <button type="button" onclick="rechazarPedidoClaude(\'' + p.id + '\')" class="px-3 py-1.5 text-[11px] rounded-lg transition border border-slate-300 text-slate-700 hover:bg-slate-100 font-medium">Rechazar</button> ';
+          if (aut || p.solicitado_por === miNombre) acc += '<button type="button" onclick="cancelarPedidoClaude(\'' + p.id + '\')" class="px-3 py-1.5 text-[11px] rounded-lg transition text-slate-500 hover:bg-slate-100 font-medium">Cancelar</button>';
+        } else if (p.estado === 'hecho') acc = '<button type="button" onclick="navegarMenu(\'claude-revisar\')" class="px-3 py-1.5 text-[11px] rounded-lg transition bg-slate-100 text-slate-800 hover:bg-slate-200 font-medium">Ver el trabajo</button>';
+        return '<tr class="align-top hover:bg-slate-50/80">' +
+          '<td class="p-3 border-r border-slate-200"><div class="font-bold text-slate-800">' + escapeHtml(nom) + '</div><div class="text-[11px] text-slate-500">' + p.anio + ' · ' + (p.visita === 'preliminar' ? 'Visita preliminar' : 'Visita final') + '</div></td>' +
+          '<td class="p-3 border-r border-slate-200 font-medium text-slate-800">' + escapeHtml(c ? c.cuenta : p.sumaria) + '</td>' +
+          '<td class="p-3 border-r border-slate-200"><div class="break-all">' + escapeHtml(p.carpeta || '') + '</div>' + (p.nota ? '<div class="text-[11px] text-slate-500 mt-1">' + escapeHtml(p.nota) + '</div>' : '') + '</td>' +
+          '<td class="p-3 border-r border-slate-200 text-[11px] text-slate-600">' + escapeHtml(p.solicitado_por || '') + '<div class="text-slate-400">' + fechaCortaOrigen(p.created_at) + '</div></td>' +
+          '<td class="p-3 border-r border-slate-200"><span class="' + est[1] + '">' + est[0] + '</span>' + (detalle ? '<div class="text-[11px] text-slate-500 mt-1">' + detalle + '</div>' : '') + (p.resumen_resultado ? '<div class="text-[11px] text-slate-600 mt-1">' + escapeHtml(p.resumen_resultado) + '</div>' : '') + '</td>' +
+          '<td class="p-3 text-center whitespace-nowrap">' + acc + '</td></tr>';
+      }).join('');
+    }
+
+    // ===== Aviso al Socio/Supervisor y botón para iniciar a Claude =====
+    let timerAvisoPedidos = null;
+    async function avisoPedidosClaude(reiniciar) {
+      try {
+        if (reiniciar) { clearInterval(timerAvisoPedidos); timerAvisoPedidos = setInterval(() => avisoPedidosClaude(false), 120000); }
+        const b = document.getElementById('badge-pedidos-claude');
+        if (!usuarioActivo || !herramientaHabilitada('pedidos-claude')) { if (b) b.classList.add('hidden'); return; }
+        const { data } = await supabaseClient.from('pedidos_claude').select('estado').in('estado', ['solicitado', 'autorizado']);
+        const l = data || [], porAut = l.filter(x => x.estado === 'solicitado').length, auts = l.filter(x => x.estado === 'autorizado').length;
+        const n = puedeAutorizarPedidos() ? porAut : 0;
+        if (b) { b.textContent = n; b.classList.toggle('hidden', n === 0); }
+        const av = document.getElementById('pc-aviso');
+        if (av) {
+          const t = [];
+          if (puedeAutorizarPedidos() && porAut) t.push('Tienes ' + porAut + ' pedido(s) por autorizar.');
+          if (auts) t.push(auts + ' pedido(s) autorizado(s) esperan a Claude.');
+          document.getElementById('pc-aviso-txt').textContent = t.join(' ');
+          av.classList.toggle('hidden', !t.length || (!auts && !puedeAutorizarPedidos()));
+          av.dataset.aut = auts;
+        }
+      } catch (e) { /* el aviso es opcional */ }
+    }
+    async function copiarOrdenClaude() {
+      const m = document.getElementById('pc-aviso-msg');
+      const txt = 'Claude, ejecuta los pedidos autorizados en PCM Inteligente: revisa la tabla pedidos_claude (estado autorizado), lee la carpeta indicada de cada uno, haz el análisis y déjalo en "Trabajo de Claude por revisar".';
+      try { await navigator.clipboard.writeText(txt); m.textContent = 'Orden copiada. Pégala en tu conversación con Claude y envíala.'; }
+      catch (e) { m.textContent = 'Copia esta orden: ' + txt; }
+    }
+    async function avisarPedidoCorreo(id, evento) {
+      try {
+        const { data, error } = await supabaseClient.functions.invoke('avisar-pedido', { body: { pedido_id: id, evento } });
+        let det = '';
+        if (error) { try { const j = error.context && await error.context.json(); det = (j && j.error) || ''; } catch (e) { /* sin detalle */ } throw new Error(det || error.message || 'sin conexión'); }
+        if (data && data.error) throw new Error(data.error);
+        const n = data && data.enviados ? data.enviados.length : 0;
+        if (data && data.fallidos && data.fallidos.length) return 'El correo falló: ' + data.fallidos[0].error;
+        return n ? 'Se envió el correo a ' + n + ' persona(s).' : (data && data.omitido) || 'No se envió correo.';
+      } catch (e) { return 'No se pudo enviar el correo (' + (e.message || e) + '); el pedido igual quedó registrado.'; }
+    }
+    async function cambiarEstadoPedido(id, cambios, accion) {
+      const { error } = await supabaseClient.from('pedidos_claude').update(cambios).eq('id', id);
+      if (error) { alert('No se pudo guardar: ' + (error.message || error)); return false; }
+      const p = pedidosClaude.find(x => x.id === id);
+      if (p) { Object.assign(p, cambios); registrarActividad(accion, p.sumaria + ' · ' + p.visita, { cliente: p.cliente_id, anio: String(p.anio) }); }
+      pintarPedidosClaude(); avisoPedidosClaude(false);
+      if (cambios.estado === 'autorizado' || cambios.estado === 'rechazado') avisarPedidoCorreo(id, cambios.estado).then(t => { const m = document.getElementById('pc-msg'); if (m) m.textContent = t; });
+      return true;
+    }
+    function autorizarPedidoClaude(id) {
+      if (!puedeAutorizarPedidos()) { alert('Solo el Socio o el Supervisor pueden autorizar.'); return; }
+      cambiarEstadoPedido(id, { estado: 'autorizado', autorizado_por: nombreUsuarioActivo(), autorizado_at: new Date().toISOString() }, 'Autorizó pedido a Claude');
+    }
+    function rechazarPedidoClaude(id) {
+      if (!puedeAutorizarPedidos()) { alert('Solo el Socio o el Supervisor pueden rechazar.'); return; }
+      const m = window.prompt('Motivo del rechazo (opcional):'); if (m === null) return;
+      cambiarEstadoPedido(id, { estado: 'rechazado', autorizado_por: nombreUsuarioActivo(), autorizado_at: new Date().toISOString(), motivo_rechazo: m.trim() || null }, 'Rechazó pedido a Claude');
+    }
+    function cancelarPedidoClaude(id) {
+      if (!window.confirm('¿Cancelar este pedido?')) return;
+      cambiarEstadoPedido(id, { estado: 'cancelado' }, 'Canceló pedido a Claude');
     }
 
     // ===== Bandeja "Trabajo de Claude por revisar" =====
@@ -12886,6 +13109,7 @@ ${cont.innerHTML}
       { clave: 'sumarias', nombre: '     ↳ 2. Análisis Claves › Sumarias', btn: 'nav-sumarias', defecto: false },
       { clave: 'pendientes', nombre: '     ↳ 2. Análisis Claves › To/Do - Quick Lett - Opinión', btn: 'nav-pendientes', defecto: false },
       { clave: 'claude-revisar', nombre: '     ↳ 2. Análisis Claves › Trabajo de Claude por revisar', btn: 'nav-claude-revisar', defecto: false },
+      { clave: 'pedidos-claude', nombre: '     ↳ 2. Análisis Claves › Pedidos a Claude', btn: 'nav-pedidos-claude', defecto: false },
       { clave: 'cta:inversiones_corrientes', nombre: '     ↳ 2. Análisis Claves › Activos › Inversiones corrientes', btn: 'nav-cuenta-activos-inversiones_corrientes', defecto: false },
       { clave: 'arrend', nombre: '     ↳ 2. Análisis Claves › Activos › Activos por derecho de uso y pasivos por arrendamiento', btn: 'nav-cuenta-extra-activos-arrend', defecto: false },
       { clave: 'import', nombre: '     ↳ 2. Análisis Claves › Activos › Inventarios (Importaciones)', btn: 'nav-cuenta-extra-activos-import', defecto: false },
@@ -13006,7 +13230,7 @@ ${cont.innerHTML}
     // ===== Históricos de visitas: quién ingresa y qué hace (bitácora en Supabase) =====
     const NOMBRE_PANTALLA = {
       auditoria: '1. Auditoría/Planificación', desarrollo: 'Pantalla principal', analisis: '2. Auditoría/Análisis Claves',
-      sumarias: 'Sumarias', pendientes: 'Pendientes', 'claude-revisar': 'Trabajo de Claude por revisar', visitas: '3. Visitas (Calendario)', asignacion: '4. Asignación de Cuentas',
+      sumarias: 'Sumarias', pendientes: 'Pendientes', 'claude-revisar': 'Trabajo de Claude por revisar', 'pedidos-claude': 'Pedidos a Claude', visitas: '3. Visitas (Calendario)', asignacion: '4. Asignación de Cuentas',
       indices: 'Herramienta: Índices', mayor: 'Herramienta: Mayor', contratos: 'Herramienta: Resumen de contratos',
       flujo: 'Herramienta: Flujo de efectivo', arrend: 'Herramienta: Arrendamientos NIIF 16', pce: 'Herramienta: Matriz PCE',
       reuniones: 'Herramienta: Resumen de reuniones', clientes: 'Configuración: Clientes', usuarios: 'Configuración: Usuarios / Auditores',
