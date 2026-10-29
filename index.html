@@ -351,6 +351,16 @@ main select#su-anio:not(#select-anio), main select#su-anio.border:not(#select-an
 /* Selectores de año de todas las herramientas con el mismo gris */
 main select[id$="-anio"]:not(#select-anio), main select[id$="-anio"].border:not(#select-anio), main select[id$="-anio"].border:not(#select-anio):hover, main select[id$="-anio"].border:not(#select-anio):focus { background-color:#bdbdba !important; border:0 !important; border-radius:10px !important; color:#1f1f1e !important; font-weight:700 !important; padding-left:10px !important; }
 main select[id$="-anio"] option { background:#fff; color:#1f1f1e; font-weight:400; }
+
+.marca-origen{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:6px 10px;border:1px solid #b9b0e8;border-radius:10px;background:#f4f2fc;color:#4b3f9e;font-size:12px}
+.marca-origen b{font-weight:700}
+.marca-origen.rev{border-color:#9cc9a8;background:#f0f8f2;color:#2f6b43}
+.marca-origen.mod{border-color:#e0c079;background:#fcf6e6;color:#8a6414}
+.marca-origen button{margin-left:auto;padding:3px 10px;border:1px solid currentColor;border-radius:8px;background:#fff;color:inherit;font-weight:600}
+.marca-origen button:hover{background:#f1f1ef}
+.pill-origen{display:inline-block;padding:1px 8px;border:1px solid #b9b0e8;border-radius:999px;background:#f4f2fc;color:#4b3f9e;font-size:11px;font-weight:600}
+.pill-origen.rev{border-color:#9cc9a8;background:#f0f8f2;color:#2f6b43}
+.pill-origen.mod{border-color:#e0c079;background:#fcf6e6;color:#8a6414}
 </style>
 </head>
 <body class="mgi-bg min-h-screen text-slate-800 font-sans flex relative">
@@ -489,6 +499,9 @@ main select[id$="-anio"] option { background:#fff; color:#1f1f1e; font-weight:40
             </button>
             <button onclick="navegarMenu('medidor')" id="nav-medidor" class="w-full text-left px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:bg-slate-800 hover:text-white transition flex items-center gap-2">
               <span>f) Medidor de uso</span>
+            </button>
+            <button onclick="navegarMenu('programas')" id="nav-programas" class="w-full text-left px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:bg-slate-800 hover:text-white transition flex items-center gap-2">
+              <span>g) Programas de trabajo</span>
             </button>
           </div>
         </div>
@@ -987,6 +1000,99 @@ main select[id$="-anio"] option { background:#fff; color:#1f1f1e; font-weight:40
       </div>
     </section>
 
+    <section id="sec-claude-revisar" class="hidden bg-white rounded-2xl shadow-xl border border-slate-200 p-6 min-h-[92vh] space-y-5">
+      <div class="border-b pb-4">
+        <h1 class="text-xl font-bold text-slate-800">Trabajo de Claude por revisar</h1>
+        <p class="text-xs text-slate-500">Todo lo que Claude preparó como asistente y está guardado en la aplicación. Cada fila lleva su marca: preparado por Claude (pendiente), revisado o modificado por una persona. Usa "Ir al análisis" para abrir el trabajo y "Marcar como revisado" cuando lo hayas visto.</p>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Cliente</label>
+          <select id="cr-cliente" onchange="cargarClaudeRevisar()" class="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs sm:text-sm outline-none"></select>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Año de consolidado</label>
+          <select id="cr-anio" onchange="cargarClaudeRevisar()" class="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs sm:text-sm outline-none"></select>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Visita</label>
+          <select id="cr-visita" onchange="cargarClaudeRevisar()" class="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs sm:text-sm outline-none">
+            <option value="">Todas las visitas</option>
+            <option value="preliminar">Visita preliminar</option>
+            <option value="final">Visita final</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Estado</label>
+          <select id="cr-estado" onchange="pintarClaudeRevisar()" class="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs sm:text-sm outline-none">
+            <option value="pendiente">Pendientes de revisión</option>
+            <option value="">Todos</option>
+            <option value="revisado">Revisados</option>
+            <option value="modificado">Modificados</option>
+          </select>
+        </div>
+      </div>
+      <div id="cr-resumen" class="flex flex-wrap gap-2"></div>
+      <p id="cr-estado-msg" class="text-xs text-slate-500 min-h-[1rem]"></p>
+      <div class="overflow-x-auto border border-slate-200 rounded-xl shadow-sm bg-white">
+        <table class="w-full text-left text-xs text-slate-700 border-collapse">
+          <thead class="bg-slate-100 text-slate-600 text-[10px] font-bold border-b border-slate-200">
+            <tr>
+              <th class="p-3 border-r border-slate-200 min-w-[150px]">Cliente / Año</th>
+              <th class="p-3 border-r border-slate-200 min-w-[180px]">Cuenta / Herramienta</th>
+              <th class="p-3 border-r border-slate-200 min-w-[140px]">Qué preparó Claude</th>
+              <th class="p-3 border-r border-slate-200 min-w-[200px]">Estado</th>
+              <th class="p-3 w-52 text-center">Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="cr-filas" class="divide-y divide-slate-200"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="sec-programas" class="hidden bg-white rounded-2xl shadow-xl border border-slate-200 p-6 min-h-[92vh] space-y-5">
+      <div class="border-b pb-4">
+        <h1 class="text-xl font-bold text-slate-800">Programas de trabajo</h1>
+        <p class="text-xs text-slate-500">Procedimientos de auditoría por sumaria. Son la receta que usa el equipo y que lee Claude. Sirven para todos los clientes. Un cambio aquí aplica a los trabajos nuevos; lo que ya se guardó en un cliente no se toca.</p>
+      </div>
+      <div class="border border-slate-300 rounded-xl p-4 space-y-2">
+        <h2 class="text-xs font-bold text-slate-700">Cargar desde el reporte de programas (Excel)</h2>
+        <p class="text-[11px] text-slate-500">Usa el "Reporte de programas" del sistema. Reemplaza todos los procedimientos actuales por los del archivo (se pierden los cambios hechos aquí).</p>
+        <label class="inline-block px-3 py-1.5 rounded-lg text-xs cursor-pointer transition bg-slate-100 text-slate-800 hover:bg-slate-200 font-medium">
+          Subir reporte (Excel)
+          <input type="file" id="pg-archivo" accept=".xlsx,.xls" class="hidden" onchange="subirReporteProgramas(this)">
+        </label>
+        <p id="pg-estado" class="text-[11px] text-slate-500 min-h-[1rem]"></p>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Sumaria</label>
+          <select id="pg-sumaria" onchange="pintarProgramas()" class="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs sm:text-sm outline-none"></select>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Buscar</label>
+          <input type="text" id="pg-buscar" oninput="pintarProgramas()" placeholder="Palabra del procedimiento" class="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs sm:text-sm outline-none">
+        </div>
+        <div class="flex items-end"><button type="button" onclick="agregarProcedimientoPlantilla()" class="px-3 py-2 rounded-lg text-xs transition bg-slate-100 text-slate-800 hover:bg-slate-200 font-medium">+ Agregar procedimiento</button></div>
+      </div>
+      <p id="pg-conteo" class="text-xs text-slate-500 min-h-[1rem]"></p>
+      <div class="overflow-x-auto border border-slate-200 rounded-xl shadow-sm bg-white">
+        <table class="w-full text-left text-xs text-slate-700 border-collapse">
+          <thead class="bg-slate-100 text-slate-600 text-[10px] font-bold border-b border-slate-200">
+            <tr>
+              <th class="p-3 border-r border-slate-200 w-16">Código</th>
+              <th class="p-3 border-r border-slate-200 w-40">Tipo</th>
+              <th class="p-3 border-r border-slate-200 min-w-[360px] w-full">Procedimiento</th>
+              <th class="p-3 border-r border-slate-200 w-36">Tamaño de empresa</th>
+              <th class="p-3 border-r border-slate-200 w-28">Riesgo</th>
+              <th class="p-3 w-24 text-center">Vigente</th>
+            </tr>
+          </thead>
+          <tbody id="pg-filas" class="divide-y divide-slate-200"></tbody>
+        </table>
+      </div>
+    </section>
+
     <section id="sec-sumarias" class="hidden bg-white rounded-2xl shadow-xl border border-slate-200 p-6 min-h-[92vh] space-y-5">
       <div class="border-b pb-4">
         <h1 class="text-xl font-bold text-slate-800">Sumarias</h1>
@@ -1181,6 +1287,7 @@ main select[id$="-anio"] option { background:#fff; color:#1f1f1e; font-weight:40
 
         <!-- Programa de trabajo de la cuenta (texto predeterminado, editable) -->
         <div id="an-panel-programa" class="space-y-3 max-w-4xl">
+          <div id="an-origen-programa"></div>
           <h3 class="text-sm font-bold text-slate-800">Programa de trabajo de la cuenta</h3><p class="text-[11px] text-slate-500">Texto predeterminado editable. Se guarda por cliente y año.</p>
           <div class="space-y-3">
             <div>
@@ -1207,6 +1314,7 @@ main select[id$="-anio"] option { background:#fff; color:#1f1f1e; font-weight:40
             </div>
             <div class="flex flex-wrap items-center justify-between gap-2">
               <button type="button" onclick="restablecerProgramaPredeterminado()" class="px-2.5 py-1 bg-white text-slate-700 hover:bg-slate-50 border border-slate-400 rounded text-[11px] font-bold transition">Restablecer el texto predeterminado</button>
+              <button type="button" onclick="traerProcedimientosPlantilla()" class="px-2.5 py-1 bg-white text-slate-700 hover:bg-slate-50 border border-slate-400 rounded text-[11px] font-bold transition">Traer procedimientos de la plantilla</button>
               <p id="an-prog-estado" class="text-[11px] text-slate-400 min-h-[1rem]"></p>
             </div>
           </div>
@@ -1214,6 +1322,7 @@ main select[id$="-anio"] option { background:#fff; color:#1f1f1e; font-weight:40
 
         <!-- 1. Anexo y cálculos programados -->
         <div id="an-panel-anexo" class="space-y-5">
+          <div id="an-origen-anexo"></div>
           <div class="flex flex-wrap items-center gap-1 p-1.5 bg-white border border-slate-200 rounded-2xl">
             <button type="button" id="an-sub-btn-subir" onclick="anexoSub('subir')" class="px-3 py-1.5 text-xs transition rounded-lg">Subir anexo (Excel o CSV)</button>
             <button type="button" id="an-sub-btn-docs" onclick="anexoSub('docs')" class="px-3 py-1.5 text-xs transition rounded-lg">Sin anexo. Armarlo desde documentos escaneados</button>
@@ -1354,6 +1463,7 @@ main select[id$="-anio"] option { background:#fff; color:#1f1f1e; font-weight:40
 
         <!-- 2. Análisis de Claude -->
         <div id="an-panel-claude" class="hidden space-y-5">
+          <div id="an-origen-claude"></div>
           <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div class="space-y-4">
               <div id="an-claude-datos"></div>
@@ -1701,6 +1811,7 @@ main select[id$="-anio"] option { background:#fff; color:#1f1f1e; font-weight:40
         <h1 id="ar-titulo" class="text-xl font-bold text-slate-800">Arrendamientos NIIF 16</h1>
         <p class="text-xs text-slate-500">Cálculo NIIF 16 contrato por contrato: pasivo, derecho de uso, impuestos diferidos y conciliación con el balance. Sirve para clientes y para empresas que no son clientes</p>
       </div>
+      <div id="ar-origen"></div>
 
       <div class="grid grid-cols-1 md:grid-cols-4 xl:grid-cols-11 gap-4">
         <div class="md:col-span-2 xl:col-span-2">
@@ -2848,23 +2959,23 @@ main select[id$="-anio"] option { background:#fff; color:#1f1f1e; font-weight:40
       if (seccion === 'mayor') { try { mayorPoblarClientes(); } catch (e) { } }
       if (seccion === 'visitas') { fechaCalendarioActual = new Date(); renderizarCalendarioLineal(); setTimeout(posicionarCalendarioHoy, 60); }
       // Clientes y Usuarios solo se abren con ingreso de Socio o Supervisor
-      if ((seccion === 'clientes' || seccion === 'usuarios' || seccion === 'cuentas' || seccion === 'habilitar' || seccion === 'historial' || seccion === 'medidor') && !puedeConfigurar()) {
+      if ((seccion === 'clientes' || seccion === 'usuarios' || seccion === 'cuentas' || seccion === 'habilitar' || seccion === 'historial' || seccion === 'medidor' || seccion === 'programas') && !puedeConfigurar()) {
         abrirLoginConfig(seccion);
         return;
       }
 
       const claveLinea = (seccion === 'analisis' && cuenta) ? 'cta:' + cuenta : seccion;
-      if ((seccion === 'sumarias' || seccion === 'pendientes' || seccion === 'arrend' || seccion === 'import' || (seccion === 'analisis' && cuenta)) && !herramientaHabilitada(claveLinea)) { avisarEnDesarrollo(); return; }
+      if ((seccion === 'sumarias' || seccion === 'pendientes' || seccion === 'claude-revisar' || seccion === 'arrend' || seccion === 'import' || (seccion === 'analisis' && cuenta)) && !herramientaHabilitada(claveLinea)) { avisarEnDesarrollo(); return; }
       if (!herramientaHabilitada(seccion)) {
         if (seccion === 'auditoria') seccion = 'desarrollo'; // pantalla principal: se muestra un aviso en vez de un mensaje emergente
         else { avisarEnDesarrollo(); return; }
       }
-      if (!['clientes', 'usuarios', 'cuentas', 'habilitar', 'historial', 'medidor'].includes(seccion)) guardarVista({ seccion: seccion, sub: sub || null, cuenta: cuenta || null });
+      if (!['clientes', 'usuarios', 'cuentas', 'habilitar', 'historial', 'medidor', 'programas'].includes(seccion)) guardarVista({ seccion: seccion, sub: sub || null, cuenta: cuenta || null });
 
-      const secciones = ['desarrollo', 'clientes', 'usuarios', 'cuentas', 'habilitar', 'historial', 'medidor', 'sumarias', 'pendientes', 'flujo', 'auditoria', 'analisis', 'visitas', 'asignacion', 'indices', 'mayor', 'contratos', 'arrend', 'import', 'pce', 'reuniones', 'mas-herramientas'];
+      const secciones = ['desarrollo', 'clientes', 'usuarios', 'cuentas', 'habilitar', 'historial', 'medidor', 'programas', 'sumarias', 'pendientes', 'claude-revisar', 'flujo', 'auditoria', 'analisis', 'visitas', 'asignacion', 'indices', 'mayor', 'contratos', 'arrend', 'import', 'pce', 'reuniones', 'mas-herramientas'];
       const grupoSubmenu = sec => ['indices', 'mayor', 'contratos', 'flujo', 'pce', 'reuniones', 'mas-herramientas'].includes(sec)
         ? 'herramientas'
-        : (['clientes', 'usuarios', 'cuentas', 'habilitar', 'historial', 'medidor'].includes(sec) ? 'config' : (['sumarias', 'pendientes'].includes(sec) ? 'analisis' : null));
+        : (['clientes', 'usuarios', 'cuentas', 'habilitar', 'historial', 'medidor', 'programas'].includes(sec) ? 'config' : (['sumarias', 'pendientes', 'claude-revisar'].includes(sec) ? 'analisis' : null));
       const esSubmenu = sec => grupoSubmenu(sec) !== null;
       
       secciones.forEach(sec => {
@@ -2890,11 +3001,13 @@ main select[id$="-anio"] option { background:#fff; color:#1f1f1e; font-weight:40
       if (seccion === 'reuniones') poblarClientesReunion();
       if (seccion === 'sumarias') abrirSumarias();
       if (seccion === 'pendientes') abrirPendientes();
+      if (seccion === 'claude-revisar') abrirClaudeRevisar();
       if (seccion === 'flujo') abrirFlujo();
       if (seccion === 'arrend') abrirArrend();
       if (seccion === 'import') abrirImport();
       if (seccion === 'pce') abrirPce();
       if (seccion === 'cuentas') abrirCatalogoCuentas();
+      if (seccion === 'programas') abrirProgramas();
       if (seccion === 'asignacion') abrirAsignacion();
       if (seccion === 'usuarios') refrescarAccesos();
 
@@ -3016,6 +3129,9 @@ main select[id$="-anio"] option { background:#fff; color:#1f1f1e; font-weight:40
         </button>
         <button type="button" onclick="navegarMenu('pendientes')" id="nav-pendientes" class="w-full text-left px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:bg-slate-800 hover:text-white transition flex items-center gap-2">
           <span>To/Do - Quick Lett - Opinión</span>
+        </button>
+        <button type="button" onclick="navegarMenu('claude-revisar')" id="nav-claude-revisar" class="w-full text-left px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:bg-slate-800 hover:text-white transition flex items-center gap-2">
+          <span>Trabajo de Claude por revisar</span>
         </button>`;
       cont.innerHTML = botonSumarias + Object.entries(RUBROS_ANALISIS).map(([r, def], i) => {
         const cuentas = def.cuentas.length
@@ -3166,7 +3282,7 @@ main select[id$="-anio"] option { background:#fff; color:#1f1f1e; font-weight:40
       guardadoPrograma.snap = {
         cliente_id: valorAnalisis('an-cliente'), anio: Number(valorAnalisis('an-anio')), cuenta: analisisEstado.cuenta, visita: visitaAnalisis(),
         objetivo: p.objetivo, procedimiento: p.procedimiento, fuente: p.fuente, responsable: p.responsable || null,
-        fecha_elaboracion: p.fecha || null, ...(quienProg ? { actualizado_por: quienProg } : {}), updated_at: new Date().toISOString()
+        fecha_elaboracion: p.fecha || null, ...(quienProg ? { actualizado_por: quienProg } : {}), ...camposEdicionOrigen('programa'), updated_at: new Date().toISOString()
       };
       document.getElementById('an-prog-estado').textContent = 'Guardando...';
       guardadoPrograma.timer = setTimeout(vaciarGuardadoPrograma, 800);
@@ -3261,6 +3377,325 @@ main select[id$="-anio"] option { background:#fff; color:#1f1f1e; font-weight:40
       actualizarReferenciaSumaria();
     }
 
+
+
+    // ===== Programas de trabajo (plantilla por sumaria) =====
+    let programasPlantilla = [];
+    async function abrirProgramas() {
+      if (!catalogoCargado) await cargarCatalogoCuentas();
+      const sel = document.getElementById('pg-sumaria'), previo = sel.value;
+      sel.innerHTML = '<option value="">Todas las sumarias</option>' + catalogoCuentas.map(c => '<option value="' + escapeHtml(c.sumaria) + '">' + escapeHtml(c.cuenta || c.sumaria) + '</option>').join('');
+      if (previo) sel.value = previo;
+      await cargarProgramasPlantilla();
+      pintarProgramas();
+    }
+    async function cargarProgramasPlantilla() {
+      const est = document.getElementById('pg-estado');
+      programasPlantilla = [];
+      for (let desde = 0; ; desde += 1000) {
+        const { data, error } = await supabaseClient.from('programas_plantilla').select('*').order('orden', { ascending: true }).range(desde, desde + 999);
+        if (error) { if (est) { est.textContent = 'No se pudo leer: ' + (error.message || error); est.className = 'text-[11px] min-h-[1rem] text-red-600 font-bold'; } return; }
+        programasPlantilla.push(...(data || []));
+        if (!data || data.length < 1000) break;
+      }
+    }
+    function pintarProgramas() {
+      const s = valorAnalisis('pg-sumaria'), q = quitarAcentosAnexo(valorAnalisis('pg-buscar'));
+      const lista = programasPlantilla.filter(r => (!s || r.sumaria === s) && (!q || quitarAcentosAnexo([r.codigo, r.tipo_procedimiento, r.procedimiento].join(' ')).includes(q)));
+      document.getElementById('pg-conteo').textContent = lista.length + ' procedimiento(s) · ' + lista.filter(r => r.activo).length + ' vigentes · ' + programasPlantilla.length + ' en total';
+      const tb = document.getElementById('pg-filas');
+      if (!lista.length) { tb.innerHTML = '<tr><td colspan="6" class="p-8 text-center text-slate-400">No hay procedimientos con este filtro.</td></tr>'; return; }
+      const nombreSum = x => { const c = catalogoCuentas.find(k => k.sumaria === x); return c ? c.cuenta : x; };
+      let ult = null, html = '';
+      lista.forEach(r => {
+        if (!s && r.sumaria !== ult) { html += '<tr><td colspan="6" class="px-3 py-2 bg-slate-100 text-slate-700 font-bold">' + escapeHtml(nombreSum(r.sumaria)) + '</td></tr>'; ult = r.sumaria; }
+        html += '<tr class="align-top' + (r.activo ? '' : ' opacity-50') + '">' +
+          '<td class="p-2 border-r border-slate-200"><input type="text" value="' + escapeHtml(r.codigo || '') + '" onchange="guardarCampoPlantilla(' + r.id + ',\'codigo\',this.value)" class="w-full p-1 border border-slate-200 rounded outline-none bg-white"></td>' +
+          '<td class="p-2 border-r border-slate-200"><input type="text" value="' + escapeHtml(r.tipo_procedimiento || '') + '" onchange="guardarCampoPlantilla(' + r.id + ',\'tipo_procedimiento\',this.value)" class="w-full p-1 border border-slate-200 rounded outline-none bg-white"></td>' +
+          '<td class="p-2 border-r border-slate-200"><textarea rows="3" onchange="guardarCampoPlantilla(' + r.id + ',\'procedimiento\',this.value)" class="w-full p-1 border border-slate-200 rounded outline-none bg-white leading-relaxed">' + escapeHtml(r.procedimiento || '') + '</textarea></td>' +
+          '<td class="p-2 border-r border-slate-200 text-[11px]">' + escapeHtml(r.tamanos || '') + '</td>' +
+          '<td class="p-2 border-r border-slate-200 text-[11px]">' + escapeHtml(r.riesgos || '') + '</td>' +
+          '<td class="p-2 text-center"><input type="checkbox" ' + (r.activo ? 'checked' : '') + ' onchange="guardarCampoPlantilla(' + r.id + ',\'activo\',this.checked)"></td></tr>';
+      });
+      tb.innerHTML = html;
+    }
+    async function guardarCampoPlantilla(id, campo, valor) {
+      const est = document.getElementById('pg-estado');
+      const r = programasPlantilla.find(x => x.id === id); if (!r) return;
+      if (campo === 'procedimiento' && !String(valor).trim()) { pintarProgramas(); return; }
+      const cambios = { [campo]: valor, actualizado_por: nombreUsuarioActivo() || null, updated_at: new Date().toISOString() };
+      const { error } = await supabaseClient.from('programas_plantilla').update(cambios).eq('id', id);
+      if (error) { est.textContent = 'No se guardó: ' + (error.message || error); est.className = 'text-[11px] min-h-[1rem] text-red-600 font-bold'; return; }
+      Object.assign(r, cambios);
+      est.textContent = 'Guardado ✓'; est.className = 'text-[11px] min-h-[1rem] text-slate-500';
+      if (campo === 'activo') pintarProgramas();
+    }
+    async function agregarProcedimientoPlantilla() {
+      const s = valorAnalisis('pg-sumaria'), est = document.getElementById('pg-estado');
+      if (!s) { est.textContent = 'Elige primero una sumaria para agregarle el procedimiento.'; est.className = 'text-[11px] min-h-[1rem] text-red-600 font-bold'; return; }
+      const maxOrden = programasPlantilla.reduce((m, r) => Math.max(m, r.orden || 0), 0);
+      const { data, error } = await supabaseClient.from('programas_plantilla').insert([{ sumaria: s, codigo: '', procedimiento: 'Nuevo procedimiento', activo: true, orden: maxOrden + 1, actualizado_por: nombreUsuarioActivo() || null }]).select().single();
+      if (error) { est.textContent = 'No se pudo agregar: ' + (error.message || error); est.className = 'text-[11px] min-h-[1rem] text-red-600 font-bold'; return; }
+      programasPlantilla.push(data); pintarProgramas();
+    }
+    // Lee el reporte de programas del sistema: una fila por procedimiento; la sumaria sale del código de la categoría
+    function filasReporteProgramas(matriz) {
+      const ih = matriz.findIndex(f => f && String(f[0] || '').trim().toUpperCase() === 'CATEGORIA');
+      if (ih < 0) throw new Error('No encontré la fila de títulos (CATEGORIA, CODIGO, NOMBRE...). ¿Es el Reporte de programas?');
+      const col = {}; (matriz[ih] || []).forEach((t, i) => { col[String(t || '').trim().toUpperCase()] = i; });
+      const g = (f, k) => { const i = col[k]; return i === undefined || f[i] === null || f[i] === undefined ? '' : String(f[i]).trim(); };
+      const ext = (txt, mapa) => (txt.match(/\[(\w+)\]/g) || []).map(x => x.slice(1, -1)).filter(x => mapa[x]).map(x => mapa[x]).join(', ');
+      const out = [];
+      matriz.slice(ih + 1).forEach(f => {
+        if (!f) return;
+        const cat = g(f, 'CATEGORIA'), codigo = g(f, 'CODIGO'), proc = g(f, 'PROCEDIMIENTO');
+        const m = cat.match(/^\[([^\]]+)\]/); if (!m || !proc) return;
+        const k = m[1], sumaria = k === '001' ? 'FG' : k.split('.').pop();
+        out.push({
+          sumaria: sumaria, codigo: codigo, tipo_procedimiento: g(f, 'TIPO PROCEDIMIENTO').replace(/^\[\d+\]\s*/, '') || null, procedimiento: proc,
+          tamanos: ext(g(f, 'TAMAÑO(S) EMPRESA'), { '02': 'Grande', '03': 'Pequeña', '04': 'Mediana' }) || null,
+          riesgos: ext(g(f, 'TIPO RIESGO(S)'), { A: 'Alto', B: 'Bajo', M: 'Medio' }) || null,
+          documento: g(f, 'DOCUMENTO').replace(/^\[\w+\]\s*/, '') || null, activo: g(f, 'ESTADO').toUpperCase() === 'ACTIVO', orden: out.length + 1
+        });
+      });
+      return out;
+    }
+    async function subirReporteProgramas(input) {
+      const f = input.files && input.files[0]; input.value = '';
+      const est = document.getElementById('pg-estado'); if (!f) return;
+      est.className = 'text-[11px] min-h-[1rem] text-slate-500'; est.textContent = 'Leyendo el archivo...';
+      try {
+        const wb = XLSX.read(await f.arrayBuffer(), { type: 'array' });
+        const filas = filasReporteProgramas(XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, raw: true, defval: null }));
+        if (!filas.length) throw new Error('El archivo no tiene procedimientos.');
+        const nSum = new Set(filas.map(x => x.sumaria)).size;
+        if (!window.confirm('El archivo trae ' + filas.length + ' procedimientos de ' + nSum + ' sumarias.\n\nSe reemplazarán todos los procedimientos actuales (' + programasPlantilla.length + ') y se perderán los cambios hechos en esta pantalla.\n\n¿Quieres continuar?')) { est.textContent = ''; return; }
+        est.textContent = 'Guardando...';
+        const quien = nombreUsuarioActivo() || null;
+        const del = await supabaseClient.from('programas_plantilla').delete().gte('id', 0);
+        if (del.error) throw del.error;
+        for (let i = 0; i < filas.length; i += 100) {
+          const { error } = await supabaseClient.from('programas_plantilla').insert(filas.slice(i, i + 100).map(x => ({ ...x, actualizado_por: quien })));
+          if (error) throw error;
+        }
+        await cargarProgramasPlantilla(); pintarProgramas();
+        est.textContent = 'Listo ✓ ' + filas.length + ' procedimientos cargados de ' + nSum + ' sumarias.';
+        registrarActividad('Cargó programas de trabajo', filas.length + ' procedimientos', { cliente: '', anio: '' });
+      } catch (err) {
+        console.error('Reporte de programas:', err);
+        est.textContent = 'No se pudo cargar: ' + (err && err.message ? err.message : err); est.className = 'text-[11px] min-h-[1rem] text-red-600 font-bold';
+      }
+    }
+    // En el programa de una cuenta: arma el procedimiento con los pasos vigentes de las sumarias de esa cuenta
+    async function traerProcedimientosPlantilla() {
+      const def = Object.values(RUBROS_ANALISIS).flatMap(r => r.cuentas).find(c => c.clave === analisisEstado.cuenta);
+      const sums = def ? [def.sumariaCorto, def.sumariaLargo].filter(Boolean) : [];
+      const est = document.getElementById('an-prog-estado');
+      if (!sums.length) { est.textContent = 'Esta cuenta no tiene sumarias asociadas.'; return; }
+      const { data, error } = await supabaseClient.from('programas_plantilla').select('*').in('sumaria', sums).eq('activo', true).order('orden', { ascending: true });
+      if (error) { est.textContent = 'No se pudo leer la plantilla: ' + (error.message || error); return; }
+      if (!data || !data.length) { est.textContent = 'La plantilla no tiene procedimientos vigentes para ' + sums.join(' y ') + '.'; return; }
+      if (!window.confirm('Se reemplazará el texto del procedimiento por ' + data.length + ' pasos de la plantilla (' + sums.join(' y ') + ').\n\n¿Quieres continuar?')) return;
+      document.getElementById('an-prog-procedimiento').value = data.map(r => (r.codigo ? r.codigo + '. ' : '') + (r.tipo_procedimiento ? '[' + r.tipo_procedimiento + '] ' : '') + r.procedimiento).join('\n\n');
+      programarGuardadoPrograma();
+    }
+
+    // ===== Marca de origen: lo que prepara Claude como asistente y su revisión por una persona =====
+    const ORIGEN = { programa: null, anexo: null, claude: null };
+    const TABLAS_ORIGEN = { programa: 'programa_trabajo_cuentas', anexo: 'anexo_inversiones', claude: 'analisis_claude_cuentas', arrend: 'arrendamientos_contratos', import: 'importaciones_datos' };
+    const NOMBRE_ORIGEN = { programa: 'Programa de trabajo', anexo: 'Anexo', claude: 'Análisis de Claude', arrend: 'Contratos de arrendamiento', import: 'Importaciones' };
+    function estadoOrigen(r) { return r && r.origen === 'claude' ? (r.estado_revision === 'revisado' ? 'revisado' : (r.estado_revision === 'modificado' ? 'modificado' : 'pendiente')) : ''; }
+    function fechaCortaOrigen(iso) { try { return iso ? new Date(iso).toLocaleDateString('es-EC', { day: '2-digit', month: '2-digit', year: 'numeric' }) : ''; } catch (e) { return ''; } }
+    function textoOrigen(r) {
+      const e = estadoOrigen(r);
+      if (e === 'revisado') return 'Revisado por ' + (r.revisado_por || 'una persona') + (r.revisado_at ? ' · ' + fechaCortaOrigen(r.revisado_at) : '');
+      if (e === 'modificado') return 'Modificado por ' + (r.revisado_por || 'una persona') + (r.revisado_at ? ' · ' + fechaCortaOrigen(r.revisado_at) : '');
+      return 'Preparado por Claude, pendiente de revisión';
+    }
+    function pillOrigen(r) {
+      const e = estadoOrigen(r); if (!e) return '';
+      return '<span class="pill-origen ' + (e === 'revisado' ? 'rev' : (e === 'modificado' ? 'mod' : '')) + '">' + escapeHtml(textoOrigen(r)) + '</span>';
+    }
+    function htmlOrigen(r, tipo) {
+      const e = estadoOrigen(r); if (!e) return '';
+      const cls = e === 'revisado' ? 'rev' : (e === 'modificado' ? 'mod' : '');
+      const boton = e === 'pendiente' ? '<button type="button" onclick="marcarRevisadoAnalisis(\'' + tipo + '\')">Marcar como revisado</button>' : '';
+      return '<div class="marca-origen ' + cls + '"><b>Claude</b><span>' + escapeHtml(textoOrigen(r)) + '</span>' + boton + '</div>';
+    }
+    function pintarOrigenAnalisis() {
+      ['programa', 'anexo', 'claude'].forEach(t => { const el = document.getElementById('an-origen-' + t); if (el) el.innerHTML = htmlOrigen(ORIGEN[t], t); });
+    }
+    // Si una persona cambia algo que preparó Claude, queda anotado como "Modificado por"
+    function camposEdicionOrigen(tipo) {
+      const r = ORIGEN[tipo];
+      if (!r || r.origen !== 'claude' || r.estado_revision === 'modificado') return {};
+      const quien = nombreUsuarioActivo(); if (!quien) return {};
+      r.estado_revision = 'modificado'; r.revisado_por = quien; r.revisado_at = new Date().toISOString();
+      setTimeout(pintarOrigenAnalisis, 0);
+      return { estado_revision: 'modificado', revisado_por: quien, revisado_at: r.revisado_at };
+    }
+    function bitacoraClaude(accion, detalle, cliente, anio) {
+      try { registrarActividad(accion, detalle, { cliente: cliente, anio: anio }); } catch (e) { }
+    }
+    async function marcarRevisadoAnalisis(tipo) {
+      const r = ORIGEN[tipo]; if (!r) return;
+      const quien = nombreUsuarioActivo();
+      if (!quien) { alert('Ingresa con tu usuario para marcar el trabajo como revisado.'); return; }
+      const cambios = { estado_revision: 'revisado', revisado_por: quien, revisado_at: new Date().toISOString() };
+      let q = supabaseClient.from(TABLAS_ORIGEN[tipo]).update(cambios);
+      q = tipo === 'claude' ? q.eq('id', r.id) : q.eq('cliente_id', valorAnalisis('an-cliente')).eq('anio', Number(valorAnalisis('an-anio'))).eq('cuenta', analisisEstado.cuenta).eq('visita', visitaAnalisis());
+      const { error } = await q;
+      if (error) { alert('No se pudo marcar como revisado: ' + (error.message || error)); return; }
+      Object.assign(r, cambios);
+      pintarOrigenAnalisis();
+      bitacoraClaude('Revisó trabajo de Claude', NOMBRE_ORIGEN[tipo] + ' · ' + analisisEstado.cuenta, valorAnalisis('an-cliente'), valorAnalisis('an-anio'));
+    }
+
+    // Arrendamientos: los contratos se guardan por cliente, sin año ni visita
+    function arrCamposEdicion(c) {
+      if (!c || c.origen !== 'claude' || c.estado_revision === 'modificado') return {};
+      const quien = nombreUsuarioActivo(); if (!quien) return {};
+      c.estado_revision = 'modificado'; c.revisado_por = quien; c.revisado_at = new Date().toISOString();
+      setTimeout(pintarOrigenArrend, 0);
+      return { estado_revision: 'modificado', revisado_por: quien, revisado_at: c.revisado_at };
+    }
+    function pintarOrigenArrend() {
+      const el = document.getElementById('ar-origen'); if (!el) return;
+      const lista = (arrEstado.contratos || []).filter(c => c.origen === 'claude');
+      if (!lista.length) { el.innerHTML = ''; return; }
+      const pend = lista.filter(c => estadoOrigen(c) === 'pendiente').length, rev = lista.filter(c => estadoOrigen(c) === 'revisado').length, mod = lista.filter(c => estadoOrigen(c) === 'modificado').length;
+      const cls = pend ? '' : (mod ? 'mod' : 'rev');
+      const txt = pend ? pend + ' contrato(s) preparados por Claude, pendientes de revisión' : 'Contratos preparados por Claude: ' + rev + ' revisado(s), ' + mod + ' modificado(s)';
+      el.innerHTML = '<div class="marca-origen ' + cls + '"><b>Claude</b><span>' + escapeHtml(txt) + (pend && (rev || mod) ? ' (' + rev + ' revisados, ' + mod + ' modificados)' : '') + '</span>' + (pend ? '<button type="button" onclick="marcarRevisadoArrend()">Marcar todos como revisados</button>' : '') + '</div>';
+    }
+    async function marcarRevisadoArrend() {
+      const quien = nombreUsuarioActivo();
+      if (!quien) { alert('Ingresa con tu usuario para marcar el trabajo como revisado.'); return; }
+      const cambios = { estado_revision: 'revisado', revisado_por: quien, revisado_at: new Date().toISOString() };
+      const { error } = await supabaseClient.from('arrendamientos_contratos').update(cambios).eq('cliente_id', arrEstado.cliente).eq('origen', 'claude').or('estado_revision.is.null,estado_revision.eq.pendiente');
+      if (error) { alert('No se pudo marcar como revisado: ' + (error.message || error)); return; }
+      (arrEstado.contratos || []).forEach(c => { if (estadoOrigen(c) === 'pendiente') Object.assign(c, cambios); });
+      pintarOrigenArrend();
+      bitacoraClaude('Revisó trabajo de Claude', NOMBRE_ORIGEN.arrend, arrEstado.cliente, '');
+    }
+
+    // ===== Bandeja "Trabajo de Claude por revisar" =====
+    let claudeRevisarDatos = [];
+    function abrirClaudeRevisar() {
+      asegurarClientesEn('cr-cliente');
+      const sc = document.getElementById('cr-cliente'), previoC = sc.value;
+      sc.innerHTML = '<option value="__todos__">Todos los clientes</option>' + sc.innerHTML.replace('<option value="">-- Selecciona un Cliente --</option>', '');
+      sc.value = (previoC && [...sc.options].some(o => o.value === previoC)) ? previoC : '__todos__';
+      const sa = document.getElementById('cr-anio'), origen = document.getElementById('select-anio');
+      const previoA = sa.dataset.tocado === '1' ? sa.value : '__todos__';
+      sa.innerHTML = '<option value="__todos__">Todos los años</option>' + (origen ? origen.innerHTML : '');
+      sa.value = [...sa.options].some(o => o.value === previoA) ? previoA : '__todos__';
+      cargarClaudeRevisar();
+    }
+    async function cargarClaudeRevisar() {
+      const cliente = valorAnalisis('cr-cliente'), anioSel = document.getElementById('cr-anio'); if (anioSel) anioSel.dataset.tocado = '1';
+      const anio = valorAnalisis('cr-anio'), visita = valorAnalisis('cr-visita');
+      const msg = document.getElementById('cr-estado-msg'); msg.textContent = 'Cargando...';
+      const filtrar = (q, conAnio) => {
+        q = q.eq('origen', 'claude');
+        if (cliente && cliente !== '__todos__') q = q.eq('cliente_id', cliente);
+        if (conAnio) { if (anio && anio !== '__todos__') q = q.eq('anio', Number(anio)); if (visita) q = q.eq('visita', visita); }
+        return q;
+      };
+      try {
+        const [a, b, c, d, e] = await Promise.all([
+          filtrar(supabaseClient.from('programa_trabajo_cuentas').select('cliente_id, anio, cuenta, visita, origen, estado_revision, revisado_por, revisado_at, updated_at'), true),
+          filtrar(supabaseClient.from('anexo_inversiones').select('cliente_id, anio, cuenta, visita, origen, estado_revision, revisado_por, revisado_at, updated_at'), true),
+          filtrar(supabaseClient.from('analisis_claude_cuentas').select('id, cliente_id, anio, cuenta, visita, origen, estado_revision, revisado_por, revisado_at, created_at'), true),
+          filtrar(supabaseClient.from('arrendamientos_contratos').select('id, cliente_id, origen, estado_revision, revisado_por, revisado_at, updated_at'), false),
+          filtrar(supabaseClient.from('importaciones_datos').select('cliente_id, anio, visita, origen, estado_revision, revisado_por, revisado_at, updated_at'), true)
+        ]);
+        const err = [a, b, c, d, e].map(x => x.error).find(Boolean); if (err) throw err;
+        const filas = [];
+        (a.data || []).forEach(r => filas.push({ ...r, _t: 'programa' }));
+        (b.data || []).forEach(r => filas.push({ ...r, _t: 'anexo' }));
+        (c.data || []).forEach(r => filas.push({ ...r, _t: 'claude', updated_at: r.created_at }));
+        // Arrendamientos: un renglón por cliente que resume sus contratos
+        const porCli = {};
+        (d.data || []).forEach(r => { const k = r.cliente_id; (porCli[k] = porCli[k] || []).push(r); });
+        Object.keys(porCli).forEach(k => {
+          const l = porCli[k], pend = l.filter(x => estadoOrigen(x) === 'pendiente').length, mod = l.filter(x => estadoOrigen(x) === 'modificado').length;
+          const ult = l.filter(x => x.revisado_at).sort((x, y) => String(y.revisado_at).localeCompare(String(x.revisado_at)))[0];
+          filas.push({ _t: 'arrend', cliente_id: k, anio: null, cuenta: 'arrend', visita: '', origen: 'claude', estado_revision: pend ? null : (mod ? 'modificado' : 'revisado'), revisado_por: ult ? ult.revisado_por : null, revisado_at: ult ? ult.revisado_at : null, _n: l.length, _pend: pend, updated_at: l.map(x => x.updated_at).sort().pop() });
+        });
+        (e.data || []).forEach(r => filas.push({ ...r, _t: 'import', cuenta: 'import' }));
+        claudeRevisarDatos = filas;
+        msg.textContent = '';
+      } catch (err) {
+        console.error('No se pudo cargar el trabajo de Claude:', err);
+        claudeRevisarDatos = [];
+        msg.textContent = 'No se pudo cargar: ' + (err && err.message ? err.message : err);
+      }
+      pintarClaudeRevisar();
+    }
+    function nombreCuentaRevisar(r) {
+      if (r._t === 'arrend') return 'Activos por derecho de uso y pasivos por arrendamiento';
+      if (r._t === 'import') return 'Inventarios (Importaciones)';
+      return nombreCuentaPorClave(r.cuenta);
+    }
+    function pintarClaudeRevisar() {
+      const f = document.getElementById('cr-estado').value;
+      const cuenta = e => claudeRevisarDatos.filter(r => estadoOrigen(r) === e).length;
+      document.getElementById('cr-resumen').innerHTML =
+        '<span class="pill-origen">Pendientes de revisión: ' + cuenta('pendiente') + '</span><span class="pill-origen rev">Revisados: ' + cuenta('revisado') + '</span><span class="pill-origen mod">Modificados: ' + cuenta('modificado') + '</span>';
+      const lista = claudeRevisarDatos.filter(r => !f || estadoOrigen(r) === f)
+        .sort((x, y) => String(x.cliente_id).localeCompare(String(y.cliente_id)) || ((y.anio || 0) - (x.anio || 0)) || String(x.cuenta).localeCompare(String(y.cuenta)));
+      const tb = document.getElementById('cr-filas');
+      if (!lista.length) { tb.innerHTML = '<tr><td colspan="5" class="p-8 text-center text-slate-400">No hay trabajo de Claude con este filtro.</td></tr>'; return; }
+      tb.innerHTML = lista.map(r => {
+        const cli = buscarClienteNombre(r.cliente_id), nom = cli ? (cli.nombre_corto || cli.nombre_completo || r.cliente_id) : r.cliente_id;
+        const idx = claudeRevisarDatos.indexOf(r), e = estadoOrigen(r);
+        const que = r._t === 'arrend' ? NOMBRE_ORIGEN.arrend + ' (' + r._n + ')' : NOMBRE_ORIGEN[r._t];
+        const sub = (r.anio ? r.anio + ' · ' : '') + (r.visita ? (r.visita === 'preliminar' ? 'Visita preliminar' : 'Visita final') : '');
+        return '<tr class="hover:bg-slate-50/80 align-top">' +
+          '<td class="p-3 border-r border-slate-200"><div class="font-bold text-slate-800">' + escapeHtml(nom) + '</div><div class="text-[11px] text-slate-500">' + escapeHtml(sub) + '</div></td>' +
+          '<td class="p-3 border-r border-slate-200 font-medium text-slate-800">' + escapeHtml(nombreCuentaRevisar(r)) + '</td>' +
+          '<td class="p-3 border-r border-slate-200">' + escapeHtml(que) + '<div class="text-[11px] text-slate-400">' + (r.updated_at ? escapeHtml(formatoFechaContrato(r.updated_at)) : '') + '</div></td>' +
+          '<td class="p-3 border-r border-slate-200">' + pillOrigen(r) + '</td>' +
+          '<td class="p-3 text-center whitespace-nowrap"><button type="button" onclick="irAlTrabajoClaude(' + idx + ')" class="px-3 py-1.5 text-[11px] rounded-lg transition bg-slate-100 text-slate-800 hover:bg-slate-200 font-medium">Ir al análisis</button>' +
+          (e === 'pendiente' ? ' <button type="button" onclick="marcarRevisadoBandeja(' + idx + ')" class="px-3 py-1.5 text-[11px] rounded-lg transition border border-slate-300 text-slate-700 hover:bg-slate-100 font-medium">Marcar revisado</button>' : '') + '</td></tr>';
+      }).join('');
+    }
+    async function marcarRevisadoBandeja(idx) {
+      const r = claudeRevisarDatos[idx]; if (!r) return;
+      const quien = nombreUsuarioActivo();
+      if (!quien) { alert('Ingresa con tu usuario para marcar el trabajo como revisado.'); return; }
+      const cambios = { estado_revision: 'revisado', revisado_por: quien, revisado_at: new Date().toISOString() };
+      let q = supabaseClient.from(TABLAS_ORIGEN[r._t]).update(cambios).eq('cliente_id', r.cliente_id);
+      if (r._t === 'claude') q = supabaseClient.from(TABLAS_ORIGEN.claude).update(cambios).eq('id', r.id);
+      else if (r._t === 'arrend') q = q.eq('origen', 'claude').or('estado_revision.is.null,estado_revision.eq.pendiente');
+      else if (r._t === 'import') q = q.eq('origen', 'claude').eq('anio', r.anio).eq('visita', r.visita);
+      else q = q.eq('anio', r.anio).eq('cuenta', r.cuenta).eq('visita', r.visita);
+      const { error } = await q;
+      if (error) { alert('No se pudo marcar como revisado: ' + (error.message || error)); return; }
+      Object.assign(r, cambios);
+      bitacoraClaude('Revisó trabajo de Claude', NOMBRE_ORIGEN[r._t] + ' · ' + nombreCuentaRevisar(r), String(r.cliente_id), r.anio ? String(r.anio) : '');
+      pintarClaudeRevisar();
+    }
+    function irAlTrabajoClaude(idx) {
+      const r = claudeRevisarDatos[idx]; if (!r) return;
+      if (r._t === 'arrend' || r._t === 'import') {
+        navegarMenu(r._t);
+        const sc = document.getElementById(r._t === 'arrend' ? 'ar-cliente' : 'im-cliente');
+        if (sc) { sc.value = String(r.cliente_id); sc.dispatchEvent(new Event('change')); }
+        return;
+      }
+      const rubro = Object.keys(RUBROS_ANALISIS).find(k => RUBROS_ANALISIS[k].cuentas.some(c => c.clave === r.cuenta)) || 'activos';
+      navegarMenu('analisis', rubro, r.cuenta);
+      const sc = document.getElementById('an-cliente'); if (sc) sc.value = String(r.cliente_id);
+      const sa = document.getElementById('an-anio');
+      if (sa) { if (![...sa.options].some(o => o.value === String(r.anio))) sa.add(new Option('Año ' + r.anio, String(r.anio))); sa.value = String(r.anio); sa.dataset.tocado = '1'; }
+      const sv = document.getElementById('an-visita'); if (sv) sv.value = r.visita === 'preliminar' ? 'preliminar' : 'final';
+      cambiarSeleccionAnalisis();
+      cambiarPestanaAnalisis(r._t === 'claude' ? 'claude' : r._t);
+      const contScroll = document.querySelector('body > main'); if (contScroll) contScroll.scrollTop = 0;
+    }
+
     async function cargarCuentaAnalisis() {
       const cliente = valorAnalisis('an-cliente');
       const anio = valorAnalisis('an-anio');
@@ -3273,7 +3708,7 @@ main select[id$="-anio"] option { background:#fff; color:#1f1f1e; font-weight:40
         await Promise.all([guardadoPrograma.cola, guardadoAnexo.cola]); // que terminen los guardados pendientes antes de leer
         [critR, anaR, anexR, progR] = await Promise.all([
           supabaseClient.from('criterio_auditor_cuentas').select('*').eq('cliente_id', cliente).eq('anio', Number(anio)).eq('cuenta', cuenta).eq('visita', visitaAnalisis()).maybeSingle(),
-          supabaseClient.from('analisis_claude_cuentas').select('id, created_at, archivos, analisis, truncado, generado_por, modelo').eq('cliente_id', cliente).eq('anio', Number(anio)).eq('cuenta', cuenta).eq('visita', visitaAnalisis()).order('created_at', { ascending: false }).limit(10),
+          supabaseClient.from('analisis_claude_cuentas').select('id, created_at, archivos, analisis, truncado, generado_por, modelo, origen, estado_revision, revisado_por, revisado_at').eq('cliente_id', cliente).eq('anio', Number(anio)).eq('cuenta', cuenta).eq('visita', visitaAnalisis()).order('created_at', { ascending: false }).limit(10),
           supabaseClient.from('anexo_inversiones').select('*').eq('cliente_id', cliente).eq('anio', Number(anio)).eq('cuenta', cuenta).eq('visita', visitaAnalisis()).maybeSingle(),
           supabaseClient.from('programa_trabajo_cuentas').select('*').eq('cliente_id', cliente).eq('anio', Number(anio)).eq('cuenta', cuenta).eq('visita', visitaAnalisis()).maybeSingle()
         ]);
@@ -3304,6 +3739,8 @@ main select[id$="-anio"] option { background:#fff; color:#1f1f1e; font-weight:40
       [rA, rC, rP].forEach(f => { if (f && f.updated_at && (f.actualizado_por || f.auditor) && (!ultima || f.updated_at > ultima.updated_at)) ultima = f; });
       analisisEstado.actualizado = ultima ? { por: ultima.actualizado_por || ultima.auditor, cuando: ultima.updated_at } : null;
       pintarIdentidadAnalisis();
+      ORIGEN.programa = rP || null; ORIGEN.anexo = rA || null; ORIGEN.claude = analisisEstado.analisis[0] || null;
+      pintarOrigenAnalisis();
 
       renderAnalisisGuardados();
       mostrarAnalisisEnPanel(analisisEstado.analisis[0] || null);
@@ -4510,6 +4947,7 @@ main select[id$="-anio"] option { background:#fff; color:#1f1f1e; font-weight:40
         balance_corto: parsearNumeroAnexo(l.corto),
         balance_largo: parsearNumeroAnexo(l.largo),
         ...(quienAnexo ? { auditor: analisisEstado.responsable || quienAnexo, actualizado_por: quienAnexo } : {}),
+        ...camposEdicionOrigen('anexo'),
         updated_at: new Date().toISOString()
       };
     }
@@ -8726,7 +9164,7 @@ main select[id$="-anio"] option { background:#fff; color:#1f1f1e; font-weight:40
       }
       arrEstado.sinTabla = false; arrEstado.cliente = cliente;
       arrEstado.contratos = (rC.data || []).map(r => ({
-        id: r.id, orden: Number(r.orden) || 0, arrendador: r.arrendador || '', ruc: r.ruc || '', n_contrato: r.n_contrato || '', local: r.local || '', centro_costo: r.centro_costo || '',
+        id: r.id, origen: r.origen || 'persona', estado_revision: r.estado_revision || null, revisado_por: r.revisado_por || null, revisado_at: r.revisado_at || null, orden: Number(r.orden) || 0, arrendador: r.arrendador || '', ruc: r.ruc || '', n_contrato: r.n_contrato || '', local: r.local || '', centro_costo: r.centro_costo || '',
         canon: r.canon === null ? '' : Number(r.canon), desde: r.desde || '', hasta: r.hasta || '', hasta_proy: r.hasta_proy || '', tasa: r.tasa === null ? '' : Number(r.tasa),
         cuotas: r.cuotas === null || r.cuotas === undefined ? '' : Number(r.cuotas), activo_ini: r.activo_ini === null || r.activo_ini === undefined ? '' : Number(r.activo_ini), pasivo_ini: r.pasivo_ini === null || r.pasivo_ini === undefined ? '' : Number(r.pasivo_ini), cambios: Array.isArray(r.cambios) ? r.cambios : [], modificaciones: Array.isArray(r.modificaciones) ? r.modificaciones : [], pago_inicio: !!r.pago_inicio, iva_no_rec: arrNumOVacio(r.iva_no_rec), anticipos: arrNumOVacio(r.anticipos), costos_directos: arrNumOVacio(r.costos_directos), desmantelamiento: arrNumOVacio(r.desmantelamiento), incentivos: arrNumOVacio(r.incentivos), nuevo: false
       }));
@@ -8741,6 +9179,7 @@ main select[id$="-anio"] option { background:#fff; color:#1f1f1e; font-weight:40
       { const ac = document.getElementById('ar-actualizado'), d = rK && rK.data;
         if (ac) { ac.value = d && d.actualizado_por ? d.actualizado_por : ''; ac.title = d && d.updated_at ? 'Último cambio: ' + new Date(d.updated_at).toLocaleString('es-EC', { day: '2-digit', month: '2-digit', year: 'numeric', hour: 'numeric', minute: '2-digit' }) : ''; } }
       arrEstadoMsg('');
+      pintarOrigenArrend();
       arrRender();
     }
 
@@ -9110,7 +9549,7 @@ main select[id$="-anio"] option { background:#fff; color:#1f1f1e; font-weight:40
         canon: nv(c.canon), desde: c.desde || null, hasta: c.hasta || null, hasta_proy: c.hasta_proy || null, tasa: nv(c.tasa), cuotas: nv(c.cuotas),
         cambios: (c.cambios || []).filter(x => x.ym && x.canon !== '' && x.canon !== null),
         modificaciones: (c.modificaciones || []).filter(x => x.ym && ((x.canon !== '' && x.canon !== null && x.canon !== undefined) || x.hasta || (x.tasa !== '' && x.tasa !== null && x.tasa !== undefined) || (x.tipo === 'reduccion' && Number(x.reduccion) > 0))).map(x => ({ ...x, tipo: x.tipo || 'renov' })),
-        actualizado_por: nombreUsuarioActivo() || null, updated_at: new Date().toISOString()
+        actualizado_por: nombreUsuarioActivo() || null, ...arrCamposEdicion(c), updated_at: new Date().toISOString()
       };
     }
     function arrProgramarGuardado(i) {
@@ -12399,6 +12838,7 @@ ${cont.innerHTML}
       { clave: 'analisis', nombre: '2. Auditoría/Análisis Claves', btn: 'nav-analisis' },
       { clave: 'sumarias', nombre: '     ↳ 2. Análisis Claves › Sumarias', btn: 'nav-sumarias', defecto: false },
       { clave: 'pendientes', nombre: '     ↳ 2. Análisis Claves › To/Do - Quick Lett - Opinión', btn: 'nav-pendientes', defecto: false },
+      { clave: 'claude-revisar', nombre: '     ↳ 2. Análisis Claves › Trabajo de Claude por revisar', btn: 'nav-claude-revisar', defecto: false },
       { clave: 'cta:inversiones_corrientes', nombre: '     ↳ 2. Análisis Claves › Activos › Inversiones corrientes', btn: 'nav-cuenta-activos-inversiones_corrientes', defecto: false },
       { clave: 'arrend', nombre: '     ↳ 2. Análisis Claves › Activos › Activos por derecho de uso y pasivos por arrendamiento', btn: 'nav-cuenta-extra-activos-arrend', defecto: false },
       { clave: 'import', nombre: '     ↳ 2. Análisis Claves › Activos › Inventarios (Importaciones)', btn: 'nav-cuenta-extra-activos-import', defecto: false },
@@ -12519,11 +12959,11 @@ ${cont.innerHTML}
     // ===== Históricos de visitas: quién ingresa y qué hace (bitácora en Supabase) =====
     const NOMBRE_PANTALLA = {
       auditoria: '1. Auditoría/Planificación', desarrollo: 'Pantalla principal', analisis: '2. Auditoría/Análisis Claves',
-      sumarias: 'Sumarias', pendientes: 'Pendientes', visitas: '3. Visitas (Calendario)', asignacion: '4. Asignación de Cuentas',
+      sumarias: 'Sumarias', pendientes: 'Pendientes', 'claude-revisar': 'Trabajo de Claude por revisar', visitas: '3. Visitas (Calendario)', asignacion: '4. Asignación de Cuentas',
       indices: 'Herramienta: Índices', mayor: 'Herramienta: Mayor', contratos: 'Herramienta: Resumen de contratos',
       flujo: 'Herramienta: Flujo de efectivo', arrend: 'Herramienta: Arrendamientos NIIF 16', pce: 'Herramienta: Matriz PCE',
       reuniones: 'Herramienta: Resumen de reuniones', clientes: 'Configuración: Clientes', usuarios: 'Configuración: Usuarios / Auditores',
-      cuentas: 'Configuración: Cuentas / Actividades', habilitar: 'Configuración: Habilitar herramientas', historial: 'Configuración: Históricos de visitas', medidor: 'Configuración: Medidor de uso'
+      cuentas: 'Configuración: Cuentas / Actividades', habilitar: 'Configuración: Habilitar herramientas', historial: 'Configuración: Históricos de visitas', programas: 'Configuración: Programas de trabajo', medidor: 'Configuración: Medidor de uso'
     };
     const _regTiempos = {};
     function _permitido(clave, ms) {
