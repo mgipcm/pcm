@@ -14755,7 +14755,8 @@ ${cont.innerHTML}
     // Nombres con los que suele aparecer una importación en el mayor: código, factura, y "nombre del proveedor + número" (HOLY 264, VETO 13)
     function impAliasPorDefecto(im) {
       const set = new Set(); const add = t => { const n = impNorm(t); if (impAliasValido(n) && !(/^\d+$/.test(n) && n.length < 5)) set.add(n); };
-      add(im.id); add(im.nombre); (im.facturas || []).forEach(f => { add(f); (String(f).match(/\d{5,}/g) || []).forEach(add); });
+      if (im.fuente !== 'consolidado') { add(im.id); add(im.nombre); } (im.facturas || []).forEach(f => { add(f); (String(f).match(/\d{5,}/g) || []).forEach(add); });
+      if (im.fuente === 'consolidado') { (im.codigosAlias || []).forEach(add); if (im.dau) { add(im.dau); (String(im.dau).match(/\d{6,}/g) || []).forEach(add); } return [...set].slice(0, 14); }
       (im.items || []).forEach(x => { if (x.factura) { add(x.factura); (String(x.factura).match(/\d{5,}/g) || []).forEach(add); } });
       const cod = impNorm(im.id).replace(/ /g, ''), md = /(?<!\d)(\d{1,4})$/.exec(cod), num = md ? String(parseInt(md[1], 10)) : '';
       if (num && num !== '0') {
@@ -14867,10 +14868,71 @@ ${cont.innerHTML}
       const tot = Object.fromEntries(Object.entries(T).filter(([k]) => k[0] !== '_'));
       return { id: '', nombre: nombreHoja, archivo, proveedor: '', fecha: '', dau: '', pais: '', facturas: [], items, totales: tot, indirectos: ind, total_indirectos: totInd, dai: {}, n_items: null, paginas: [], avisos: ['Leída desde Excel: completa el proveedor, la fecha y el valor en aduana de la DAI si los necesitas.'], sinHoja: false, fuente: 'excel', leido: new Date().toISOString() };
     }
+
+    // ---- Excel "consolidado de importaciones": una fila por producto importado, con columnas de costos (FOB, flete, seguro, CIF, aduanas, despacho, ISD, total) ----
+    const IMP_HDR_CONS = [
+      ['no', /^(n|no|nro|numero)$/], ['codigo', /^producto$/], ['descripcion', /descripcion/], ['subpartida', /partida/], ['factura', /^factura$/],
+      ['dai', /declaracion aduanera|^dai$|^dau$/], ['fecha_liq', /fecha liq/], ['proveedor', /^proveedor/], ['pais', /^pais$/], ['orden', /orden de compra/],
+      ['fob', /^(valor )?fob$/], ['fca', /^(valor )?fca$/], ['flete', /^flete$/], ['seguro', /total seguro|^seguro$/], ['cif', /^(valor )?cif$/],
+      ['arancel', /^arancel$/], ['fodinfa', /^fodinfa$/], ['tasa', /tasa de aduana/], ['tot_aduanas', /total.*aduana/], ['despacho', /facturas? de des|desaduan|despacho/],
+      ['licencias', /licencia/], ['notarios', /notario/], ['isd', /^isd$/], ['total', /total.*importacion/]
+    ];
+    function impFechaIso(v) {
+      if (v instanceof Date && !isNaN(v)) return new Date(v.getTime() + 12 * 3600e3).toISOString().slice(0, 10);
+      const m = /^(\d{4}-\d{2}-\d{2})/.exec(String(v || '')); return m ? m[1] : '';
+    }
+    function impLeerConsolidado(nombreHoja, filas, archivo) {
+      let hi = -1, mapa = null;
+      for (let i = 0; i < Math.min(filas.length, 60); i++) {
+        const m = {}; (filas[i] || []).forEach((h, ci) => { const t = impNormTxt(h); if (!t) return; const k = IMP_HDR_CONS.find(([kk, re]) => re.test(t) && (kk === 'isd' || m[kk] === undefined)); if (k) m[k[0]] = ci; });
+        if ((m.fob !== undefined || m.fca !== undefined) && m.cif !== undefined && m.total !== undefined && (m.descripcion !== undefined || m.codigo !== undefined)) { hi = i; mapa = m; break; }
+      }
+      if (hi < 0) return [];
+      const num = (f, k) => { const v = mapa[k] === undefined ? null : impN(f[mapa[k]]); return v === null || v === undefined ? null : v; };
+      const txt = (f, k) => { const v = mapa[k] === undefined ? '' : f[mapa[k]]; return v === null || v === undefined ? '' : String(v).trim(); };
+      const r2 = x => Math.round((x + Number.EPSILON) * 100) / 100;
+      const grupos = new Map(), avisosFila = []; let vacias = 0, sumaTotal = 0, nFilas = 0;
+      for (let i = hi + 1; i < filas.length; i++) {
+        const f = filas[i] || [], vacia = !f.some(c => c !== '' && c !== null && c !== undefined);
+        if (vacia) { if (++vacias >= 2 && nFilas) break; continue; } vacias = 0;
+        const primero = impNormTxt(f.find(c => c !== '' && c !== null && c !== undefined));
+        if (/^total/.test(primero)) break;
+        const cif = num(f, 'cif'); if (cif === null || (!txt(f, 'descripcion') && !txt(f, 'codigo'))) continue;
+        const fob = num(f, 'fob') !== null ? num(f, 'fob') : num(f, 'fca'), tasa = num(f, 'tasa') || 0, arancel = num(f, 'arancel') || 0, fodinfa = num(f, 'fodinfa') || 0;
+        const aduanas = num(f, 'tot_aduanas') !== null ? num(f, 'tot_aduanas') : r2(arancel + fodinfa + tasa);
+        const desp = num(f, 'despacho') || 0, lic = (num(f, 'licencias') || 0) + (num(f, 'notarios') || 0), isd = num(f, 'isd') || 0;
+        const it = { no: num(f, 'no'), subpartida: txt(f, 'subpartida'), factura: txt(f, 'factura'), codigo: txt(f, 'codigo'), descripcion: txt(f, 'descripcion'), pais: txt(f, 'pais'),
+          fob_total: fob, flete: num(f, 'flete') || 0, seguro: num(f, 'seguro') || 0, cif: cif, arancel: arancel, fodinfa: fodinfa, gastos_origen: tasa || null, costo_total: r2(cif + aduanas),
+          isd: isd, agente: desp, logistico: r2(lic), total_indirectos: r2(isd + desp + lic) };
+        const stated = num(f, 'total'); if (stated !== null && Math.abs(stated - (it.costo_total + it.total_indirectos)) > 0.05) avisosFila.push(`Fila ${it.no || i + 1} (${it.codigo || it.descripcion}): el total del archivo (${r2(stated)}) no coincide con la suma de sus partes (${r2(it.costo_total + it.total_indirectos)}).`);
+        sumaTotal += stated || 0; nFilas++;
+        const dai = txt(f, 'dai'), clave = dai || ('F:' + it.factura) || ('R' + i);
+        if (!grupos.has(clave)) grupos.set(clave, { dai: dai, proveedor: txt(f, 'proveedor'), fecha: impFechaIso(f[mapa.fecha_liq]), pais: it.pais, items: [] });
+        grupos.get(clave).items.push(it);
+      }
+      // total del archivo (celda de suma al pie de la tabla)
+      let totalPie = null;
+      if (mapa.total !== undefined) for (let i = hi + 1 + nFilas; i < filas.length; i++) { const v = impN((filas[i] || [])[mapa.total]); if (v !== null && v > 0) { totalPie = v; break; } }
+      const out = [], cuentaCod = {}; grupos.forEach(g => [...new Set(g.items.map(x => x.codigo).filter(Boolean))].forEach(c => { cuentaCod[c] = (cuentaCod[c] || 0) + 1; }));
+      grupos.forEach(g => {
+        g.items.forEach((x, i) => { x.no = i + 1; }); // la numeración del archivo corre por todo el consolidado; aquí se numera dentro de cada importación
+        const codigos = [...new Set(g.items.map(x => x.codigo).filter(Boolean))], id = (codigos[0] || g.dai || 'IMP').toUpperCase().slice(0, 18) + (codigos.length > 1 ? '+' + (codigos.length - 1) : '');
+        const av = ['Leída del Excel consolidado de importaciones (una fila por producto). Costo = CIF + total aduanas; los gastos de despacho se toman como agente aduanero; licencias y notarios como gasto logístico. El archivo no trae IVA, por eso ese cruce no se puede hacer con este archivo.'];
+        if (g.items.some(x => x.gastos_origen)) av.push('El archivo trae tasa de aduanas: se dejó en la columna "Gastos de origen" para que el costo cuadre.');
+        out.push({ id: '', idFijo: id, nombre: id, archivo: archivo, proveedor: g.proveedor, fecha: g.fecha, dau: g.dai, pais: g.pais, facturas: [...new Set(g.items.map(x => x.factura).filter(Boolean))], items: g.items, totales: {}, indirectos: [], total_indirectos: null,
+          dai: g.dai ? { numero: g.dai } : {}, n_items: null, codigosAlias: codigos.filter(c => cuentaCod[c] === 1), paginas: [], avisos: av, sinHoja: false, fuente: 'consolidado', leido: new Date().toISOString() });
+      });
+      if (out.length) {
+        if (totalPie !== null && Math.abs(totalPie - sumaTotal) > 1) out[0].avisos.push(`La suma de los totales de las filas (${r2(sumaTotal)}) no coincide con el total al pie del archivo (${r2(totalPie)}).`);
+        else if (totalPie !== null) out[0].avisos.push(`Total del archivo ${r2(totalPie)}: cuadra con la suma de las ${nFilas} filas.`);
+        if (avisosFila.length) out[0].avisos.push(...avisosFila.slice(0, 12));
+      }
+      return out;
+    }
     async function impLeerExcelLiquidacion(file) {
       if (!window.XLSX) throw new Error('No se pudo cargar el lector de Excel.');
       const wb = XLSX.read(new Uint8Array(await file.arrayBuffer()), { type: 'array', cellDates: true }), out = [];
-      wb.SheetNames.forEach(n => { const filas = XLSX.utils.sheet_to_json(wb.Sheets[n], { header: 1, raw: true, defval: '', blankrows: true }); const r = impLeerHojaExcel(n, filas, file.name); if (r && r.items.length) out.push(r); });
+      wb.SheetNames.forEach(n => { const filas = XLSX.utils.sheet_to_json(wb.Sheets[n], { header: 1, raw: true, defval: '', blankrows: true }); const r = impLeerHojaExcel(n, filas, file.name); if (r && r.items.length) out.push(r); else out.push(...impLeerConsolidado(n, filas, file.name)); });
       return out;
     }
 
@@ -15184,8 +15246,8 @@ ${(im.aprendidos || []).length ? `<p class="text-xs text-slate-600 bg-slate-50 b
         try {
           const lista = await impLeerExcelLiquidacion(f);
           if (!lista.length) throw new Error('No encontré una tabla de liquidación (con columnas como Descripción, FOB, CIF, Costo total).');
-          lista.forEach(im => { im.id = impIdDeArchivo(lista.length > 1 ? im.nombre : f.name); im.__nuevo = true; impAgregar(im); delete im.__nuevo; });
-          pr.est = 'ok'; pr.msg = `${lista.length} liquidación(es) leída(s): ${lista.map(x => x.id + ' (' + x.items.length + ' ítems)').join(', ')}.`;
+          lista.forEach(im => { im.id = im.idFijo || impIdDeArchivo(lista.length > 1 ? im.nombre : f.name); im.__nuevo = true; impAgregar(im); delete im.__nuevo; });
+          pr.est = 'ok'; pr.msg = lista.length > 6 ? `${lista.length} importaciones leídas (${lista.reduce((t, x) => t + x.items.length, 0)} filas del archivo).` : `${lista.length} liquidación(es) leída(s): ${lista.map(x => x.id + ' (' + x.items.length + ' ítems)').join(', ')}.`;
         } catch (e) { pr.est = 'error'; pr.msg = String(e.message || e); }
       }
       impGuardar('liquidaciones'); impReclasificar(); impRender();
