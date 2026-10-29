@@ -15245,7 +15245,7 @@ ${(im.aprendidos || []).length ? `<p class="text-xs text-slate-600 bg-slate-50 b
         const pr = { nombre: f.name, msg: 'Leyendo…', est: 'trabajando' }; impEstado.proc.push(pr);
         try {
           const lista = await impLeerExcelLiquidacion(f);
-          if (!lista.length) throw new Error('No encontré una tabla de liquidación (con columnas como Descripción, FOB, CIF, Costo total).');
+          if (!lista.length) throw new Error('No encontré una tabla de liquidación ni un consolidado de importaciones (con columnas como Descripción o Producto, FOB, CIF y Total). Si ves este mismo mensaje, revisa que la fila de títulos esté completa.');
           lista.forEach(im => { im.id = im.idFijo || impIdDeArchivo(lista.length > 1 ? im.nombre : f.name); im.__nuevo = true; impAgregar(im); delete im.__nuevo; });
           pr.est = 'ok'; pr.msg = lista.length > 6 ? `${lista.length} importaciones leídas (${lista.reduce((t, x) => t + x.items.length, 0)} filas del archivo).` : `${lista.length} liquidación(es) leída(s): ${lista.map(x => x.id + ' (' + x.items.length + ' ítems)').join(', ')}.`;
         } catch (e) { pr.est = 'error'; pr.msg = String(e.message || e); }
