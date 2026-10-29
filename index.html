@@ -3572,12 +3572,41 @@ main select[id$="-anio"] option { background:#fff; color:#1f1f1e; font-weight:40
     }
     function pintarOrigenArrend() {
       const el = document.getElementById('ar-origen'); if (!el) return;
+      let html = '';
       const lista = (arrEstado.contratos || []).filter(c => c.origen === 'claude');
-      if (!lista.length) { el.innerHTML = ''; return; }
-      const pend = lista.filter(c => estadoOrigen(c) === 'pendiente').length, rev = lista.filter(c => estadoOrigen(c) === 'revisado').length, mod = lista.filter(c => estadoOrigen(c) === 'modificado').length;
-      const cls = pend ? '' : (mod ? 'mod' : 'rev');
-      const txt = pend ? pend + ' contrato(s) preparados por Claude, pendientes de revisión' : 'Contratos preparados por Claude: ' + rev + ' revisado(s), ' + mod + ' modificado(s)';
-      el.innerHTML = '<div class="marca-origen ' + cls + '"><b>Claude</b><span>' + escapeHtml(txt) + (pend && (rev || mod) ? ' (' + rev + ' revisados, ' + mod + ' modificados)' : '') + '</span>' + (pend ? '<button type="button" onclick="marcarRevisadoArrend()">Marcar todos como revisados</button>' : '') + '</div>';
+      if (lista.length) {
+        const pend = lista.filter(c => estadoOrigen(c) === 'pendiente').length, rev = lista.filter(c => estadoOrigen(c) === 'revisado').length, mod = lista.filter(c => estadoOrigen(c) === 'modificado').length;
+        const cls = pend ? '' : (mod ? 'mod' : 'rev');
+        const txt = pend ? pend + ' contrato(s) preparados por Claude, pendientes de revisión' : 'Contratos preparados por Claude: ' + rev + ' revisado(s), ' + mod + ' modificado(s)';
+        html += '<div class="marca-origen ' + cls + '"><b>Claude</b><span>' + escapeHtml(txt) + (pend && (rev || mod) ? ' (' + rev + ' revisados, ' + mod + ' modificados)' : '') + '</span>' + (pend ? '<button type="button" onclick="marcarRevisadoArrend()">Marcar todos como revisados</button>' : '') + '</div>';
+      }
+      const a = ORIGEN.arrend;
+      if (a) {
+        const e = estadoOrigen(a), cls = e === 'revisado' ? 'rev' : (e === 'modificado' ? 'mod' : '');
+        html += '<div class="marca-origen ' + cls + '" style="margin-top:6px"><b>Claude</b><span>Análisis de Claude · ' + a.anio + ' · ' + (a.visita === 'preliminar' ? 'Visita preliminar' : 'Visita final') + ' · ' + escapeHtml(textoOrigen(a)) + '</span>' + (e === 'pendiente' ? '<button type="button" onclick="marcarRevisadoClaudeArrend()">Marcar como revisado</button>' : '') + '</div>' +
+          '<details class="mt-2 border border-slate-200 rounded-xl p-3 bg-white" open><summary class="cursor-pointer font-semibold text-slate-700">Ver u ocultar el análisis de Claude</summary><div class="mt-2 leading-relaxed text-xs text-slate-700">' + renderTextoResumenContrato(a.analisis || '') + '</div></details>';
+      }
+      el.innerHTML = html;
+    }
+    async function cargarClaudeArrend() {
+      const cli = arrEstado.cliente; ORIGEN.arrend = null;
+      try {
+        const { data, error } = await supabaseClient.from('analisis_claude_cuentas').select('id, created_at, anio, visita, analisis, origen, estado_revision, revisado_por, revisado_at').eq('cliente_id', cli).eq('cuenta', 'arrend').order('created_at', { ascending: false }).limit(1);
+        if (error) throw error;
+        if (cli !== arrEstado.cliente) return;
+        ORIGEN.arrend = (data && data[0]) || null;
+      } catch (e) { console.warn('No se pudo leer el análisis de Claude:', e); }
+      pintarOrigenArrend();
+    }
+    async function marcarRevisadoClaudeArrend() {
+      const a = ORIGEN.arrend; if (!a) return;
+      const quien = nombreUsuarioActivo();
+      if (!quien) { alert('Ingresa con tu usuario para marcar el trabajo como revisado.'); return; }
+      const cambios = { estado_revision: 'revisado', revisado_por: quien, revisado_at: new Date().toISOString() };
+      const { error } = await supabaseClient.from('analisis_claude_cuentas').update(cambios).eq('id', a.id);
+      if (error) { alert('No se pudo marcar como revisado: ' + (error.message || error)); return; }
+      Object.assign(a, cambios); pintarOrigenArrend();
+      bitacoraClaude('Revisó trabajo de Claude', NOMBRE_ORIGEN.claude + ' · arrendamientos', arrEstado.cliente, String(a.anio));
     }
     async function marcarRevisadoArrend() {
       const quien = nombreUsuarioActivo();
@@ -9197,7 +9226,7 @@ main select[id$="-anio"] option { background:#fff; color:#1f1f1e; font-weight:40
       { const ac = document.getElementById('ar-actualizado'), d = rK && rK.data;
         if (ac) { ac.value = d && d.actualizado_por ? d.actualizado_por : ''; ac.title = d && d.updated_at ? 'Último cambio: ' + new Date(d.updated_at).toLocaleString('es-EC', { day: '2-digit', month: '2-digit', year: 'numeric', hour: 'numeric', minute: '2-digit' }) : ''; } }
       arrEstadoMsg('');
-      pintarOrigenArrend();
+      ORIGEN.arrend = null; pintarOrigenArrend(); cargarClaudeArrend();
       arrRender();
     }
 
