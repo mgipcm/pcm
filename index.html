@@ -348,6 +348,9 @@ main select#su-anio:not(#select-anio), main select#su-anio.border:not(#select-an
 .fila-desplegada table tbody td, .fila-desplegada table tbody th { background-color:transparent !important; border-bottom:1px solid #cdcdc9 !important; }
 .fila-desplegada table tbody tr:hover > td { background-color:transparent !important; }
 .fila-desplegada input:not([type=checkbox]):not([type=radio]), .fila-desplegada select { background-color:transparent !important; }
+/* Selectores de año de todas las herramientas con el mismo gris */
+main select[id$="-anio"]:not(#select-anio), main select[id$="-anio"].border:not(#select-anio), main select[id$="-anio"].border:not(#select-anio):hover, main select[id$="-anio"].border:not(#select-anio):focus { background-color:#bdbdba !important; border:0 !important; border-radius:10px !important; color:#1f1f1e !important; font-weight:700 !important; padding-left:10px !important; }
+main select[id$="-anio"] option { background:#fff; color:#1f1f1e; font-weight:400; }
 </style>
 </head>
 <body class="mgi-bg min-h-screen text-slate-800 font-sans flex relative">
