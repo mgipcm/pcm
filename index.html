@@ -3438,6 +3438,17 @@ main select[id$="-anio"] option { background:#fff; color:#1f1f1e; font-weight:40
       if (error) { est.textContent = 'No se pudo agregar: ' + (error.message || error); est.className = 'text-[11px] min-h-[1rem] text-red-600 font-bold'; return; }
       programasPlantilla.push(data); pintarProgramas();
     }
+    // Pasa el texto del reporte (todo en mayúsculas) a oración: solo la primera letra de cada frase en mayúscula
+    function oracionPlantilla(t) {
+      if (!t) return t;
+      let r = '', cap = true;
+      for (const c of String(t)) {
+        if (cap && /\p{L}/u.test(c)) { r += c.toUpperCase(); cap = false; } else r += c.toLowerCase();
+        if ('.:;'.includes(c)) cap = true;
+      }
+      ['NIIF', 'NIC', 'NIA', 'IFRS', 'NC', 'IVA', 'ISD', 'SRI', 'IESS', 'ICT', 'TI', 'VNR', 'MP', 'PT', 'PP', 'XAAX', 'UAFE', 'RUC', 'PCE'].forEach(a => { r = r.replace(new RegExp('(^|[^\\p{L}])' + a + '(?![\\p{L}])', 'giu'), (m, p1) => p1 + a); });
+      return r.replace(/(^|[^\p{L}])quick lett(?![\p{L}])/giu, '$1Quick Lett').replace(/(^|[^\p{L}])pymes(?![\p{L}])/giu, '$1Pymes');
+    }
     // Lee el reporte de programas del sistema: una fila por procedimiento; la sumaria sale del código de la categoría
     function filasReporteProgramas(matriz) {
       const ih = matriz.findIndex(f => f && String(f[0] || '').trim().toUpperCase() === 'CATEGORIA');
@@ -3452,7 +3463,7 @@ main select[id$="-anio"] option { background:#fff; color:#1f1f1e; font-weight:40
         const m = cat.match(/^\[([^\]]+)\]/); if (!m || !proc) return;
         const k = m[1], sumaria = k === '001' ? 'FG' : k.split('.').pop();
         out.push({
-          sumaria: sumaria, codigo: codigo, tipo_procedimiento: g(f, 'TIPO PROCEDIMIENTO').replace(/^\[\d+\]\s*/, '') || null, procedimiento: proc,
+          sumaria: sumaria, codigo: codigo, tipo_procedimiento: oracionPlantilla(g(f, 'TIPO PROCEDIMIENTO').replace(/^\[\d+\]\s*/, '')) || null, procedimiento: oracionPlantilla(proc),
           tamanos: ext(g(f, 'TAMAÑO(S) EMPRESA'), { '02': 'Grande', '03': 'Pequeña', '04': 'Mediana' }) || null,
           riesgos: ext(g(f, 'TIPO RIESGO(S)'), { A: 'Alto', B: 'Bajo', M: 'Medio' }) || null,
           documento: g(f, 'DOCUMENTO').replace(/^\[\w+\]\s*/, '') || null, activo: g(f, 'ESTADO').toUpperCase() === 'ACTIVO', orden: out.length + 1
@@ -3606,7 +3617,7 @@ main select[id$="-anio"] option { background:#fff; color:#1f1f1e; font-weight:40
         const [a, b, c, d, e] = await Promise.all([
           filtrar(supabaseClient.from('programa_trabajo_cuentas').select('cliente_id, anio, cuenta, visita, origen, estado_revision, revisado_por, revisado_at, updated_at'), true),
           filtrar(supabaseClient.from('anexo_inversiones').select('cliente_id, anio, cuenta, visita, origen, estado_revision, revisado_por, revisado_at, updated_at'), true),
-          filtrar(supabaseClient.from('analisis_claude_cuentas').select('id, cliente_id, anio, cuenta, visita, origen, estado_revision, revisado_por, revisado_at, created_at'), true),
+          filtrar(supabaseClient.from('analisis_claude_cuentas').select('id, cliente_id, anio, cuenta, visita, analisis, origen, estado_revision, revisado_por, revisado_at, created_at'), true),
           filtrar(supabaseClient.from('arrendamientos_contratos').select('id, cliente_id, origen, estado_revision, revisado_por, revisado_at, updated_at'), false),
           filtrar(supabaseClient.from('importaciones_datos').select('cliente_id, anio, visita, origen, estado_revision, revisado_por, revisado_at, updated_at'), true)
         ]);
@@ -3636,6 +3647,7 @@ main select[id$="-anio"] option { background:#fff; color:#1f1f1e; font-weight:40
     function nombreCuentaRevisar(r) {
       if (r._t === 'arrend') return 'Activos por derecho de uso y pasivos por arrendamiento';
       if (r._t === 'import') return 'Inventarios (Importaciones)';
+      if (r.cuenta === 'arrend') return 'Activos por derecho de uso (AOO) y pasivos por arrendamiento (PCC, PLL)';
       return nombreCuentaPorClave(r.cuenta);
     }
     function pintarClaudeRevisar() {
@@ -3655,7 +3667,7 @@ main select[id$="-anio"] option { background:#fff; color:#1f1f1e; font-weight:40
         return '<tr class="hover:bg-slate-50/80 align-top">' +
           '<td class="p-3 border-r border-slate-200"><div class="font-bold text-slate-800">' + escapeHtml(nom) + '</div><div class="text-[11px] text-slate-500">' + escapeHtml(sub) + '</div></td>' +
           '<td class="p-3 border-r border-slate-200 font-medium text-slate-800">' + escapeHtml(nombreCuentaRevisar(r)) + '</td>' +
-          '<td class="p-3 border-r border-slate-200">' + escapeHtml(que) + '<div class="text-[11px] text-slate-400">' + (r.updated_at ? escapeHtml(formatoFechaContrato(r.updated_at)) : '') + '</div></td>' +
+          '<td class="p-3 border-r border-slate-200">' + escapeHtml(que) + '<div class="text-[11px] text-slate-400">' + (r.updated_at ? escapeHtml(formatoFechaContrato(r.updated_at)) : '') + '</div>' + (r.analisis ? '<details class="mt-1"><summary class="cursor-pointer text-slate-600 font-semibold">Ver el análisis</summary><div class="mt-2 max-w-[640px] leading-relaxed">' + renderTextoResumenContrato(r.analisis) + '</div></details>' : '') + '</td>' +
           '<td class="p-3 border-r border-slate-200">' + pillOrigen(r) + '</td>' +
           '<td class="p-3 text-center whitespace-nowrap"><button type="button" onclick="irAlTrabajoClaude(' + idx + ')" class="px-3 py-1.5 text-[11px] rounded-lg transition bg-slate-100 text-slate-800 hover:bg-slate-200 font-medium">Ir al análisis</button>' +
           (e === 'pendiente' ? ' <button type="button" onclick="marcarRevisadoBandeja(' + idx + ')" class="px-3 py-1.5 text-[11px] rounded-lg transition border border-slate-300 text-slate-700 hover:bg-slate-100 font-medium">Marcar revisado</button>' : '') + '</td></tr>';
@@ -3677,6 +3689,11 @@ main select[id$="-anio"] option { background:#fff; color:#1f1f1e; font-weight:40
       bitacoraClaude('Revisó trabajo de Claude', NOMBRE_ORIGEN[r._t] + ' · ' + nombreCuentaRevisar(r), String(r.cliente_id), r.anio ? String(r.anio) : '');
       pintarClaudeRevisar();
     }
+    function irAlTrabajoClaude_arrend(r) {
+      navegarMenu('arrend');
+      const sc = document.getElementById('ar-cliente');
+      if (sc) { sc.value = String(r.cliente_id); sc.dispatchEvent(new Event('change')); }
+    }
     function irAlTrabajoClaude(idx) {
       const r = claudeRevisarDatos[idx]; if (!r) return;
       if (r._t === 'arrend' || r._t === 'import') {
@@ -3685,6 +3702,7 @@ main select[id$="-anio"] option { background:#fff; color:#1f1f1e; font-weight:40
         if (sc) { sc.value = String(r.cliente_id); sc.dispatchEvent(new Event('change')); }
         return;
       }
+      if (r.cuenta === 'arrend') { irAlTrabajoClaude_arrend(r); return; }
       const rubro = Object.keys(RUBROS_ANALISIS).find(k => RUBROS_ANALISIS[k].cuentas.some(c => c.clave === r.cuenta)) || 'activos';
       navegarMenu('analisis', rubro, r.cuenta);
       const sc = document.getElementById('an-cliente'); if (sc) sc.value = String(r.cliente_id);
