@@ -3041,6 +3041,47 @@ main select[id$="-anio"] option { background:#fff; color:#1f1f1e; font-weight:40
       if (evento === 'SIGNED_OUT') { usuarioActivo = null; pintarIdentidadAnalisis(); pintarPanelUsuario(); if (permisoConfig.autorizado) bloquearConfigLocal(); mostrarPuerta(); }
     });
 
+    // ===== Cliente, año y visita activos: al cambiar de pantalla se mantienen, hasta que la persona elija otros =====
+    // La fecha de corte no se copia: cada pantalla la trae sola según el cliente, el año y la visita (así no se pisa una fecha guardada).
+    const SELECTS_CONTEXTO = {
+      auditoria: { cliente: 'select-cliente', anio: 'select-anio' },
+      analisis: { cliente: 'an-cliente', anio: 'an-anio', visita: 'an-visita' },
+      sumarias: { cliente: 'su-cliente', anio: 'su-anio', visita: 'su-visita' },
+      pendientes: { cliente: 'pe-cliente', anio: 'pe-anio', visita: 'pe-visita' },
+      'claude-revisar': { cliente: 'cr-cliente', anio: 'cr-anio', visita: 'cr-visita' },
+      'pedidos-claude': { cliente: 'pc-cliente', anio: 'pc-anio', visita: 'pc-visita' },
+      contratos: { cliente: 'contr-cliente' }, flujo: { cliente: 'fl-cliente', anio: 'fl-anio' },
+      arrend: { cliente: 'ar-cliente', anio: 'ar-anio', visita: 'ar-visita' }, import: { cliente: 'im-cliente', anio: 'im-anio', visita: 'im-visita' },
+      pce: { cliente: 'pce-cliente' }, reuniones: { cliente: 'reu-cliente' }, mayor: { cliente: 'my-cliente' },
+      asignacion: { cliente: 'as-cliente', anio: 'as-anio', visita: 'as-visita' }
+    };
+    const contextoActivo = { cliente: '', anio: '', visita: '' };
+    try { Object.assign(contextoActivo, JSON.parse(sessionStorage.getItem('pcm-contexto-activo') || '{}')); } catch (e) { /* sin almacenamiento */ }
+    document.addEventListener('change', ev => {
+      const t = ev.target;
+      if (!ev.isTrusted || !t || t.tagName !== 'SELECT' || !t.value) return;
+      for (const sec in SELECTS_CONTEXTO) {
+        const m = SELECTS_CONTEXTO[sec];
+        for (const k of ['cliente', 'anio', 'visita']) {
+          if (m[k] === t.id) {
+            contextoActivo[k] = t.value;
+            try { sessionStorage.setItem('pcm-contexto-activo', JSON.stringify(contextoActivo)); } catch (e) { /* sin almacenamiento */ }
+            return;
+          }
+        }
+      }
+    }, true);
+    function aplicarContextoActivo(seccion) {
+      const m = SELECTS_CONTEXTO[seccion]; if (!m) return;
+      let primero = null;
+      ['cliente', 'anio', 'visita'].forEach(k => {
+        const v = contextoActivo[k], s = m[k] && document.getElementById(m[k]);
+        if (!v || !s || s.value === v || ![...s.options].some(o => o.value === v)) return;
+        s.value = v; if (!primero) primero = s;
+      });
+      if (primero) primero.dispatchEvent(new Event('change', { bubbles: true })); // una sola carga; no cuenta como elección de la persona
+    }
+
     function navegarMenu(seccion, sub, cuenta) {
       if (seccion === 'mayor') { try { mayorPoblarClientes(); } catch (e) { } }
       if (seccion === 'visitas') { fechaCalendarioActual = new Date(); renderizarCalendarioLineal(); setTimeout(posicionarCalendarioHoy, 60); }
@@ -3080,6 +3121,7 @@ main select[id$="-anio"] option { background:#fff; color:#1f1f1e; font-weight:40
 
       const activeSec = document.getElementById(`sec-${seccion}`);
       if (activeSec) activeSec.classList.remove('hidden');
+      setTimeout(() => aplicarContextoActivo(seccion), 250); setTimeout(() => aplicarContextoActivo(seccion), 1000); // espera a que la pantalla cargue sus clientes
       if (seccion === 'contratos') { poblarClientesContratos(); cargarResumenesGuardados(); }
       if (seccion === 'habilitar') abrirHabilitar();
       if (seccion === 'historial') abrirHistorial();
