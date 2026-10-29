@@ -342,6 +342,12 @@ tr[data-fila-cap] > td:nth-child(2) button[onclick^="abrirModalOpinion"].border-
 #su-anio:hover, #su-anio:focus { background-color:#bdbdba !important; border-radius:10px !important; }
 #su-anio option { background:#fff; color:#1f1f1e; font-weight:400; }
 main select#su-anio:not(#select-anio), main select#su-anio.border:not(#select-anio), main select#su-anio.border:not(#select-anio):hover, main select#su-anio.border:not(#select-anio):focus { background-color:#bdbdba !important; border:0 !important; border-radius:10px !important; color:#1f1f1e !important; }
+/* Despliegues (Sumarias, Arrendamientos, Importaciones...): fondo gris, encabezado claro de tabla y líneas finas */
+.fila-desplegada .bg-white:not(button):not(input):not(select):not(textarea):not(thead):not(th), .fila-desplegada .bg-slate-50:not(thead):not(th):not(button), .fila-desplegada .bg-slate-100:not(thead):not(th):not(button):not(span) { background-color:transparent !important; }
+.fila-desplegada table thead, .fila-desplegada table thead tr, .fila-desplegada table thead th { background-color:#fafaf9 !important; color:#6b6b68 !important; font-weight:700; }
+.fila-desplegada table tbody td, .fila-desplegada table tbody th { background-color:transparent !important; border-bottom:1px solid #cdcdc9 !important; }
+.fila-desplegada table tbody tr:hover > td { background-color:transparent !important; }
+.fila-desplegada input:not([type=checkbox]):not([type=radio]), .fila-desplegada select { background-color:transparent !important; }
 </style>
 </head>
 <body class="mgi-bg min-h-screen text-slate-800 font-sans flex relative">
