@@ -3964,8 +3964,20 @@ main select[id$="-anio"] option { background:#fff; color:#1f1f1e; font-weight:40
           '<td class="p-3 border-r border-slate-200">' + escapeHtml(que) + '<div class="text-[11px] text-slate-400">' + (r.updated_at ? escapeHtml(formatoFechaContrato(r.updated_at)) : '') + '</div>' + (r.analisis ? '<details class="mt-1"><summary class="cursor-pointer text-slate-600 font-semibold">Ver el análisis</summary><div class="mt-2 max-w-[640px] leading-relaxed">' + renderTextoResumenContrato(r.analisis) + '</div></details>' : '') + '</td>' +
           '<td class="p-3 border-r border-slate-200">' + pillOrigen(r) + '</td>' +
           '<td class="p-3 text-center whitespace-nowrap"><button type="button" onclick="irAlTrabajoClaude(' + idx + ')" class="px-3 py-1.5 text-[11px] rounded-lg transition bg-slate-100 text-slate-800 hover:bg-slate-200 font-medium">Ir al análisis</button>' +
-          (e === 'pendiente' ? ' <button type="button" onclick="marcarRevisadoBandeja(' + idx + ')" class="px-3 py-1.5 text-[11px] rounded-lg transition border border-slate-300 text-slate-700 hover:bg-slate-100 font-medium">Marcar revisado</button>' : '') + '</td></tr>';
+          (e === 'pendiente' ? ' <button type="button" onclick="marcarRevisadoBandeja(' + idx + ')" class="px-3 py-1.5 text-[11px] rounded-lg transition border border-slate-300 text-slate-700 hover:bg-slate-100 font-medium">Marcar revisado</button>' : '') +
+          (r._t === 'claude' && puedeConfigurar() ? ' <button type="button" onclick="eliminarAnalisisClaude(' + idx + ')" class="px-3 py-1.5 text-[11px] rounded-lg transition text-slate-500 hover:bg-slate-100 font-medium" title="Elimina este análisis de Claude (solo Socio o Supervisor)">Eliminar</button>' : '') + '</td></tr>';
       }).join('');
+    }
+    async function eliminarAnalisisClaude(idx) {
+      const r = claudeRevisarDatos[idx]; if (!r || r._t !== 'claude') return;
+      if (!puedeConfigurar()) { alert('Solo el Socio o el Supervisor pueden eliminar el análisis de Claude.'); return; }
+      const fecha = r.updated_at ? formatoFechaContrato(r.updated_at) : '';
+      if (!confirm('¿Eliminar este análisis de Claude?\n\n' + nombreCuentaRevisar(r) + '\n' + (r.anio || '') + ' · ' + (r.visita === 'preliminar' ? 'Visita preliminar' : 'Visita final') + (fecha ? '\nPreparado el ' + fecha : '') + '\n\nNo se puede deshacer.')) return;
+      const { error } = await supabaseClient.from(TABLAS_ORIGEN.claude).delete().eq('id', r.id);
+      if (error) { alert('No se pudo eliminar: ' + (error.message || error)); return; }
+      bitacoraClaude('Eliminó análisis de Claude', nombreCuentaRevisar(r) + (fecha ? ' · ' + fecha : ''), String(r.cliente_id), r.anio ? String(r.anio) : '');
+      claudeRevisarDatos.splice(idx, 1);
+      pintarClaudeRevisar();
     }
     async function marcarRevisadoBandeja(idx) {
       const r = claudeRevisarDatos[idx]; if (!r) return;
