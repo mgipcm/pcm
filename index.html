@@ -1096,7 +1096,7 @@ main select[id$="-anio"] option { background:#fff; color:#1f1f1e; font-weight:40
     <section id="sec-pedidos-claude" class="hidden bg-white rounded-2xl shadow-xl border border-slate-200 p-6 min-h-[92vh] space-y-5">
       <div class="border-b pb-4">
         <h1 class="text-xl font-bold text-slate-800">Pedidos a Claude</h1>
-        <p class="text-xs text-slate-500">El auditor deja la documentación en la carpeta del cliente y solicita el análisis aquí. El Socio o el Supervisor lo autoriza. Claude solo trabaja los pedidos autorizados y deja el resultado en "Trabajo de Claude por revisar".</p>
+        <p class="text-xs text-slate-500">El auditor sube aquí la documentación que se necesita para el análisis y es responsable de que sea completa y adecuada. El Socio o el Supervisor lo autoriza. Claude solo trabaja los pedidos autorizados y deja el resultado en "Trabajo de Claude por revisar". Los archivos son temporales: se eliminan al revisar el trabajo o a los 15 días, y queda el registro con sus nombres.</p>
       </div>
       <div class="border border-slate-300 rounded-xl p-4 space-y-3">
         <h2 class="text-xs font-bold text-slate-700">Nuevo pedido</h2>
@@ -1123,8 +1123,9 @@ main select[id$="-anio"] option { background:#fff; color:#1f1f1e; font-weight:40
         </div>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label class="block text-xs font-semibold text-slate-600 mb-1">Carpeta donde dejaste la documentación</label>
-            <input type="text" id="pc-carpeta" placeholder="Ej. Clientes\Summit Agro\2026\Arrendamientos" class="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs sm:text-sm outline-none">
+            <label class="block text-xs font-semibold text-slate-600 mb-1">Documentación para el análisis (uno o varios archivos, máx. 50 MB cada uno)</label>
+            <input type="file" id="pc-archivos" multiple class="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs sm:text-sm outline-none">
+            <label class="flex items-start gap-2 mt-2 text-[11px] text-slate-600"><input type="checkbox" id="pc-confirma" class="mt-0.5"><span>Confirmo que esta documentación es completa y adecuada para realizar el análisis solicitado.</span></label>
           </div>
           <div>
             <label class="block text-xs font-semibold text-slate-600 mb-1">Nota para Claude (opcional)</label>
@@ -1167,7 +1168,7 @@ main select[id$="-anio"] option { background:#fff; color:#1f1f1e; font-weight:40
             <tr>
               <th class="p-3 border-r border-slate-200 min-w-[150px]">Cliente / Año</th>
               <th class="p-3 border-r border-slate-200 min-w-[170px]">Cuenta</th>
-              <th class="p-3 border-r border-slate-200 min-w-[220px]">Carpeta y nota</th>
+              <th class="p-3 border-r border-slate-200 min-w-[240px]">Documentación y nota</th>
               <th class="p-3 border-r border-slate-200 min-w-[160px]">Solicitó</th>
               <th class="p-3 border-r border-slate-200 min-w-[190px]">Estado</th>
               <th class="p-3 w-48 text-center">Acciones</th>
@@ -3692,7 +3693,7 @@ main select[id$="-anio"] option { background:#fff; color:#1f1f1e; font-weight:40
       const { error } = await q;
       if (error) { alert('No se pudo marcar como revisado: ' + (error.message || error)); return; }
       Object.assign(r, cambios);
-      pintarOrigenAnalisis();
+      pintarOrigenAnalisis(); limpiarArchivosPedidos();
       bitacoraClaude('Revisó trabajo de Claude', NOMBRE_ORIGEN[tipo] + ' · ' + analisisEstado.cuenta, valorAnalisis('an-cliente'), valorAnalisis('an-anio'));
     }
 
@@ -3881,6 +3882,7 @@ main select[id$="-anio"] option { background:#fff; color:#1f1f1e; font-weight:40
       if (error) { alert('No se pudo marcar como revisado: ' + (error.message || error)); return; }
       Object.assign(a, cambios); pintarOrigenArrend();
       bitacoraClaude('Revisó trabajo de Claude', NOMBRE_ORIGEN.claude + ' · arrendamientos', arrEstado.cliente, String(a.anio));
+      limpiarArchivosPedidos();
     }
     async function marcarRevisadoArrend() {
       const quien = nombreUsuarioActivo();
@@ -3919,6 +3921,7 @@ main select[id$="-anio"] option { background:#fff; color:#1f1f1e; font-weight:40
       const msg = document.getElementById('pc-msg');
       if (error) { pedidosClaude = []; msg.textContent = 'No se pudo cargar: ' + (error.message || error); msg.className = 'text-[11px] min-h-[1rem] text-red-600 font-bold'; }
       else pedidosClaude = data || [];
+      if (!error) { await limpiarArchivosPedidos(); await cargarArchivosPedidos(); }
       pintarPedidosClaude(); avisoPedidosClaude(false);
     }
     async function solicitarPedidoClaude() {
@@ -3928,16 +3931,80 @@ main select[id$="-anio"] option { background:#fff; color:#1f1f1e; font-weight:40
       if (!v('pc-cliente')) return err('Elige el cliente.');
       if (!v('pc-anio')) return err('Elige el año a evaluar.');
       if (!v('pc-sumaria')) return err('Elige la cuenta (sumaria).');
-      if (!v('pc-carpeta')) return err('Indica la carpeta donde dejaste la documentación.');
-      const fila = { cliente_id: v('pc-cliente'), anio: Number(v('pc-anio')), visita: v('pc-visita') || 'final', sumaria: v('pc-sumaria'), carpeta: v('pc-carpeta'), nota: v('pc-nota') || null, solicitado_por: nombreUsuarioActivo(), solicitado_email: usuarioActivo.email || null };
+      const archivos = [...(document.getElementById('pc-archivos').files || [])];
+      if (!archivos.length) return err('Sube al menos un archivo con la documentación.');
+      const grande = archivos.find(f => f.size > 52428800); if (grande) return err('El archivo "' + grande.name + '" supera los 50 MB. Sube una versión resumida o filtrada a lo que se va a analizar.');
+      if (!document.getElementById('pc-confirma').checked) return err('Marca la confirmación de que la documentación es completa y adecuada.');
+      const fila = { cliente_id: v('pc-cliente'), anio: Number(v('pc-anio')), visita: v('pc-visita') || 'final', sumaria: v('pc-sumaria'), carpeta: null, nota: v('pc-nota') || null, doc_confirmada_por: nombreUsuarioActivo(), doc_confirmada_at: new Date().toISOString(), solicitado_por: nombreUsuarioActivo(), solicitado_email: usuarioActivo.email || null };
       const { data: ins, error } = await supabaseClient.from('pedidos_claude').insert([fila]).select('id').single();
       if (error) return err('No se pudo enviar: ' + (error.message || error));
-      msg.textContent = 'Pedido enviado. Avisando por correo al Socio y al Supervisor…'; msg.className = 'text-[11px] min-h-[1rem] text-slate-500';
+      msg.textContent = 'Subiendo ' + archivos.length + ' archivo(s)…'; msg.className = 'text-[11px] min-h-[1rem] text-slate-500';
+      const falla = [];
+      for (const f of archivos) {
+        const ruta = ins.id + '/' + Date.now() + '_' + f.name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^A-Za-z0-9._-]+/g, '_');
+        const { error: eu } = await supabaseClient.storage.from('pedidos-claude').upload(ruta, f, { contentType: f.type || 'application/octet-stream' });
+        if (eu) { falla.push(f.name + ' (' + (eu.message || eu) + ')'); continue; }
+        const { error: ea } = await supabaseClient.from('pedidos_claude_archivos').insert([{ pedido_id: ins.id, nombre: f.name, ruta, tamano: f.size, tipo: f.type || null, subido_por: nombreUsuarioActivo() }]);
+        if (ea) falla.push(f.name + ' (' + (ea.message || ea) + ')');
+      }
+      if (falla.length) { err('El pedido se creó, pero no se subieron: ' + falla.join('; ') + '. Cancela el pedido y vuelve a enviarlo.'); cargarPedidosClaude(); return; }
+      msg.textContent = 'Pedido enviado. Avisando por correo al Socio y al Supervisor…';
       const av = await avisarPedidoCorreo(ins.id, 'solicitado');
-      msg.textContent = 'Pedido enviado. ' + av;
-      document.getElementById('pc-nota').value = '';
+      msg.textContent = 'Pedido enviado con ' + archivos.length + ' archivo(s). ' + av;
+      document.getElementById('pc-nota').value = ''; document.getElementById('pc-archivos').value = ''; document.getElementById('pc-confirma').checked = false;
       registrarActividad('Solicitó análisis a Claude', fila.sumaria + ' · ' + fila.visita, { cliente: fila.cliente_id, anio: String(fila.anio) });
       cargarPedidosClaude();
+    }
+
+    // ===== Archivos temporales de los pedidos =====
+    const DIAS_ARCHIVOS_PEDIDO = 15;
+    function tamanoLegible(b) { b = Number(b) || 0; return b >= 1048576 ? (b / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(b / 1024)) + ' KB'; }
+    async function cargarArchivosPedidos() {
+      const ids = pedidosClaude.map(p => p.id); pedidosClaude.forEach(p => { p._arch = []; });
+      if (!ids.length) return;
+      const { data } = await supabaseClient.from('pedidos_claude_archivos').select('*').in('pedido_id', ids).order('created_at', { ascending: true });
+      (data || []).forEach(a => { const p = pedidosClaude.find(x => x.id === a.pedido_id); if (p) p._arch.push(a); });
+    }
+    // Elimina los archivos de pedidos ya revisados, vencidos (15 días) o cancelados/rechazados; conserva el registro con los nombres.
+    async function limpiarArchivosPedidos() {
+      try {
+        const { data: act } = await supabaseClient.from('pedidos_claude_archivos').select('id, pedido_id, ruta').is('eliminado_at', null);
+        if (!act || !act.length) return;
+        const pids = [...new Set(act.map(a => a.pedido_id))];
+        const { data: peds } = await supabaseClient.from('pedidos_claude').select('id, created_at, estado, resultado_id').in('id', pids);
+        const rids = (peds || []).map(p => p.resultado_id).filter(Boolean);
+        let revis = {};
+        if (rids.length) { const { data: an } = await supabaseClient.from('analisis_claude_cuentas').select('id, estado_revision').in('id', rids); (an || []).forEach(r => { revis[r.id] = r.estado_revision; }); }
+        const motivo = {}, ahora = Date.now();
+        (peds || []).forEach(p => {
+          if (p.resultado_id && (revis[p.resultado_id] === 'revisado' || revis[p.resultado_id] === 'modificado')) motivo[p.id] = 'Trabajo revisado';
+          else if (p.estado === 'cancelado' || p.estado === 'rechazado') motivo[p.id] = p.estado === 'cancelado' ? 'Pedido cancelado' : 'Pedido rechazado';
+          else if (ahora - new Date(p.created_at).getTime() > DIAS_ARCHIVOS_PEDIDO * 86400000) motivo[p.id] = 'Venció el plazo de ' + DIAS_ARCHIVOS_PEDIDO + ' días';
+        });
+        for (const pid of Object.keys(motivo)) {
+          const lote = act.filter(a => a.pedido_id === pid); if (!lote.length) continue;
+          const { error } = await supabaseClient.storage.from('pedidos-claude').remove(lote.map(a => a.ruta));
+          if (error) continue;
+          await supabaseClient.from('pedidos_claude_archivos').update({ eliminado_at: new Date().toISOString(), eliminado_motivo: motivo[pid] }).in('id', lote.map(a => a.id));
+        }
+      } catch (e) { /* la limpieza es opcional; se reintenta al abrir los pedidos */ }
+    }
+    async function descargarArchivoPedido(ruta, nombre) {
+      const { data, error } = await supabaseClient.storage.from('pedidos-claude').createSignedUrl(ruta, 120, { download: nombre });
+      if (error || !data) { alert('No se pudo abrir el archivo: ' + ((error && error.message) || 'sin conexión')); return; }
+      window.open(data.signedUrl, '_blank');
+    }
+    function htmlArchivosPedido(p) {
+      const arch = p._arch || [], vivos = arch.filter(a => !a.eliminado_at), idos = arch.filter(a => a.eliminado_at);
+      let h = '';
+      if (vivos.length) {
+        const vence = new Date(new Date(p.created_at).getTime() + DIAS_ARCHIVOS_PEDIDO * 86400000);
+        h += '<div class="space-y-0.5">' + vivos.map(a => '<div class="break-all">📎 ' + (puedeAutorizarPedidos() ? '<a href="#" onclick="descargarArchivoPedido(\'' + escapeHtml(a.ruta).replace(/'/g, '') + '\', \'' + escapeHtml(a.nombre).replace(/'/g, '') + '\'); return false;" class="underline text-slate-800">' + escapeHtml(a.nombre) + '</a>' : escapeHtml(a.nombre)) + ' <span class="text-slate-400">(' + tamanoLegible(a.tamano) + ')</span></div>').join('') + '</div><div class="text-[11px] text-slate-400 mt-1">Se eliminan al revisar el trabajo o el ' + fechaCortaOrigen(vence.toISOString()) + '</div>';
+      }
+      if (idos.length) h += '<div class="text-[11px] text-slate-500 mt-1">Archivos eliminados (' + escapeHtml(idos[0].eliminado_motivo || '') + ', ' + fechaCortaOrigen(idos[0].eliminado_at) + '): ' + idos.map(a => escapeHtml(a.nombre) + ' (' + tamanoLegible(a.tamano) + ')').join('; ') + '</div>';
+      if (!arch.length && p.carpeta) h += '<div class="break-all">' + escapeHtml(p.carpeta) + '</div>';
+      if (p.doc_confirmada_por) h += '<div class="text-[11px] text-slate-500 mt-1">Documentación confirmada por ' + escapeHtml(p.doc_confirmada_por) + '</div>';
+      return h;
     }
     function pintarPedidosClaude() {
       const f = valorAnalisis('pc-f-estado'), n = e => pedidosClaude.filter(p => p.estado === e).length;
@@ -3957,7 +4024,7 @@ main select[id$="-anio"] option { background:#fff; color:#1f1f1e; font-weight:40
         return '<tr class="align-top hover:bg-slate-50/80">' +
           '<td class="p-3 border-r border-slate-200"><div class="font-bold text-slate-800">' + escapeHtml(nom) + '</div><div class="text-[11px] text-slate-500">' + p.anio + ' · ' + (p.visita === 'preliminar' ? 'Visita preliminar' : 'Visita final') + '</div></td>' +
           '<td class="p-3 border-r border-slate-200 font-medium text-slate-800">' + escapeHtml(c ? c.cuenta : p.sumaria) + '</td>' +
-          '<td class="p-3 border-r border-slate-200"><div class="break-all">' + escapeHtml(p.carpeta || '') + '</div>' + (p.nota ? '<div class="text-[11px] text-slate-500 mt-1">' + escapeHtml(p.nota) + '</div>' : '') + '</td>' +
+          '<td class="p-3 border-r border-slate-200">' + htmlArchivosPedido(p) + (p.nota ? '<div class="text-[11px] text-slate-500 mt-1">' + escapeHtml(p.nota) + '</div>' : '') + '</td>' +
           '<td class="p-3 border-r border-slate-200 text-[11px] text-slate-600">' + escapeHtml(p.solicitado_por || '') + '<div class="text-slate-400">' + fechaCortaOrigen(p.created_at) + '</div></td>' +
           '<td class="p-3 border-r border-slate-200"><span class="' + est[1] + '">' + est[0] + '</span>' + (detalle ? '<div class="text-[11px] text-slate-500 mt-1">' + detalle + '</div>' : '') + (p.resumen_resultado ? '<div class="text-[11px] text-slate-600 mt-1">' + escapeHtml(p.resumen_resultado) + '</div>' : '') + '</td>' +
           '<td class="p-3 text-center whitespace-nowrap">' + acc + '</td></tr>';
@@ -3988,7 +4055,7 @@ main select[id$="-anio"] option { background:#fff; color:#1f1f1e; font-weight:40
     }
     async function copiarOrdenClaude() {
       const m = document.getElementById('pc-aviso-msg');
-      const txt = 'Claude, ejecuta los pedidos autorizados en PCM Inteligente: revisa la tabla pedidos_claude (estado autorizado), lee la carpeta indicada de cada uno, haz el análisis y déjalo en "Trabajo de Claude por revisar".';
+      const txt = 'Claude, ejecuta los pedidos autorizados en PCM Inteligente: revisa la tabla pedidos_claude (estado autorizado), lee los archivos adjuntos de cada uno (tabla pedidos_claude_archivos, bucket pedidos-claude), haz el análisis y déjalo en "Trabajo de Claude por revisar".';
       try { await navigator.clipboard.writeText(txt); m.textContent = 'Orden copiada. Pégala en tu conversación con Claude y envíala.'; }
       catch (e) { m.textContent = 'Copia esta orden: ' + txt; }
     }
@@ -4135,7 +4202,7 @@ main select[id$="-anio"] option { background:#fff; color:#1f1f1e; font-weight:40
       if (error) { alert('No se pudo marcar como revisado: ' + (error.message || error)); return; }
       Object.assign(r, cambios);
       bitacoraClaude('Revisó trabajo de Claude', NOMBRE_ORIGEN[r._t] + ' · ' + nombreCuentaRevisar(r), String(r.cliente_id), r.anio ? String(r.anio) : '');
-      pintarClaudeRevisar();
+      pintarClaudeRevisar(); limpiarArchivosPedidos();
     }
     function irAlTrabajoClaude_arrend(r) {
       navegarMenu('arrend');
