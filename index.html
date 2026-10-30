@@ -1956,6 +1956,7 @@ main select[id$="-anio"] option { background:#fff; color:#1f1f1e; font-weight:40
           <button type="button" id="ar-tab-verif" onclick="arrTab('verif')" class="px-3 py-1.5 text-xs transition rounded-lg">9. Verificaciones</button>
           <button type="button" id="ar-tab-revel" onclick="arrTab('revel')" class="px-3 py-1.5 text-xs transition rounded-lg">10. Revelaciones</button>
           <button type="button" id="ar-tab-claude" onclick="arrTab('claude')" class="px-3 py-1.5 text-xs transition rounded-lg">11. Análisis de Claude</button>
+          <button type="button" id="ar-tab-programa" onclick="arrTab('programa')" class="px-3 py-1.5 text-xs transition rounded-lg">12. Programa de trabajo</button>
           <button type="button" id="ar-descargar" onclick="arrDescargar()" class="hidden ml-auto px-3 py-1.5 rounded-lg text-xs bg-slate-100 text-slate-800 hover:bg-slate-200 font-medium transition">Descargar todo (Excel)</button>
         </div>
         <div id="ar-panel" class="border border-slate-200 rounded-xl overflow-auto max-h-[78vh]"></div>
@@ -3703,23 +3704,126 @@ main select[id$="-anio"] option { background:#fff; color:#1f1f1e; font-weight:40
       setTimeout(pintarOrigenArrend, 0);
       return { estado_revision: 'modificado', revisado_por: quien, revisado_at: c.revisado_at };
     }
+    // ----- Pestaña 12: Programa de trabajo (procedimientos de AOO, PCC y PLL con dónde, quién y estado) -----
+    let ARR_PLANTILLA = null;
+    const ARR_PROG_SUMARIAS = { AOO: 'AOO · Activos por derecho de uso', PCC: 'PCC · Pasivos por arrendamiento a corto plazo', PLL: 'PLL · Pasivos por arrendamiento a largo plazo' };
+    async function arrCargarPlantilla() {
+      const { data, error } = await supabaseClient.from('programas_plantilla').select('sumaria, codigo, tipo_procedimiento, procedimiento, orden').in('sumaria', Object.keys(ARR_PROG_SUMARIAS)).order('orden', { ascending: true });
+      ARR_PLANTILLA = error ? [] : (data || []);
+      if (arrEstado.tab === 'programa') arrRender();
+    }
+    function arrFilasPrograma() {
+      const a = ORIGEN.arrend, prog = (a && Array.isArray(a.programa)) ? a.programa : [];
+      return (ARR_PLANTILLA || []).map(x => ({ ...x, ...(prog.find(k => k.codigo === x.codigo) || {}), estado: (prog.find(k => k.codigo === x.codigo) || {}).estado || 'pendiente' }));
+    }
+    function arrHtmlPrograma() {
+      const a = ORIGEN.arrend;
+      if (!a) return '<div class="p-8 text-center text-slate-400 text-sm">Claude todavía no preparó un análisis para este cliente. El programa de trabajo se guarda junto con el análisis.</div>';
+      if (ARR_PLANTILLA === null) { arrCargarPlantilla(); return '<div class="p-8 text-center text-slate-400 text-sm">Cargando el programa de trabajo...</div>'; }
+      if (!ARR_PLANTILLA.length) return '<div class="p-8 text-center text-slate-400 text-sm">No hay procedimientos cargados para AOO, PCC y PLL en Configuración › Programas de trabajo.</div>';
+      const filas = arrFilasPrograma(), hechos = filas.filter(x => x.estado === 'hecho').length;
+      let html = '<div class="p-4 text-sm text-slate-700"><div class="flex flex-wrap items-center gap-2 mb-3"><span class="pill-origen rev">Hechos: ' + hechos + '</span><span class="pill-origen mod">Pendientes: ' + (filas.length - hechos) + '</span><span id="ar-prog-msg" class="text-xs text-slate-500"></span></div>' +
+        '<div class="overflow-x-auto border border-slate-200 rounded-xl"><table class="w-full text-left text-sm border-collapse"><thead class="bg-slate-100 text-slate-600 text-xs font-bold border-b border-slate-200"><tr><th class="p-3 w-16">Código</th><th class="p-3 min-w-[360px]">Procedimiento</th><th class="p-3 min-w-[200px]">Dónde está hecho</th><th class="p-3 w-40">Quién lo hizo</th><th class="p-3 w-36">Estado</th></tr></thead><tbody>';
+      Object.keys(ARR_PROG_SUMARIAS).forEach(s => {
+        const l = filas.filter(x => x.sumaria === s); if (!l.length) return;
+        html += '<tr><td colspan="5" class="px-3 py-2 bg-slate-50 font-bold text-slate-700 border-y border-slate-200">' + escapeHtml(ARR_PROG_SUMARIAS[s]) + '</td></tr>';
+        l.forEach(x => {
+          html += '<tr class="align-top border-b border-slate-100"><td class="p-3 font-semibold">' + escapeHtml(x.codigo) + '</td><td class="p-3"><div class="text-xs text-slate-400">' + escapeHtml(x.tipo_procedimiento || '') + '</div>' + escapeHtml(x.procedimiento || '') + '</td>' +
+            '<td class="p-3"><input type="text" value="' + escapeHtml(x.donde || '') + '" placeholder="Ej. Pestaña 7" onchange="arrProgSet(\'' + x.codigo + '\', \'donde\', this.value)" class="w-full p-2 border border-slate-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500"></td>' +
+            '<td class="p-3">' + escapeHtml(x.quien || '—') + '</td>' +
+            '<td class="p-3"><select onchange="arrProgSet(\'' + x.codigo + '\', \'estado\', this.value)" class="w-full p-2 border border-slate-300 rounded-lg text-sm bg-white outline-none"><option value="pendiente"' + (x.estado === 'hecho' ? '' : ' selected') + '>Pendiente</option><option value="hecho"' + (x.estado === 'hecho' ? ' selected' : '') + '>Hecho</option></select></td></tr>';
+        });
+      });
+      return html + '</tbody></table></div></div>';
+    }
+    async function arrProgSet(codigo, campo, valor) {
+      const a = ORIGEN.arrend; if (!a) return;
+      const quien = nombreUsuarioActivo(), msg = document.getElementById('ar-prog-msg');
+      if (campo === 'estado' && valor === 'hecho' && !quien) { alert('Ingresa con tu usuario para marcar un procedimiento como hecho.'); arrRender(); return; }
+      const prog = Array.isArray(a.programa) ? a.programa.map(k => ({ ...k })) : [];
+      let e = prog.find(k => k.codigo === codigo); if (!e) { e = { codigo, donde: '', quien: '', estado: 'pendiente' }; prog.push(e); }
+      e[campo] = valor;
+      if (campo === 'estado') { e.quien = valor === 'hecho' ? quien : ''; e.fecha = valor === 'hecho' ? new Date().toISOString() : null; }
+      const { error } = await supabaseClient.from('analisis_claude_cuentas').update({ programa: prog }).eq('id', a.id);
+      if (error) { if (msg) { msg.textContent = 'No se guardó: ' + (error.message || error); msg.className = 'text-xs text-red-600 font-bold'; } return; }
+      a.programa = prog;
+      if (campo === 'estado') { bitacoraClaude('Cambió estado de procedimiento', codigo + ' · ' + (valor === 'hecho' ? 'Hecho' : 'Pendiente'), arrEstado.cliente, String(a.anio)); arrRender(); }
+      else if (msg) { msg.textContent = 'Guardado ✓'; msg.className = 'text-xs text-slate-500'; }
+    }
     function arrHtmlClaude() {
       const a = ORIGEN.arrend;
-      if (!a) return '<div class="p-8 text-center text-slate-400 text-xs">Claude todavía no preparó un análisis para este cliente.</div>';
+      if (!a) return '<div class="p-8 text-center text-slate-400 text-sm">Claude todavía no preparó un análisis para este cliente.</div>';
       const e = estadoOrigen(a), cls = e === 'revisado' ? 'rev' : (e === 'modificado' ? 'mod' : '');
-      return '<div class="p-4"><div class="marca-origen ' + cls + '"><b>Claude</b><span>Análisis de Claude · ' + a.anio + ' · ' + (a.visita === 'preliminar' ? 'Visita preliminar' : 'Visita final') + ' · ' + escapeHtml(textoOrigen(a)) + '</span>' + (e === 'pendiente' ? '<button type="button" onclick="marcarRevisadoClaudeArrend()">Marcar como revisado</button>' : '') + '</div>' +
-        '<div class="mt-3 leading-relaxed text-xs text-slate-700">' + renderTextoResumenContrato(a.analisis || '') + '</div></div>';
+      const pend = Array.isArray(a.pendientes) ? a.pendientes : [];
+      const abiertos = pend.filter(x => x.estado === 'abierto'), enviados = pend.filter(x => x.estado !== 'abierto');
+      const NOM = { todo: 'To/Do', quicklett: 'Quick Lett', opinion: 'Opinión' };
+      const btn = (id, d) => '<button type="button" onclick="arrEnviarPendiente(\'' + id + '\', \'' + d + '\')" class="px-2.5 py-1 text-xs rounded-lg transition border border-slate-300 text-slate-700 hover:bg-slate-100 font-medium">' + NOM[d] + '</button>';
+      const h2 = 'font-bold text-slate-800 text-base border-b border-slate-200 mt-5 mb-2 pb-1';
+      return '<div class="p-4 text-sm text-slate-700"><div class="marca-origen ' + cls + '"><b>Claude</b><span>Análisis de Claude · ' + a.anio + ' · ' + (a.visita === 'preliminar' ? 'Visita preliminar' : 'Visita final') + ' · ' + escapeHtml(textoOrigen(a)) + '</span>' + (e === 'pendiente' ? '<button type="button" onclick="marcarRevisadoClaudeArrend()">Marcar como revisado</button>' : '') + '</div>' +
+        '<div class="mt-3 leading-relaxed text-sm text-slate-700">' + renderTextoResumenContrato(a.analisis || '') + '</div>' +
+        '<h2 class="' + h2 + '">6. Pendientes del cliente</h2>' +
+        '<p class="text-xs text-slate-500 mb-2">Envía cada pendiente a To/Do, Quick Lett u Opinión de la pregunta "C.16. Acuerdos de arrendamiento" de este cliente y año. Al enviarlo sale de esta lista.</p>' +
+        (abiertos.length ? abiertos.map(x => '<div class="flex flex-wrap items-center gap-3 py-2 border-b border-slate-100"><div class="flex-1 min-w-[16rem]">• ' + escapeHtml(x.texto) + '</div><div class="flex gap-2">' + btn(x.id, 'todo') + btn(x.id, 'quicklett') + btn(x.id, 'opinion') + '</div></div>').join('') : '<div class="text-slate-400 text-sm py-2">No quedan pendientes abiertos.</div>') +
+        (enviados.length ? '<details class="mt-2 text-xs text-slate-500"><summary class="cursor-pointer">Enviados (' + enviados.length + ')</summary>' + enviados.map(x => '<div class="py-1">• ' + escapeHtml(x.texto) + ' → <b>' + (NOM[x.estado] || x.estado) + '</b>' + (x.por ? ' · ' + escapeHtml(x.por) : '') + '</div>').join('') + '</details>' : '') +
+        '<h2 class="' + h2 + '">7. Criterio final</h2>' +
+        '<p class="text-xs text-slate-500 mb-2">Lo escribe el auditor. Claude no lo llena.</p>' +
+        '<textarea id="ar-criterio" rows="6" class="w-full p-3 border border-slate-300 rounded-lg text-sm leading-relaxed outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Escribe aquí el criterio final del auditor...">' + escapeHtml(a.criterio_final || '') + '</textarea>' +
+        '<div class="flex flex-wrap items-center gap-3 mt-2"><button type="button" onclick="arrGuardarCriterio()" class="px-3 py-1.5 text-xs rounded-lg transition bg-slate-200 text-slate-900 hover:bg-slate-300 font-semibold">Guardar criterio</button><span id="ar-criterio-msg" class="text-xs text-slate-500">' + (a.criterio_por ? 'Guardado por ' + escapeHtml(a.criterio_por) + (a.criterio_at ? ' · ' + escapeHtml(formatoFechaContrato(a.criterio_at)) : '') : '') + '</span></div></div>';
+    }
+    async function arrGuardarCriterio() {
+      const a = ORIGEN.arrend; if (!a) return;
+      const quien = nombreUsuarioActivo(), msg = document.getElementById('ar-criterio-msg');
+      if (!quien) { alert('Ingresa con tu usuario para guardar el criterio.'); return; }
+      const cambios = { criterio_final: document.getElementById('ar-criterio').value, criterio_por: quien, criterio_at: new Date().toISOString() };
+      const { error } = await supabaseClient.from('analisis_claude_cuentas').update(cambios).eq('id', a.id);
+      if (error) { msg.textContent = 'No se pudo guardar: ' + (error.message || error); msg.className = 'text-xs text-red-600 font-bold'; return; }
+      Object.assign(a, cambios);
+      msg.textContent = 'Guardado por ' + quien + ' · ' + formatoFechaContrato(cambios.criterio_at); msg.className = 'text-xs text-slate-500';
+      bitacoraClaude('Guardó criterio final', 'Arrendamientos (AOO, PCC, PLL)', arrEstado.cliente, String(a.anio));
+    }
+    // Lleva un pendiente a To/Do, Quick Lett u Opinión de la pregunta C.16 (Acuerdos de arrendamiento); si ya hay texto, lo agrega al final
+    async function arrEnviarPendiente(idPend, destino) {
+      const a = ORIGEN.arrend; if (!a) return;
+      const x = (a.pendientes || []).find(k => k.id === idPend); if (!x || x.estado !== 'abierto') return;
+      const email = usuarioSesionEmail || (usuarioActivo && usuarioActivo.email) || '', quien = nombreUsuarioActivo();
+      if (!quien) { alert('Ingresa con tu usuario para enviar el pendiente.'); return; }
+      const NOM = { todo: 'To/Do', quicklett: 'Quick Lett', opinion: 'Opinión' };
+      if (!confirm('¿Enviar este pendiente a ' + NOM[destino] + '?\n\n' + x.texto + '\n\nPregunta: C.16. Acuerdos de arrendamiento (' + a.anio + ')')) return;
+      const PREG = 'A_03_P_016', cli = arrEstado.cliente;
+      const { data: ex, error: e1 } = await supabaseClient.from('respuestas_auditoria').select('*').eq('cliente_id', cli).eq('anio', Number(a.anio)).eq('pregunta_id', PREG).maybeSingle();
+      if (e1) { alert('No se pudo leer la pregunta: ' + (e1.message || e1)); return; }
+      const sumar = previo => { const p = String(previo || '').trim(); return p.includes(x.texto) ? p : (p ? p + '\n' : '') + '• ' + x.texto; };
+      let datos;
+      if (destino === 'todo') datos = { es_todo: true, detalle_todo: sumar(ex && ex.detalle_todo), elaborado_todo: (ex && ex.elaborado_todo) || email, ...(a.visita === 'preliminar' ? { visita_preliminar_todo: true } : { visita_final_todo: true }) };
+      else if (destino === 'quicklett') datos = { es_quicklett: true, detalle_quicklett: sumar(ex && ex.detalle_quicklett), elaborado_quicklett: (ex && ex.elaborado_quicklett) || email };
+      else datos = { es_opinion: true, detalle_opinion: sumar(ex && ex.detalle_opinion), elaborado_opinion: (ex && ex.elaborado_opinion) || email, decision_opinion: (ex && ex.decision_opinion) || 'PENDIENTE' };
+      const r = ex ? await supabaseClient.from('respuestas_auditoria').update(datos).eq('id', ex.id) : await supabaseClient.from('respuestas_auditoria').insert([{ cliente_id: cli, anio: Number(a.anio), pregunta_id: PREG, ...datos }]);
+      if (r.error) { alert('No se pudo enviar: ' + (r.error.message || r.error)); return; }
+      const nuevos = (a.pendientes || []).map(k => k.id === idPend ? { ...k, estado: destino, por: quien, cuando: new Date().toISOString() } : k);
+      const r2 = await supabaseClient.from('analisis_claude_cuentas').update({ pendientes: nuevos }).eq('id', a.id);
+      if (r2.error) { alert('Se envió a ' + NOM[destino] + ', pero no se pudo quitar de la lista: ' + (r2.error.message || r2.error)); return; }
+      a.pendientes = nuevos;
+      bitacoraClaude('Envió pendiente de Claude a ' + NOM[destino], x.texto.slice(0, 120), cli, String(a.anio));
+      arrRender();
     }
     // Filas del análisis de Claude para el Excel: un renglón por línea, sin símbolos de formato
-    function arrFilasClaude(texto) {
-      const filas = [];
-      String(texto || '').split(/\r?\n/).forEach(l => {
-        const t = l.trim(); if (!t) { if (filas.length && filas[filas.length - 1].length) filas.push([]); return; }
-        if (/^\|?\s*[-:| ]+\|?$/.test(t) && t.includes('-')) return;
-        const tit = t.match(/^#{1,6}\s+(.*)$/);
+    function arrFilasClaude(a) {
+      const filas = [], NOM = { todo: 'To/Do', quicklett: 'Quick Lett', opinion: 'Opinión' };
+      const aTexto = t => String(t || '').split(/\r?\n/).forEach(l => {
+        const s = l.trim(); if (!s) { if (filas.length && filas[filas.length - 1].length) filas.push([]); return; }
+        if (/^\|?\s*[-:| ]+\|?$/.test(s) && s.includes('-')) return;
+        const tit = s.match(/^#{1,6}\s+(.*)$/);
         if (tit) { if (filas.length && filas[filas.length - 1].length) filas.push([]); filas.push([tit[1].replace(/\*\*/g, '')]); return; }
-        filas.push(['', '• ' + t.replace(/^[-*]\s+/, '').replace(/\*\*/g, '')]);
+        filas.push(['', '• ' + s.replace(/^[-*]\s+/, '').replace(/\*\*/g, '')]);
       });
+      aTexto(a.analisis);
+      filas.push([]); filas.push(['6. Pendientes del cliente']);
+      const pend = Array.isArray(a.pendientes) ? a.pendientes : [];
+      if (!pend.length) filas.push(['', '• Sin pendientes registrados.']);
+      pend.forEach(x => filas.push(['', '• ' + x.texto + (x.estado !== 'abierto' ? ' → Enviado a ' + (NOM[x.estado] || x.estado) + (x.por ? ' (' + x.por + ')' : '') : '')]));
+      filas.push([]); filas.push(['7. Criterio final']);
+      aTexto(a.criterio_final || '');
+      if (!String(a.criterio_final || '').trim()) filas.push(['', '(Pendiente: lo escribe el auditor.)']);
       return filas;
     }
     function pintarOrigenArrend() {
@@ -3742,7 +3846,7 @@ main select[id$="-anio"] option { background:#fff; color:#1f1f1e; font-weight:40
     async function cargarClaudeArrend() {
       const cli = arrEstado.cliente; ORIGEN.arrend = null;
       try {
-        const { data, error } = await supabaseClient.from('analisis_claude_cuentas').select('id, created_at, anio, visita, analisis, origen, estado_revision, revisado_por, revisado_at').eq('cliente_id', cli).eq('cuenta', 'arrend').order('created_at', { ascending: false }).limit(1);
+        const { data, error } = await supabaseClient.from('analisis_claude_cuentas').select('id, created_at, anio, visita, analisis, origen, estado_revision, revisado_por, revisado_at, pendientes, criterio_final, criterio_por, criterio_at, programa').eq('cliente_id', cli).eq('cuenta', 'arrend').order('created_at', { ascending: false }).limit(1);
         if (error) throw error;
         if (cli !== arrEstado.cliente) return;
         ORIGEN.arrend = (data && data[0]) || null;
@@ -9540,7 +9644,7 @@ main select[id$="-anio"] option { background:#fff; color:#1f1f1e; font-weight:40
 
     function arrRender() {
       arrSyncCabecera();
-      ['contratos', 'hist', 'anual', 'costo', 'mensual', 'estados', 'revel', 'verif', 'concil', 'cuadre', 'claude'].forEach(t => {
+      ['contratos', 'hist', 'anual', 'costo', 'mensual', 'estados', 'revel', 'verif', 'concil', 'cuadre', 'claude', 'programa'].forEach(t => {
         const b = document.getElementById('ar-tab-' + t); if (!b) return;
         b.className = 'px-3 py-1.5 text-xs transition rounded-lg ' + (arrEstado.tab === t ? 'bg-slate-200 text-slate-900 font-semibold' : 'text-slate-600 hover:bg-slate-100 font-medium');
       });
@@ -9554,6 +9658,7 @@ main select[id$="-anio"] option { background:#fff; color:#1f1f1e; font-weight:40
       else if (arrEstado.tab === 'revel') { p.innerHTML = arrHtmlRevelaciones(); notas.innerHTML = '<div class="mb-2"><div class="font-bold text-slate-700">Pagos futuros sin descontar</div><ul class="list-disc pl-5"><li>Salen de la tabla de amortización del contrato como estaba a cada 31 de diciembre; las modificaciones posteriores no cuentan.</li><li>Cada mes se clasifica según cuánto falta desde el 31 de diciembre: hasta 1 año, de 1 a 5 años, más de 5 años.</li></ul></div><div class="mb-2"><div class="font-bold text-slate-700">Intereses por devengar</div><ul class="list-disc pl-5"><li>Pagos sin descontar − pasivo (valor actual).</li></ul></div><div class="mb-2"><div class="font-bold text-slate-700">No incluidos en el detalle</div><ul class="list-disc pl-5"><li>Contratos de corto plazo y de bajo valor: su gasto y sus pagos se revelan aparte.</li></ul></div>'; }
       else if (arrEstado.tab === 'verif') { p.innerHTML = arrHtmlVerificaciones(); notas.innerHTML = '<div class="mb-2"><div class="font-bold text-slate-700">Verificaciones automáticas</div><ul class="list-disc pl-5"><li>Se recalculan con los contratos cargados.</li></ul></div><div class="mb-2"><div class="font-bold text-slate-700">Evaluaciones del auditor</div><ul class="list-disc pl-5"><li>Se guardan por cliente.</li><li>Elige el estado y escribe el comentario o la referencia al papel de trabajo.</li></ul></div><div class="mb-2"><div class="font-bold text-slate-700">Impuesto diferido activo</div><ul class="list-disc pl-5"><li>La herramienta reconoce el 100 %.</li><li>Si concluyes reconocer menos, se ajusta con tu asiento.</li></ul></div>'; }
       else if (arrEstado.tab === 'cuadre') { p.innerHTML = arrHtmlCuadre(); notas.innerHTML = '<div class="mb-2"><div class="font-bold text-slate-700">Qué comprueba</div><ul class="list-disc pl-5"><li>Que lo reconocido en resultados (depreciación + interés) frente a lo pagado se explique por partidas conocidas.</li><li>Si el contrato ya terminó y no tuvo nada adicional, depreciación + interés = pagos.</li></ul></div><div class="mb-2"><div class="font-bold text-slate-700">Partidas que explican la diferencia</div><ul class="list-disc pl-5"><li>Costos iniciales: se deprecian, pero no son canon.</li><li>Saldo traído de un contrato anterior: activo − pasivo.</li><li>Pasivo y activo que siguen abiertos al corte (contratos vigentes).</li></ul></div><div class="mb-2"><div class="font-bold text-slate-700">Cómo leerla</div><ul class="list-disc pl-5"><li>"Toda la vida": desde el inicio hasta el fin de cada contrato.</li><li>"Hasta el mes de consulta": acumulado al último día del mes de la conciliación con el balance.</li><li>La diferencia sin explicar debe ser cero.</li></ul></div>'; }
+      else if (arrEstado.tab === 'programa') { p.innerHTML = arrHtmlPrograma(); notas.innerHTML = '<div class="mb-2"><div class="font-bold text-slate-700">Cómo usarlo</div><ul class="list-disc pl-5"><li>Cada procedimiento del programa de trabajo de AOO, PCC y PLL indica en qué pestaña está hecho, quién lo hizo y si está hecho o pendiente.</li><li>Lo que dejó marcado Claude puede cambiarse. Al marcar "Hecho" queda tu nombre; al volver a "Pendiente" se borra.</li><li>Se incluye como hoja del Excel que se descarga.</li></ul></div>'; }
       else if (arrEstado.tab === 'claude') { p.innerHTML = arrHtmlClaude(); notas.innerHTML = '<div class="mb-2"><div class="font-bold text-slate-700">Qué es</div><ul class="list-disc pl-5"><li>El análisis que Claude preparó para este cliente, con los contratos y los saldos de esta herramienta. Es un apoyo: el Criterio final lo define el auditor.</li><li>Se incluye como la última hoja del Excel que se descarga.</li></ul></div>'; }
       else if (arrEstado.tab === 'concil') { p.innerHTML = arrHtmlConcil(); arrAutoSum(); notas.innerHTML = '<div class="mb-2"><div class="font-bold text-slate-700">Cómo usarla</div><ul class="list-disc pl-5"><li>Elige el mes de corte de los estados financieros; la herramienta calcula al último día de ese mes.</li><li>Escribe en "Según el balance" el valor de tu contabilidad a esa fecha.</li><li>Puedes consultar cualquier mes sin que se guarde nada. Si quieres conservar el corte, presiona "Guardar este corte".</li><li>La diferencia es herramienta − balance: positiva si la herramienta es mayor y falta registrar; negativa si el balance es mayor.</li></ul></div><div class="mb-2"><div class="font-bold text-slate-700">Cómo se calcula</div><ul class="list-disc pl-5"><li>Corto plazo: lo que se amortiza en los 12 meses siguientes al corte; largo plazo: el resto.</li><li>Interés, depreciación y pagos: de enero al mes de corte del mismo año.</li><li>Impuesto diferido activo = tasa × pasivo; pasivo = tasa × derecho de uso neto (tasa de la parte superior).</li><li>Gasto del activo = tasa × (pagos − interés) del año; ingreso del pasivo = tasa × depreciación del año (menos costos iniciales si los hay). Son los mismos movimientos de "Estados e impuestos diferidos", sin altas ni remediciones.</li><li>La flecha ▸ despliega el detalle por contrato; la comparación es solo con el total.</li></ul></div><div class="mb-2"><div class="font-bold text-slate-700">Se guarda</div><ul class="list-disc pl-5"><li>Solo se guardan los cortes que tú guardas, por cliente. Cada mes tiene sus propios valores del balance.</li><li>Al elegir un mes con corte guardado se cargan sus valores.</li></ul></div>'; }
     }
@@ -10563,12 +10668,18 @@ main select[id$="-anio"] option { background:#fff; color:#1f1f1e; font-weight:40
         ARR_CONC_FILAS.forEach(([k, t]) => conc.push([t, ...CC.filas.map(f => r2f(f[k]))]));
         add('Conciliación con el balance', conc, [{ wch: 62 }], { info: [['Corte', fechaCorteX], ['Estado del corte', guardado ? 'Guardado' : 'Consulta sin guardar']], notas: ['Diferencia = según la herramienta − según el balance. Si no se registró el valor del balance, la diferencia queda vacía.'] });
       }
+      if (ORIGEN.arrend && ARR_PLANTILLA === null) await arrCargarPlantilla();
+      if (ORIGEN.arrend && ARR_PLANTILLA && ARR_PLANTILLA.length) {
+        const pf = [['Código', 'Procedimiento', 'Dónde está hecho', 'Quién lo hizo', 'Estado']];
+        arrFilasPrograma().forEach(x => pf.push([x.codigo, x.procedimiento || '', x.donde || '', x.quien || '', x.estado === 'hecho' ? 'Hecho' : 'Pendiente']));
+        add('Programa de trabajo', pf, [{ wch: 9 }, { wch: 95 }, { wch: 34 }, { wch: 22 }, { wch: 12 }], { sinCongelar: true, titulo: 'Programa de trabajo (AOO, PCC y PLL)', info: [['Año', ORIGEN.arrend.anio], ['Visita', ORIGEN.arrend.visita === 'preliminar' ? 'Preliminar' : 'Final']] });
+      }
       if (ORIGEN.arrend && ORIGEN.arrend.analisis) {
-        const fc = arrFilasClaude(ORIGEN.arrend.analisis);
+        const fc = arrFilasClaude(ORIGEN.arrend);
         add('Análisis de Claude', fc, [{ wch: 4 }, { wch: 125 }], { sinCongelar: true, titulo: 'Análisis de Claude', info: [['Año', ORIGEN.arrend.anio], ['Visita', ORIGEN.arrend.visita === 'preliminar' ? 'Preliminar' : 'Final'], ['Estado', textoOrigen(ORIGEN.arrend)]], notas: ['Preparado por Claude como apoyo. El Criterio final lo define el auditor.'] });
       }
       // Orden de las hojas: el mismo de las pestañas
-      const ORDEN = ['Resumen', 'Contratos', 'Mensual total', 'Mensual por contrato', 'Historial de cambios'], ORDEN_FIN = ['Costo y depreciación acumulada', 'Estados e imp diferidos', 'Conciliación con el balance', 'Cuadre general', 'Verificaciones', 'Revelaciones', 'Análisis de Claude'];
+      const ORDEN = ['Resumen', 'Contratos', 'Mensual total', 'Mensual por contrato', 'Historial de cambios'], ORDEN_FIN = ['Costo y depreciación acumulada', 'Estados e imp diferidos', 'Conciliación con el balance', 'Cuadre general', 'Verificaciones', 'Revelaciones', 'Análisis de Claude', 'Programa de trabajo'];
       const rango = n => { const i = ORDEN.indexOf(n); if (i >= 0) return i; const j = ORDEN_FIN.indexOf(n); return j >= 0 ? 100 + j : 50; };
       hojas.forEach((h, i) => { h.__i = i; }); hojas.sort((a, b) => rango(a.nombre) - rango(b.nombre) || a.__i - b.__i);
       const nombreArchivo = `Arrendamientos_NIIF16_${String(cliSel).replace(/[^A-Za-z0-9]+/g, '_').slice(0, 40)}.xlsx`;
