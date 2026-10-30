@@ -3707,6 +3707,23 @@ main select[id$="-anio"] option { background:#fff; color:#1f1f1e; font-weight:40
     // ----- Pestaña 12: Programa de trabajo (procedimientos de AOO, PCC y PLL con dónde, quién y estado) -----
     let ARR_PLANTILLA = null;
     const ARR_PROG_SUMARIAS = { AOO: 'AOO · Activos por derecho de uso', PCC: 'PCC · Pasivos por arrendamiento a corto plazo', PLL: 'PLL · Pasivos por arrendamiento a largo plazo' };
+
+    // Enlace Programa de trabajo <-> Verificaciones: cada verificación pertenece a un procedimiento del programa
+    const ARR_VERIF_PROG = { tasa: '093', plazo: '093', exenc: '091', comp: '091', pagos: '093', iva: '093', costos: '093', pago: '093', mes: '093', modif: '094', deter: '092', tarifa: '097', dta: '097', revel: '096' };
+    const ARR_AUTO_PROG = [
+      [/Cuadre mensual|Cuadre anual/i, '092'], [/Impuesto diferido/i, '097'], [/Cambios de plazo|Reducciones de alcance|modificaciones/i, '094'],
+      [/12 meses o menos/i, '091'], [/vienen de uno anterior/i, '092'], [/Datos completos|Fechas coherentes|duplicados|plazo proyectado|Tasas de descuento|pagan al inicio|IVA no recuperable|costos iniciales|anticipos/i, '093']
+    ];
+    function arrAutoCodigo(t) { const r = ARR_AUTO_PROG.find(x => x[0].test(t)); return r ? r[1] : ''; }
+    function arrVerifDeProcedimiento(cod) {
+      const aut = (arrEstado.contratos.length ? arrVerifAuto() : []).filter(x => arrAutoCodigo(x[0]) === cod);
+      const man = ARR_VERIF_MANUALES.filter(x => ARR_VERIF_PROG[x[0]] === cod).map(x => ({ k: x[0], t: x[1], e: (arrEstado.verif[x[0]] || {}).e || 'pendiente' }));
+      const abiertas = aut.filter(x => x[1] === 'rev').length + man.filter(x => x.e === 'pendiente' || x.e === 'nocumple').length;
+      return { aut, man, total: aut.length + man.length, abiertas };
+    }
+    function arrCodigoDeVerif(esAuto, clave) { return esAuto ? arrAutoCodigo(clave) : (ARR_VERIF_PROG[clave] || ''); }
+    function arrIrVerif() { arrTab('verif'); }
+    function arrIrPrograma() { arrTab('programa'); }
     async function arrCargarPlantilla() {
       const { data, error } = await supabaseClient.from('programas_plantilla').select('sumaria, codigo, tipo_procedimiento, procedimiento, orden').in('sumaria', Object.keys(ARR_PROG_SUMARIAS)).order('orden', { ascending: true });
       ARR_PLANTILLA = error ? [] : (data || []);
@@ -3723,14 +3740,15 @@ main select[id$="-anio"] option { background:#fff; color:#1f1f1e; font-weight:40
       if (!ARR_PLANTILLA.length) return '<div class="p-8 text-center text-slate-400 text-sm">No hay procedimientos cargados para AOO, PCC y PLL en Configuración › Programas de trabajo.</div>';
       const filas = arrFilasPrograma(), hechos = filas.filter(x => x.estado === 'hecho').length;
       let html = '<div class="p-4 text-sm text-slate-700"><div class="flex flex-wrap items-center gap-2 mb-3"><span class="pill-origen rev">Hechos: ' + hechos + '</span><span class="pill-origen mod">Pendientes: ' + (filas.length - hechos) + '</span><span id="ar-prog-msg" class="text-xs text-slate-500"></span></div>' +
-        '<div class="overflow-x-auto border border-slate-200 rounded-xl"><table class="w-full text-left text-sm border-collapse"><thead class="bg-slate-100 text-slate-600 text-xs font-bold border-b border-slate-200"><tr><th class="p-3 w-16">Código</th><th class="p-3 min-w-[360px]">Procedimiento</th><th class="p-3 min-w-[200px]">Dónde está hecho</th><th class="p-3 w-40">Quién lo hizo</th><th class="p-3 w-36">Estado</th></tr></thead><tbody>';
+        '<div class="overflow-x-auto border border-slate-200 rounded-xl"><table class="w-full text-left text-sm border-collapse"><thead class="bg-slate-100 text-slate-600 text-xs font-bold border-b border-slate-200"><tr><th class="p-3 w-16">Código</th><th class="p-3 min-w-[360px]">Procedimiento</th><th class="p-3 min-w-[200px]">Dónde está hecho</th><th class="p-3 w-40">Quién lo hizo</th><th class="p-3 min-w-[170px]">Verificaciones (pestaña 9)</th><th class="p-3 w-36">Estado</th></tr></thead><tbody>';
       Object.keys(ARR_PROG_SUMARIAS).forEach(s => {
         const l = filas.filter(x => x.sumaria === s); if (!l.length) return;
-        html += '<tr><td colspan="5" class="px-3 py-2 bg-slate-50 font-bold text-slate-700 border-y border-slate-200">' + escapeHtml(ARR_PROG_SUMARIAS[s]) + '</td></tr>';
+        html += '<tr><td colspan="6" class="px-3 py-2 bg-slate-50 font-bold text-slate-700 border-y border-slate-200">' + escapeHtml(ARR_PROG_SUMARIAS[s]) + '</td></tr>';
         l.forEach(x => {
           html += '<tr class="align-top border-b border-slate-100"><td class="p-3 font-semibold">' + escapeHtml(x.codigo) + '</td><td class="p-3"><div class="text-xs text-slate-400">' + escapeHtml(x.tipo_procedimiento || '') + '</div>' + escapeHtml(x.procedimiento || '') + '</td>' +
             '<td class="p-3"><input type="text" value="' + escapeHtml(x.donde || '') + '" placeholder="Ej. Pestaña 7" onchange="arrProgSet(\'' + x.codigo + '\', \'donde\', this.value)" class="w-full p-2 border border-slate-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500"></td>' +
             '<td class="p-3">' + escapeHtml(x.quien || '—') + '</td>' +
+            '<td class="p-3 text-xs">' + (() => { const v = arrVerifDeProcedimiento(x.codigo); if (!v.total) return '<span class="text-slate-400">Sin verificaciones</span>'; const col = v.abiertas ? 'text-amber-700' : 'text-emerald-700'; return '<button type="button" onclick="arrIrVerif()" class="underline ' + col + ' font-bold text-left" title="Ir a la pestaña 9">' + (v.abiertas ? v.abiertas + ' por resolver de ' + v.total : 'Todas cerradas (' + v.total + ')') + '</button>' + (x.estado !== 'hecho' && !v.abiertas ? '<div class="text-slate-500">Puedes marcarlo Hecho</div>' : '') + (x.estado === 'hecho' && v.abiertas ? '<div class="text-amber-700">Está Hecho pero tiene verificaciones abiertas</div>' : ''); })() + '</td>' +
             '<td class="p-3"><select onchange="arrProgSet(\'' + x.codigo + '\', \'estado\', this.value)" class="w-full p-2 border border-slate-300 rounded-lg text-sm bg-white outline-none"><option value="pendiente"' + (x.estado === 'hecho' ? '' : ' selected') + '>Pendiente</option><option value="hecho"' + (x.estado === 'hecho' ? ' selected' : '') + '>Hecho</option></select></td></tr>';
         });
       });
@@ -10328,13 +10346,13 @@ main select[id$="-anio"] option { background:#fff; color:#1f1f1e; font-weight:40
       if (!arrEstado.contratos.length) return '<p class="p-6 text-xs text-slate-400 text-center">Agrega contratos para ver las verificaciones.</p>';
       const col = { ok: 'text-emerald-700', rev: 'text-amber-700', info: 'text-slate-500' }, tx = { ok: 'Cumple', rev: 'Revisar', info: 'Informativo' };
       const aut = arrVerifAuto();
-      let html = `<div class="px-2 py-1 text-[11px] font-bold text-slate-700 bg-slate-100 border-b border-slate-200">Verificaciones automáticas (se recalculan con los contratos cargados)</div><table class="w-full text-[11px] leading-tight border-collapse"><thead class="bg-slate-50 text-slate-600"><tr><th class="px-2 py-1 border-b border-slate-200 text-left">Verificación</th><th class="px-2 py-1 border-b border-slate-200 text-left whitespace-nowrap">Resultado</th><th class="px-2 py-1 border-b border-slate-200 text-left">Detalle</th></tr></thead><tbody>`;
-      aut.forEach(([t, e, d]) => { html += `<tr class="border-b border-slate-100 align-top"><td class="px-2 py-0.5 font-semibold text-slate-700">${escapeHtml(t)}</td><td class="px-2 py-0.5 font-bold whitespace-nowrap ${col[e]}">${tx[e]}</td><td class="px-2 py-0.5 text-slate-600">${escapeHtml(d)}</td></tr>`; });
+      let html = `<div class="px-2 py-1 text-[11px] font-bold text-slate-700 bg-slate-100 border-b border-slate-200">Verificaciones automáticas (se recalculan con los contratos cargados)</div><table class="w-full text-[11px] leading-tight border-collapse"><thead class="bg-slate-50 text-slate-600"><tr><th class="px-2 py-1 border-b border-slate-200 text-left">Verificación</th><th class="px-2 py-1 border-b border-slate-200 text-left whitespace-nowrap">Resultado</th><th class="px-2 py-1 border-b border-slate-200 text-left">Detalle</th><th class="px-2 py-1 border-b border-slate-200 text-left whitespace-nowrap">Procedimiento</th></tr></thead><tbody>`;
+      aut.forEach(([t, e, d]) => { html += `<tr class="border-b border-slate-100 align-top"><td class="px-2 py-0.5 font-semibold text-slate-700">${escapeHtml(t)}</td><td class="px-2 py-0.5 font-bold whitespace-nowrap ${col[e]}">${tx[e]}</td><td class="px-2 py-0.5 text-slate-600">${escapeHtml(d)}</td><td class="px-2 py-0.5 whitespace-nowrap">${(c => c ? `<button type="button" onclick="arrIrPrograma()" class="underline text-indigo-700 font-bold" title="Ir al programa de trabajo (pestaña 12)">${c}</button>` : '<span class="text-slate-400">Apoyo</span>')(arrAutoCodigo(t))}</td></tr>`; });
       const hechas = ARR_VERIF_MANUALES.filter(([k]) => ((arrEstado.verif[k] || {}).e || 'pendiente') !== 'pendiente').length;
-      html += `</tbody></table><div class="px-2 py-1 mt-2 text-[11px] font-bold text-slate-700 bg-slate-100 border-y border-slate-200">Evaluaciones del auditor (se guardan por cliente): ${hechas} de ${ARR_VERIF_MANUALES.length} evaluadas</div><table class="w-full text-[11px] leading-tight border-collapse"><thead class="bg-slate-50 text-slate-600"><tr><th class="px-2 py-1 border-b border-slate-200 text-left">Verificación</th><th class="px-2 py-1 border-b border-slate-200 text-left whitespace-nowrap">Referencia</th><th class="px-2 py-1 border-b border-slate-200 text-left">Estado</th><th class="px-2 py-1 border-b border-slate-200 text-left w-[34%]">Comentario o papel de trabajo</th></tr></thead><tbody>`;
+      html += `</tbody></table><div class="px-2 py-1 mt-2 text-[11px] font-bold text-slate-700 bg-slate-100 border-y border-slate-200">Evaluaciones del auditor (se guardan por cliente): ${hechas} de ${ARR_VERIF_MANUALES.length} evaluadas</div><table class="w-full text-[11px] leading-tight border-collapse"><thead class="bg-slate-50 text-slate-600"><tr><th class="px-2 py-1 border-b border-slate-200 text-left">Verificación</th><th class="px-2 py-1 border-b border-slate-200 text-left whitespace-nowrap">Referencia</th><th class="px-2 py-1 border-b border-slate-200 text-left">Estado</th><th class="px-2 py-1 border-b border-slate-200 text-left w-[34%]">Comentario o papel de trabajo</th><th class="px-2 py-1 border-b border-slate-200 text-left whitespace-nowrap">Procedimiento</th></tr></thead><tbody>`;
       ARR_VERIF_MANUALES.forEach(([k, t, ref]) => {
         const v = arrEstado.verif[k] || { e: 'pendiente', n: '' };
-        html += `<tr class="border-b border-slate-100 align-top"><td class="px-2 py-1 text-slate-700">${escapeHtml(t)}</td><td class="px-2 py-1 text-slate-500 whitespace-nowrap">${escapeHtml(ref)}</td><td class="px-2 py-1"><select onchange="arrVerifEditar('${k}', 'e', this)" class="h-6 px-1 text-[11px] border border-slate-300 rounded bg-white">${ARR_VERIF_ESTADOS.map(([val, nom]) => `<option value="${val}" ${(v.e || 'pendiente') === val ? 'selected' : ''}>${nom}</option>`).join('')}</select></td><td class="px-2 py-1"><input type="text" value="${escapeHtml(v.n || '')}" onchange="arrVerifEditar('${k}', 'n', this)" class="w-full h-6 px-1.5 text-[11px] border border-slate-300 rounded"></td></tr>`;
+        html += `<tr class="border-b border-slate-100 align-top"><td class="px-2 py-1 text-slate-700">${escapeHtml(t)}</td><td class="px-2 py-1 text-slate-500 whitespace-nowrap">${escapeHtml(ref)}</td><td class="px-2 py-1"><select onchange="arrVerifEditar('${k}', 'e', this)" class="h-6 px-1 text-[11px] border border-slate-300 rounded bg-white">${ARR_VERIF_ESTADOS.map(([val, nom]) => `<option value="${val}" ${(v.e || 'pendiente') === val ? 'selected' : ''}>${nom}</option>`).join('')}</select></td><td class="px-2 py-1"><input type="text" value="${escapeHtml(v.n || '')}" onchange="arrVerifEditar('${k}', 'n', this)" class="w-full h-6 px-1.5 text-[11px] border border-slate-300 rounded"></td><td class="px-2 py-1 whitespace-nowrap">${(c => c ? `<button type="button" onclick="arrIrPrograma()" class="underline text-indigo-700 font-bold" title="Ir al programa de trabajo (pestaña 12)">${c}</button>` : '<span class="text-slate-400">Apoyo</span>')(ARR_VERIF_PROG[k])}</td></tr>`;
       });
       return html + '</tbody></table>';
     }
@@ -10626,7 +10644,7 @@ main select[id$="-anio"] option { background:#fff; color:#1f1f1e; font-weight:40
       add('Estados e imp diferidos', est, [{ wch: 62 }]);
       add('Revelaciones', arrAoaFilas(K, arrFilasRevel(K, arrVencimientos(K))), [{ wch: 70 }]);
       const estV = { pendiente: 'Pendiente', cumple: 'Cumple', nocumple: 'No cumple', noaplica: 'No aplica' }, resV = { ok: 'Cumple', rev: 'Revisar', info: 'Informativo' };
-      add('Verificaciones', [['Verificaciones automáticas', 'Resultado', 'Detalle'], ...arrVerifAuto().map(([t, e, d]) => [t, resV[e], d]), [], ['Evaluaciones del auditor', 'Referencia', 'Estado', 'Comentario'], ...ARR_VERIF_MANUALES.map(([k, t, ref]) => { const v = arrEstado.verif[k] || {}; return [t, ref, estV[v.e || 'pendiente'], v.n || '']; })], [{ wch: 80 }, { wch: 28 }, { wch: 14 }, { wch: 60 }]);
+      add('Verificaciones', [['Verificaciones automáticas', 'Resultado', 'Detalle', 'Procedimiento del programa'], ...arrVerifAuto().map(([t, e, d]) => [t, resV[e], d, arrAutoCodigo(t) || 'Apoyo']), [], ['Evaluaciones del auditor', 'Referencia', 'Estado', 'Comentario', 'Procedimiento del programa'], ...ARR_VERIF_MANUALES.map(([k, t, ref]) => { const v = arrEstado.verif[k] || {}; return [t, ref, estV[v.e || 'pendiente'], v.n || '', ARR_VERIF_PROG[k] || 'Apoyo']; })], [{ wch: 80 }, { wch: 28 }, { wch: 14 }, { wch: 60 }, { wch: 16 }]);
       const modoPrev = arrEstado.cuadreModo, cuadreAoa = [];
       ['vida', 'corte'].forEach(m => {
         arrEstado.cuadreModo = m; const C = arrCuadreCols(); if (!C.cols.length) return;
@@ -10670,9 +10688,9 @@ main select[id$="-anio"] option { background:#fff; color:#1f1f1e; font-weight:40
       }
       if (ORIGEN.arrend && ARR_PLANTILLA === null) await arrCargarPlantilla();
       if (ORIGEN.arrend && ARR_PLANTILLA && ARR_PLANTILLA.length) {
-        const pf = [['Código', 'Procedimiento', 'Dónde está hecho', 'Quién lo hizo', 'Estado']];
-        arrFilasPrograma().forEach(x => pf.push([x.codigo, x.procedimiento || '', x.donde || '', x.quien || '', x.estado === 'hecho' ? 'Hecho' : 'Pendiente']));
-        add('Programa de trabajo', pf, [{ wch: 9 }, { wch: 95 }, { wch: 34 }, { wch: 22 }, { wch: 12 }], { sinCongelar: true, titulo: 'Programa de trabajo (AOO, PCC y PLL)', info: [['Año', ORIGEN.arrend.anio], ['Visita', ORIGEN.arrend.visita === 'preliminar' ? 'Preliminar' : 'Final']] });
+        const pf = [['Código', 'Procedimiento', 'Dónde está hecho', 'Quién lo hizo', 'Estado', 'Verificaciones (pestaña 9)']];
+        arrFilasPrograma().forEach(x => { const v = arrVerifDeProcedimiento(x.codigo); pf.push([x.codigo, x.procedimiento || '', x.donde || '', x.quien || '', x.estado === 'hecho' ? 'Hecho' : 'Pendiente', v.total ? (v.abiertas ? v.abiertas + ' por resolver de ' + v.total : 'Todas cerradas (' + v.total + ')') : 'Sin verificaciones']); });
+        add('Programa de trabajo', pf, [{ wch: 9 }, { wch: 95 }, { wch: 34 }, { wch: 22 }, { wch: 12 }, { wch: 28 }], { sinCongelar: true, titulo: 'Programa de trabajo (AOO, PCC y PLL)', info: [['Año', ORIGEN.arrend.anio], ['Visita', ORIGEN.arrend.visita === 'preliminar' ? 'Preliminar' : 'Final']] });
       }
       if (ORIGEN.arrend && ORIGEN.arrend.analisis) {
         const fc = arrFilasClaude(ORIGEN.arrend);
