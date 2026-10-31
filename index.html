@@ -406,7 +406,7 @@ main select[id$="-anio"] option { background:#fff; color:#1f1f1e; font-weight:40
 
 
   <!-- ==================== MENÚ LATERAL (SIDEBAR) ==================== -->
-  <aside id="sidebar" class="w-64 bg-slate-900 text-slate-300 min-h-screen flex flex-col justify-between shrink-0 transition-all duration-300 shadow-xl z-20">
+  <aside id="sidebar" class="w-72 bg-slate-900 text-slate-300 min-h-screen flex flex-col justify-between shrink-0 transition-all duration-300 shadow-xl z-20">
     <div>
       <div class="mgi-sidebar-head">
         <div class="mgi-logo-card">
@@ -428,7 +428,7 @@ main select[id$="-anio"] option { background:#fff; color:#1f1f1e; font-weight:40
             <span id="icon-analisis" class="inline-block text-[11px] leading-none transition-transform duration-200">▾</span>
           </button>
 
-          <div id="submenu-analisis" class="hidden pl-4 space-y-1"></div>
+          <div id="submenu-analisis" class="hidden pl-0 space-y-1"></div>
         </div>
 
         <button onclick="navegarMenu('visitas')" id="nav-visitas" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:bg-slate-800 hover:text-white transition">
@@ -3341,7 +3341,7 @@ main select[id$="-anio"] option { background:#fff; color:#1f1f1e; font-weight:40
               <span>${letras[i] || ''}) ${escapeHtml(def.titulo)}</span>
               <span id="icon-rubro-${r}" class="inline-block text-[11px] leading-none transition-transform duration-200">▾</span>
             </button>
-            <div id="submenu-rubro-${r}" class="hidden pl-1 space-y-1">${cuentas}${extras}</div>
+            <div id="submenu-rubro-${r}" class="hidden pl-2 space-y-1">${cuentas}${extras}</div>
           </div>`;
       }).join('');
       if (typeof aplicarEstadoMenu === 'function') aplicarEstadoMenu();
