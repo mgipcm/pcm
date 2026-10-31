@@ -3615,7 +3615,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
     async function abrirProgramas() {
       if (!catalogoCargado) await cargarCatalogoCuentas();
       const sel = document.getElementById('pg-sumaria'), previo = sel.value;
-      sel.innerHTML = '<option value="">Todas las sumarias</option>' + catalogoCuentas.filter(c => !['FG', 'LA', 'QL'].includes(c.sumaria)).map(c => '<option value="' + escapeHtml(c.sumaria) + '">' + escapeHtml(c.cuenta || c.sumaria) + '</option>').join('');
+      sel.innerHTML = '<option value="">Todas las sumarias</option>' + catalogoCuentas.filter(c => !/^(FG|LA|QL)\d*$/.test(c.sumaria)).map(c => '<option value="' + escapeHtml(c.sumaria) + '">' + escapeHtml(c.cuenta || c.sumaria) + '</option>').join('');
       if (previo) sel.value = previo;
       await cargarProgramasPlantilla();
       pintarProgramas();
@@ -3632,7 +3632,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
     }
     function pintarProgramas() {
       const s = valorAnalisis('pg-sumaria'), q = quitarAcentosAnexo(valorAnalisis('pg-buscar'));
-      const lista = programasPlantilla.filter(r => !['FG', 'LA', 'QL'].includes(r.sumaria) && (!s || r.sumaria === s) && (!q || quitarAcentosAnexo([r.codigo, r.tipo_procedimiento, r.procedimiento].join(' ')).includes(q)));
+      const lista = programasPlantilla.filter(r => !/^(FG|LA|QL)\d*$/.test(r.sumaria) && (!s || r.sumaria === s) && (!q || quitarAcentosAnexo([r.codigo, r.tipo_procedimiento, r.procedimiento].join(' ')).includes(q)));
       document.getElementById('pg-conteo').textContent = lista.length + ' procedimiento(s) · ' + lista.filter(r => r.activo).length + ' vigentes · ' + programasPlantilla.length + ' en total';
       const tb = document.getElementById('pg-filas');
       if (!lista.length) { tb.innerHTML = '<tr><td colspan="6" class="p-8 text-center text-slate-400">No hay procedimientos con este filtro.</td></tr>'; return; }
