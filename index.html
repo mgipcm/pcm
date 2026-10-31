@@ -3265,9 +3265,9 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
     const EXTRAS_ANALISIS = {
       // Se ordenan por la letra de la sumaria; "hijos" arma una cuenta con subcuentas (las que no tienen id aún están en desarrollo)
       'activos': [
-        { sumaria: 'AA', nombre: 'AA - Efectivo y equivalentes de efectivo', hijos: [{ clave: 'caja', nombre: 'Caja' }, { id: 'concil', nombre: 'Bancos' }, { clave: 'equivalentes', nombre: 'Equivalentes de efectivo' }] },
-        { sumaria: 'AF', id: 'import', nombre: 'AF - Inventarios (Importaciones)' },
-        { sumaria: 'AOO', id: 'arrend', nombre: 'AOO - Activos por derecho de uso y pasivos por arrendamiento' }
+        { sumaria: 'AA', nombre: 'AA Efectivo y equivalentes de efectivo', hijos: [{ clave: 'caja', nombre: 'Caja' }, { id: 'concil', nombre: 'Bancos' }, { clave: 'equivalentes', nombre: 'Equivalentes de efectivo' }] },
+        { sumaria: 'AF', id: 'import', nombre: 'AF Inventarios (Importaciones)' },
+        { sumaria: 'AOO', id: 'arrend', nombre: 'AOO Activos por derecho de uso y pasivos por arrendamiento' }
       ]
     };
     const RUBROS_ANALISIS = {
@@ -3348,7 +3348,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
           : `<button type="button" onclick="avisarEnDesarrollo()" id="nav-cuenta-extra-${r}-${x.clave}" class="${claseBtn} opacity-60"><span>${escapeHtml(x.nombre)}</span><span class="ml-auto text-[9px] text-slate-500">Pronto</span></button>`;
         const grupoExtra = x => `<div class="space-y-1"><button type="button" onclick="toggleGrupoAnalisis('${r}-${x.sumaria}')" class="w-full flex items-center justify-between px-2 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:bg-slate-800 hover:text-white transition"><span>${escapeHtml(x.nombre)}</span><span id="icon-grupo-${r}-${x.sumaria}" class="inline-block text-[11px] leading-none transition-transform duration-200">▾</span></button><div id="submenu-grupo-${r}-${x.sumaria}" class="hidden pl-2 space-y-1">${x.hijos.map(botonExtra).join('')}</div></div>`;
         const items = [
-          ...def.cuentas.map(c => ({ sumaria: c.sumariaCorto || 'ZZ', html: `<button type="button" onclick="navegarMenu('analisis', '${r}', '${c.clave}')" id="nav-cuenta-${r}-${c.clave}" class="${claseBtn}"><span>${c.sumariaCorto ? escapeHtml(c.sumariaCorto) + ' - ' : ''}${escapeHtml(c.nombre)}</span></button>` })),
+          ...def.cuentas.map(c => ({ sumaria: c.sumariaCorto || 'ZZ', html: `<button type="button" onclick="navegarMenu('analisis', '${r}', '${c.clave}')" id="nav-cuenta-${r}-${c.clave}" class="${claseBtn}"><span>${c.sumariaCorto ? escapeHtml(c.sumariaCorto) + ' ' : ''}${escapeHtml(c.nombre)}</span></button>` })),
           ...(EXTRAS_ANALISIS[r] || []).map(x => ({ sumaria: x.sumaria || 'ZZZ', html: x.hijos ? grupoExtra(x) : botonExtra(x) }))
         ].sort((a, b) => (a.sumaria < b.sumaria ? -1 : (a.sumaria > b.sumaria ? 1 : 0)));
         const cuentas = items.length ? items.map(i => i.html).join('') : '<p class="px-3 py-1 text-[11px] italic text-slate-400">Aún sin cuentas</p>';
