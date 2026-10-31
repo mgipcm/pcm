@@ -1101,6 +1101,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
               <th class="p-3 border-r border-slate-200 min-w-[90px]">Código</th>
               <th class="p-3 border-r border-slate-200 min-w-[200px]">Tipo</th>
               <th class="p-3 border-r border-slate-200 min-w-[360px] w-full">Procedimiento</th>
+              <th class="p-3 border-r border-slate-200 min-w-[170px]">Norma de referencia</th>
               <th class="p-3 border-r border-slate-200 w-36">Tamaño de empresa</th>
               <th class="p-3 border-r border-slate-200 w-28">Riesgo</th>
               <th class="p-3 w-24 text-center">Vigente</th>
@@ -3632,19 +3633,20 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
     }
     function pintarProgramas() {
       const s = valorAnalisis('pg-sumaria'), q = quitarAcentosAnexo(valorAnalisis('pg-buscar'));
-      const lista = programasPlantilla.filter(r => !/^(FG|LA|QL)\d*$/.test(r.sumaria) && (!s || r.sumaria === s) && (!q || quitarAcentosAnexo([r.codigo, r.tipo_procedimiento, r.procedimiento].join(' ')).includes(q)));
+      const lista = programasPlantilla.filter(r => !/^(FG|LA|QL)\d*$/.test(r.sumaria) && (!s || r.sumaria === s) && (!q || quitarAcentosAnexo([r.codigo, r.tipo_procedimiento, r.procedimiento, r.norma].join(' ')).includes(q)));
       document.getElementById('pg-conteo').textContent = lista.length + ' procedimiento(s) · ' + lista.filter(r => r.activo).length + ' vigentes · ' + programasPlantilla.length + ' en total';
       const tb = document.getElementById('pg-filas');
-      if (!lista.length) { tb.innerHTML = '<tr><td colspan="6" class="p-8 text-center text-slate-400">No hay procedimientos con este filtro.</td></tr>'; return; }
+      if (!lista.length) { tb.innerHTML = '<tr><td colspan="7" class="p-8 text-center text-slate-400">No hay procedimientos con este filtro.</td></tr>'; return; }
       lista.sort((x, y) => String(x.sumaria).localeCompare(String(y.sumaria), 'es', { numeric: true }) || (x.orden - y.orden) || (x.id - y.id));
       const nombreSum = x => { const c = catalogoCuentas.find(k => k.sumaria === x); return c ? c.cuenta : x; };
       let ult = null, html = '';
       lista.forEach(r => {
-        if (!s && r.sumaria !== ult) { html += '<tr><td colspan="6" class="px-3 py-2 bg-slate-100 text-slate-700 font-bold">' + escapeHtml(nombreSum(r.sumaria)) + '</td></tr>'; ult = r.sumaria; }
+        if (!s && r.sumaria !== ult) { html += '<tr><td colspan="7" class="px-3 py-2 bg-slate-100 text-slate-700 font-bold">' + escapeHtml(nombreSum(r.sumaria)) + '</td></tr>'; ult = r.sumaria; }
         html += '<tr class="align-top' + (r.activo ? '' : ' opacity-50') + '">' +
           '<td class="p-2 border-r border-slate-200"><input type="text" value="' + escapeHtml(r.codigo || '') + '" onchange="guardarCampoPlantilla(' + r.id + ',\'codigo\',this.value)" class="w-full p-1 border border-slate-200 rounded outline-none bg-white"></td>' +
           '<td class="p-2 border-r border-slate-200"><input type="text" value="' + escapeHtml(r.tipo_procedimiento || '') + '" onchange="guardarCampoPlantilla(' + r.id + ',\'tipo_procedimiento\',this.value)" class="w-full p-1 border border-slate-200 rounded outline-none bg-white"></td>' +
           '<td class="p-2 border-r border-slate-200"><textarea rows="3" onchange="guardarCampoPlantilla(' + r.id + ',\'procedimiento\',this.value)" class="w-full p-1 border border-slate-200 rounded outline-none bg-white leading-relaxed">' + escapeHtml(r.procedimiento || '') + '</textarea></td>' +
+          '<td class="p-2 border-r border-slate-200"><textarea rows="3" onchange="guardarCampoPlantilla(' + r.id + ',\'norma\',this.value)" class="w-full p-1 border border-slate-200 rounded outline-none bg-white text-[11px] leading-relaxed">' + escapeHtml(r.norma || '') + '</textarea></td>' +
           '<td class="p-2 border-r border-slate-200 text-[11px]">' + escapeHtml(r.tamanos || '') + '</td>' +
           '<td class="p-2 border-r border-slate-200 text-[11px]">' + escapeHtml(r.riesgos || '') + '</td>' +
           '<td class="p-2 text-center"><input type="checkbox" ' + (r.activo ? 'checked' : '') + ' onchange="guardarCampoPlantilla(' + r.id + ',\'activo\',this.checked)"></td></tr>';
@@ -3807,10 +3809,10 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
     const ARR_PROG_SUMARIAS = { AOO: 'AOO · Activos por derecho de uso', PCC: 'PCC · Pasivos por arrendamiento a corto plazo', PLL: 'PLL · Pasivos por arrendamiento a largo plazo' };
 
     // Enlace Programa de trabajo <-> Verificaciones: cada verificación pertenece a un procedimiento del programa
-    const ARR_VERIF_PROG = { tasa: 'AOO-04', plazo: 'AOO-04', exenc: 'AOO-02', comp: 'AOO-02', pagos: 'AOO-04', iva: 'AOO-04', costos: 'AOO-04', pago: 'AOO-04', mes: 'AOO-04', modif: 'AOO-05', deter: 'AOO-03', tarifa: 'AOO-08', dta: 'AOO-08', revel: 'AOO-07' };
+    const ARR_VERIF_PROG = { tasa: 'AOO-06', plazo: 'AOO-05', exenc: 'AOO-02', comp: 'AOO-02', pagos: 'AOO-05', iva: 'AOO-05', costos: 'AOO-05', pago: 'AOO-05', mes: 'AOO-05', modif: 'AOO-10', deter: 'AOO-04', tarifa: 'AOO-13', dta: 'AOO-13', revel: 'AOO-12' };
     const ARR_AUTO_PROG = [
-      [/Cuadre mensual|Cuadre anual/i, 'AOO-03'], [/Impuesto diferido/i, 'AOO-08'], [/Cambios de plazo|Reducciones de alcance|modificaciones/i, 'AOO-05'],
-      [/12 meses o menos/i, 'AOO-02'], [/vienen de uno anterior/i, 'AOO-03'], [/Datos completos|Fechas coherentes|duplicados|plazo proyectado|Tasas de descuento|pagan al inicio|IVA no recuperable|costos iniciales|anticipos/i, 'AOO-04']
+      [/Cuadre mensual|Cuadre anual/i, 'AOO-04'], [/Impuesto diferido/i, 'AOO-13'], [/Cambios de plazo|Reducciones de alcance|modificaciones/i, 'AOO-10'],
+      [/12 meses o menos/i, 'AOO-02'], [/vienen de uno anterior/i, 'AOO-04'], [/Tasas de descuento/i, 'AOO-06'], [/Datos completos|Fechas coherentes|duplicados|plazo proyectado|pagan al inicio|IVA no recuperable|costos iniciales|anticipos/i, 'AOO-05']
     ];
     function arrAutoCodigo(t) { const r = ARR_AUTO_PROG.find(x => x[0].test(t)); return r ? r[1] : ''; }
     function arrVerifDeProcedimiento(cod) {
@@ -13559,14 +13561,14 @@ ${cont.innerHTML}
     ];
     const CB_TABS = [['resumen', '1. Resumen de conciliaciones'], ['libros', '2. Comparación con libros'], ['verif', '3. Verificaciones'], ['revel', '4. Revelaciones'], ['claude', '5. Análisis de Claude'], ['programa', '6. Programa de trabajo']];
     const CB_VERIF_MANUALES = [
-      ['todas', 'Todas las cuentas bancarias y de ahorro del cliente están en el resumen, incluidas las cerradas durante el año', 'Programa AA-06', 'AA-06'],
-      ['firmas', 'Se obtuvieron y archivaron las firmas autorizadas de las cuentas bancarias', 'Programa AA-05', 'AA-05'],
+      ['todas', 'Todas las cuentas bancarias y de ahorro del cliente están en el resumen, incluidas las cerradas durante el año', 'Programa AA-04', 'AA-04'],
+      ['firmas', 'Se obtuvieron y archivaron las firmas autorizadas de las cuentas bancarias', 'Programa AA-03', 'AA-03'],
       ['conf', 'Las confirmaciones bancarias se enviaron a todas las instituciones (cuentas, inversiones, préstamos y garantías) y los saldos confirmados coinciden con el estado de cuenta', 'Programa AA-09', 'AA-09'],
-      ['control', 'Se llevó el control de confirmaciones enviadas y recibidas y se archivó', 'Programa AA-10', 'AA-10'],
+      ['control', 'Se llevó el control de confirmaciones enviadas y recibidas y se archivó', 'Programa AA-09', 'AA-09'],
       ['rastreo', 'Los cheques girados y depósitos en tránsito significativos se rastrearon en el extracto del mes siguiente', 'Programa AA-08', 'AA-08'],
       ['inusuales', 'Las partidas conciliatorias inusuales o antiguas se analizaron y se evaluó si requieren ajuste', 'Programa AA-07', 'AA-07'],
-      ['moneda', 'Las cuentas en moneda extranjera se convirtieron al tipo de cambio de cierre', 'NIC 21 párr. 23', 'AA-06'],
-      ['sobregiro', 'Se evaluó si los sobregiros forman parte de la gestión de efectivo (se presentan como efectivo) o son financiamiento (pasivo)', 'NIC 7 párr. 8', 'AA-11'],
+      ['moneda', 'Las cuentas en moneda extranjera se convirtieron al tipo de cambio de cierre', 'NIC 21 párr. 23', 'AA-04'],
+      ['sobregiro', 'Se evaluó si los sobregiros forman parte de la gestión de efectivo (se presentan como efectivo) o son financiamiento (pasivo)', 'NIC 7 párr. 8', 'AA-10'],
       ['restr', 'Se indagó si existen restricciones al efectivo (garantías, endosos, avales) y se obtuvo el soporte para la revelación', 'NIC 7 párr. 48', 'AA-12']
     ];
     const CB_ESTADOS = [['pendiente', 'Pendiente'], ['cumple', 'Cumple'], ['nocumple', 'No cumple'], ['noaplica', 'No aplica']];
@@ -13671,15 +13673,15 @@ ${cont.innerHTML}
       if (!L.length) return out;
       const lista = (xs, max = 5) => xs.slice(0, max).map(cbNombre).join('; ') + (xs.length > max ? ' y ' + (xs.length - max) + ' más' : '');
       const inc = L.filter(c => c.saldo_estado === '' || c.saldo_estado === undefined || c.saldo_libros === '' || c.saldo_libros === undefined);
-      add('Datos completos (saldo del estado de cuenta y saldo en libros de cada cuenta)', inc.length ? 'rev' : 'ok', inc.length ? inc.length + ' cuenta(s) sin algún saldo: ' + lista(inc) : L.length + ' cuenta(s) con ambos saldos', 'AA-06');
+      add('Datos completos (saldo del estado de cuenta y saldo en libros de cada cuenta)', inc.length ? 'rev' : 'ok', inc.length ? inc.length + ' cuenta(s) sin algún saldo: ' + lista(inc) : L.length + ' cuenta(s) con ambos saldos', 'AA-04');
       const dup = {}; L.forEach(c => { const k = (c.banco + '|' + c.cuenta).toLowerCase().trim(); if (k !== '|') (dup[k] = dup[k] || []).push(c); });
       const dups = Object.values(dup).filter(a => a.length > 1);
-      add('Cuentas repetidas (mismo banco y número de cuenta)', dups.length ? 'rev' : 'ok', dups.length ? dups.length + ' grupo(s) repetido(s): ' + lista(dups.map(a => a[0])) : 'No hay cuentas repetidas', 'AA-06');
+      add('Cuentas repetidas (mismo banco y número de cuenta)', dups.length ? 'rev' : 'ok', dups.length ? dups.length + ' grupo(s) repetido(s): ' + lista(dups.map(a => a[0])) : 'No hay cuentas repetidas', 'AA-04');
       const sd = L.filter(c => Math.abs(cbDif(c)) > tol);
-      add('El saldo conciliado coincide con el saldo en libros (tolerancia ' + formatoNumeroAnexo(tol) + ')', sd.length ? 'rev' : 'ok', sd.length ? sd.length + ' cuenta(s) con diferencia: ' + sd.slice(0, 5).map(c => cbNombre(c) + ' (' + formatoNumeroAnexo(cbDif(c)) + ')').join('; ') : 'Todas las cuentas cuadran', 'AA-06');
+      add('El saldo conciliado coincide con el saldo en libros (tolerancia ' + formatoNumeroAnexo(tol) + ')', sd.length ? 'rev' : 'ok', sd.length ? sd.length + ' cuenta(s) con diferencia: ' + sd.slice(0, 5).map(c => cbNombre(c) + ' (' + formatoNumeroAnexo(cbDif(c)) + ')').join('; ') : 'Todas las cuentas cuadran', 'AA-04');
       const bal = cbE.config.balance;
-      if (bal !== undefined && bal !== '') { const d = r2f(cbTotales().libros - cbN(bal)); add('El total en libros coincide con el saldo del balance (AA1 Bancos)', Math.abs(d) > tol ? 'rev' : 'ok', Math.abs(d) > tol ? 'Diferencia de ' + formatoNumeroAnexo(d) + ' entre libros y balance' : 'Libros y balance coinciden', 'AA-06'); }
-      else add('El total en libros coincide con el saldo del balance (AA1 Bancos)', 'info', 'Falta ingresar el saldo según balance en la pestaña 2', 'AA-06');
+      if (bal !== undefined && bal !== '') { const d = r2f(cbTotales().libros - cbN(bal)); add('El total en libros coincide con el saldo del balance (AA1 Bancos)', Math.abs(d) > tol ? 'rev' : 'ok', Math.abs(d) > tol ? 'Diferencia de ' + formatoNumeroAnexo(d) + ' entre libros y balance' : 'Libros y balance coinciden', 'AA-04'); }
+      else add('El total en libros coincide con el saldo del balance (AA1 Bancos)', 'info', 'Falta ingresar el saldo según balance en la pestaña 2', 'AA-04');
       const todas = L.flatMap(c => (c.partidas || []).map(p => ({ c, p })));
       const sinDato = todas.filter(x => !x.p.fecha || x.p.valor === '' || x.p.valor === undefined);
       add('Partidas conciliatorias con fecha y valor', sinDato.length ? 'rev' : 'ok', sinDato.length ? sinDato.length + ' partida(s) sin fecha o sin valor' : 'Todas las partidas tienen fecha y valor', 'AA-07');
@@ -13695,7 +13697,7 @@ ${cont.innerHTML}
       const ot = todas.filter(x => x.p.tipo === 'otra');
       add('Otras partidas conciliatorias', ot.length ? 'rev' : 'ok', ot.length ? ot.length + ' partida(s) por valor neto de ' + formatoNumeroAnexo(ot.reduce((s, x) => s + cbN(x.p.valor), 0)) + ': analiza que sean usuales y sustentadas' : 'No hay otras partidas', 'AA-07');
       const neg = L.filter(c => cbN(c.saldo_libros) < 0 || cbN(c.saldo_estado) < 0);
-      add('Saldos negativos (posibles sobregiros)', neg.length ? 'info' : 'ok', neg.length ? neg.length + ' cuenta(s): ' + lista(neg) + '. Evalúa su presentación (efectivo o pasivo)' : 'No hay saldos negativos', 'AA-11');
+      add('Saldos negativos (posibles sobregiros)', neg.length ? 'info' : 'ok', neg.length ? neg.length + ' cuenta(s): ' + lista(neg) + '. Evalúa su presentación (efectivo o pasivo)' : 'No hay saldos negativos', 'AA-10');
       return out;
     }
     function cbVerifDeProc(cod) {
