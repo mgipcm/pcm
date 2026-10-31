@@ -1118,13 +1118,16 @@ main select[id$="-anio"] option { background:#fff; color:#1f1f1e; font-weight:40
           </div>
           <div>
             <label class="block text-xs font-semibold text-slate-600 mb-1">Cuenta (sumaria)</label>
-            <select id="pc-sumaria" class="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs sm:text-sm outline-none"></select>
+            <select id="pc-sumaria" onchange="pcArchivosElegidos()" class="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs sm:text-sm outline-none"></select>
           </div>
         </div>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label class="block text-xs font-semibold text-slate-600 mb-1">Documentación para el análisis (uno o varios archivos, máx. 50 MB cada uno)</label>
-            <input type="file" id="pc-archivos" multiple class="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs sm:text-sm outline-none">
+            <input type="file" id="pc-archivos" multiple onchange="pcArchivosElegidos()" class="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs sm:text-sm outline-none">
+            <div id="pc-checklist" class="mt-2 text-[11px] text-slate-600"></div>
+            <div id="pc-lista-arch" class="mt-2 space-y-1"></div>
+            <p class="mt-1 text-[11px] text-slate-400">Se leen PDF (con texto o escaneados), Excel, CSV, TXT y fotos JPG o PNG. Las fotos y los escaneos los transcribe Claude y las cifras deben verificarse contra el original.</p>
             <label class="flex items-start gap-2 mt-2 text-[11px] text-slate-600"><input type="checkbox" id="pc-confirma" class="mt-0.5"><span>Confirmo que esta documentación es completa y adecuada para realizar el análisis solicitado.</span></label>
           </div>
           <div>
@@ -3979,26 +3982,95 @@ main select[id$="-anio"] option { background:#fff; color:#1f1f1e; font-weight:40
       const archivos = [...(document.getElementById('pc-archivos').files || [])];
       if (!archivos.length) return err('Sube al menos un archivo con la documentación.');
       const grande = archivos.find(f => f.size > 52428800); if (grande) return err('El archivo "' + grande.name + '" supera los 50 MB. Sube una versión resumida o filtrada a lo que se va a analizar.');
+      if (archivos.some((f, i) => !pcEtiquetasElegidas[i])) return err('Elige el tipo de cada archivo (conciliación, estado de cuenta, etc.).');
       if (!document.getElementById('pc-confirma').checked) return err('Marca la confirmación de que la documentación es completa y adecuada.');
       const fila = { cliente_id: v('pc-cliente'), anio: Number(v('pc-anio')), visita: v('pc-visita') || 'final', sumaria: v('pc-sumaria'), carpeta: null, nota: v('pc-nota') || null, doc_confirmada_por: nombreUsuarioActivo(), doc_confirmada_at: new Date().toISOString(), solicitado_por: nombreUsuarioActivo(), solicitado_email: usuarioActivo.email || null };
       const { data: ins, error } = await supabaseClient.from('pedidos_claude').insert([fila]).select('id').single();
       if (error) return err('No se pudo enviar: ' + (error.message || error));
       msg.textContent = 'Subiendo ' + archivos.length + ' archivo(s)…'; msg.className = 'text-[11px] min-h-[1rem] text-slate-500';
       const falla = [];
-      for (const f of archivos) {
-        const ruta = ins.id + '/' + Date.now() + '_' + f.name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^A-Za-z0-9._-]+/g, '_');
-        const { error: eu } = await supabaseClient.storage.from('pedidos-claude').upload(ruta, f, { contentType: f.type || 'application/octet-stream' });
+      for (const [i, f] of archivos.entries()) {
+        const pf = await pcPrepararArchivo(f);
+        const ruta = ins.id + '/' + Date.now() + '_' + pf.nombre.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^A-Za-z0-9._-]+/g, '_');
+        const { error: eu } = await supabaseClient.storage.from('pedidos-claude').upload(ruta, pf.blob, { contentType: pf.tipo });
         if (eu) { falla.push(f.name + ' (' + (eu.message || eu) + ')'); continue; }
-        const { error: ea } = await supabaseClient.from('pedidos_claude_archivos').insert([{ pedido_id: ins.id, nombre: f.name, ruta, tamano: f.size, tipo: f.type || null, subido_por: nombreUsuarioActivo() }]);
+        const { error: ea } = await supabaseClient.from('pedidos_claude_archivos').insert([{ pedido_id: ins.id, nombre: pf.nombre, ruta, tamano: pf.tamano, tipo: pf.tipo, subido_por: nombreUsuarioActivo(), etiqueta: pcEtiquetasElegidas[i] }]);
         if (ea) falla.push(f.name + ' (' + (ea.message || ea) + ')');
       }
       if (falla.length) { err('El pedido se creó, pero no se subieron: ' + falla.join('; ') + '. Cancela el pedido y vuelve a enviarlo.'); cargarPedidosClaude(); return; }
       msg.textContent = 'Pedido enviado. Avisando por correo al Socio y al Supervisor…';
       const av = await avisarPedidoCorreo(ins.id, 'solicitado');
       msg.textContent = 'Pedido enviado con ' + archivos.length + ' archivo(s). ' + av;
-      document.getElementById('pc-nota').value = ''; document.getElementById('pc-archivos').value = ''; document.getElementById('pc-confirma').checked = false;
+      document.getElementById('pc-nota').value = ''; document.getElementById('pc-archivos').value = ''; document.getElementById('pc-confirma').checked = false; pcArchivosElegidos();
       registrarActividad('Solicitó análisis a Claude', fila.sumaria + ' · ' + fila.visita, { cliente: fila.cliente_id, anio: String(fila.anio) });
       cargarPedidosClaude();
+    }
+
+
+
+    // Las fotos se reducen antes de subirlas (máx. 2200 px, JPG) para que pesen poco y Claude las pueda leer
+    async function pcPrepararArchivo(f) {
+      const base = { blob: f, nombre: f.name, tipo: f.type || 'application/octet-stream', tamano: f.size };
+      try {
+        if (!/^image\/(jpeg|png|webp)$/i.test(f.type) || f.size < 600000) return base;
+        const bmp = await createImageBitmap(f), esc = Math.min(1, 2200 / Math.max(bmp.width, bmp.height));
+        const cv = document.createElement('canvas'); cv.width = Math.round(bmp.width * esc); cv.height = Math.round(bmp.height * esc);
+        const cx = cv.getContext('2d'); cx.fillStyle = '#fff'; cx.fillRect(0, 0, cv.width, cv.height); cx.drawImage(bmp, 0, 0, cv.width, cv.height);
+        const blob = await new Promise(ok => cv.toBlob(ok, 'image/jpeg', 0.88));
+        if (!blob || blob.size >= f.size) return base;
+        return { blob, nombre: f.name.replace(/\.[^.]+$/, '') + '.jpg', tipo: 'image/jpeg', tamano: blob.size };
+      } catch (e) { return base; }
+    }
+
+    // ===== Tipos de documento por cuenta y lista de qué subir =====
+    const PC_ETIQ = {
+      AA1: ['Conciliación bancaria', 'Estado de cuenta', 'Confirmación bancaria', 'Firmas autorizadas', 'Otro'],
+      AOO: ['Contrato', 'Adenda o renovación', 'Evaluación NIIF 16', 'Factura o soporte de pagos', 'Otro'],
+      PCC: ['Contrato', 'Adenda o renovación', 'Evaluación NIIF 16', 'Factura o soporte de pagos', 'Otro'],
+      PLL: ['Contrato', 'Adenda o renovación', 'Evaluación NIIF 16', 'Factura o soporte de pagos', 'Otro']
+    };
+    function pcEtiquetas(sumaria) { return PC_ETIQ[sumaria] || ['Documento de soporte', 'Otro']; }
+    let pcEtiquetasElegidas = [];
+    function pcEtiquetaSugerida(nombre, et) {
+      const reglas = [[/concilia/i, 'Conciliación bancaria'], [/estado.?de.?cuenta|extracto/i, 'Estado de cuenta'], [/confirma/i, 'Confirmación bancaria'], [/firma/i, 'Firmas autorizadas'], [/adenda|renov/i, 'Adenda o renovación'], [/contrato/i, 'Contrato'], [/niif|evaluaci/i, 'Evaluación NIIF 16'], [/factura|pago/i, 'Factura o soporte de pagos']];
+      const r = reglas.find(x => x[0].test(nombre) && et.includes(x[1])); return r ? r[1] : '';
+    }
+    function pcArchivosElegidos() {
+      const fs = [...((document.getElementById('pc-archivos') || {}).files || [])], et = pcEtiquetas(valorAnalisis('pc-sumaria')), prev = pcEtiquetasElegidas;
+      pcEtiquetasElegidas = fs.map((f, i) => (et.includes(prev[i]) ? prev[i] : pcEtiquetaSugerida(f.name, et)));
+      const lista = document.getElementById('pc-lista-arch');
+      if (lista) lista.innerHTML = fs.map((f, i) => '<div class="flex flex-wrap items-center gap-2 text-[11px]"><span class="flex-1 min-w-[10rem] break-all">📎 ' + escapeHtml(f.name) + ' <span class="text-slate-400">(' + tamanoLegible(f.size) + ')</span></span><select onchange="pcEtiquetasElegidas[' + i + '] = this.value; pcChecklist()" class="p-1 border border-slate-300 rounded text-[11px] bg-white"><option value="">— Elige el tipo —</option>' + et.map(x => '<option value="' + escapeHtml(x) + '"' + (pcEtiquetasElegidas[i] === x ? ' selected' : '') + '>' + escapeHtml(x) + '</option>').join('') + '</select></div>').join('');
+      pcChecklist();
+    }
+    function pcChecklist() {
+      const el = document.getElementById('pc-checklist'); if (!el) return;
+      const sum = valorAnalisis('pc-sumaria'); if (!sum) { el.innerHTML = ''; return; }
+      const et = pcEtiquetas(sum).filter(x => x !== 'Otro');
+      el.innerHTML = '<b>Qué subir:</b> ' + et.map(x => (pcEtiquetasElegidas.includes(x) ? '<span class="text-emerald-700">✓ ' : '<span class="text-slate-500">○ ') + escapeHtml(x) + '</span>').join(' · ');
+    }
+    function pcAgregarArchivos(id) {
+      const sel = document.getElementById('pc-et-' + id), msg = document.getElementById('pc-msg');
+      if (!sel || !sel.value) { alert('Elige primero el tipo de archivo que vas a agregar.'); return; }
+      const et = sel.value, inp = document.createElement('input'); inp.type = 'file'; inp.multiple = true;
+      inp.onchange = async () => {
+        const fs = [...inp.files], p = pedidosClaude.find(x => x.id === id); if (!fs.length || !p) return;
+        const grande = fs.find(f => f.size > 52428800); if (grande) { alert('El archivo "' + grande.name + '" supera los 50 MB. Sube una versión resumida o filtrada.'); return; }
+        msg.textContent = 'Subiendo ' + fs.length + ' archivo(s)…'; msg.className = 'text-[11px] min-h-[1rem] text-slate-500';
+        const falla = [];
+        for (const f of fs) {
+          const pf = await pcPrepararArchivo(f);
+          const ruta = id + '/' + Date.now() + '_' + pf.nombre.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^A-Za-z0-9._-]+/g, '_');
+          const { error: eu } = await supabaseClient.storage.from('pedidos-claude').upload(ruta, pf.blob, { contentType: pf.tipo });
+          if (eu) { falla.push(f.name); continue; }
+          const { error: ea } = await supabaseClient.from('pedidos_claude_archivos').insert([{ pedido_id: id, nombre: pf.nombre, ruta, tamano: pf.tamano, tipo: pf.tipo, subido_por: nombreUsuarioActivo(), etiqueta: et }]);
+          if (ea) falla.push(f.name);
+        }
+        msg.textContent = falla.length ? 'No se subieron: ' + falla.join('; ') : 'Se agregaron ' + fs.length + ' archivo(s) al pedido.';
+        msg.className = 'text-[11px] min-h-[1rem] ' + (falla.length ? 'text-red-600 font-bold' : 'text-slate-500');
+        registrarActividad('Agregó archivos al pedido', p.sumaria + ' · ' + et, { cliente: p.cliente_id, anio: String(p.anio) });
+        cargarPedidosClaude();
+      };
+      inp.click();
     }
 
     // ===== Archivos temporales de los pedidos =====
@@ -4009,6 +4081,9 @@ main select[id$="-anio"] option { background:#fff; color:#1f1f1e; font-weight:40
       if (!ids.length) return;
       const { data } = await supabaseClient.from('pedidos_claude_archivos').select('*').in('pedido_id', ids).order('created_at', { ascending: true });
       (data || []).forEach(a => { const p = pedidosClaude.find(x => x.id === a.pedido_id); if (p) p._arch.push(a); });
+      const { data: lec } = await supabaseClient.from('pedidos_claude_textos').select('archivo_id, error, paginas, origen_lectura').in('archivo_id', (data || []).map(a => a.id));
+      const mapa = {}; (lec || []).forEach(l => { mapa[l.archivo_id] = l; });
+      (data || []).forEach(a => { a._lectura = mapa[a.id] || null; });
     }
     // Elimina los archivos de pedidos ya revisados, vencidos (15 días) o cancelados/rechazados; conserva el registro con los nombres.
     async function limpiarArchivosPedidos() {
@@ -4045,9 +4120,10 @@ main select[id$="-anio"] option { background:#fff; color:#1f1f1e; font-weight:40
       let h = '';
       if (vivos.length) {
         const vence = new Date(new Date(p.created_at).getTime() + DIAS_ARCHIVOS_PEDIDO * 86400000);
-        h += '<div class="space-y-0.5">' + vivos.map(a => '<div class="break-all">📎 ' + (puedeAutorizarPedidos() ? '<a href="#" onclick="descargarArchivoPedido(\'' + escapeHtml(a.ruta).replace(/'/g, '') + '\', \'' + escapeHtml(a.nombre).replace(/'/g, '') + '\'); return false;" class="underline text-slate-800">' + escapeHtml(a.nombre) + '</a>' : escapeHtml(a.nombre)) + ' <span class="text-slate-400">(' + tamanoLegible(a.tamano) + ')</span></div>').join('') + '</div><div class="text-[11px] text-slate-400 mt-1">Se eliminan al revisar el trabajo o el ' + fechaCortaOrigen(vence.toISOString()) + '</div>';
+        h += '<div class="space-y-0.5">' + vivos.map(a => '<div class="break-all">📎 ' + (a.etiqueta ? '<span class="text-slate-500">[' + escapeHtml(a.etiqueta) + ']</span> ' : '') + (puedeAutorizarPedidos() ? '<a href="#" onclick="descargarArchivoPedido(\'' + escapeHtml(a.ruta).replace(/'/g, '') + '\', \'' + escapeHtml(a.nombre).replace(/'/g, '') + '\'); return false;" class="underline text-slate-800">' + escapeHtml(a.nombre) + '</a>' : escapeHtml(a.nombre)) + ' <span class="text-slate-400">(' + tamanoLegible(a.tamano) + ')</span> ' + (a._lectura ? (a._lectura.error ? '<span class="text-amber-700" title="' + escapeHtml(a._lectura.error) + '">⚠ no se pudo leer: ' + escapeHtml(a._lectura.error) + '</span>' : (a._lectura.origen_lectura === 'transcripcion' ? '<span class="text-amber-700">✓ transcrito de imagen: verifica las cifras</span>' : '<span class="text-emerald-700">✓ leído</span>')) : '<span class="text-slate-400">leyendo…</span>') + '</div>').join('') + '</div><div class="text-[11px] text-slate-400 mt-1">Se eliminan al revisar el trabajo o el ' + fechaCortaOrigen(vence.toISOString()) + '</div>';
       }
       if (idos.length) h += '<div class="text-[11px] text-slate-500 mt-1">Archivos eliminados (' + escapeHtml(idos[0].eliminado_motivo || '') + ', ' + fechaCortaOrigen(idos[0].eliminado_at) + '): ' + idos.map(a => escapeHtml(a.nombre) + ' (' + tamanoLegible(a.tamano) + ')').join('; ') + '</div>';
+      if (['solicitado', 'autorizado'].includes(p.estado) && (puedeAutorizarPedidos() || p.solicitado_por === nombreUsuarioActivo())) h += '<div class="mt-2 flex flex-wrap items-center gap-1"><select id="pc-et-' + p.id + '" class="p-1 border border-slate-300 rounded text-[11px] bg-white"><option value="">Tipo de archivo…</option>' + pcEtiquetas(p.sumaria).map(x => '<option value="' + escapeHtml(x) + '">' + escapeHtml(x) + '</option>').join('') + '</select><button type="button" onclick="pcAgregarArchivos(\'' + p.id + '\')" class="px-2 py-1 text-[11px] rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-100 font-medium">Agregar archivos</button></div>';
       if (!arch.length && p.carpeta) h += '<div class="break-all">' + escapeHtml(p.carpeta) + '</div>';
       if (p.doc_confirmada_por) h += '<div class="text-[11px] text-slate-500 mt-1">Documentación confirmada por ' + escapeHtml(p.doc_confirmada_por) + '</div>';
       return h;
