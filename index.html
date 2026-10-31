@@ -3217,6 +3217,8 @@ main select[id$="-anio"] option { background:#fff; color:#1f1f1e; font-weight:40
         document.getElementById('icon-analisis').classList.add('rotate-180');
         const cj = document.getElementById('submenu-rubro-activos'); if (cj) cj.classList.remove('hidden');
         const fl = document.getElementById('icon-rubro-activos'); if (fl) fl.classList.add('rotate-180');
+        const gr = bx ? bx.closest('[id^="submenu-grupo-"]') : null;
+        if (gr) { gr.classList.remove('hidden'); const ic = document.getElementById(gr.id.replace('submenu-grupo-', 'icon-grupo-')); if (ic) ic.classList.add('rotate-180'); }
       }
       const activeBtn = document.getElementById(`nav-${seccion}`);
       if (activeBtn && seccion !== 'analisis' && !desdeAnalisis) {
@@ -3243,7 +3245,12 @@ main select[id$="-anio"] option { background:#fff; color:#1f1f1e; font-weight:40
 
     // Herramientas que también se abren desde el menú de Análisis (misma herramienta y mismos datos que en Herramientas)
     const EXTRAS_ANALISIS = {
-      'activos': [{ id: 'arrend', nombre: 'Activos por derecho de uso y pasivos por arrendamiento' }, { id: 'import', nombre: 'Inventarios (Importaciones)' }, { id: 'concil', nombre: 'Efectivo › Bancos (conciliaciones)' }]
+      // Se ordenan por la letra de la sumaria; "hijos" arma una cuenta con subcuentas (las que no tienen id aún están en desarrollo)
+      'activos': [
+        { sumaria: 'AA', nombre: 'AA - Efectivo y equivalentes de efectivo', hijos: [{ clave: 'caja', nombre: 'Caja' }, { id: 'concil', nombre: 'Bancos' }, { clave: 'equivalentes', nombre: 'Equivalentes de efectivo' }] },
+        { sumaria: 'AF', id: 'import', nombre: 'AF - Inventarios (Importaciones)' },
+        { sumaria: 'AOO', id: 'arrend', nombre: 'AOO - Activos por derecho de uso y pasivos por arrendamiento' }
+      ]
     };
     const RUBROS_ANALISIS = {
       'activos': { titulo: 'Activos', cuentas: [{ clave: 'inversiones_corrientes', nombre: 'Inversiones corrientes', sumariaCorto: 'AB', sumariaLargo: 'AS' }] },
@@ -3317,16 +3324,17 @@ main select[id$="-anio"] option { background:#fff; color:#1f1f1e; font-weight:40
           <span>Pedidos a Claude</span><span id="badge-pedidos-claude" class="hidden ml-auto text-[10px] font-bold bg-slate-200 text-slate-900 rounded-full px-2 py-0.5"></span>
         </button>`;
       cont.innerHTML = botonSumarias + Object.entries(RUBROS_ANALISIS).map(([r, def], i) => {
-        const cuentas = def.cuentas.length
-          ? def.cuentas.map(c => `
-              <button type="button" onclick="navegarMenu('analisis', '${r}', '${c.clave}')" id="nav-cuenta-${r}-${c.clave}" class="w-full text-left px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:bg-slate-800 hover:text-white transition flex items-center gap-2">
-                <span>${escapeHtml(c.nombre)}</span>
-              </button>`).join('')
-          : ((EXTRAS_ANALISIS[r] || []).length ? '' : '<p class="px-3 py-1 text-[11px] italic text-slate-400">Aún sin cuentas</p>');
-        const extras = (EXTRAS_ANALISIS[r] || []).map(x => `
-              <button type="button" onclick="navegarMenu('${x.id}', 'analisis')" id="nav-cuenta-extra-${r}-${x.id}" class="w-full text-left px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:bg-slate-800 hover:text-white transition flex items-center gap-2">
-                <span>${escapeHtml(x.nombre)}</span>
-              </button>`).join('');
+        const claseBtn = 'w-full text-left px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:bg-slate-800 hover:text-white transition flex items-center gap-2';
+        const botonExtra = x => x.id
+          ? `<button type="button" onclick="navegarMenu('${x.id}', 'analisis')" id="nav-cuenta-extra-${r}-${x.id}" class="${claseBtn}"><span>${escapeHtml(x.nombre)}</span></button>`
+          : `<button type="button" onclick="avisarEnDesarrollo()" id="nav-cuenta-extra-${r}-${x.clave}" class="${claseBtn} opacity-60"><span>${escapeHtml(x.nombre)}</span><span class="ml-auto text-[9px] text-slate-500">Próximamente</span></button>`;
+        const grupoExtra = x => `<div class="space-y-1"><button type="button" onclick="toggleGrupoAnalisis('${r}-${x.sumaria}')" class="w-full flex items-center justify-between px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:bg-slate-800 hover:text-white transition"><span>${escapeHtml(x.nombre)}</span><span id="icon-grupo-${r}-${x.sumaria}" class="inline-block text-[11px] leading-none transition-transform duration-200">▾</span></button><div id="submenu-grupo-${r}-${x.sumaria}" class="hidden pl-4 space-y-1">${x.hijos.map(botonExtra).join('')}</div></div>`;
+        const items = [
+          ...def.cuentas.map(c => ({ sumaria: c.sumariaCorto || 'ZZ', html: `<button type="button" onclick="navegarMenu('analisis', '${r}', '${c.clave}')" id="nav-cuenta-${r}-${c.clave}" class="${claseBtn}"><span>${c.sumariaCorto ? escapeHtml(c.sumariaCorto) + ' - ' : ''}${escapeHtml(c.nombre)}</span></button>` })),
+          ...(EXTRAS_ANALISIS[r] || []).map(x => ({ sumaria: x.sumaria || 'ZZZ', html: x.hijos ? grupoExtra(x) : botonExtra(x) }))
+        ].sort((a, b) => (a.sumaria < b.sumaria ? -1 : (a.sumaria > b.sumaria ? 1 : 0)));
+        const cuentas = items.length ? items.map(i => i.html).join('') : '<p class="px-3 py-1 text-[11px] italic text-slate-400">Aún sin cuentas</p>';
+        const extras = '';
         return `
           <div class="space-y-1">
             <button type="button" onclick="toggleRubroAnalisis('${r}')" id="nav-rubro-${r}" class="w-full flex items-center justify-between px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-500 hover:bg-slate-800 hover:text-white transition">
@@ -3339,6 +3347,13 @@ main select[id$="-anio"] option { background:#fff; color:#1f1f1e; font-weight:40
       if (typeof aplicarEstadoMenu === 'function') aplicarEstadoMenu();
     }
 
+    function toggleGrupoAnalisis(id) {
+      const caja = document.getElementById('submenu-grupo-' + id), flecha = document.getElementById('icon-grupo-' + id);
+      if (!caja) return;
+      const abrir = caja.classList.contains('hidden');
+      caja.classList.toggle('hidden', !abrir);
+      if (flecha) flecha.classList.toggle('rotate-180', abrir);
+    }
     function toggleRubroAnalisis(rubro) {
       const caja = document.getElementById('submenu-rubro-' + rubro);
       const flecha = document.getElementById('icon-rubro-' + rubro);
@@ -13828,7 +13843,7 @@ ${cont.innerHTML}
       { clave: 'cta:inversiones_corrientes', nombre: '     ↳ 2. Análisis Claves › Activos › Inversiones corrientes', btn: 'nav-cuenta-activos-inversiones_corrientes', defecto: false },
       { clave: 'arrend', nombre: '     ↳ 2. Análisis Claves › Activos › Activos por derecho de uso y pasivos por arrendamiento', btn: 'nav-cuenta-extra-activos-arrend', defecto: false },
       { clave: 'import', nombre: '     ↳ 2. Análisis Claves › Activos › Inventarios (Importaciones)', btn: 'nav-cuenta-extra-activos-import', defecto: false },
-      { clave: 'concil', nombre: '     ↳ 2. Análisis Claves › Activos › Efectivo › Bancos (conciliaciones)', btn: 'nav-cuenta-extra-activos-concil', defecto: false },
+      { clave: 'concil', nombre: '     ↳ 2. Análisis Claves › Activos › AA Efectivo y equivalentes › Bancos (conciliaciones)', btn: 'nav-cuenta-extra-activos-concil', defecto: false },
       { clave: 'visitas', nombre: '3. Visitas (Calendario)', btn: 'nav-visitas' },
       { clave: 'asignacion', nombre: '4. Asignación de Cuentas', btn: 'nav-asignacion' },
       { clave: 'indices', nombre: '5a) Índices financieros', btn: 'nav-indices' },
