@@ -4031,6 +4031,7 @@ main select[id$="-anio"] option { background:#fff; color:#1f1f1e; font-weight:40
           const { error } = await supabaseClient.storage.from('pedidos-claude').remove(lote.map(a => a.ruta));
           if (error) continue;
           await supabaseClient.from('pedidos_claude_archivos').update({ eliminado_at: new Date().toISOString(), eliminado_motivo: motivo[pid] }).in('id', lote.map(a => a.id));
+          await supabaseClient.from('pedidos_claude_textos').delete().in('archivo_id', lote.map(a => a.id));
         }
       } catch (e) { /* la limpieza es opcional; se reintenta al abrir los pedidos */ }
     }
