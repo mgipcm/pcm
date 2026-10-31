@@ -3324,11 +3324,11 @@ main select[id$="-anio"] option { background:#fff; color:#1f1f1e; font-weight:40
           <span>Pedidos a Claude</span><span id="badge-pedidos-claude" class="hidden ml-auto text-[10px] font-bold bg-slate-200 text-slate-900 rounded-full px-2 py-0.5"></span>
         </button>`;
       cont.innerHTML = botonSumarias + Object.entries(RUBROS_ANALISIS).map(([r, def], i) => {
-        const claseBtn = 'w-full text-left px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:bg-slate-800 hover:text-white transition flex items-center gap-2';
+        const claseBtn = 'w-full text-left px-2 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:bg-slate-800 hover:text-white transition flex items-center gap-2';
         const botonExtra = x => x.id
           ? `<button type="button" onclick="navegarMenu('${x.id}', 'analisis')" id="nav-cuenta-extra-${r}-${x.id}" class="${claseBtn}"><span>${escapeHtml(x.nombre)}</span></button>`
-          : `<button type="button" onclick="avisarEnDesarrollo()" id="nav-cuenta-extra-${r}-${x.clave}" class="${claseBtn} opacity-60"><span>${escapeHtml(x.nombre)}</span><span class="ml-auto text-[9px] text-slate-500">Próximamente</span></button>`;
-        const grupoExtra = x => `<div class="space-y-1"><button type="button" onclick="toggleGrupoAnalisis('${r}-${x.sumaria}')" class="w-full flex items-center justify-between px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:bg-slate-800 hover:text-white transition"><span>${escapeHtml(x.nombre)}</span><span id="icon-grupo-${r}-${x.sumaria}" class="inline-block text-[11px] leading-none transition-transform duration-200">▾</span></button><div id="submenu-grupo-${r}-${x.sumaria}" class="hidden pl-4 space-y-1">${x.hijos.map(botonExtra).join('')}</div></div>`;
+          : `<button type="button" onclick="avisarEnDesarrollo()" id="nav-cuenta-extra-${r}-${x.clave}" class="${claseBtn} opacity-60"><span>${escapeHtml(x.nombre)}</span><span class="ml-auto text-[9px] text-slate-500">Pronto</span></button>`;
+        const grupoExtra = x => `<div class="space-y-1"><button type="button" onclick="toggleGrupoAnalisis('${r}-${x.sumaria}')" class="w-full flex items-center justify-between px-2 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:bg-slate-800 hover:text-white transition"><span>${escapeHtml(x.nombre)}</span><span id="icon-grupo-${r}-${x.sumaria}" class="inline-block text-[11px] leading-none transition-transform duration-200">▾</span></button><div id="submenu-grupo-${r}-${x.sumaria}" class="hidden pl-2 space-y-1">${x.hijos.map(botonExtra).join('')}</div></div>`;
         const items = [
           ...def.cuentas.map(c => ({ sumaria: c.sumariaCorto || 'ZZ', html: `<button type="button" onclick="navegarMenu('analisis', '${r}', '${c.clave}')" id="nav-cuenta-${r}-${c.clave}" class="${claseBtn}"><span>${c.sumariaCorto ? escapeHtml(c.sumariaCorto) + ' - ' : ''}${escapeHtml(c.nombre)}</span></button>` })),
           ...(EXTRAS_ANALISIS[r] || []).map(x => ({ sumaria: x.sumaria || 'ZZZ', html: x.hijos ? grupoExtra(x) : botonExtra(x) }))
@@ -3341,7 +3341,7 @@ main select[id$="-anio"] option { background:#fff; color:#1f1f1e; font-weight:40
               <span>${letras[i] || ''}) ${escapeHtml(def.titulo)}</span>
               <span id="icon-rubro-${r}" class="inline-block text-[11px] leading-none transition-transform duration-200">▾</span>
             </button>
-            <div id="submenu-rubro-${r}" class="hidden pl-4 space-y-1">${cuentas}${extras}</div>
+            <div id="submenu-rubro-${r}" class="hidden pl-1 space-y-1">${cuentas}${extras}</div>
           </div>`;
       }).join('');
       if (typeof aplicarEstadoMenu === 'function') aplicarEstadoMenu();
