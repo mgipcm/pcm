@@ -1102,7 +1102,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
               <th class="p-3 border-r border-slate-200 min-w-[200px]">Tipo</th>
               <th class="p-3 border-r border-slate-200 min-w-[360px] w-full">Procedimiento</th>
               <th class="p-3 border-r border-slate-200 min-w-[170px]">Norma de referencia</th>
-              <th class="p-3 border-r border-slate-200 w-36">Tamaño de empresa</th>
+              <th class="p-3 border-r border-slate-200 w-36">Alcance</th>
               <th class="p-3 border-r border-slate-200 w-28">Riesgo</th>
               <th class="p-3 w-24 text-center">Vigente</th>
             </tr>
@@ -3633,7 +3633,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
     }
     function pintarProgramas() {
       const s = valorAnalisis('pg-sumaria'), q = quitarAcentosAnexo(valorAnalisis('pg-buscar'));
-      const lista = programasPlantilla.filter(r => !/^(FG|LA|QL)\d*$/.test(r.sumaria) && (!s || r.sumaria === s) && (!q || quitarAcentosAnexo([r.codigo, r.tipo_procedimiento, r.procedimiento, r.norma].join(' ')).includes(q)));
+      const lista = programasPlantilla.filter(r => !/^(FG|LA|QL)\d*$/.test(r.sumaria) && (!s || r.sumaria === s) && (!q || quitarAcentosAnexo([r.codigo, r.tipo_procedimiento, r.procedimiento, r.norma, r.alcance].join(' ')).includes(q)));
       document.getElementById('pg-conteo').textContent = lista.length + ' procedimiento(s) · ' + lista.filter(r => r.activo).length + ' vigentes · ' + programasPlantilla.length + ' en total';
       const tb = document.getElementById('pg-filas');
       if (!lista.length) { tb.innerHTML = '<tr><td colspan="7" class="p-8 text-center text-slate-400">No hay procedimientos con este filtro.</td></tr>'; return; }
@@ -3647,7 +3647,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
           '<td class="p-2 border-r border-slate-200"><input type="text" value="' + escapeHtml(r.tipo_procedimiento || '') + '" onchange="guardarCampoPlantilla(' + r.id + ',\'tipo_procedimiento\',this.value)" class="w-full p-1 border border-slate-200 rounded outline-none bg-white"></td>' +
           '<td class="p-2 border-r border-slate-200"><textarea rows="3" onchange="guardarCampoPlantilla(' + r.id + ',\'procedimiento\',this.value)" class="w-full p-1 border border-slate-200 rounded outline-none bg-white leading-relaxed">' + escapeHtml(r.procedimiento || '') + '</textarea></td>' +
           '<td class="p-2 border-r border-slate-200"><textarea rows="3" onchange="guardarCampoPlantilla(' + r.id + ',\'norma\',this.value)" class="w-full p-1 border border-slate-200 rounded outline-none bg-white text-[11px] leading-relaxed">' + escapeHtml(r.norma || '') + '</textarea></td>' +
-          '<td class="p-2 border-r border-slate-200 text-[11px]">' + escapeHtml(r.tamanos || '') + '</td>' +
+          '<td class="p-2 border-r border-slate-200"><select onchange="guardarCampoPlantilla(' + r.id + ',\'alcance\',this.value)" class="w-full p-1 border border-slate-200 rounded outline-none bg-white text-[11px]"><option value="Base"' + ((r.alcance || 'Base') === 'Base' ? ' selected' : '') + '>Base</option><option value="Solo riesgo alto"' + (r.alcance === 'Solo riesgo alto' ? ' selected' : '') + '>Solo riesgo alto</option></select></td>' +
           '<td class="p-2 border-r border-slate-200 text-[11px]">' + escapeHtml(r.riesgos || '') + '</td>' +
           '<td class="p-2 text-center"><input type="checkbox" ' + (r.activo ? 'checked' : '') + ' onchange="guardarCampoPlantilla(' + r.id + ',\'activo\',this.checked)"></td></tr>';
       });
