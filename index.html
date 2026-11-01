@@ -1103,7 +1103,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
               <th class="p-3 border-r border-slate-200 min-w-[360px] w-full">Procedimiento</th>
               <th class="p-3 border-r border-slate-200 min-w-[170px]">Norma de referencia</th>
               <th class="p-3 border-r border-slate-200 w-36">Alcance</th>
-              <th class="p-3 border-r border-slate-200 w-28">Riesgo</th>
+              <th class="p-3 border-r border-slate-200 w-40">Tamaño de empresa</th>
               <th class="p-3 w-24 text-center">Vigente</th>
             </tr>
           </thead>
@@ -3648,10 +3648,14 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
           '<td class="p-2 border-r border-slate-200"><textarea rows="3" onchange="guardarCampoPlantilla(' + r.id + ',\'procedimiento\',this.value)" class="w-full p-1 border border-slate-200 rounded outline-none bg-white leading-relaxed">' + escapeHtml(r.procedimiento || '') + '</textarea></td>' +
           '<td class="p-2 border-r border-slate-200"><textarea rows="3" onchange="guardarCampoPlantilla(' + r.id + ',\'norma\',this.value)" class="w-full p-1 border border-slate-200 rounded outline-none bg-white text-[11px] leading-relaxed">' + escapeHtml(r.norma || '') + '</textarea></td>' +
           '<td class="p-2 border-r border-slate-200"><select onchange="guardarCampoPlantilla(' + r.id + ',\'alcance\',this.value)" class="w-full p-1 border border-slate-200 rounded outline-none bg-white text-[11px]"><option value="Base"' + ((r.alcance || 'Base') === 'Base' ? ' selected' : '') + '>Base</option><option value="Solo riesgo alto"' + (r.alcance === 'Solo riesgo alto' ? ' selected' : '') + '>Solo riesgo alto</option></select></td>' +
-          '<td class="p-2 border-r border-slate-200 text-[11px]">' + escapeHtml(r.riesgos || '') + '</td>' +
+          '<td class="p-2 border-r border-slate-200 text-[11px]">' + ['Gran dimensión', 'Mediana', 'Pequeña'].map(t => '<label class="flex items-center gap-1 whitespace-nowrap"><input type="checkbox" data-tam="' + r.id + '" value="' + t + '"' + (String(r.tamanos || '').includes(t) ? ' checked' : '') + ' onchange="guardarTamanoPlantilla(' + r.id + ')"> ' + t + '</label>').join('') + '</td>' +
           '<td class="p-2 text-center"><input type="checkbox" ' + (r.activo ? 'checked' : '') + ' onchange="guardarCampoPlantilla(' + r.id + ',\'activo\',this.checked)"></td></tr>';
       });
       tb.innerHTML = html;
+    }
+    function guardarTamanoPlantilla(id) {
+      const marcados = Array.from(document.querySelectorAll('input[data-tam="' + id + '"]')).filter(x => x.checked).map(x => x.value);
+      guardarCampoPlantilla(id, 'tamanos', marcados.length ? marcados.join(', ') : null);
     }
     async function guardarCampoPlantilla(id, campo, valor) {
       const est = document.getElementById('pg-estado');
