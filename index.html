@@ -1143,7 +1143,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label class="block text-xs font-semibold text-slate-600 mb-1">Documentación para el análisis (uno o varios archivos, máx. 50 MB cada uno)</label>
-            <input type="file" id="pc-archivos" multiple onchange="pcArchivosElegidos()" class="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs sm:text-sm outline-none">
+            <input type="file" id="pc-archivos" multiple onchange="pcAgregarSeleccion(this)" class="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs sm:text-sm outline-none">
             <div id="pc-checklist" class="mt-2 text-[11px] text-slate-600"></div>
             <div id="pc-lista-arch" class="mt-2 space-y-1"></div>
             <p class="mt-1 text-[11px] text-slate-400">Se leen PDF (con texto o escaneados), Excel, CSV, TXT y fotos JPG o PNG. Las fotos y los escaneos los transcribe Claude y las cifras deben verificarse contra el original.</p>
@@ -4084,7 +4084,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       if (!v('pc-cliente')) return err('Elige el cliente.');
       if (!v('pc-anio')) return err('Elige el año a evaluar.');
       if (!v('pc-sumaria')) return err('Elige la cuenta (sumaria).');
-      const archivos = [...(document.getElementById('pc-archivos').files || [])];
+      const archivos = [...pcArchivosSel];
       if (!archivos.length) return err('Sube al menos un archivo con la documentación.');
       const grande = archivos.find(f => f.size > 52428800); if (grande) return err('El archivo "' + grande.name + '" supera los 50 MB. Sube una versión resumida o filtrada a lo que se va a analizar.');
       if (archivos.some((f, i) => !pcEtiquetasElegidas[i])) return err('Elige el tipo de cada archivo (conciliación, estado de cuenta, etc.).');
@@ -4107,7 +4107,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       msg.textContent = 'Pedido enviado. Avisando por correo al Socio y al Supervisor…';
       const av = await avisarPedidoCorreo(ins.id, 'solicitado');
       msg.textContent = 'Pedido enviado con ' + archivos.length + ' archivo(s). ' + av;
-      document.getElementById('pc-nota').value = ''; document.getElementById('pc-archivos').value = ''; document.getElementById('pc-confirma').checked = false; pcArchivosElegidos();
+      document.getElementById('pc-nota').value = ''; document.getElementById('pc-archivos').value = ''; pcArchivosSel = []; pcEtiquetasElegidas = []; document.getElementById('pc-confirma').checked = false; pcArchivosElegidos();
       registrarActividad('Solicitó análisis a Claude', fila.sumaria + ' · ' + fila.visita, { cliente: fila.cliente_id, anio: String(fila.anio) });
       cargarPedidosClaude();
     }
@@ -4137,15 +4137,26 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
     };
     function pcEtiquetas(sumaria) { return PC_ETIQ[sumaria] || ['Documento de soporte', 'Otro']; }
     let pcEtiquetasElegidas = [];
+    let pcArchivosSel = [];
+    function pcAgregarSeleccion(inp) {
+      const nuevos = [...(inp.files || [])];
+      nuevos.forEach(f => { if (!pcArchivosSel.some(x => x.name === f.name && x.size === f.size)) pcArchivosSel.push(f); });
+      inp.value = '';
+      pcArchivosElegidos();
+    }
+    function pcQuitarArchivo(i) {
+      pcArchivosSel.splice(i, 1); pcEtiquetasElegidas.splice(i, 1);
+      pcArchivosElegidos();
+    }
     function pcEtiquetaSugerida(nombre, et) {
       const reglas = [[/concilia/i, 'Conciliación bancaria'], [/estado.?de.?cuenta|extracto/i, 'Estado de cuenta'], [/confirma/i, 'Confirmación bancaria'], [/firma/i, 'Firmas autorizadas'], [/adenda|renov/i, 'Adenda o renovación'], [/contrato/i, 'Contrato'], [/niif|evaluaci/i, 'Evaluación NIIF 16'], [/factura|pago/i, 'Factura o soporte de pagos']];
       const r = reglas.find(x => x[0].test(nombre) && et.includes(x[1])); return r ? r[1] : '';
     }
     function pcArchivosElegidos() {
-      const fs = [...((document.getElementById('pc-archivos') || {}).files || [])], et = pcEtiquetas(valorAnalisis('pc-sumaria')), prev = pcEtiquetasElegidas;
+      const fs = pcArchivosSel, et = pcEtiquetas(valorAnalisis('pc-sumaria')), prev = pcEtiquetasElegidas;
       pcEtiquetasElegidas = fs.map((f, i) => (et.includes(prev[i]) ? prev[i] : pcEtiquetaSugerida(f.name, et)));
       const lista = document.getElementById('pc-lista-arch');
-      if (lista) lista.innerHTML = fs.map((f, i) => '<div class="flex flex-wrap items-center gap-2 text-[11px]"><span class="flex-1 min-w-[10rem] break-all">📎 ' + escapeHtml(f.name) + ' <span class="text-slate-400">(' + tamanoLegible(f.size) + ')</span></span><select onchange="pcEtiquetasElegidas[' + i + '] = this.value; pcChecklist()" class="p-1 border border-slate-300 rounded text-[11px] bg-white"><option value="">— Elige el tipo —</option>' + et.map(x => '<option value="' + escapeHtml(x) + '"' + (pcEtiquetasElegidas[i] === x ? ' selected' : '') + '>' + escapeHtml(x) + '</option>').join('') + '</select></div>').join('');
+      if (lista) lista.innerHTML = fs.map((f, i) => '<div class="flex flex-wrap items-center gap-2 text-[11px]"><span class="flex-1 min-w-[10rem] break-all">📎 ' + escapeHtml(f.name) + ' <span class="text-slate-400">(' + tamanoLegible(f.size) + ')</span></span><select onchange="pcEtiquetasElegidas[' + i + '] = this.value; pcChecklist()" class="p-1 border border-slate-300 rounded text-[11px] bg-white"><option value="">— Elige el tipo —</option>' + et.map(x => '<option value="' + escapeHtml(x) + '"' + (pcEtiquetasElegidas[i] === x ? ' selected' : '') + '>' + escapeHtml(x) + '</option>').join('') + '</select><button type="button" onclick="pcQuitarArchivo(' + i + ')" class="px-2 py-0.5 rounded border border-slate-300 text-slate-600 hover:bg-slate-100" title="Quitar este archivo">✕ Quitar</button></div>').join('');
       pcChecklist();
     }
     function pcChecklist() {
