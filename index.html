@@ -3662,11 +3662,37 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       if (!chips) return ta;
       const b = chips.map((c, i) => {
         if (!c.k.length) return '<span class="inline-block px-1.5 py-0.5 m-0.5 text-[11px] text-slate-500">' + escapeHtml(c.t) + '</span>';
-        const tip = c.k.map(k => { const x = textoNorma(k); return x.n + ' ' + x.p + ': ' + x.t; }).join('\n\n');
-        return '<button type="button" title="' + escapeHtml(tip.length > 700 ? tip.slice(0, 700) + '… (clic para ver completo)' : tip) + '" onclick="abrirNorma(' + r.id + ',' + i + ')" class="inline-block px-1.5 py-0.5 m-0.5 text-[11px] rounded border border-blue-200 bg-blue-50 text-blue-800 hover:bg-blue-100 cursor-pointer">' + escapeHtml(c.t) + '</button>';
+        return '<button type="button" data-ntip="' + r.id + ',' + i + '" onclick="abrirNorma(' + r.id + ',' + i + ')" class="inline-block px-1.5 py-0.5 m-0.5 text-[11px] rounded border border-blue-200 bg-blue-50 text-blue-800 hover:bg-blue-100 cursor-pointer">' + escapeHtml(c.t) + '</button>';
       }).join('');
       return '<div>' + b + ' <button type="button" title="Editar el texto de la referencia" onclick="var t=document.getElementById(\'nta-' + r.id + '\');t.style.display=t.style.display===\'none\'?\'block\':\'none\'" class="text-slate-400 hover:text-slate-700 text-xs">✎</button></div>' + ta;
     }
+    function textoTipNorma(id, i) {
+      const r = programasPlantilla.find(x => x.id === id); if (!r) return '';
+      const c = (normasDB().m[r.norma] || [])[i]; if (!c) return '';
+      const t = c.k.map(k => { const x = textoNorma(k); return '<b>' + escapeHtml(x.n + ' ' + x.p) + '</b><br>' + escapeHtml(x.t.length > 600 ? x.t.slice(0, 600) + '…' : x.t); }).join('<br><br>');
+      return t + '<div style="color:#94a3b8;margin-top:6px;font-size:10px">Clic para ver completo</div>';
+    }
+    (function () {
+      let tip = null;
+      function quitar() { if (tip) { tip.remove(); tip = null; } }
+      document.addEventListener('mouseover', function (e) {
+        const b = e.target.closest && e.target.closest('[data-ntip]');
+        if (!b) { quitar(); return; }
+        if (tip && tip._b === b) return;
+        quitar();
+        const p = b.getAttribute('data-ntip').split(',').map(Number);
+        tip = document.createElement('div'); tip._b = b;
+        tip.style.cssText = 'position:fixed;z-index:10000;max-width:420px;background:#fff;color:#334155;border:1px solid #cbd5e1;border-radius:10px;box-shadow:0 6px 20px rgba(15,23,42,.15);padding:10px 12px;font-size:12px;line-height:1.5;pointer-events:none';
+        tip.innerHTML = textoTipNorma(p[0], p[1]);
+        document.body.appendChild(tip);
+        const r = b.getBoundingClientRect(), w = tip.offsetWidth, hh = tip.offsetHeight;
+        let x = Math.min(r.left, window.innerWidth - w - 10); if (x < 10) x = 10;
+        let y = r.bottom + 6; if (y + hh > window.innerHeight - 10) y = Math.max(10, r.top - hh - 6);
+        tip.style.left = x + 'px'; tip.style.top = y + 'px';
+      });
+      document.addEventListener('scroll', quitar, true);
+      document.addEventListener('click', quitar, true);
+    })();
     function abrirNorma(id, i) {
       const r = programasPlantilla.find(x => x.id === id); if (!r) return;
       const c = (normasDB().m[r.norma] || [])[i]; if (!c) return;
