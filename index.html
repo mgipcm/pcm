@@ -4063,7 +4063,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       if (origen && !sa.options.length) sa.innerHTML = origen.innerHTML;
       if (!catalogoCargado) await cargarCatalogoCuentas();
       const ss = document.getElementById('pc-sumaria');
-      if (!ss.options.length) ss.innerHTML = '<option value="">-- Elige la cuenta --</option>' + catalogoCuentas.map(c => '<option value="' + escapeHtml(c.sumaria) + '">' + escapeHtml(c.cuenta || c.sumaria) + '</option>').join('');
+      if (!ss.options.length) ss.innerHTML = '<option value="">-- Elige la cuenta --</option>' + catalogoCuentas.filter(c => !/^(FG|LA|QL)\d*$/.test(c.sumaria)).map(c => '<option value="' + escapeHtml(c.sumaria) + '">' + escapeHtml(c.cuenta || c.sumaria) + '</option>').join('');
       cargarPedidosClaude();
     }
     async function cargarPedidosClaude() {
