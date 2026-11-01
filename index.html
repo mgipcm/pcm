@@ -1115,7 +1115,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
     <section id="sec-pedidos-claude" class="hidden bg-white rounded-2xl shadow-xl border border-slate-200 p-6 min-h-[92vh] space-y-5">
       <div class="border-b pb-4">
         <h1 class="text-xl font-bold text-slate-800">Pedidos a Claude</h1>
-        <p class="text-xs text-slate-500">El auditor sube aquí la documentación que se necesita para el análisis y es responsable de que sea completa y adecuada. El Socio o el Supervisor lo autoriza. Claude solo trabaja los pedidos autorizados y deja el resultado en "Trabajo de Claude por revisar". Los archivos son temporales: se eliminan al revisar el trabajo o a los 15 días, y queda el registro con sus nombres.</p>
+        <p class="text-xs text-slate-500">El auditor sube aquí la documentación que se necesita para el análisis y es responsable de que sea completa y adecuada. El Socio o el Supervisor lo autoriza. Claude solo trabaja los pedidos autorizados y deja el resultado en "Trabajo de Claude por revisar". Los archivos son temporales: se eliminan a los 3 días de hacer el pedido (si Claude ya lo trabajó, se mantienen 3 días más desde ese momento) o si el pedido se cancela o se rechaza, y queda el registro con sus nombres.</p>
       </div>
       <div class="border border-slate-300 rounded-xl p-4 space-y-3">
         <h2 class="text-xs font-bold text-slate-700">Nuevo pedido</h2>
@@ -4180,7 +4180,13 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
     }
 
     // ===== Archivos temporales de los pedidos =====
-    const DIAS_ARCHIVOS_PEDIDO = 15;
+    const DIAS_ARCHIVOS_PEDIDO = 3;
+    // Vence a los 3 días del pedido; si Claude ya lo hizo, se mantiene 3 días más desde que lo hizo
+    function venceArchivosPedido(p) {
+      const dia = 86400000; let v = new Date(p.created_at).getTime() + DIAS_ARCHIVOS_PEDIDO * dia;
+      if (p.estado === 'hecho' && p.hecho_at) v = Math.max(v, new Date(p.hecho_at).getTime() + DIAS_ARCHIVOS_PEDIDO * dia);
+      return new Date(v);
+    }
     function tamanoLegible(b) { b = Number(b) || 0; return b >= 1048576 ? (b / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(b / 1024)) + ' KB'; }
     async function cargarArchivosPedidos() {
       const ids = pedidosClaude.map(p => p.id); pedidosClaude.forEach(p => { p._arch = []; });
@@ -4191,21 +4197,20 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       const mapa = {}; (lec || []).forEach(l => { mapa[l.archivo_id] = l; });
       (data || []).forEach(a => { a._lectura = mapa[a.id] || null; });
     }
-    // Elimina los archivos de pedidos ya revisados, vencidos (15 días) o cancelados/rechazados; conserva el registro con los nombres.
+    // Elimina los archivos de pedidos vencidos (3 días) o cancelados/rechazados; conserva el registro con los nombres.
     async function limpiarArchivosPedidos() {
       try {
         const { data: act } = await supabaseClient.from('pedidos_claude_archivos').select('id, pedido_id, ruta').is('eliminado_at', null);
         if (!act || !act.length) return;
         const pids = [...new Set(act.map(a => a.pedido_id))];
-        const { data: peds } = await supabaseClient.from('pedidos_claude').select('id, created_at, estado, resultado_id').in('id', pids);
+        const { data: peds } = await supabaseClient.from('pedidos_claude').select('id, created_at, estado, hecho_at, resultado_id').in('id', pids);
         const rids = (peds || []).map(p => p.resultado_id).filter(Boolean);
         let revis = {};
         if (rids.length) { const { data: an } = await supabaseClient.from('analisis_claude_cuentas').select('id, estado_revision').in('id', rids); (an || []).forEach(r => { revis[r.id] = r.estado_revision; }); }
         const motivo = {}, ahora = Date.now();
         (peds || []).forEach(p => {
-          if (p.resultado_id && (revis[p.resultado_id] === 'revisado' || revis[p.resultado_id] === 'modificado')) motivo[p.id] = 'Trabajo revisado';
-          else if (p.estado === 'cancelado' || p.estado === 'rechazado') motivo[p.id] = p.estado === 'cancelado' ? 'Pedido cancelado' : 'Pedido rechazado';
-          else if (ahora - new Date(p.created_at).getTime() > DIAS_ARCHIVOS_PEDIDO * 86400000) motivo[p.id] = 'Venció el plazo de ' + DIAS_ARCHIVOS_PEDIDO + ' días';
+          if (p.estado === 'cancelado' || p.estado === 'rechazado') motivo[p.id] = p.estado === 'cancelado' ? 'Pedido cancelado' : 'Pedido rechazado';
+          else if (ahora > venceArchivosPedido(p).getTime()) motivo[p.id] = 'Venció el plazo de ' + DIAS_ARCHIVOS_PEDIDO + ' días';
         });
         for (const pid of Object.keys(motivo)) {
           const lote = act.filter(a => a.pedido_id === pid); if (!lote.length) continue;
@@ -4225,7 +4230,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       const arch = p._arch || [], vivos = arch.filter(a => !a.eliminado_at), idos = arch.filter(a => a.eliminado_at);
       let h = '';
       if (vivos.length) {
-        const vence = new Date(new Date(p.created_at).getTime() + DIAS_ARCHIVOS_PEDIDO * 86400000);
+        const vence = venceArchivosPedido(p);
         h += '<div class="space-y-0.5">' + vivos.map(a => '<div class="break-all">📎 ' + (a.etiqueta ? '<span class="text-slate-500">[' + escapeHtml(a.etiqueta) + ']</span> ' : '') + (puedeAutorizarPedidos() ? '<a href="#" onclick="descargarArchivoPedido(\'' + escapeHtml(a.ruta).replace(/'/g, '') + '\', \'' + escapeHtml(a.nombre).replace(/'/g, '') + '\'); return false;" class="underline text-slate-800">' + escapeHtml(a.nombre) + '</a>' : escapeHtml(a.nombre)) + ' <span class="text-slate-400">(' + tamanoLegible(a.tamano) + ')</span> ' + (a._lectura ? (a._lectura.error ? '<span class="text-amber-700" title="' + escapeHtml(a._lectura.error) + '">⚠ no se pudo leer: ' + escapeHtml(a._lectura.error) + '</span>' : (a._lectura.origen_lectura === 'transcripcion' ? '<span class="text-amber-700">✓ transcrito de imagen: verifica las cifras</span>' : '<span class="text-emerald-700">✓ leído</span>')) : '<span class="text-slate-400">leyendo…</span>') + '</div>').join('') + '</div><div class="text-[11px] text-slate-400 mt-1">Se eliminan al revisar el trabajo o el ' + fechaCortaOrigen(vence.toISOString()) + '</div>';
       }
       if (idos.length) h += '<div class="text-[11px] text-slate-500 mt-1">Archivos eliminados (' + escapeHtml(idos[0].eliminado_motivo || '') + ', ' + fechaCortaOrigen(idos[0].eliminado_at) + '): ' + idos.map(a => escapeHtml(a.nombre) + ' (' + tamanoLegible(a.tamano) + ')').join('; ') + '</div>';
