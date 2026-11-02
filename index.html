@@ -1159,10 +1159,34 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
           <span id="pc-msg" class="text-[11px] text-slate-500 min-h-[1rem]"></span>
         </div>
       </div>
+      <div class="space-y-2">
+        <h2 class="text-xs font-bold text-slate-700">Mis pedidos</h2>
+        <div class="overflow-x-auto border border-slate-200 rounded-xl shadow-sm bg-white">
+          <table class="w-full text-left text-xs text-slate-700 border-collapse">
+            <thead class="bg-slate-100 text-slate-600 text-[10px] font-bold border-b border-slate-200">
+              <tr>
+                <th class="p-3 border-r border-slate-200 min-w-[150px]">Cliente / Año</th>
+                <th class="p-3 border-r border-slate-200 min-w-[170px]">Cuenta</th>
+                <th class="p-3 border-r border-slate-200 min-w-[240px]">Documentación y nota</th>
+                <th class="p-3 border-r border-slate-200 min-w-[190px]">Estado</th>
+                <th class="p-3 w-40 text-center">Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="pc-mis-filas" class="divide-y divide-slate-200"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section id="sec-aprobaciones-claude" class="hidden bg-white rounded-2xl shadow-xl border border-slate-200 p-6 min-h-[92vh] space-y-5">
+      <div class="border-b pb-4">
+        <h1 class="text-xl font-bold text-slate-800">Aprobaciones de pedidos</h1>
+        <p class="text-xs text-slate-500">Aquí el Socio o el Supervisor autorizan, rechazan o cancelan los pedidos a Claude. Claude solo trabaja los pedidos autorizados y deja el resultado en "Trabajo de Claude por revisar".</p>
+      </div>
       <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div>
           <label class="block text-xs font-semibold text-slate-600 mb-1">Cliente</label>
-          <select id="pc-f-cliente" onchange="cargarPedidosClaude()" class="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs sm:text-sm outline-none"></select>
+          <select id="pc-f-cliente" onchange="pintarPedidosClaude()" class="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs sm:text-sm outline-none"></select>
         </div>
         <div>
           <label class="block text-xs font-semibold text-slate-600 mb-1">Estado</label>
@@ -3151,6 +3175,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
     }
 
     function navegarMenu(seccion, sub, cuenta) {
+      if (seccion === 'aprobaciones-claude' && !puedeAutorizarPedidos()) { alert('Solo el Socio o el Supervisor pueden aprobar pedidos.'); return; }
       if (seccion === 'mayor') { try { mayorPoblarClientes(); } catch (e) { } }
       if (seccion === 'visitas') { fechaCalendarioActual = new Date(); renderizarCalendarioLineal(); setTimeout(posicionarCalendarioHoy, 60); }
       // Clientes y Usuarios solo se abren con ingreso de Socio o Supervisor
@@ -3159,18 +3184,18 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
         return;
       }
 
-      const claveLinea = (seccion === 'analisis' && cuenta) ? 'cta:' + cuenta : seccion;
-      if ((seccion === 'sumarias' || seccion === 'pendientes' || seccion === 'claude-revisar' || seccion === 'pedidos-claude' || seccion === 'arrend' || seccion === 'import' || seccion === 'concil' || (seccion === 'analisis' && cuenta)) && !herramientaHabilitada(claveLinea)) { avisarEnDesarrollo(); return; }
-      if (!herramientaHabilitada(seccion)) {
+      const claveLinea = (seccion === 'analisis' && cuenta) ? 'cta:' + cuenta : (seccion === 'aprobaciones-claude' ? 'pedidos-claude' : seccion);
+      if ((seccion === 'sumarias' || seccion === 'pendientes' || seccion === 'claude-revisar' || seccion === 'pedidos-claude' || seccion === 'aprobaciones-claude' || seccion === 'arrend' || seccion === 'import' || seccion === 'concil' || (seccion === 'analisis' && cuenta)) && !herramientaHabilitada(claveLinea)) { avisarEnDesarrollo(); return; }
+      if (!herramientaHabilitada(seccion === 'aprobaciones-claude' ? 'pedidos-claude' : seccion)) {
         if (seccion === 'auditoria') seccion = 'desarrollo'; // pantalla principal: se muestra un aviso en vez de un mensaje emergente
         else { avisarEnDesarrollo(); return; }
       }
       if (!['clientes', 'usuarios', 'cuentas', 'habilitar', 'historial', 'medidor', 'programas'].includes(seccion)) guardarVista({ seccion: seccion, sub: sub || null, cuenta: cuenta || null });
 
-      const secciones = ['desarrollo', 'clientes', 'usuarios', 'cuentas', 'habilitar', 'historial', 'medidor', 'programas', 'sumarias', 'pendientes', 'claude-revisar', 'pedidos-claude', 'flujo', 'auditoria', 'analisis', 'visitas', 'asignacion', 'indices', 'mayor', 'contratos', 'arrend', 'import', 'concil', 'pce', 'reuniones', 'mas-herramientas'];
+      const secciones = ['desarrollo', 'clientes', 'usuarios', 'cuentas', 'habilitar', 'historial', 'medidor', 'programas', 'sumarias', 'pendientes', 'claude-revisar', 'pedidos-claude', 'aprobaciones-claude', 'flujo', 'auditoria', 'analisis', 'visitas', 'asignacion', 'indices', 'mayor', 'contratos', 'arrend', 'import', 'concil', 'pce', 'reuniones', 'mas-herramientas'];
       const grupoSubmenu = sec => ['indices', 'mayor', 'contratos', 'flujo', 'pce', 'reuniones', 'mas-herramientas'].includes(sec)
         ? 'herramientas'
-        : (['clientes', 'usuarios', 'cuentas', 'habilitar', 'historial', 'medidor', 'programas'].includes(sec) ? 'config' : (['sumarias', 'pendientes', 'claude-revisar', 'pedidos-claude'].includes(sec) ? 'analisis' : null));
+        : (['clientes', 'usuarios', 'cuentas', 'habilitar', 'historial', 'medidor', 'programas'].includes(sec) ? 'config' : (['sumarias', 'pendientes', 'claude-revisar', 'pedidos-claude', 'aprobaciones-claude'].includes(sec) ? 'analisis' : null));
       const esSubmenu = sec => grupoSubmenu(sec) !== null;
       
       secciones.forEach(sec => {
@@ -3198,7 +3223,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       if (seccion === 'sumarias') abrirSumarias();
       if (seccion === 'pendientes') abrirPendientes();
       if (seccion === 'claude-revisar') abrirClaudeRevisar();
-      if (seccion === 'pedidos-claude') abrirPedidosClaude();
+      if (seccion === 'pedidos-claude' || seccion === 'aprobaciones-claude') abrirPedidosClaude();
       if (seccion === 'flujo') abrirFlujo();
       if (seccion === 'arrend') abrirArrend();
       if (seccion === 'import') abrirImport();
@@ -3340,7 +3365,10 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
           <span>Trabajo de Claude por revisar</span>
         </button>
         <button type="button" onclick="navegarMenu('pedidos-claude')" id="nav-pedidos-claude" class="w-full text-left px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:bg-slate-800 hover:text-white transition flex items-center gap-2">
-          <span>Pedidos a Claude</span><span id="badge-pedidos-claude" class="hidden ml-auto text-[10px] font-bold bg-slate-200 text-slate-900 rounded-full px-2 py-0.5"></span>
+          <span>Pedidos a Claude</span>
+        </button>
+        <button type="button" onclick="navegarMenu('aprobaciones-claude')" id="nav-aprobaciones-claude" style="display:none" class="w-full text-left px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:bg-slate-800 hover:text-white transition flex items-center gap-2">
+          <span>Aprobaciones de pedidos</span><span id="badge-pedidos-claude" class="hidden ml-auto text-[10px] font-bold bg-slate-200 text-slate-900 rounded-full px-2 py-0.5"></span>
         </button>`;
       cont.innerHTML = botonSumarias + Object.entries(RUBROS_ANALISIS).map(([r, def], i) => {
         const claseBtn = 'w-full text-left px-2 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:bg-slate-800 hover:text-white transition flex items-center gap-2';
@@ -3364,6 +3392,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
           </div>`;
       }).join('');
       if (typeof aplicarEstadoMenu === 'function') aplicarEstadoMenu();
+      try { avisoPedidosClaude(false); } catch (e) { }
     }
 
 
@@ -4069,7 +4098,6 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
     async function cargarPedidosClaude() {
       const cli = valorAnalisis('pc-f-cliente');
       let q = supabaseClient.from('pedidos_claude').select('*').order('created_at', { ascending: false }).limit(300);
-      if (cli && cli !== '__todos__') q = q.eq('cliente_id', cli);
       const { data, error } = await q;
       const msg = document.getElementById('pc-msg');
       if (error) { pedidosClaude = []; msg.textContent = 'No se pudo cargar: ' + (error.message || error); msg.className = 'text-[11px] min-h-[1rem] text-red-600 font-bold'; }
@@ -4237,7 +4265,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       if (error || !data) { alert('No se pudo abrir el archivo: ' + ((error && error.message) || 'sin conexión')); return; }
       window.open(data.signedUrl, '_blank');
     }
-    function htmlArchivosPedido(p) {
+    function htmlArchivosPedido(p, sinAgregar) {
       const arch = p._arch || [], vivos = arch.filter(a => !a.eliminado_at), idos = arch.filter(a => a.eliminado_at);
       let h = '';
       if (vivos.length) {
@@ -4245,15 +4273,37 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
         h += '<div class="space-y-0.5">' + vivos.map(a => '<div class="break-all">📎 ' + (a.etiqueta ? '<span class="text-slate-500">[' + escapeHtml(a.etiqueta) + ']</span> ' : '') + (puedeAutorizarPedidos() ? '<a href="#" onclick="descargarArchivoPedido(\'' + escapeHtml(a.ruta).replace(/'/g, '') + '\', \'' + escapeHtml(a.nombre).replace(/'/g, '') + '\'); return false;" class="underline text-slate-800">' + escapeHtml(a.nombre) + '</a>' : escapeHtml(a.nombre)) + ' <span class="text-slate-400">(' + tamanoLegible(a.tamano) + ')</span> ' + (a._lectura ? (a._lectura.error ? '<span class="text-amber-700" title="' + escapeHtml(a._lectura.error) + '">⚠ no se pudo leer: ' + escapeHtml(a._lectura.error) + '</span>' : (a._lectura.origen_lectura === 'transcripcion' ? '<span class="text-amber-700">✓ transcrito de imagen: verifica las cifras</span>' : '<span class="text-emerald-700">✓ leído</span>')) : '<span class="text-slate-400">leyendo…</span>') + '</div>').join('') + '</div><div class="text-[11px] text-slate-400 mt-1">Se eliminan al revisar el trabajo o el ' + fechaCortaOrigen(vence.toISOString()) + '</div>';
       }
       if (idos.length) h += '<div class="text-[11px] text-slate-500 mt-1">Archivos eliminados (' + escapeHtml(idos[0].eliminado_motivo || '') + ', ' + fechaCortaOrigen(idos[0].eliminado_at) + '): ' + idos.map(a => escapeHtml(a.nombre) + ' (' + tamanoLegible(a.tamano) + ')').join('; ') + '</div>';
-      if (['solicitado', 'autorizado'].includes(p.estado) && (puedeAutorizarPedidos() || p.solicitado_por === nombreUsuarioActivo())) h += '<div class="mt-2 flex flex-wrap items-center gap-1"><select id="pc-et-' + p.id + '" class="p-1 border border-slate-300 rounded text-[11px] bg-white"><option value="">Tipo de archivo…</option>' + pcEtiquetas(p.sumaria).map(x => '<option value="' + escapeHtml(x) + '">' + escapeHtml(x) + '</option>').join('') + '</select><button type="button" onclick="pcAgregarArchivos(\'' + p.id + '\')" class="px-2 py-1 text-[11px] rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-100 font-medium">Agregar archivos</button></div>';
+      if (!sinAgregar && ['solicitado', 'autorizado'].includes(p.estado) && (puedeAutorizarPedidos() || p.solicitado_por === nombreUsuarioActivo())) h += '<div class="mt-2 flex flex-wrap items-center gap-1"><select id="pc-et-' + p.id + '" class="p-1 border border-slate-300 rounded text-[11px] bg-white"><option value="">Tipo de archivo…</option>' + pcEtiquetas(p.sumaria).map(x => '<option value="' + escapeHtml(x) + '">' + escapeHtml(x) + '</option>').join('') + '</select><button type="button" onclick="pcAgregarArchivos(\'' + p.id + '\')" class="px-2 py-1 text-[11px] rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-100 font-medium">Agregar archivos</button></div>';
       if (!arch.length && p.carpeta) h += '<div class="break-all">' + escapeHtml(p.carpeta) + '</div>';
       if (p.doc_confirmada_por) h += '<div class="text-[11px] text-slate-500 mt-1">Documentación confirmada por ' + escapeHtml(p.doc_confirmada_por) + '</div>';
       return h;
     }
+    function pintarMisPedidos() {
+      const tb = document.getElementById('pc-mis-filas'); if (!tb) return;
+      const yo = nombreUsuarioActivo(), lista = pedidosClaude.filter(p => yo && p.solicitado_por === yo);
+      if (!lista.length) { tb.innerHTML = '<tr><td colspan="5" class="p-6 text-center text-slate-400">Aún no has hecho pedidos.</td></tr>'; return; }
+      tb.innerHTML = lista.map(p => {
+        const cli = buscarClienteNombre(p.cliente_id), nom = cli ? (cli.nombre_corto || cli.nombre_completo || p.cliente_id) : p.cliente_id;
+        const c = catalogoCuentas.find(k => k.sumaria === p.sumaria), est = ESTADOS_PEDIDO[p.estado] || [p.estado, 'pill-origen'];
+        const detalle = p.estado === 'autorizado' || p.estado === 'hecho' ? 'Autorizó ' + escapeHtml(p.autorizado_por || '') + (p.autorizado_at ? ' · ' + fechaCortaOrigen(p.autorizado_at) : '') : (p.estado === 'rechazado' ? 'Motivo: ' + escapeHtml(p.motivo_rechazo || '—') : '');
+        const btn = (fn, txt, cls) => '<button type="button" onclick="' + fn + '(\'' + p.id + '\')" class="px-3 py-1.5 text-[11px] rounded-lg transition ' + cls + ' font-medium">' + txt + '</button>';
+        let acc = '';
+        if (p.estado === 'solicitado' || p.estado === 'autorizado') acc = btn('cancelarPedidoClaude', 'Cancelar', 'border border-slate-300 text-slate-700 hover:bg-slate-100');
+        else if (p.estado === 'cancelado' || p.estado === 'rechazado') acc = btn('eliminarPedidoClaude', 'Eliminar', 'text-slate-500 hover:bg-slate-100');
+        else if (p.estado === 'hecho') acc = '<button type="button" onclick="navegarMenu(\'claude-revisar\')" class="px-3 py-1.5 text-[11px] rounded-lg transition bg-slate-100 text-slate-800 hover:bg-slate-200 font-medium">Ver el trabajo</button>';
+        return '<tr class="align-top hover:bg-slate-50/80">' +
+          '<td class="p-3 border-r border-slate-200"><div class="font-bold text-slate-800">' + escapeHtml(nom) + '</div><div class="text-[11px] text-slate-500">' + p.anio + ' · ' + (p.visita === 'preliminar' ? 'Visita preliminar' : 'Visita final') + '</div></td>' +
+          '<td class="p-3 border-r border-slate-200 font-medium text-slate-800">' + escapeHtml(c ? c.cuenta : p.sumaria) + '</td>' +
+          '<td class="p-3 border-r border-slate-200">' + htmlArchivosPedido(p, true) + (p.nota ? '<div class="text-[11px] text-slate-500 mt-1">' + escapeHtml(p.nota) + '</div>' : '') + '</td>' +
+          '<td class="p-3 border-r border-slate-200"><span class="' + est[1] + '">' + est[0] + '</span>' + (detalle ? '<div class="text-[11px] text-slate-500 mt-1">' + detalle + '</div>' : '') + '</td>' +
+          '<td class="p-3 text-center whitespace-nowrap">' + acc + '</td></tr>';
+      }).join('');
+    }
     function pintarPedidosClaude() {
-      const f = valorAnalisis('pc-f-estado'), n = e => pedidosClaude.filter(p => p.estado === e).length;
+      pintarMisPedidos();
+      const f = valorAnalisis('pc-f-estado'), fcli = valorAnalisis('pc-f-cliente'), n = e => pedidosClaude.filter(p => p.estado === e).length;
       document.getElementById('pc-resumen').innerHTML = '<span class="pill-origen mod">Por autorizar: ' + n('solicitado') + '</span><span class="pill-origen">Autorizados, esperan a Claude: ' + n('autorizado') + '</span><span class="pill-origen rev">Hechos: ' + n('hecho') + '</span>';
-      const lista = pedidosClaude.filter(p => !f || p.estado === f), tb = document.getElementById('pc-filas');
+      const lista = pedidosClaude.filter(p => (!f || p.estado === f) && (!fcli || fcli === '__todos__' || p.cliente_id === fcli)), tb = document.getElementById('pc-filas');
       if (!lista.length) { tb.innerHTML = '<tr><td colspan="6" class="p-8 text-center text-slate-400">No hay pedidos con este filtro.</td></tr>'; return; }
       const aut = puedeAutorizarPedidos(), miNombre = nombreUsuarioActivo();
       tb.innerHTML = lista.map(p => {
@@ -4285,6 +4335,8 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       try {
         if (reiniciar) { clearInterval(timerAvisoPedidos); timerAvisoPedidos = setInterval(() => avisoPedidosClaude(false), 120000); }
         const b = document.getElementById('badge-pedidos-claude');
+        const nb = document.getElementById('nav-aprobaciones-claude');
+        if (nb) nb.style.display = (usuarioActivo && puedeAutorizarPedidos() && herramientaHabilitada('pedidos-claude')) ? '' : 'none';
         if (!usuarioActivo || !herramientaHabilitada('pedidos-claude')) { if (b) b.classList.add('hidden'); return; }
         const { data } = await supabaseClient.from('pedidos_claude').select('estado').in('estado', ['solicitado', 'autorizado']);
         const l = data || [], porAut = l.filter(x => x.estado === 'solicitado').length, auts = l.filter(x => x.estado === 'autorizado').length;
@@ -14105,7 +14157,7 @@ ${cont.innerHTML}
     // ===== Históricos de visitas: quién ingresa y qué hace (bitácora en Supabase) =====
     const NOMBRE_PANTALLA = {
       auditoria: '1. Auditoría/Planificación', desarrollo: 'Pantalla principal', analisis: '2. Auditoría/Análisis Claves',
-      sumarias: 'Sumarias', pendientes: 'Pendientes', 'claude-revisar': 'Trabajo de Claude por revisar', 'pedidos-claude': 'Pedidos a Claude', visitas: '3. Visitas (Calendario)', asignacion: '4. Asignación de Cuentas',
+      sumarias: 'Sumarias', pendientes: 'Pendientes', 'claude-revisar': 'Trabajo de Claude por revisar', 'pedidos-claude': 'Pedidos a Claude', 'aprobaciones-claude': 'Aprobaciones de pedidos', visitas: '3. Visitas (Calendario)', asignacion: '4. Asignación de Cuentas',
       indices: 'Herramienta: Índices', mayor: 'Herramienta: Mayor', contratos: 'Herramienta: Resumen de contratos',
       flujo: 'Herramienta: Flujo de efectivo', arrend: 'Herramienta: Arrendamientos NIIF 16', pce: 'Herramienta: Matriz PCE',
       reuniones: 'Herramienta: Resumen de reuniones', clientes: 'Configuración: Clientes', usuarios: 'Configuración: Usuarios / Auditores',
