@@ -14159,23 +14159,34 @@ ${cont.innerHTML}
       cbVerifAuto().forEach(([t, e, d, cod]) => { if (e === 'rev' && !cerr.has(cod)) ver.push({ t, d, cod, tipo: 'Automática' }); });
       CB_VERIF_MANUALES.forEach(([k, t, ref, cod]) => { const e = (V[k] || {}).e || 'pendiente'; if ((e === 'pendiente' || e === 'nocumple') && !cerr.has(cod)) ver.push({ t, d: e === 'nocumple' ? 'Marcada como No cumple' : 'Sin evaluar', cod, tipo: 'Del auditor' }); });
       const prog = cbE.plantilla ? cbFilasPrograma().filter(x => x.estado !== 'hecho' || (x.otro && !x.quien)) : [];
-      return { ver, prog };
+      // Una sola lista por programa: cada código aparece una vez con su procedimiento y sus verificaciones abiertas
+      const mapa = new Map();
+      const todos = cbE.plantilla ? cbFilasPrograma(true) : [];
+      const get = cod => { if (!mapa.has(cod)) mapa.set(cod, { cod, proc: todos.find(x => x.codigo === cod) || null, pendiente: false, ver: [] }); return mapa.get(cod); };
+      prog.forEach(x => { get(x.codigo).pendiente = true; });
+      ver.forEach(x => get(x.cod || '—').ver.push(x));
+      const grupos = [...mapa.values()].sort((a, b) => String(a.cod).localeCompare(String(b.cod), 'es', { numeric: true }));
+      return { ver, prog, grupos };
     }
     function cbHtmlConcluir() {
       if (cbE.plantilla === null) return '<div class="p-8 text-center text-slate-400 text-sm">Cargando...</div>';
       const P = cbPorConcluir();
-      if (!P.ver.length && !P.prog.length) return '<div class="p-8 text-center text-emerald-700 text-sm font-semibold">Nada pendiente: todas las verificaciones están resueltas y todos los procedimientos están hechos.</div>';
+      if (!P.grupos.length) return '<div class="p-8 text-center text-emerald-700 text-sm font-semibold">Nada pendiente: todas las verificaciones están resueltas y todos los procedimientos están hechos.</div>';
       const ir = (tab, txt) => '<button type="button" onclick="cbTab(\'' + tab + '\')" class="underline text-indigo-700 font-bold">' + txt + '</button>';
-      let h = '<div class="p-4 text-sm text-slate-700 space-y-5">';
-      h += '<div><div class="font-bold text-slate-800 mb-1">Verificaciones por resolver (' + P.ver.length + ') · ' + ir('verif', 'ir a Verificaciones') + '</div>';
-      h += P.ver.length ? '<div class="overflow-x-auto border border-slate-200 rounded-xl"><table class="w-full text-left text-xs border-collapse"><thead class="bg-slate-100 text-slate-600 font-bold border-b border-slate-200"><tr><th class="p-2 w-20">Programa</th><th class="p-2">Verificación</th><th class="p-2">Situación</th><th class="p-2 w-24">Origen</th></tr></thead><tbody>' + P.ver.map(x => '<tr class="border-b border-slate-100 align-top"><td class="p-2 font-semibold">' + escapeHtml(x.cod || '') + '</td><td class="p-2">' + escapeHtml(x.t) + '</td><td class="p-2 text-amber-700">' + escapeHtml(x.d || '') + '</td><td class="p-2 text-slate-500">' + x.tipo + '</td></tr>').join('') + '</tbody></table></div>' : '<div class="text-xs text-emerald-700">Todas resueltas.</div>';
-      h += '</div><div><div class="font-bold text-slate-800 mb-1">Procedimientos del programa sin concluir (' + P.prog.length + ') · ' + ir('programa', 'ir al Programa de trabajo') + '</div>';
-      h += P.prog.length ? '<div class="overflow-x-auto border border-slate-200 rounded-xl"><table class="w-full text-left text-xs border-collapse"><thead class="bg-slate-100 text-slate-600 font-bold border-b border-slate-200"><tr><th class="p-2 w-20">Código</th><th class="p-2">Procedimiento</th><th class="p-2 w-44">Verificaciones</th></tr></thead><tbody>' + P.prog.map(x => { const v = cbVerifDeProc(x.codigo); return '<tr class="border-b border-slate-100 align-top"><td class="p-2 font-semibold">' + escapeHtml(x.codigo) + '</td><td class="p-2"><div class="text-[11px] text-slate-400">' + escapeHtml(x.tipo_procedimiento || '') + '</div>' + escapeHtml(x.procedimiento || '') + '</td><td class="p-2">' + (v.total ? (v.abiertas ? '<span class="text-amber-700">' + v.abiertas + ' por resolver de ' + v.total + '</span>' : '<span class="text-emerald-700">Todas cerradas (' + v.total + ')</span>') : '<span class="text-slate-400">Sin verificaciones</span>') + '</td></tr>'; }).join('') + '</tbody></table></div>' : '<div class="text-xs text-emerald-700">Todos hechos.</div>';
-      return h + '</div></div>';
+      let h = '<div class="p-4 text-sm text-slate-700"><div class="font-bold text-slate-800 mb-2">Programas por concluir (' + P.grupos.length + ') · ' + ir('programa', 'ir al Programa de trabajo') + ' · ' + ir('verif', 'ir a Verificaciones') + '</div>';
+      h += '<div class="overflow-x-auto border border-slate-200 rounded-xl"><table class="w-full text-left text-xs border-collapse"><thead class="bg-slate-100 text-slate-600 font-bold border-b border-slate-200"><tr><th class="p-2 w-20">Programa</th><th class="p-2 min-w-[320px]">Procedimiento</th><th class="p-2 w-28">Estado</th><th class="p-2 min-w-[300px]">Verificaciones por resolver</th></tr></thead><tbody>';
+      h += P.grupos.map(g => {
+        const x = g.proc;
+        const proc = x ? '<div class="text-[11px] text-slate-400">' + escapeHtml(x.tipo_procedimiento || '') + '</div>' + escapeHtml(x.procedimiento || '') : '<span class="text-slate-400">—</span>';
+        const est = g.pendiente ? '<span class="text-amber-700 font-semibold">' + (x && x.estado === 'hecho' && x.otro ? 'Falta indicar auditor' : 'Pendiente') + '</span>' : '<span class="text-emerald-700 font-semibold">Hecho</span>';
+        const ver = g.ver.length ? g.ver.map(v => '<div class="mb-1">• ' + escapeHtml(v.t) + ' <span class="text-amber-700">(' + escapeHtml(v.d || '') + ')</span> <span class="text-slate-400">· ' + v.tipo + '</span></div>').join('') : '<span class="text-emerald-700">Todas cerradas</span>';
+        return '<tr class="border-b border-slate-100 align-top"><td class="p-2 font-semibold">' + escapeHtml(g.cod) + '</td><td class="p-2">' + proc + '</td><td class="p-2">' + est + '</td><td class="p-2">' + ver + '</td></tr>';
+      }).join('') + '</tbody></table></div></div>';
+      return h;
     }
     function cbRender() {
       const tabs = $cb('cb-tabs'); if (!tabs) return;
-      const _pc = cbPorConcluir(), _npc = _pc.ver.length + _pc.prog.length;
+      const _pc = cbPorConcluir(), _npc = _pc.grupos.length;
       tabs.innerHTML = CB_TABS.map(([t, n]) => '<button type="button" onclick="cbTab(\'' + t + '\')" class="px-3 py-1.5 text-xs transition rounded-lg ' + (cbE.tab === t ? 'bg-slate-200 text-slate-900 font-semibold' : 'text-slate-600 hover:bg-slate-100 font-medium') + '">' + n + (t === 'concluir' && _npc ? ' (' + _npc + ')' : '') + '</button>').join('') + '<button type="button" onclick="cbDescargar()" class="ml-auto px-3 py-1.5 rounded-lg text-xs bg-slate-100 text-slate-800 hover:bg-slate-200 font-medium transition">Descargar todo (Excel)</button>';
       const p = $cb('cb-panel'), n = $cb('cb-notas');
       const nota = (tit, items) => '<div class="mb-2"><div class="font-bold text-slate-700">' + tit + '</div><ul class="list-disc pl-5">' + items.map(i => '<li>' + i + '</li>').join('') + '</ul></div>';
@@ -14184,7 +14195,7 @@ ${cont.innerHTML}
       else if (cbE.tab === 'verif') { p.innerHTML = cbHtmlVerif(); n.innerHTML = nota('Cómo se usa', ['Las verificaciones automáticas se recalculan con los datos de la pestaña 2.', 'Las evaluaciones del auditor quedan guardadas por cliente y año, y cada una indica el procedimiento del programa al que pertenece.']); }
       else if (cbE.tab === 'revel') { p.innerHTML = cbHtmlRevel(); n.innerHTML = nota('Referencia', ['NIC 7 párr. 45-48: componentes del efectivo y revelación de saldos significativos no disponibles para uso del grupo.']); }
       else if (cbE.tab === 'claude') { p.innerHTML = cbHtmlClaude(); n.innerHTML = ''; }
-      else if (cbE.tab === 'concluir') { p.innerHTML = cbHtmlConcluir(); n.innerHTML = nota('Qué muestra', ['Junta lo que falta por cerrar en Verificaciones y en el Programa de trabajo. Cuando no queda nada, la cuenta está lista para revisión final.']); }
+      else if (cbE.tab === 'concluir') { p.innerHTML = cbHtmlConcluir(); n.innerHTML = nota('Qué muestra', ['Cada programa aparece una sola vez, con su procedimiento y las verificaciones que le faltan por resolver. Cuando no queda nada, la cuenta está lista para revisión final.']); }
       else { p.innerHTML = cbHtmlPrograma(); n.innerHTML = nota('Cómo se usa', ['Marca cada procedimiento como Hecho e indica dónde está el papel de trabajo. Queda registrado quién lo hizo.']); }
     }
     function cbDescargar() {
