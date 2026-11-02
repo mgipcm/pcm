@@ -3943,6 +3943,40 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
     }
     let arrVerTodosProg = false;
     function arrCtxRiesgo() { return ctxRiesgoRapido(valorAnalisis('ar-cliente'), valorAnalisis('ar-anio'), valorAnalisis('ar-visita'), () => { if (arrEstado.tab === 'programa') arrRender(); }); }
+
+    // ===== Programas de trabajo: quién hizo cada procedimiento (yo, otro auditor o planificación) =====
+    let AUDITORES = null;
+    async function cargarAuditores(alTerminar) {
+      if (AUDITORES !== null) return;
+      AUDITORES = [];
+      try {
+        const { data } = await supabaseClient.from('usuarios').select('*');
+        AUDITORES = [...new Set((data || []).map(u => String(u.nombre || u.nombre_completo || '').trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'es'));
+      } catch (e) { AUDITORES = []; }
+      if (alTerminar) alTerminar();
+    }
+    function esAnaliticaProg(x) { return /anal[ií]tica/i.test(String((x && x.tipo_procedimiento) || '')); }
+    function htmlSelectEstadoProg(x, fn, idArg) {
+      const v = x.estado !== 'hecho' ? 'pendiente' : (x.otro ? 'otro' : 'hecho');
+      const etOtro = esAnaliticaProg(x) ? 'Hecho en planificación' : 'Hecho por otro auditor';
+      const op = (val, txt) => '<option value="' + val + '"' + (v === val ? ' selected' : '') + '>' + txt + '</option>';
+      const opciones = esAnaliticaProg(x) ? [op('pendiente', 'Pendiente'), op('otro', etOtro), op('hecho', 'Hecho')] : [op('pendiente', 'Pendiente'), op('hecho', 'Hecho'), op('otro', etOtro)];
+      return '<select onchange="' + fn + '(\'' + idArg + '\', \'estado\', this.value)" class="w-full p-2 border border-slate-300 rounded-lg text-sm bg-white outline-none">' + opciones.join('') + '</select>';
+    }
+    function htmlQuienProg(x, fn, idArg, alTerminar) {
+      if (!(x.estado === 'hecho' && x.otro)) return escapeHtml(x.quien || '—');
+      if (AUDITORES === null) cargarAuditores(alTerminar);
+      const lista = (AUDITORES || []).slice(); if (x.quien && !lista.includes(x.quien)) lista.push(x.quien);
+      return '<select onchange="' + fn + '(\'' + idArg + '\', \'quien\', this.value)" class="w-full p-2 border rounded-lg text-sm bg-white outline-none ' + (x.quien ? 'border-slate-300' : 'border-amber-400') + '"><option value="">— Elige el auditor —</option>' + lista.map(n => '<option value="' + escapeHtml(n) + '"' + (x.quien === n ? ' selected' : '') + '>' + escapeHtml(n) + '</option>').join('') + '</select>' + (x.quien ? '' : '<div class="text-xs text-amber-700 mt-1">Falta indicar quién lo hizo</div>') + (x.registrado_por ? '<div class="text-[10px] text-slate-400 mt-0.5">Registrado por ' + escapeHtml(x.registrado_por) + '</div>' : '');
+    }
+    function aplicarCambioProg(e, campo, valor, quien, esAnalitica) {
+      if (campo === 'estado') {
+        const ahora = new Date().toISOString();
+        if (valor === 'otro') { e.estado = 'hecho'; e.otro = true; e.quien = ''; e.registrado_por = quien || ''; e.fecha = ahora; if (!e.donde && esAnalitica) e.donde = 'Planificación'; }
+        else { e.estado = valor; e.otro = false; e.quien = valor === 'hecho' ? quien : ''; e.registrado_por = ''; e.fecha = valor === 'hecho' ? ahora : null; }
+      } else e[campo] = valor;
+    }
+
     function arrFilasPrograma(todo) {
       const a = ORIGEN.arrend, prog = (a && Array.isArray(a.programa)) ? a.programa : [], ctx = arrCtxRiesgo();
       const todas = (ARR_PLANTILLA || []).map(x => ({ ...x, ...(prog.find(k => k.codigo === x.codigo) || {}), estado: (prog.find(k => k.codigo === x.codigo) || {}).estado || 'pendiente', noAplica: motivosNoAplica(x, x.sumaria, ctx) }));
@@ -3963,9 +3997,9 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
         l.forEach(x => {
           html += '<tr class="align-top border-b border-slate-100' + (x.noAplica.length ? ' opacity-60' : '') + '"><td class="p-3 font-semibold">' + escapeHtml(x.codigo) + '</td><td class="p-3"><div class="text-xs text-slate-400">' + escapeHtml(x.tipo_procedimiento || '') + '</div>' + escapeHtml(x.procedimiento || '') + (x.noAplica.length ? '<div class="text-xs text-amber-700 mt-1">Ya no aplica por ' + escapeHtml(x.noAplica.join(' y ')) + (x.estado === 'hecho' ? ' (estaba hecho)' : '') + '</div>' : '') + '</td>' +
             '<td class="p-3"><input type="text" value="' + escapeHtml(x.donde || '') + '" placeholder="Ej. Pestaña 7" onchange="arrProgSet(\'' + x.codigo + '\', \'donde\', this.value)" class="w-full p-2 border border-slate-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500"></td>' +
-            '<td class="p-3">' + escapeHtml(x.quien || '—') + '</td>' +
+            '<td class="p-3">' + htmlQuienProg(x, 'arrProgSet', x.codigo, arrRender) + '</td>' +
             '<td class="p-3 text-xs">' + (() => { const v = arrVerifDeProcedimiento(x.codigo); if (!v.total) return '<span class="text-slate-400">Sin verificaciones</span>'; const col = v.abiertas ? 'text-amber-700' : 'text-emerald-700'; return '<button type="button" onclick="arrIrVerif()" class="underline ' + col + ' font-bold text-left" title="Ir a la pestaña 9">' + (v.abiertas ? v.abiertas + ' por resolver de ' + v.total : 'Todas cerradas (' + v.total + ')') + '</button>' + (x.estado !== 'hecho' && !v.abiertas ? '<div class="text-slate-500">Puedes marcarlo Hecho</div>' : '') + (x.estado === 'hecho' && v.abiertas ? '<div class="text-amber-700">Está Hecho pero tiene verificaciones abiertas</div>' : ''); })() + '</td>' +
-            '<td class="p-3"><select onchange="arrProgSet(\'' + x.codigo + '\', \'estado\', this.value)" class="w-full p-2 border border-slate-300 rounded-lg text-sm bg-white outline-none"><option value="pendiente"' + (x.estado === 'hecho' ? '' : ' selected') + '>Pendiente</option><option value="hecho"' + (x.estado === 'hecho' ? ' selected' : '') + '>Hecho</option></select></td></tr>';
+            '<td class="p-3">' + htmlSelectEstadoProg(x, 'arrProgSet', x.codigo) + '</td></tr>';
         });
       });
       return html + '</tbody></table></div></div>';
@@ -3973,15 +4007,14 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
     async function arrProgSet(codigo, campo, valor) {
       const a = ORIGEN.arrend; if (!a) return;
       const quien = nombreUsuarioActivo(), msg = document.getElementById('ar-prog-msg');
-      if (campo === 'estado' && valor === 'hecho' && !quien) { alert('Ingresa con tu usuario para marcar un procedimiento como hecho.'); arrRender(); return; }
+      if (campo === 'estado' && valor !== 'pendiente' && !quien) { alert('Ingresa con tu usuario para marcar un procedimiento como hecho.'); arrRender(); return; }
       const prog = Array.isArray(a.programa) ? a.programa.map(k => ({ ...k })) : [];
       let e = prog.find(k => k.codigo === codigo); if (!e) { e = { codigo, donde: '', quien: '', estado: 'pendiente' }; prog.push(e); }
-      e[campo] = valor;
-      if (campo === 'estado') { e.quien = valor === 'hecho' ? quien : ''; e.fecha = valor === 'hecho' ? new Date().toISOString() : null; }
+      aplicarCambioProg(e, campo, valor, quien, esAnaliticaProg((ARR_PLANTILLA || []).find(p => p.codigo === codigo)));
       const { error } = await supabaseClient.from('analisis_claude_cuentas').update({ programa: prog }).eq('id', a.id);
       if (error) { if (msg) { msg.textContent = 'No se guardó: ' + (error.message || error); msg.className = 'text-xs text-red-600 font-bold'; } return; }
       a.programa = prog;
-      if (campo === 'estado') { bitacoraClaude('Cambió estado de procedimiento', codigo + ' · ' + (valor === 'hecho' ? 'Hecho' : 'Pendiente'), arrEstado.cliente, String(a.anio)); arrRender(); }
+      if (campo === 'estado' || campo === 'quien') { bitacoraClaude('Cambió estado de procedimiento', codigo + ' · ' + (campo === 'quien' ? 'Auditor: ' + valor : (valor === 'hecho' ? 'Hecho' : (valor === 'otro' ? 'Hecho por otro auditor' : 'Pendiente'))), arrEstado.cliente, String(a.anio)); arrRender(); }
       else if (msg) { msg.textContent = 'Guardado ✓'; msg.className = 'text-xs text-slate-500'; }
     }
     function arrHtmlClaude() {
@@ -11121,7 +11154,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       if (ORIGEN.arrend && ARR_PLANTILLA === null) await arrCargarPlantilla();
       if (ORIGEN.arrend && ARR_PLANTILLA && ARR_PLANTILLA.length) {
         const pf = [['Código', 'Procedimiento', 'Dónde está hecho', 'Quién lo hizo', 'Estado', 'Verificaciones (pestaña 9)']];
-        arrFilasPrograma().forEach(x => { const v = arrVerifDeProcedimiento(x.codigo); pf.push([x.codigo, x.procedimiento || '', x.donde || '', x.quien || '', x.estado === 'hecho' ? 'Hecho' : 'Pendiente', v.total ? (v.abiertas ? v.abiertas + ' por resolver de ' + v.total : 'Todas cerradas (' + v.total + ')') : 'Sin verificaciones']); });
+        arrFilasPrograma().forEach(x => { const v = arrVerifDeProcedimiento(x.codigo); pf.push([x.codigo, x.procedimiento || '', x.donde || '', x.quien || '', x.estado === 'hecho' ? (x.otro ? (esAnaliticaProg(x) ? 'Hecho en planificación' : 'Hecho por otro auditor') : 'Hecho') : 'Pendiente', v.total ? (v.abiertas ? v.abiertas + ' por resolver de ' + v.total : 'Todas cerradas (' + v.total + ')') : 'Sin verificaciones']); });
         add('Programa de trabajo', pf, [{ wch: 9 }, { wch: 95 }, { wch: 34 }, { wch: 22 }, { wch: 12 }, { wch: 28 }], { sinCongelar: true, titulo: 'Programa de trabajo (AOO, PCC y PLL)', info: [['Año', ORIGEN.arrend.anio], ['Visita', ORIGEN.arrend.visita === 'preliminar' ? 'Preliminar' : 'Final']] });
       }
       if (ORIGEN.arrend && ORIGEN.arrend.analisis) {
@@ -14086,7 +14119,7 @@ ${cont.innerHTML}
       bitacoraClaude('Guardó criterio final', 'Bancos (conciliaciones)', cbE.cliente, String(a.anio));
     }
     function cbFilasPrograma(todo) {
-      const todas = (cbE.plantilla || []).map(x => { const g = cbE.programa.find(k => k.k === x.k) || {}; return { ...x, donde: g.donde || '', quien: g.quien || '', estado: g.estado || 'pendiente', nota: g.nota || '', noAplica: motivosNoAplica(x, 'AA1', cbE.ctx) }; });
+      const todas = (cbE.plantilla || []).map(x => { const g = cbE.programa.find(k => k.k === x.k) || {}; return { ...x, donde: g.donde || '', quien: g.quien || '', estado: g.estado || 'pendiente', otro: !!g.otro, registrado_por: g.registrado_por || '', nota: g.nota || '', noAplica: motivosNoAplica(x, 'AA1', cbE.ctx) }; });
       return todo ? todas : todas.filter(x => !x.noAplica.length || x.estado === 'hecho');
     }
     function cbVerTodosProg(v) { cbE.verTodos = !!v; cbRender(); }
@@ -14100,19 +14133,18 @@ ${cont.innerHTML}
         h += '<tr class="align-top border-b border-slate-100' + (x.noAplica.length ? ' opacity-60' : '') + '"><td class="p-3 font-semibold">' + escapeHtml(x.codigo) + '</td><td class="p-3"><div class="text-xs text-slate-400">' + escapeHtml(x.tipo_procedimiento || '') + '</div>' + escapeHtml(x.procedimiento || '') + (x.noAplica.length ? '<div class="text-xs text-amber-700 mt-1">Ya no aplica por ' + escapeHtml(x.noAplica.join(' y ')) + (x.estado === 'hecho' ? ' (estaba hecho)' : '') + '</div>' : '') + '</td>' +
           '<td class="p-3"><input type="text" value="' + escapeHtml(x.donde) + '" placeholder="Ej. Pestaña 1" onchange="cbProgSet(\'' + x.k + '\', \'donde\', this.value)" class="w-full p-2 border border-slate-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500"></td>' +
           '<td class="p-3"><input type="text" value="' + escapeHtml(x.nota || '') + '" placeholder="Ej. Inmaterial, no se ajustó" onchange="cbProgSet(\'' + x.k + '\', \'nota\', this.value)" class="w-full p-2 border border-slate-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500"></td>' +
-          '<td class="p-3">' + escapeHtml(x.quien || '—') + '</td>' +
+          '<td class="p-3">' + htmlQuienProg(x, 'cbProgSet', x.k, cbRender) + '</td>' +
           '<td class="p-3 text-xs">' + (v.total ? '<button type="button" onclick="cbTab(\'verif\')" class="underline font-bold text-left ' + col + '">' + (v.abiertas ? v.abiertas + ' por resolver de ' + v.total : 'Todas cerradas (' + v.total + ')') + '</button>' + (x.estado !== 'hecho' && !v.abiertas ? '<div class="text-slate-500">Puedes marcarlo Hecho</div>' : '') + (x.estado === 'hecho' && v.abiertas ? (String(x.nota || '').trim() ? '<div class="text-slate-600">Hecho con verificaciones abiertas; queda el comentario como constancia</div>' : '<div class="text-amber-700">Está Hecho pero tiene verificaciones abiertas: agrega un comentario</div>') : '') : '<span class="text-slate-400">Sin verificaciones</span>') + '</td>' +
-          '<td class="p-3"><select onchange="cbProgSet(\'' + x.k + '\', \'estado\', this.value)" class="w-full p-2 border border-slate-300 rounded-lg text-sm bg-white outline-none"><option value="pendiente"' + (x.estado === 'hecho' ? '' : ' selected') + '>Pendiente</option><option value="hecho"' + (x.estado === 'hecho' ? ' selected' : '') + '>Hecho</option></select></td></tr>';
+          '<td class="p-3">' + htmlSelectEstadoProg(x, 'cbProgSet', x.k) + '</td></tr>';
       });
       return h + '</tbody></table></div></div>';
     }
     function cbProgSet(k, campo, valor) {
       const quien = nombreUsuarioActivo();
-      if (campo === 'estado' && valor === 'hecho' && !quien) { alert('Ingresa con tu usuario para marcar un procedimiento como hecho.'); cbRender(); return; }
+      if (campo === 'estado' && valor !== 'pendiente' && !quien) { alert('Ingresa con tu usuario para marcar un procedimiento como hecho.'); cbRender(); return; }
       let e = cbE.programa.find(x => x.k === k); if (!e) { e = { k, donde: '', quien: '', estado: 'pendiente' }; cbE.programa.push(e); }
-      e[campo] = valor;
-      if (campo === 'estado') { e.quien = valor === 'hecho' ? quien : ''; e.fecha = valor === 'hecho' ? new Date().toISOString() : null; }
-      cbGuardar(); if (campo === 'estado') cbRenderConScroll();
+      aplicarCambioProg(e, campo, valor, quien, esAnaliticaProg((cbE.plantilla || []).find(p => p.k === k)));
+      cbGuardar(); if (campo === 'estado' || campo === 'quien') cbRenderConScroll();
     }
 
     // Procedimientos hechos con un comentario del auditor: sus verificaciones siguen en rojo como constancia, pero ya no se cuentan como pendientes
@@ -14126,7 +14158,7 @@ ${cont.innerHTML}
       const V = cbE.config.verif || {}, ver = [], cerr = cbCodigosConComentario();
       cbVerifAuto().forEach(([t, e, d, cod]) => { if (e === 'rev' && !cerr.has(cod)) ver.push({ t, d, cod, tipo: 'Automática' }); });
       CB_VERIF_MANUALES.forEach(([k, t, ref, cod]) => { const e = (V[k] || {}).e || 'pendiente'; if ((e === 'pendiente' || e === 'nocumple') && !cerr.has(cod)) ver.push({ t, d: e === 'nocumple' ? 'Marcada como No cumple' : 'Sin evaluar', cod, tipo: 'Del auditor' }); });
-      const prog = cbE.plantilla ? cbFilasPrograma().filter(x => x.estado !== 'hecho') : [];
+      const prog = cbE.plantilla ? cbFilasPrograma().filter(x => x.estado !== 'hecho' || (x.otro && !x.quien)) : [];
       return { ver, prog };
     }
     function cbHtmlConcluir() {
@@ -14170,7 +14202,7 @@ ${cont.innerHTML}
       const R = cbE.config.revel || {};
       add('Revelaciones', [['Banco', 'Cuenta', 'Tipo', 'Moneda', 'Saldo en libros'], ...cbE.cuentas.map(c => [c.banco, c.cuenta, c.tipo, c.moneda, cbN(c.saldo_libros)]), [], ['Restricciones sobre el efectivo', R.restr || ''], ['Otras revelaciones', R.otras || '']]);
       if (cbE.analisis) add('Análisis de Claude', arrFilasClaude(cbE.analisis));
-      add('Programa de trabajo', [['Código', 'Procedimiento', 'Dónde está hecho', 'Quién lo hizo', 'Estado', 'Verificaciones (pestaña 5)'], ...cbFilasPrograma().map(x => { const v = cbVerifDeProc(x.codigo); return [x.codigo, x.procedimiento || '', x.donde, x.quien, x.estado === 'hecho' ? 'Hecho' : 'Pendiente', v.total ? (v.abiertas ? v.abiertas + ' por resolver de ' + v.total : 'Todas cerradas (' + v.total + ')') : 'Sin verificaciones']; })]);
+      add('Programa de trabajo', [['Código', 'Procedimiento', 'Dónde está hecho', 'Quién lo hizo', 'Estado', 'Verificaciones (pestaña 5)'], ...cbFilasPrograma().map(x => { const v = cbVerifDeProc(x.codigo); return [x.codigo, x.procedimiento || '', x.donde, x.quien, x.estado === 'hecho' ? (x.otro ? (esAnaliticaProg(x) ? 'Hecho en planificación' : 'Hecho por otro auditor') : 'Hecho') : 'Pendiente', v.total ? (v.abiertas ? v.abiertas + ' por resolver de ' + v.total : 'Todas cerradas (' + v.total + ')') : 'Sin verificaciones']; })]);
       XLSX.writeFile(wb, 'Conciliaciones_bancarias_' + String(nomCli).replace(/[^\w\- ]+/g, '').trim().replace(/\s+/g, '-') + '_' + cbE.anio + '.xlsx');
     }
 
