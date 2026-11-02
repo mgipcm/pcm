@@ -1234,7 +1234,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
         <p class="text-xs text-slate-500">Sube el balance de comprobación codificado (código, cuenta, saldo y sumaria). La aplicación suma los saldos de cada sumaria y los deja listos para los cruces de los análisis.</p>
       </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
+      <div class="grid grid-cols-1 md:grid-cols-6 gap-4">
         <div>
           <label class="block text-xs font-semibold text-slate-600 mb-1">Cliente</label>
           <select id="su-cliente" onchange="cargarBalanceSumarias()" class="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs sm:text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
@@ -1261,6 +1261,15 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
             <option value="Gran dimensión">Gran dimensión</option>
             <option value="Mediana">Mediana</option>
             <option value="Pequeña">Pequeña</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Riesgo combinado</label>
+          <select id="su-riesgo-gen" onchange="guardarRiesgoSumaria('*', this.value)" class="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs sm:text-sm focus:ring-2 focus:ring-indigo-500 outline-none" title="Se aplica a todas las cuentas del cliente">
+            <option value="">— Sin definir —</option>
+            <option value="Bajo">Bajo</option>
+            <option value="Medio">Medio</option>
+            <option value="Alto">Alto</option>
           </select>
         </div>
         <div>
@@ -3841,7 +3850,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       const ctxP = await traerContextoRiesgo(valorAnalisis('an-cliente'), valorAnalisis('an-anio'), valorAnalisis('an-visita'));
       const totalP = (data || []).length;
       data = (data || []).filter(r => !motivosNoAplica(r, r.sumaria, ctxP).length);
-      if (totalP && data.length < totalP) est.textContent = 'Se omitieron ' + (totalP - data.length) + ' procedimiento(s) que no corresponden por el tamaño de la empresa o el riesgo de la cuenta (se definen en Sumarias).';
+      if (totalP && data.length < totalP) est.textContent = 'Se omitieron ' + (totalP - data.length) + ' procedimiento(s) que no corresponden por el tamaño de la empresa o el riesgo combinado (se definen en Sumarias).';
       if (!data || !data.length) { est.textContent = 'La plantilla no tiene procedimientos vigentes para ' + sums.join(' y ') + '.'; return; }
       if (!window.confirm('Se reemplazará el texto del procedimiento por ' + data.length + ' pasos de la plantilla (' + sums.join(' y ') + ').\n\n¿Quieres continuar?')) return;
       document.getElementById('an-prog-procedimiento').value = data.map(r => (r.codigo ? r.codigo + '. ' : '') + (r.tipo_procedimiento ? '[' + r.tipo_procedimiento + '] ' : '') + r.procedimiento).join('\n\n');
@@ -12778,13 +12787,13 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       if (cliente && anio && visita) traerContextoRiesgo(cliente, anio, visita).then(c => { if (_ctxRiesgo[k] && alTerminar) alTerminar(); });
       return null;
     }
-    function riesgoDeSumaria(ctx, s) { const r = (ctx && ctx.riesgos) || {}; return r[s] || r[String(s).replace(/\d+$/, '')] || ''; }
+    function riesgoDeSumaria(ctx, s) { const r = (ctx && ctx.riesgos) || {}; return r['*'] || ''; }
     // Devuelve la lista de motivos por los que el procedimiento NO corresponde (vacía = corresponde)
     function motivosNoAplica(p, sumaria, ctx) {
       const m = [];
       if (!ctx) return m;
       if (ctx.tamano && p.tamanos && !String(p.tamanos).includes(ctx.tamano)) m.push('tamaño de la empresa');
-      if (p.alcance === 'Solo riesgo alto' && riesgoDeSumaria(ctx, sumaria) !== 'Alto') m.push('riesgo de la cuenta');
+      if (p.alcance === 'Solo riesgo alto' && riesgoDeSumaria(ctx, sumaria) !== 'Alto') m.push('riesgo combinado');
       return m;
     }
     function htmlContextoPrograma(ctx, sumaria, total, visibles, verTodos, fnAlternar) {
@@ -12792,9 +12801,9 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       const r = riesgoDeSumaria(ctx, sumaria);
       const falta = [];
       if (!ctx.tamano) falta.push('el tamaño de la empresa');
-      if (!r) falta.push('el riesgo de la cuenta');
+      if (!r) falta.push('el riesgo combinado');
       return '<div class="mb-3 p-3 border border-slate-200 rounded-xl bg-slate-50 text-xs text-slate-700 flex flex-wrap items-center gap-x-4 gap-y-1">' +
-        '<span><b>Tamaño:</b> ' + escapeHtml(ctx.tamano || 'sin definir') + '</span><span><b>Riesgo (' + escapeHtml(sumaria) + '):</b> ' + escapeHtml(r || 'sin definir') + '</span>' +
+        '<span><b>Tamaño:</b> ' + escapeHtml(ctx.tamano || 'sin definir') + '</span><span><b>Riesgo combinado:</b> ' + escapeHtml(r || 'sin definir') + '</span>' +
         '<span>Se muestran ' + visibles + ' de ' + total + ' procedimientos</span>' +
         '<label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" ' + (verTodos ? 'checked ' : '') + 'onchange="' + fnAlternar + '(this.checked)"> Ver todos</label>' +
         (falta.length ? '<span class="w-full text-amber-700">Falta definir ' + falta.join(' y ') + ' en Sumarias. Mientras tanto no se muestran los procedimientos de "Solo riesgo alto".</span>' : '') + '</div>';
@@ -12822,7 +12831,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       if (error) { alert('No se pudo guardar el riesgo: ' + (error.message || error)); return; }
       delete _ctxRiesgo[claveCtx(cliente, anio, visita)];
       sumEstado.ctx = await traerContextoRiesgo(cliente, anio, visita);
-      registrarActividad('Guardó riesgo de la cuenta', sumaria + ' · ' + (riesgo || 'sin riesgo'), { cliente, anio: String(anio) });
+      registrarActividad('Guardó riesgo de la cuenta', (sumaria === '*' ? 'Todas las cuentas' : sumaria) + ' · ' + (riesgo || 'sin riesgo'), { cliente, anio: String(anio) });
       renderSumarias();
     }
 
@@ -12838,6 +12847,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       sumEstado.ctx = await traerContextoRiesgo(cliente, anio, visitaSumarias());
       if (miId !== sumEstado.cargaId) return;
       document.getElementById('su-tamano').value = sumEstado.ctx.tamano || '';
+      document.getElementById('su-riesgo-gen').value = sumEstado.ctx.riesgos['*'] || '';
       document.getElementById('su-errtol').value = sumEstado.ctx.errorTol === null ? '' : formatoNumeroAnexo(sumEstado.ctx.errorTol);
       const errEl = document.getElementById('su-error');
       errEl.classList.add('hidden');
@@ -12909,12 +12919,6 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       return grupos;
     }
 
-    function celdaRiesgo(g, seguro) {
-      if (g.sumaria === '(sin sumaria)' || g.prevSolo) return '<td class="p-1.5"></td>';
-      const rsg = (sumEstado.ctx && sumEstado.ctx.riesgos[g.sumaria]) || '';
-      const fondo = { Bajo: 'bg-emerald-100', Medio: 'bg-amber-100', Alto: 'bg-red-100' }[rsg] || 'bg-white';
-      return `<td class="p-1.5" onclick="event.stopPropagation()"><select onchange="guardarRiesgoSumaria('${seguro}', this.value)" class="w-full p-1 text-[11px] border border-slate-300 rounded outline-none ${fondo}"><option value="">—</option>${['Bajo', 'Medio', 'Alto'].map(x => `<option value="${x}"${rsg === x ? ' selected' : ''}>${x}</option>`).join('')}</select></td>`;
-    }
     function renderSumarias() {
       const cont = document.getElementById('su-resultado'), alertas = document.getElementById('su-alertas');
       const regs = sumEstado.registros;
@@ -12970,7 +12974,6 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       let html = `<div class="border border-slate-200 rounded-xl overflow-x-auto"><table class="w-full text-xs border-collapse ${verPrev ? 'min-w-[900px]' : 'min-w-[680px]'}">
         <thead><tr class="bg-slate-50 text-slate-600 text-left">
           <th class="p-2.5 border-b border-slate-200 w-[10%]">Sumaria</th><th class="p-2.5 border-b border-slate-200">Cuenta</th>
-          <th class="p-2.5 border-b border-slate-200 w-[9%]">Riesgo</th>
           <th class="p-2.5 border-b border-slate-200 text-right w-[8%]">N.º cuentas</th>
           <th class="p-2.5 border-b border-slate-200 text-right w-[16%]">Saldo${fechaAct ? ' al ' + fechaAct : ''}</th>
           ${verPrev ? `<th class="p-2.5 border-b border-slate-200 text-right w-[16%]">Saldo al ${fechaPrev}</th><th class="p-2.5 border-b border-slate-200 text-right w-[14%]">Variación</th>` : ''}
@@ -12978,7 +12981,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       let claveGrupo = null, sub = 0, subPrev = 0, buffer = [];
       const cerrar = () => {
         if (claveGrupo === null) return;
-        html += `<tr class="bg-slate-100 font-bold text-slate-800"><td colspan="4" class="p-2.5">${escapeHtml(claveGrupo || 'Sin clasificar')}</td><td class="p-2.5 text-right">${nf(r2(sub))}</td>${celdasPrev(sub, subPrev, '')}</tr>` + buffer.join('');
+        html += `<tr class="bg-slate-100 font-bold text-slate-800"><td colspan="3" class="p-2.5">${escapeHtml(claveGrupo || 'Sin clasificar')}</td><td class="p-2.5 text-right">${nf(r2(sub))}</td>${celdasPrev(sub, subPrev, '')}</tr>` + buffer.join('');
       };
       grupos2.forEach(g => {
         const k = g.enCatalogo ? [g.clasificacion, g.grupo].filter(Boolean).join(' › ') : '';
@@ -12989,7 +12992,6 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
         buffer.push(`<tr class="border-b border-slate-200 cursor-pointer hover:bg-slate-50" onclick="alternarDetalleSumaria('${seguro}')">
           <td class="p-2.5 font-bold text-slate-800 whitespace-nowrap"><span class="flecha-caja ${abierta ? 'abierta' : ''}">${abierta ? '▾' : '▸'}</span>${escapeHtml(g.sumaria)}</td>
           <td class="p-2.5">${escapeHtml(g.nombre || (g.enCatalogo ? '' : 'No está en el catálogo'))}</td>
-          ${celdaRiesgo(g, seguro)}
           <td class="p-2.5 text-right">${g.cuentas.length}</td><td class="p-2.5 text-right font-semibold">${nf(g.saldo)}</td>${celdasPrev(g.saldo, g.prev || 0, 'font-semibold')}</tr>`);
         if (abierta) {
           let detalle;
@@ -13004,11 +13006,11 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
           } else {
             detalle = `<table class="w-full text-[11px]"><tbody>${g.cuentas.map(r => `<tr class="border-b border-slate-100"><td class="py-1 pr-3 text-slate-500 w-[18%]">${escapeHtml(r.codigo || '')}</td><td class="py-1 pr-3">${escapeHtml(r.cuenta || '')}</td><td class="py-1 text-right w-[22%]">${nf(Number(r.saldo) || 0)}</td></tr>`).join('')}</tbody></table>`;
           }
-          buffer.push(`<tr><td class="fila-desplegada"></td><td colspan="${cols + 1}" class="p-2 fila-desplegada">${detalle}</td></tr>`);
+          buffer.push(`<tr><td class="fila-desplegada"></td><td colspan="${cols}" class="p-2 fila-desplegada">${detalle}</td></tr>`);
         }
       });
       cerrar();
-      html += `<tr class="bg-slate-800 text-white font-bold"><td colspan="4" class="p-2.5">${filtrando ? 'Suma de las cuentas encontradas' : 'Suma de todos los saldos del balance'}</td><td class="p-2.5 text-right">${formatoNumeroAnexo(total)}</td>${verPrev ? `<td class="p-2.5 text-right">${formatoNumeroAnexo(totalPrev)}</td><td class="p-2.5 text-right">${formatoNumeroAnexo(r2(total - totalPrev))}</td>` : ''}</tr></tbody></table></div>
+      html += `<tr class="bg-slate-800 text-white font-bold"><td colspan="3" class="p-2.5">${filtrando ? 'Suma de las cuentas encontradas' : 'Suma de todos los saldos del balance'}</td><td class="p-2.5 text-right">${formatoNumeroAnexo(total)}</td>${verPrev ? `<td class="p-2.5 text-right">${formatoNumeroAnexo(totalPrev)}</td><td class="p-2.5 text-right">${formatoNumeroAnexo(r2(total - totalPrev))}</td>` : ''}</tr></tbody></table></div>
         <p class="text-[11px] text-slate-500">Toca una sumaria para ver las cuentas que la forman${verPrev ? ' (el detalle incluye las dos fechas)' : ''}. En un balance de comprobación completo, la suma de todos los saldos debería ser cero.</p>`;
       cont.innerHTML = html;
     }
