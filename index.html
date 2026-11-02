@@ -14036,7 +14036,7 @@ ${cont.innerHTML}
       let h = '<div class="px-2 py-1 text-[11px] font-bold text-slate-700 bg-slate-100 border-b border-slate-200">Verificaciones automáticas (se recalculan con las cuentas cargadas)</div>';
       if (!aut.length) h += '<p class="p-6 text-xs text-slate-400 text-center">Agrega cuentas para ver las verificaciones.</p>';
       else { h += '<table class="w-full table-fixed text-[11px] leading-tight border-collapse"><colgroup><col style="width:80px"><col style="width:46%"><col style="width:150px"><col></colgroup><thead class="bg-slate-50 text-slate-600"><tr><th class="px-2 py-1 border-b border-slate-200 text-left">Programa</th><th class="px-2 py-1 border-b border-slate-200 text-left">Verificación</th><th class="px-2 py-1 border-b border-slate-200 text-left">Resultado</th><th class="px-2 py-1 border-b border-slate-200 text-left">Detalle</th></tr></thead><tbody>';
-        aut.forEach(([t, e, d, cod]) => { h += '<tr class="border-b border-slate-100 align-top"><td class="px-2 py-0.5">' + lnk(cod) + '</td><td class="px-2 py-0.5 text-slate-700">' + escapeHtml(t) + '</td><td class="px-2 py-0.5 font-bold whitespace-nowrap ' + col[e] + '">' + tx[e] + '</td><td class="px-2 py-0.5 text-slate-600">' + escapeHtml(d) + '</td></tr>'; });
+        aut.forEach(([t, e, d, cod]) => { h += '<tr class="border-b border-slate-100 align-top"><td class="px-2 py-0.5">' + lnk(cod) + '</td><td class="px-2 py-0.5 text-slate-700">' + escapeHtml(t) + '</td><td class="px-2 py-0.5 font-bold whitespace-nowrap ' + col[e] + '">' + tx[e] + '</td><td class="px-2 py-0.5 text-slate-600">' + escapeHtml(d) + (e === 'rev' && cbComentarioDeCodigo(cod) ? '<div class="text-[10px] text-slate-500 mt-0.5">Comentario en el programa (' + escapeHtml(cod) + '): ' + escapeHtml(cbComentarioDeCodigo(cod)) + '</div>' : '') + '</td></tr>'; });
         h += '</tbody></table>'; }
       const V = cbE.config.verif || {}, hechas = CB_VERIF_MANUALES.filter(x => ((V[x[0]] || {}).e || 'pendiente') !== 'pendiente').length;
       h += '<div class="px-2 py-1 mt-2 text-[11px] font-bold text-slate-700 bg-slate-100 border-y border-slate-200">Evaluaciones del auditor (se guardan por cliente y año): ' + hechas + ' de ' + CB_VERIF_MANUALES.length + ' evaluadas</div><table class="w-full table-fixed text-[11px] leading-tight border-collapse"><colgroup><col style="width:80px"><col style="width:46%"><col style="width:150px"><col></colgroup><thead class="bg-slate-50 text-slate-600"><tr><th class="px-2 py-1 border-b border-slate-200 text-left">Programa</th><th class="px-2 py-1 border-b border-slate-200 text-left">Verificación</th><th class="px-2 py-1 border-b border-slate-200 text-left">Estado</th><th class="px-2 py-1 border-b border-slate-200 text-left">Comentario o papel de trabajo</th></tr></thead><tbody>';
@@ -14086,7 +14086,7 @@ ${cont.innerHTML}
       bitacoraClaude('Guardó criterio final', 'Bancos (conciliaciones)', cbE.cliente, String(a.anio));
     }
     function cbFilasPrograma(todo) {
-      const todas = (cbE.plantilla || []).map(x => { const g = cbE.programa.find(k => k.k === x.k) || {}; return { ...x, donde: g.donde || '', quien: g.quien || '', estado: g.estado || 'pendiente', noAplica: motivosNoAplica(x, 'AA1', cbE.ctx) }; });
+      const todas = (cbE.plantilla || []).map(x => { const g = cbE.programa.find(k => k.k === x.k) || {}; return { ...x, donde: g.donde || '', quien: g.quien || '', estado: g.estado || 'pendiente', nota: g.nota || '', noAplica: motivosNoAplica(x, 'AA1', cbE.ctx) }; });
       return todo ? todas : todas.filter(x => !x.noAplica.length || x.estado === 'hecho');
     }
     function cbVerTodosProg(v) { cbE.verTodos = !!v; cbRender(); }
@@ -14094,13 +14094,14 @@ ${cont.innerHTML}
       if (cbE.plantilla === null) return '<div class="p-8 text-center text-slate-400 text-sm">Cargando el programa de trabajo...</div>';
       if (!cbE.plantilla.length) return '<div class="p-8 text-center text-slate-400 text-sm">No hay procedimientos cargados para AA1 en Configuración › Programas de trabajo.</div>';
       const filas = cbE.verTodos ? cbFilasPrograma(true) : cbFilasPrograma(), hechos = filas.filter(x => x.estado === 'hecho').length;
-      let h = '<div class="p-4 text-sm text-slate-700">' + htmlContextoPrograma(cbE.ctx, 'AA1', cbE.plantilla.length, cbFilasPrograma().length, cbE.verTodos, 'cbVerTodosProg') + '<div class="flex flex-wrap items-center gap-2 mb-3"><span class="pill-origen rev">Hechos: ' + hechos + '</span><span class="pill-origen mod">Pendientes: ' + (filas.length - hechos) + '</span></div><div class="overflow-x-auto border border-slate-200 rounded-xl"><table class="w-full text-left text-sm border-collapse"><thead class="bg-slate-100 text-slate-600 text-xs font-bold border-b border-slate-200"><tr><th class="p-3 w-16">Código</th><th class="p-3 min-w-[360px]">Procedimiento</th><th class="p-3 min-w-[200px]">Dónde está hecho</th><th class="p-3 w-40">Quién lo hizo</th><th class="p-3 min-w-[170px]">Verificaciones (pestaña 5)</th><th class="p-3 w-36">Estado</th></tr></thead><tbody>';
+      let h = '<div class="p-4 text-sm text-slate-700">' + htmlContextoPrograma(cbE.ctx, 'AA1', cbE.plantilla.length, cbFilasPrograma().length, cbE.verTodos, 'cbVerTodosProg') + '<div class="flex flex-wrap items-center gap-2 mb-3"><span class="pill-origen rev">Hechos: ' + hechos + '</span><span class="pill-origen mod">Pendientes: ' + (filas.length - hechos) + '</span></div><div class="overflow-x-auto border border-slate-200 rounded-xl"><table class="w-full text-left text-sm border-collapse"><thead class="bg-slate-100 text-slate-600 text-xs font-bold border-b border-slate-200"><tr><th class="p-3 w-16">Código</th><th class="p-3 min-w-[360px]">Procedimiento</th><th class="p-3 min-w-[200px]">Dónde está hecho</th><th class="p-3 min-w-[220px]">Comentario</th><th class="p-3 w-40">Quién lo hizo</th><th class="p-3 min-w-[170px]">Verificaciones (pestaña 5)</th><th class="p-3 w-36">Estado</th></tr></thead><tbody>';
       filas.forEach(x => {
         const v = cbVerifDeProc(x.codigo), col = v.abiertas ? 'text-amber-700' : 'text-emerald-700';
         h += '<tr class="align-top border-b border-slate-100' + (x.noAplica.length ? ' opacity-60' : '') + '"><td class="p-3 font-semibold">' + escapeHtml(x.codigo) + '</td><td class="p-3"><div class="text-xs text-slate-400">' + escapeHtml(x.tipo_procedimiento || '') + '</div>' + escapeHtml(x.procedimiento || '') + (x.noAplica.length ? '<div class="text-xs text-amber-700 mt-1">Ya no aplica por ' + escapeHtml(x.noAplica.join(' y ')) + (x.estado === 'hecho' ? ' (estaba hecho)' : '') + '</div>' : '') + '</td>' +
           '<td class="p-3"><input type="text" value="' + escapeHtml(x.donde) + '" placeholder="Ej. Pestaña 1" onchange="cbProgSet(\'' + x.k + '\', \'donde\', this.value)" class="w-full p-2 border border-slate-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500"></td>' +
+          '<td class="p-3"><input type="text" value="' + escapeHtml(x.nota || '') + '" placeholder="Ej. Inmaterial, no se ajustó" onchange="cbProgSet(\'' + x.k + '\', \'nota\', this.value)" class="w-full p-2 border border-slate-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500"></td>' +
           '<td class="p-3">' + escapeHtml(x.quien || '—') + '</td>' +
-          '<td class="p-3 text-xs">' + (v.total ? '<button type="button" onclick="cbTab(\'verif\')" class="underline font-bold text-left ' + col + '">' + (v.abiertas ? v.abiertas + ' por resolver de ' + v.total : 'Todas cerradas (' + v.total + ')') + '</button>' + (x.estado !== 'hecho' && !v.abiertas ? '<div class="text-slate-500">Puedes marcarlo Hecho</div>' : '') + (x.estado === 'hecho' && v.abiertas ? '<div class="text-amber-700">Está Hecho pero tiene verificaciones abiertas</div>' : '') : '<span class="text-slate-400">Sin verificaciones</span>') + '</td>' +
+          '<td class="p-3 text-xs">' + (v.total ? '<button type="button" onclick="cbTab(\'verif\')" class="underline font-bold text-left ' + col + '">' + (v.abiertas ? v.abiertas + ' por resolver de ' + v.total : 'Todas cerradas (' + v.total + ')') + '</button>' + (x.estado !== 'hecho' && !v.abiertas ? '<div class="text-slate-500">Puedes marcarlo Hecho</div>' : '') + (x.estado === 'hecho' && v.abiertas ? (String(x.nota || '').trim() ? '<div class="text-slate-600">Hecho con verificaciones abiertas; queda el comentario como constancia</div>' : '<div class="text-amber-700">Está Hecho pero tiene verificaciones abiertas: agrega un comentario</div>') : '') : '<span class="text-slate-400">Sin verificaciones</span>') + '</td>' +
           '<td class="p-3"><select onchange="cbProgSet(\'' + x.k + '\', \'estado\', this.value)" class="w-full p-2 border border-slate-300 rounded-lg text-sm bg-white outline-none"><option value="pendiente"' + (x.estado === 'hecho' ? '' : ' selected') + '>Pendiente</option><option value="hecho"' + (x.estado === 'hecho' ? ' selected' : '') + '>Hecho</option></select></td></tr>';
       });
       return h + '</tbody></table></div></div>';
@@ -14114,10 +14115,17 @@ ${cont.innerHTML}
       cbGuardar(); if (campo === 'estado') cbRenderConScroll();
     }
 
+    // Procedimientos hechos con un comentario del auditor: sus verificaciones siguen en rojo como constancia, pero ya no se cuentan como pendientes
+    function cbCodigosConComentario() {
+      const s = new Set(); if (cbE.plantilla) cbFilasPrograma(true).forEach(x => { if (x.estado === 'hecho' && String(x.nota || '').trim()) s.add(x.codigo); }); return s;
+    }
+    function cbComentarioDeCodigo(cod) {
+      const x = cbE.plantilla ? cbFilasPrograma(true).find(k => k.codigo === cod && k.estado === 'hecho' && String(k.nota || '').trim()) : null; return x ? x.nota : '';
+    }
     function cbPorConcluir() {
-      const V = cbE.config.verif || {}, ver = [];
-      cbVerifAuto().forEach(([t, e, d, cod]) => { if (e === 'rev') ver.push({ t, d, cod, tipo: 'Automática' }); });
-      CB_VERIF_MANUALES.forEach(([k, t, ref, cod]) => { const e = (V[k] || {}).e || 'pendiente'; if (e === 'pendiente' || e === 'nocumple') ver.push({ t, d: e === 'nocumple' ? 'Marcada como No cumple' : 'Sin evaluar', cod, tipo: 'Del auditor' }); });
+      const V = cbE.config.verif || {}, ver = [], cerr = cbCodigosConComentario();
+      cbVerifAuto().forEach(([t, e, d, cod]) => { if (e === 'rev' && !cerr.has(cod)) ver.push({ t, d, cod, tipo: 'Automática' }); });
+      CB_VERIF_MANUALES.forEach(([k, t, ref, cod]) => { const e = (V[k] || {}).e || 'pendiente'; if ((e === 'pendiente' || e === 'nocumple') && !cerr.has(cod)) ver.push({ t, d: e === 'nocumple' ? 'Marcada como No cumple' : 'Sin evaluar', cod, tipo: 'Del auditor' }); });
       const prog = cbE.plantilla ? cbFilasPrograma().filter(x => x.estado !== 'hecho') : [];
       return { ver, prog };
     }
