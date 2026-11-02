@@ -14198,23 +14198,77 @@ ${cont.innerHTML}
       else if (cbE.tab === 'concluir') { p.innerHTML = cbHtmlConcluir(); n.innerHTML = nota('Qué muestra', ['Cada programa aparece una sola vez, con su procedimiento y las verificaciones que le faltan por resolver. Cuando no queda nada, la cuenta está lista para revisión final.']); }
       else { p.innerHTML = cbHtmlPrograma(); n.innerHTML = nota('Cómo se usa', ['Marca cada procedimiento como Hecho e indica dónde está el papel de trabajo. Queda registrado quién lo hizo.']); }
     }
-    function cbDescargar() {
+    // Marcas de fila para el Excel: cbH = títulos de columnas, cbT = totales, cbL = título con texto largo al lado
+    const cbH = f => { f._h = true; return f; }, cbT = f => { f._t = true; return f; }, cbL = f => { f._l = true; return f; };
+    async function cbDescargar() {
       if (!cbE.cliente) return;
-      const wb = XLSX.utils.book_new(), cli = buscarClienteNombre(cbE.cliente), nomCli = cli ? (cli.nombre_corto || cli.nombre_completo || cbE.cliente) : cbE.cliente;
-      const info = [['Cliente', nomCli], ['Año', cbE.anio], ['Visita', cbE.visita === 'preliminar' ? 'Preliminar' : 'Final'], ['Fecha de corte', cbE.corte], []];
-      const add = (nombre, filas) => XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([...info, ...filas]), nombre);
+      const cli = buscarClienteNombre(cbE.cliente), nomCli = cli ? (cli.nombre_corto || cli.nombre_completo || cbE.cliente) : cbE.cliente;
+      const hojas = [];
+      const add = (nombre, filas, op) => hojas.push({ nombre, filas, op: op || {} });
       const t = cbTotales();
-      add('Resumen', [['Banco', 'Cuenta', 'Moneda', 'Saldo según estado de cuenta', ...CB_TIPOS.map(x => x[1]), 'Saldo conciliado', 'Saldo en libros', 'Diferencia'], ...cbE.cuentas.map(c => [c.banco, c.cuenta, c.moneda, cbN(c.saldo_estado), ...CB_TIPOS.map(x => cbSuma(c, x[0])), cbConciliado(c), cbN(c.saldo_libros), cbDif(c)]), ['Total', '', '', t.estado, ...CB_TIPOS.map(x => t[x[0]]), t.conc, t.libros, t.dif]]);
-      add('Detalle de partidas', [['Banco', 'Cuenta', 'Tipo de partida', 'Fecha', 'Referencia', 'Descripción', 'Valor', 'Efecto en la conciliación', 'Rastreo posterior', 'Observación'], ...cbE.cuentas.flatMap(c => (c.partidas || []).map(p => [c.banco, c.cuenta, (CB_TIPOS.find(x => x[0] === p.tipo) || [])[1] || p.tipo, p.fecha, p.ref, p.desc, cbN(p.valor), cbEfecto(p), p.rastreo, p.nota]))]);
+      add('Resumen', [cbH(['Banco', 'Cuenta', 'Moneda', 'Saldo según estado de cuenta', ...CB_TIPOS.map(x => x[1]), 'Saldo conciliado', 'Saldo en libros', 'Diferencia']), ...cbE.cuentas.map(c => [c.banco, c.cuenta, c.moneda, cbN(c.saldo_estado), ...CB_TIPOS.map(x => cbSuma(c, x[0])), cbConciliado(c), cbN(c.saldo_libros), cbDif(c)]), cbT(['Total', '', '', t.estado, ...CB_TIPOS.map(x => t[x[0]]), t.conc, t.libros, t.dif])]);
+      add('Detalle de partidas', [cbH(['Banco', 'Cuenta', 'Tipo de partida', 'Fecha', 'Referencia', 'Descripción', 'Valor', 'Efecto en la conciliación', 'Rastreo posterior', 'Observación']), ...cbE.cuentas.flatMap(c => (c.partidas || []).map(p => [c.banco, c.cuenta, (CB_TIPOS.find(x => x[0] === p.tipo) || [])[1] || p.tipo, p.fecha, p.ref, p.desc, cbN(p.valor), cbEfecto(p), p.rastreo, p.nota]))]);
       const hayBal = cbE.config.balance !== undefined && cbE.config.balance !== '';
-      add('Comparación con libros', [['Banco', 'Cuenta', 'Saldo conciliado', 'Saldo en libros', 'Diferencia', 'Resultado'], ...cbE.cuentas.map(c => [c.banco, c.cuenta, cbConciliado(c), cbN(c.saldo_libros), cbDif(c), Math.abs(cbDif(c)) <= cbTol() ? 'Cuadra' : 'Revisar']), [], ['Total en libros', '', '', t.libros], ['Saldo según balance (AA1)', '', '', hayBal ? cbN(cbE.config.balance) : 'Sin ingresar'], ['Diferencia libros − balance', '', '', hayBal ? r2f(t.libros - cbN(cbE.config.balance)) : '']]);
+      add('Comparación con libros', [cbH(['Banco', 'Cuenta', 'Saldo conciliado', 'Saldo en libros', 'Diferencia', 'Resultado']), ...cbE.cuentas.map(c => [c.banco, c.cuenta, cbConciliado(c), cbN(c.saldo_libros), cbDif(c), Math.abs(cbDif(c)) <= cbTol() ? 'Cuadra' : 'Revisar']), [], cbT(['Total en libros', '', '', t.libros]), cbT(['Saldo según balance (AA1)', '', '', hayBal ? cbN(cbE.config.balance) : 'Sin ingresar']), cbT(['Diferencia libros − balance', '', '', hayBal ? r2f(t.libros - cbN(cbE.config.balance)) : ''])]);
       const resV = { ok: 'Cumple', rev: 'Revisar', info: 'Informativo' }, estV = { pendiente: 'Pendiente', cumple: 'Cumple', nocumple: 'No cumple', noaplica: 'No aplica' }, V = cbE.config.verif || {};
-      add('Verificaciones', [['Verificaciones automáticas', 'Resultado', 'Detalle', 'Procedimiento del programa'], ...cbVerifAuto().map(([a, e, d, cod]) => [a, resV[e], d, cod]), [], ['Evaluaciones del auditor', 'Referencia', 'Estado', 'Comentario', 'Procedimiento del programa'], ...CB_VERIF_MANUALES.map(([k, a, ref, cod]) => [a, ref, estV[(V[k] || {}).e || 'pendiente'], (V[k] || {}).n || '', cod])]);
+      add('Verificaciones', [cbH(['Verificaciones automáticas', 'Resultado', 'Detalle', 'Procedimiento del programa']), ...cbVerifAuto().map(([a, e, d, cod]) => [a, resV[e], d, cod]), [], cbH(['Evaluaciones del auditor', 'Referencia', 'Estado', 'Comentario', 'Procedimiento del programa']), ...CB_VERIF_MANUALES.map(([k, a, ref, cod]) => [a, ref, estV[(V[k] || {}).e || 'pendiente'], (V[k] || {}).n || '', cod])]);
       const R = cbE.config.revel || {};
-      add('Revelaciones', [['Banco', 'Cuenta', 'Tipo', 'Moneda', 'Saldo en libros'], ...cbE.cuentas.map(c => [c.banco, c.cuenta, c.tipo, c.moneda, cbN(c.saldo_libros)]), [], ['Restricciones sobre el efectivo', R.restr || ''], ['Otras revelaciones', R.otras || '']]);
-      if (cbE.analisis) add('Análisis de Claude', arrFilasClaude(cbE.analisis));
-      add('Programa de trabajo', [['Código', 'Procedimiento', 'Dónde está hecho', 'Quién lo hizo', 'Estado', 'Verificaciones (pestaña 5)'], ...cbFilasPrograma().map(x => { const v = cbVerifDeProc(x.codigo); return [x.codigo, x.procedimiento || '', x.donde, x.quien, x.estado === 'hecho' ? (x.otro ? (esAnaliticaProg(x) ? 'Hecho en planificación' : 'Hecho por otro auditor') : 'Hecho') : 'Pendiente', v.total ? (v.abiertas ? v.abiertas + ' por resolver de ' + v.total : 'Todas cerradas (' + v.total + ')') : 'Sin verificaciones']; })]);
-      XLSX.writeFile(wb, 'Conciliaciones_bancarias_' + String(nomCli).replace(/[^\w\- ]+/g, '').trim().replace(/\s+/g, '-') + '_' + cbE.anio + '.xlsx');
+      add('Revelaciones', [cbH(['Banco', 'Cuenta', 'Tipo', 'Moneda', 'Saldo en libros']), ...cbE.cuentas.map(c => [c.banco, c.cuenta, c.tipo, c.moneda, cbN(c.saldo_libros)]), [], cbL(['Restricciones sobre el efectivo', R.restr || '']), cbL(['Otras revelaciones', R.otras || ''])]);
+      if (cbE.analisis) add('Análisis de Claude', arrFilasClaude(cbE.analisis), { texto: true });
+      add('Programa de trabajo', [cbH(['Código', 'Procedimiento', 'Dónde está hecho', 'Quién lo hizo', 'Estado', 'Verificaciones (pestaña 5)']), ...cbFilasPrograma().map(x => { const v = cbVerifDeProc(x.codigo); return [x.codigo, x.procedimiento || '', x.donde, x.quien, x.estado === 'hecho' ? (x.otro ? (esAnaliticaProg(x) ? 'Hecho en planificación' : 'Hecho por otro auditor') : 'Hecho') : 'Pendiente', v.total ? (v.abiertas ? v.abiertas + ' por resolver de ' + v.total : 'Todas cerradas (' + v.total + ')') : 'Sin verificaciones']; })]);
+      const archivo = 'Conciliaciones_bancarias_' + String(nomCli).replace(/[^\w\- ]+/g, '').trim().replace(/\s+/g, '-') + '_' + cbE.anio + '.xlsx';
+      const hoy = new Date(), fechaHoy = String(hoy.getDate()).padStart(2, '0') + '/' + String(hoy.getMonth() + 1).padStart(2, '0') + '/' + hoy.getFullYear();
+      const info = [['Cliente', nomCli], ['Año', String(cbE.anio)], ['Visita', cbE.visita === 'preliminar' ? 'Preliminar' : 'Final'], ['Fecha de corte', cbE.corte || ''], ['Preparado por', nombreUsuarioActivo() || ''], ['Fecha de elaboración', fechaHoy]];
+      if (!window.ExcelJS) {
+        const wb = XLSX.utils.book_new();
+        hojas.forEach(x => XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([...info, [], ...x.filas]), x.nombre));
+        XLSX.writeFile(wb, archivo); return;
+      }
+      const NAVY = 'FF0B2C4D', GRIS_T = 'FFD9D9D9', GRIS_S = 'FFF2F2F2', FMT = '#,##0.00;[Red]-#,##0.00';
+      const bl = { style: 'thin', color: { argb: 'FFBFBFBF' } };
+      const bordes = { top: bl, left: bl, bottom: bl, right: bl };
+      const wb = new ExcelJS.Workbook(); wb.creator = 'MGI Guerra'; wb.created = new Date();
+      const letra = n => { let s = ''; while (n > 0) { const m = (n - 1) % 26; s = String.fromCharCode(65 + m) + s; n = Math.floor((n - 1) / 26); } return s; };
+      hojas.forEach(x => {
+        const filas = x.filas, texto = !!x.op.texto, ncol = Math.max(4, filas.reduce((m, f) => Math.max(m, f.length), 0));
+        const ws = wb.addWorksheet(x.nombre.slice(0, 31), { views: [{ showGridLines: false }], pageSetup: { orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 0, paperSize: 9 } });
+        const anchos = Array.from({ length: ncol }, () => 10);
+        filas.forEach(f => { if (texto || f._l) return; f.forEach((v, j) => { const len = typeof v === 'number' ? 16 : String(v == null ? '' : v).length + 2; anchos[j] = Math.max(anchos[j], f._h ? Math.min(len, 24) : Math.min(len, 55)); }); });
+        if (texto) { anchos.fill(16); anchos[0] = 5; }
+        ws.columns = anchos.map(w => ({ width: w }));
+        ws.mergeCells('A1:' + letra(Math.min(ncol, 6)) + '1');
+        const tit = ws.getCell('A1'); tit.value = 'Conciliaciones bancarias — ' + x.nombre; tit.font = { name: 'Calibri', size: 14, bold: true, color: { argb: NAVY } }; tit.alignment = { vertical: 'middle' }; ws.getRow(1).height = 26;
+        info.forEach((f, i) => { const r = 3 + i, a = ws.getCell('A' + r); a.value = f[0]; a.font = { bold: true, color: { argb: NAVY } }; const c = ws.getCell('B' + r); c.value = f[1]; c.alignment = { horizontal: 'left' }; });
+        let r = 3 + info.length + 1;
+        filas.forEach(f => {
+          if (!f.length) { r++; return; }
+          const row = ws.getRow(r);
+          if (texto) {
+            if (f.length === 1) { const c = row.getCell(1); c.value = f[0]; c.font = { bold: true, size: 11, color: { argb: NAVY } }; row.height = 22; }
+            else { ws.mergeCells('B' + r + ':H' + r); const c = ws.getCell('B' + r); c.value = f[1]; c.alignment = { wrapText: true, vertical: 'top', horizontal: 'left' }; row.height = Math.max(16, Math.ceil(String(f[1] || '').length / 105) * 15); }
+            r++; return;
+          }
+          if (f._l) {
+            const a = row.getCell(1); a.value = f[0]; a.font = { bold: true }; a.alignment = { vertical: 'top', wrapText: true };
+            ws.mergeCells('B' + r + ':' + letra(Math.max(ncol, 5)) + r); const c = ws.getCell('B' + r); c.value = f[1]; c.alignment = { wrapText: true, vertical: 'top', horizontal: 'left' };
+            row.height = Math.max(18, Math.ceil(String(f[1] || '').length / 70) * 15); r++; return;
+          }
+          f.forEach((v, j) => {
+            const c = row.getCell(j + 1); c.value = v === undefined ? null : v; c.border = bordes;
+            if (f._h) { c.font = { bold: true, color: { argb: 'FF1F2937' } }; c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: GRIS_T } }; c.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true }; }
+            else if (typeof v === 'number') { c.numFmt = FMT; c.alignment = { horizontal: 'right', vertical: 'top' }; }
+            else c.alignment = { horizontal: 'left', vertical: 'top', wrapText: true };
+            if (f._t) { c.font = { bold: true }; c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: GRIS_S } }; c.border = { top: { style: 'thin', color: { argb: 'FF000000' } }, bottom: { style: 'double', color: { argb: 'FF000000' } }, left: bl, right: bl }; }
+          });
+          if (f._h) row.height = 32;
+          r++;
+        });
+      });
+      const buffer = await wb.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const enlace = document.createElement('a'); enlace.href = URL.createObjectURL(blob); enlace.download = archivo;
+      document.body.appendChild(enlace); enlace.click();
+      setTimeout(() => { URL.revokeObjectURL(enlace.href); enlace.remove(); }, 1500);
     }
 
     // ================= HABILITAR HERRAMIENTAS (solo Socio) =================
