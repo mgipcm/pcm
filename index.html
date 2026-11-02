@@ -13721,7 +13721,7 @@ ${cont.innerHTML}
       ['nd', '(+) Notas de débito no registradas'],
       ['otra', '(±) Otras partidas']
     ];
-    const CB_TABS = [['resumen', '1. Resumen de conciliaciones'], ['libros', '2. Comparación con libros'], ['verif', '3. Verificaciones'], ['revel', '4. Revelaciones'], ['claude', '5. Análisis de Claude'], ['programa', '6. Programa de trabajo']];
+    const CB_TABS = [['libros', '1. Comparación con libros'], ['resumen', '2. Resumen de conciliaciones'], ['claude', '3. Análisis de Claude'], ['revel', '4. Revelaciones'], ['verif', '5. Verificaciones'], ['programa', '6. Programa de trabajo'], ['concluir', '7. Por concluir']];
     const CB_VERIF_MANUALES = [
       ['todas', 'Todas las cuentas bancarias y de ahorro del cliente están en el resumen, incluidas las cerradas durante el año', 'Programa AA-04', 'AA-04'],
       ['firmas', 'Se obtuvieron y archivaron las firmas autorizadas de las cuentas bancarias', 'Programa AA-03', 'AA-03'],
@@ -13734,7 +13734,7 @@ ${cont.innerHTML}
       ['restr', 'Se indagó si existen restricciones al efectivo (garantías, endosos, avales) y se obtuvo el soporte para la revelación', 'NIC 7 párr. 48', 'AA-12']
     ];
     const CB_ESTADOS = [['pendiente', 'Pendiente'], ['cumple', 'Cumple'], ['nocumple', 'No cumple'], ['noaplica', 'No aplica']];
-    const cbE = { cliente: '', anio: '', visita: 'final', corte: '', cuentas: [], config: {}, programa: [], plantilla: null, analisis: null, tab: 'resumen', det: null, act: null, cargaId: 0, tmp: null };
+    const cbE = { cliente: '', anio: '', visita: 'final', corte: '', cuentas: [], config: {}, programa: [], plantilla: null, analisis: null, tab: 'libros', det: null, act: null, cargaId: 0, tmp: null };
     const $cb = id => document.getElementById(id);
     const cbN = v => { const x = arrNum(v); return Number.isFinite(x) ? x : 0; };
     const cbFmt = n => { const v = r2f(n); return v === 0 ? '–' : formatoNumeroAnexo(v); };
@@ -13843,7 +13843,7 @@ ${cont.innerHTML}
       add('El saldo conciliado coincide con el saldo en libros (tolerancia ' + formatoNumeroAnexo(tol) + ')', sd.length ? 'rev' : 'ok', sd.length ? sd.length + ' cuenta(s) con diferencia: ' + sd.slice(0, 5).map(c => cbNombre(c) + ' (' + formatoNumeroAnexo(cbDif(c)) + ')').join('; ') : 'Todas las cuentas cuadran', 'AA-04');
       const bal = cbE.config.balance;
       if (bal !== undefined && bal !== '') { const d = r2f(cbTotales().libros - cbN(bal)); add('El total en libros coincide con el saldo del balance (AA1 Bancos)', Math.abs(d) > tol ? 'rev' : 'ok', Math.abs(d) > tol ? 'Diferencia de ' + formatoNumeroAnexo(d) + ' entre libros y balance' : 'Libros y balance coinciden', 'AA-04'); }
-      else add('El total en libros coincide con el saldo del balance (AA1 Bancos)', 'info', 'Falta ingresar el saldo según balance en la pestaña 2', 'AA-04');
+      else add('El total en libros coincide con el saldo del balance (AA1 Bancos)', 'info', 'Falta ingresar el saldo según balance en la pestaña 1', 'AA-04');
       const todas = L.flatMap(c => (c.partidas || []).map(p => ({ c, p })));
       const sinDato = todas.filter(x => !x.p.fecha || x.p.valor === '' || x.p.valor === undefined);
       add('Partidas conciliatorias con fecha y valor', sinDato.length ? 'rev' : 'ok', sinDato.length ? sinDato.length + ' partida(s) sin fecha o sin valor' : 'Todas las partidas tienen fecha y valor', 'AA-07');
@@ -13908,7 +13908,7 @@ ${cont.innerHTML}
     }
     function cbHtmlLibros() {
       const L = cbE.cuentas, t = cbTotales(), tol = cbTol();
-      if (!L.length) return '<p class="p-8 text-center text-slate-400 text-sm">Agrega cuentas en la pestaña 1 para compararlas con los libros.</p>';
+      if (!L.length) return '<p class="p-8 text-center text-slate-400 text-sm">Agrega cuentas en la pestaña 2 para compararlas con los libros.</p>';
       let h = '<div class="p-3 text-[11px]"><div class="overflow-x-auto border border-slate-200 rounded-xl"><table class="w-full text-[11px] leading-tight border-collapse"><thead><tr><th class="' + CB_TH + '">Banco</th><th class="' + CB_TH + '">Cuenta</th><th class="' + CB_TH + ' text-right">Saldo conciliado</th><th class="' + CB_TH + ' text-right">Saldo en libros</th><th class="' + CB_TH + ' text-right">Diferencia</th><th class="' + CB_TH + '">Resultado</th></tr></thead><tbody>';
       L.forEach(c => { const d = cbDif(c), ok = Math.abs(d) <= tol; h += '<tr class="border-b border-slate-100"><td class="px-2 py-1">' + escapeHtml(c.banco || '') + '</td><td class="px-2 py-1">' + escapeHtml(c.cuenta || '') + '</td><td class="px-2 py-1 text-right">' + cbFmt(cbConciliado(c)) + '</td><td class="px-2 py-1 text-right">' + cbFmt(c.saldo_libros) + '</td><td class="px-2 py-1 text-right font-bold">' + cbFmt(d) + '</td><td class="px-2 py-1 font-bold ' + (ok ? 'text-emerald-700' : 'text-amber-700') + '">' + (ok ? 'Cuadra' : 'Revisar') + '</td></tr>'; });
       h += '<tr class="bg-slate-50 font-bold"><td class="px-2 py-1.5" colspan="2">Total cuentas bancarias</td><td class="px-2 py-1.5 text-right">' + cbFmt(t.conc) + '</td><td class="px-2 py-1.5 text-right">' + cbFmt(t.libros) + '</td><td class="px-2 py-1.5 text-right">' + cbFmt(t.dif) + '</td><td></td></tr></tbody></table></div>';
@@ -13939,7 +13939,7 @@ ${cont.innerHTML}
       const pos = L.filter(c => cbN(c.saldo_libros) >= 0), neg = L.filter(c => cbN(c.saldo_libros) < 0);
       const fila = c => '<tr class="border-b border-slate-100"><td class="px-2 py-1">' + escapeHtml(c.banco || '') + '</td><td class="px-2 py-1">' + escapeHtml(c.cuenta || '') + '</td><td class="px-2 py-1">' + escapeHtml(c.tipo || '') + '</td><td class="px-2 py-1">' + escapeHtml(c.moneda || '') + '</td><td class="px-2 py-1 text-right">' + cbFmt(c.saldo_libros) + '</td></tr>';
       let h = '<div class="p-3 text-[11px]"><div class="font-bold text-slate-700 mb-1">Composición del efectivo en bancos (saldo en libros)</div>';
-      if (!L.length) return h + '<p class="p-6 text-center text-slate-400 text-sm">Agrega cuentas en la pestaña 1.</p></div>';
+      if (!L.length) return h + '<p class="p-6 text-center text-slate-400 text-sm">Agrega cuentas en la pestaña 2.</p></div>';
       h += '<div class="overflow-x-auto border border-slate-200 rounded-xl"><table class="w-full text-[11px] leading-tight border-collapse"><thead><tr><th class="' + CB_TH + '">Banco</th><th class="' + CB_TH + '">Cuenta</th><th class="' + CB_TH + '">Tipo</th><th class="' + CB_TH + '">Moneda</th><th class="' + CB_TH + ' text-right">Saldo</th></tr></thead><tbody>' + pos.map(fila).join('') + '<tr class="bg-slate-50 font-bold"><td class="px-2 py-1.5" colspan="4">Total bancos</td><td class="px-2 py-1.5 text-right">' + cbFmt(pos.reduce((s, c) => s + cbN(c.saldo_libros), 0)) + '</td></tr></tbody></table></div>';
       if (neg.length) h += '<div class="font-bold text-slate-700 mt-4 mb-1">Cuentas con saldo negativo (sobregiros): evalúa su presentación según NIC 7 párr. 8</div><div class="overflow-x-auto border border-slate-200 rounded-xl"><table class="w-full text-[11px] border-collapse"><tbody>' + neg.map(fila).join('') + '</tbody></table></div>';
       h += '<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4"><div><label class="block font-bold text-slate-700 mb-1">Restricciones sobre el efectivo (garantías, endosos, avales)</label><textarea rows="5" class="w-full p-2 border border-slate-300 rounded-lg text-[11px] outline-none focus:ring-1 focus:ring-indigo-400" onchange="cbSetTexto(\'revel\', \'restr\', this)" placeholder="Describe las restricciones y su importe. Si no hay, indícalo.">' + escapeHtml(R.restr || '') + '</textarea></div><div><label class="block font-bold text-slate-700 mb-1">Otras revelaciones (saldos no disponibles, líneas de sobregiro, otros)</label><textarea rows="5" class="w-full p-2 border border-slate-300 rounded-lg text-[11px] outline-none focus:ring-1 focus:ring-indigo-400" onchange="cbSetTexto(\'revel\', \'otras\', this)">' + escapeHtml(R.otras || '') + '</textarea></div></div></div>';
@@ -13980,7 +13980,7 @@ ${cont.innerHTML}
       if (cbE.plantilla === null) return '<div class="p-8 text-center text-slate-400 text-sm">Cargando el programa de trabajo...</div>';
       if (!cbE.plantilla.length) return '<div class="p-8 text-center text-slate-400 text-sm">No hay procedimientos cargados para AA1 en Configuración › Programas de trabajo.</div>';
       const filas = cbFilasPrograma(), hechos = filas.filter(x => x.estado === 'hecho').length;
-      let h = '<div class="p-4 text-sm text-slate-700"><div class="flex flex-wrap items-center gap-2 mb-3"><span class="pill-origen rev">Hechos: ' + hechos + '</span><span class="pill-origen mod">Pendientes: ' + (filas.length - hechos) + '</span></div><div class="overflow-x-auto border border-slate-200 rounded-xl"><table class="w-full text-left text-sm border-collapse"><thead class="bg-slate-100 text-slate-600 text-xs font-bold border-b border-slate-200"><tr><th class="p-3 w-16">Código</th><th class="p-3 min-w-[360px]">Procedimiento</th><th class="p-3 min-w-[200px]">Dónde está hecho</th><th class="p-3 w-40">Quién lo hizo</th><th class="p-3 min-w-[170px]">Verificaciones (pestaña 3)</th><th class="p-3 w-36">Estado</th></tr></thead><tbody>';
+      let h = '<div class="p-4 text-sm text-slate-700"><div class="flex flex-wrap items-center gap-2 mb-3"><span class="pill-origen rev">Hechos: ' + hechos + '</span><span class="pill-origen mod">Pendientes: ' + (filas.length - hechos) + '</span></div><div class="overflow-x-auto border border-slate-200 rounded-xl"><table class="w-full text-left text-sm border-collapse"><thead class="bg-slate-100 text-slate-600 text-xs font-bold border-b border-slate-200"><tr><th class="p-3 w-16">Código</th><th class="p-3 min-w-[360px]">Procedimiento</th><th class="p-3 min-w-[200px]">Dónde está hecho</th><th class="p-3 w-40">Quién lo hizo</th><th class="p-3 min-w-[170px]">Verificaciones (pestaña 5)</th><th class="p-3 w-36">Estado</th></tr></thead><tbody>';
       filas.forEach(x => {
         const v = cbVerifDeProc(x.codigo), col = v.abiertas ? 'text-amber-700' : 'text-emerald-700';
         h += '<tr class="align-top border-b border-slate-100"><td class="p-3 font-semibold">' + escapeHtml(x.codigo) + '</td><td class="p-3"><div class="text-xs text-slate-400">' + escapeHtml(x.tipo_procedimiento || '') + '</div>' + escapeHtml(x.procedimiento || '') + '</td>' +
@@ -14000,16 +14000,37 @@ ${cont.innerHTML}
       cbGuardar(); if (campo === 'estado') cbRenderConScroll();
     }
 
+    function cbPorConcluir() {
+      const V = cbE.config.verif || {}, ver = [];
+      cbVerifAuto().forEach(([t, e, d, cod]) => { if (e === 'rev') ver.push({ t, d, cod, tipo: 'Automática' }); });
+      CB_VERIF_MANUALES.forEach(([k, t, ref, cod]) => { const e = (V[k] || {}).e || 'pendiente'; if (e === 'pendiente' || e === 'nocumple') ver.push({ t, d: e === 'nocumple' ? 'Marcada como No cumple' : 'Sin evaluar', cod, tipo: 'Del auditor' }); });
+      const prog = cbE.plantilla ? cbFilasPrograma().filter(x => x.estado !== 'hecho') : [];
+      return { ver, prog };
+    }
+    function cbHtmlConcluir() {
+      if (cbE.plantilla === null) return '<div class="p-8 text-center text-slate-400 text-sm">Cargando...</div>';
+      const P = cbPorConcluir();
+      if (!P.ver.length && !P.prog.length) return '<div class="p-8 text-center text-emerald-700 text-sm font-semibold">Nada pendiente: todas las verificaciones están resueltas y todos los procedimientos están hechos.</div>';
+      const ir = (tab, txt) => '<button type="button" onclick="cbTab(\'' + tab + '\')" class="underline text-indigo-700 font-bold">' + txt + '</button>';
+      let h = '<div class="p-4 text-sm text-slate-700 space-y-5">';
+      h += '<div><div class="font-bold text-slate-800 mb-1">Verificaciones por resolver (' + P.ver.length + ') · ' + ir('verif', 'ir a Verificaciones') + '</div>';
+      h += P.ver.length ? '<div class="overflow-x-auto border border-slate-200 rounded-xl"><table class="w-full text-left text-xs border-collapse"><thead class="bg-slate-100 text-slate-600 font-bold border-b border-slate-200"><tr><th class="p-2 w-20">Programa</th><th class="p-2">Verificación</th><th class="p-2">Situación</th><th class="p-2 w-24">Origen</th></tr></thead><tbody>' + P.ver.map(x => '<tr class="border-b border-slate-100 align-top"><td class="p-2 font-semibold">' + escapeHtml(x.cod || '') + '</td><td class="p-2">' + escapeHtml(x.t) + '</td><td class="p-2 text-amber-700">' + escapeHtml(x.d || '') + '</td><td class="p-2 text-slate-500">' + x.tipo + '</td></tr>').join('') + '</tbody></table></div>' : '<div class="text-xs text-emerald-700">Todas resueltas.</div>';
+      h += '</div><div><div class="font-bold text-slate-800 mb-1">Procedimientos del programa sin concluir (' + P.prog.length + ') · ' + ir('programa', 'ir al Programa de trabajo') + '</div>';
+      h += P.prog.length ? '<div class="overflow-x-auto border border-slate-200 rounded-xl"><table class="w-full text-left text-xs border-collapse"><thead class="bg-slate-100 text-slate-600 font-bold border-b border-slate-200"><tr><th class="p-2 w-20">Código</th><th class="p-2">Procedimiento</th><th class="p-2 w-44">Verificaciones</th></tr></thead><tbody>' + P.prog.map(x => { const v = cbVerifDeProc(x.codigo); return '<tr class="border-b border-slate-100 align-top"><td class="p-2 font-semibold">' + escapeHtml(x.codigo) + '</td><td class="p-2"><div class="text-[11px] text-slate-400">' + escapeHtml(x.tipo_procedimiento || '') + '</div>' + escapeHtml(x.procedimiento || '') + '</td><td class="p-2">' + (v.total ? (v.abiertas ? '<span class="text-amber-700">' + v.abiertas + ' por resolver de ' + v.total + '</span>' : '<span class="text-emerald-700">Todas cerradas (' + v.total + ')</span>') : '<span class="text-slate-400">Sin verificaciones</span>') + '</td></tr>'; }).join('') + '</tbody></table></div>' : '<div class="text-xs text-emerald-700">Todos hechos.</div>';
+      return h + '</div></div>';
+    }
     function cbRender() {
       const tabs = $cb('cb-tabs'); if (!tabs) return;
-      tabs.innerHTML = CB_TABS.map(([t, n]) => '<button type="button" onclick="cbTab(\'' + t + '\')" class="px-3 py-1.5 text-xs transition rounded-lg ' + (cbE.tab === t ? 'bg-slate-200 text-slate-900 font-semibold' : 'text-slate-600 hover:bg-slate-100 font-medium') + '">' + n + '</button>').join('') + '<button type="button" onclick="cbDescargar()" class="ml-auto px-3 py-1.5 rounded-lg text-xs bg-slate-100 text-slate-800 hover:bg-slate-200 font-medium transition">Descargar todo (Excel)</button>';
+      const _pc = cbPorConcluir(), _npc = _pc.ver.length + _pc.prog.length;
+      tabs.innerHTML = CB_TABS.map(([t, n]) => '<button type="button" onclick="cbTab(\'' + t + '\')" class="px-3 py-1.5 text-xs transition rounded-lg ' + (cbE.tab === t ? 'bg-slate-200 text-slate-900 font-semibold' : 'text-slate-600 hover:bg-slate-100 font-medium') + '">' + n + (t === 'concluir' && _npc ? ' (' + _npc + ')' : '') + '</button>').join('') + '<button type="button" onclick="cbDescargar()" class="ml-auto px-3 py-1.5 rounded-lg text-xs bg-slate-100 text-slate-800 hover:bg-slate-200 font-medium transition">Descargar todo (Excel)</button>';
       const p = $cb('cb-panel'), n = $cb('cb-notas');
       const nota = (tit, items) => '<div class="mb-2"><div class="font-bold text-slate-700">' + tit + '</div><ul class="list-disc pl-5">' + items.map(i => '<li>' + i + '</li>').join('') + '</ul></div>';
       if (cbE.tab === 'resumen') { p.innerHTML = cbHtmlResumen(); n.innerHTML = nota('Cómo se calcula', ['Saldo conciliado = saldo según estado de cuenta − cheques girados y no cobrados + depósitos en tránsito − notas de crédito no registradas + notas de débito no registradas ± otras partidas.', 'La diferencia es el saldo conciliado menos el saldo en libros; debe ser cero o estar dentro de la tolerancia.', 'En cheques, depósitos y notas, ingresa los valores en positivo; el signo lo aplica la herramienta. En "Otras" ingresa el valor con su signo.']); }
       else if (cbE.tab === 'libros') { p.innerHTML = cbHtmlLibros(); n.innerHTML = nota('Qué comprueba', ['Que cada conciliación llegue al saldo en libros de la cuenta y que el total en libros sea el saldo del balance (sumaria AA1).']); }
-      else if (cbE.tab === 'verif') { p.innerHTML = cbHtmlVerif(); n.innerHTML = nota('Cómo se usa', ['Las verificaciones automáticas se recalculan con los datos de la pestaña 1.', 'Las evaluaciones del auditor quedan guardadas por cliente y año, y cada una indica el procedimiento del programa al que pertenece.']); }
+      else if (cbE.tab === 'verif') { p.innerHTML = cbHtmlVerif(); n.innerHTML = nota('Cómo se usa', ['Las verificaciones automáticas se recalculan con los datos de la pestaña 2.', 'Las evaluaciones del auditor quedan guardadas por cliente y año, y cada una indica el procedimiento del programa al que pertenece.']); }
       else if (cbE.tab === 'revel') { p.innerHTML = cbHtmlRevel(); n.innerHTML = nota('Referencia', ['NIC 7 párr. 45-48: componentes del efectivo y revelación de saldos significativos no disponibles para uso del grupo.']); }
       else if (cbE.tab === 'claude') { p.innerHTML = cbHtmlClaude(); n.innerHTML = ''; }
+      else if (cbE.tab === 'concluir') { p.innerHTML = cbHtmlConcluir(); n.innerHTML = nota('Qué muestra', ['Junta lo que falta por cerrar en Verificaciones y en el Programa de trabajo. Cuando no queda nada, la cuenta está lista para revisión final.']); }
       else { p.innerHTML = cbHtmlPrograma(); n.innerHTML = nota('Cómo se usa', ['Marca cada procedimiento como Hecho e indica dónde está el papel de trabajo. Queda registrado quién lo hizo.']); }
     }
     function cbDescargar() {
@@ -14027,7 +14048,7 @@ ${cont.innerHTML}
       const R = cbE.config.revel || {};
       add('Revelaciones', [['Banco', 'Cuenta', 'Tipo', 'Moneda', 'Saldo en libros'], ...cbE.cuentas.map(c => [c.banco, c.cuenta, c.tipo, c.moneda, cbN(c.saldo_libros)]), [], ['Restricciones sobre el efectivo', R.restr || ''], ['Otras revelaciones', R.otras || '']]);
       if (cbE.analisis) add('Análisis de Claude', arrFilasClaude(cbE.analisis));
-      add('Programa de trabajo', [['Código', 'Procedimiento', 'Dónde está hecho', 'Quién lo hizo', 'Estado', 'Verificaciones (pestaña 3)'], ...cbFilasPrograma().map(x => { const v = cbVerifDeProc(x.codigo); return [x.codigo, x.procedimiento || '', x.donde, x.quien, x.estado === 'hecho' ? 'Hecho' : 'Pendiente', v.total ? (v.abiertas ? v.abiertas + ' por resolver de ' + v.total : 'Todas cerradas (' + v.total + ')') : 'Sin verificaciones']; })]);
+      add('Programa de trabajo', [['Código', 'Procedimiento', 'Dónde está hecho', 'Quién lo hizo', 'Estado', 'Verificaciones (pestaña 5)'], ...cbFilasPrograma().map(x => { const v = cbVerifDeProc(x.codigo); return [x.codigo, x.procedimiento || '', x.donde, x.quien, x.estado === 'hecho' ? 'Hecho' : 'Pendiente', v.total ? (v.abiertas ? v.abiertas + ' por resolver de ' + v.total : 'Todas cerradas (' + v.total + ')') : 'Sin verificaciones']; })]);
       XLSX.writeFile(wb, 'Conciliaciones_bancarias_' + String(nomCli).replace(/[^\w\- ]+/g, '').trim().replace(/\s+/g, '-') + '_' + cbE.anio + '.xlsx');
     }
 
