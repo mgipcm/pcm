@@ -14083,7 +14083,7 @@ ${cont.innerHTML}
     function cbHtmlMemo() {
       const m = cbMemo(), tit = t => '<div class="font-bold text-slate-800 underline mb-0.5">' + t + '.-</div>';
       const lista = a => a.length ? a.map(x => '<div>' + escapeHtml(x) + '</div>').join('') : '<div class="text-slate-400">Agrega cuentas para completar esta parte.</div>';
-      return '<div class="mt-5 p-4 border border-slate-300 rounded-xl max-w-3xl text-[11px] text-slate-700 space-y-3" style="background:#e4e4e1"><div class="text-xs font-bold text-slate-800">Memorándum (sale en la primera hoja del Excel)</div>' +
+      return '<div class="mt-5 p-4 border border-slate-300 rounded-xl max-w-3xl text-[11px] text-slate-700 space-y-3" style="background:#dcdcd8;border-color:#b8b8b3"><div class="text-xs font-bold text-slate-800">Memorándum (sale en la primera hoja del Excel)</div>' +
         '<div>' + tit('Objetivo') + '<div>' + escapeHtml(m.objetivo) + '</div></div>' +
         '<div>' + tit('Procedimiento') + lista(m.procedimiento) + '</div>' +
         '<div>' + tit('Fuente de la información') + lista(m.fuente) + '</div>' +
