@@ -1538,12 +1538,13 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
             <div id="an-sumaria-ref"></div>
 
             <div class="border border-slate-200 rounded-xl overflow-x-auto">
-              <table class="w-full text-xs border-collapse min-w-[640px]">
+              <table class="text-xs border-collapse" style="table-layout:fixed;width:760px;max-width:100%">
+                <colgroup><col style="width:330px"><col style="width:120px"><col style="width:160px"><col style="width:150px"></colgroup>
                 <thead>
                   <tr class="bg-slate-50 text-slate-600 text-left">
-                    <th class="p-2.5 border-b border-slate-200 w-[34%]">Concepto</th>
+                    <th class="p-2.5 border-b border-slate-200">Concepto</th>
                     <th class="p-2.5 border-b border-slate-200 text-right">Según el anexo</th>
-                    <th class="p-2.5 border-b border-slate-200 text-right w-[24%]">Según libros</th>
+                    <th class="p-2.5 border-b border-slate-200 text-right">Según libros</th>
                     <th class="p-2.5 border-b border-slate-200 text-right">Diferencia</th>
                   </tr>
                 </thead>
