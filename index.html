@@ -1295,7 +1295,6 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
               Subir balance (Excel)
               <input type="file" id="su-archivo" accept=".xlsx,.xls,.csv" class="hidden" onchange="subirBalanceSumarias(this, false)">
             </label>
-            <button type="button" id="su-btn-descargar" onclick="descargarSumarias()" class="hidden px-3 py-1.5 bg-white text-slate-700 hover:bg-slate-50 border border-slate-400 rounded-lg text-xs font-bold transition">Descargar sumarias (Excel)</button>
             <button type="button" id="su-btn-borrar" onclick="borrarBalanceSumarias(false)" class="hidden px-3 py-1.5 bg-white text-red-700 hover:bg-red-50 border border-red-400 rounded-lg text-xs font-bold transition">Borrar este balance</button>
           </div>
           <p id="su-estado" class="text-[11px] text-slate-500 min-h-[1rem]"></p>
@@ -13125,7 +13124,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       const esFinal = visitaSumarias() === 'final';
       const regsPrev = sumEstado.prev.registros;
       const verPrev = regsPrev.length > 0;
-      document.getElementById('su-btn-descargar').classList.toggle('hidden', !regs.length && !verPrev);
+
       document.getElementById('su-btn-borrar').classList.toggle('hidden', !regs.length);
       document.getElementById('su-btn-borrar-prev').classList.toggle('hidden', !verPrev);
       alertas.innerHTML = '';
