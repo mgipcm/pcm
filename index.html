@@ -14051,6 +14051,45 @@ ${cont.innerHTML}
       }
       return h + '</div>';
     }
+    // ===== Memorándum de la conciliación (Objetivo, Procedimiento, Fuente salen de lo ingresado; Conclusión y Responsable los escribe el auditor) =====
+    function cbFechaLarga(iso) {
+      const m = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})/); if (!m) return '';
+      const meses = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+      return Number(m[3]) + ' de ' + meses[Number(m[2]) - 1] + ' de ' + m[1];
+    }
+    function cbMemo() {
+      const L = cbE.cuentas, f = cbFechaLarga(cbE.corte), al = f ? ' al ' + f : '', V = cbE.config.verif || {}, M = cbE.config.memo || {};
+      const bal = cbE.config.balance, hayBal = bal !== undefined && bal !== '';
+      const conStd = L.some(c => String(c.saldo_estado === undefined ? '' : c.saldo_estado) !== ''), conLib = L.some(c => String(c.saldo_libros === undefined ? '' : c.saldo_libros) !== '');
+      const conPart = L.some(c => (c.partidas || []).length), confOk = ((V.conf || {}).e) === 'cumple';
+      const nBancos = new Set(L.map(c => String(c.banco || '').trim()).filter(Boolean)).size;
+      const proc = [];
+      if (L.length) {
+        proc.push('Solicitamos las conciliaciones bancarias de la compañía' + al + ' (' + L.length + (L.length === 1 ? ' cuenta' : ' cuentas') + (nBancos ? ' en ' + nBancos + (nBancos === 1 ? ' banco' : ' bancos') : '') + ').');
+        proc.push('Realizamos un resumen de las conciliaciones bancarias' + (hayBal ? ' y cruzamos el total en libros con la sumaria AA1.' : '.'));
+        if (conStd) proc.push('Cotejamos los saldos según estado de cuenta con las conciliaciones.');
+        if (conPart) proc.push('Revisamos las partidas conciliatorias (cheques girados y no cobrados, depósitos en tránsito, notas y otras partidas).');
+        if (confOk) proc.push('Verificamos las confirmaciones bancarias.');
+        proc.push('Analizamos la presentación de los saldos de las cuentas de acuerdo a su naturaleza.');
+      }
+      const fuente = [];
+      if (L.length) fuente.push('Conciliaciones bancarias' + al);
+      if (conStd) fuente.push('Estados de cuenta bancarios' + al);
+      if (conLib) fuente.push('Mayores contables' + al);
+      if (hayBal) fuente.push('Sumaria AA1 / balance general' + al);
+      if (confOk) fuente.push('Confirmaciones bancarias');
+      return { objetivo: 'Verificar la correcta preparación y presentación de las conciliaciones bancarias.', procedimiento: proc, fuente, concl: M.concl || '', resp: M.resp || '' };
+    }
+    function cbHtmlMemo() {
+      const m = cbMemo(), tit = t => '<div class="font-bold text-slate-800 underline mb-0.5">' + t + '.-</div>';
+      const lista = a => a.length ? a.map(x => '<div>' + escapeHtml(x) + '</div>').join('') : '<div class="text-slate-400">Agrega cuentas para completar esta parte.</div>';
+      return '<div class="mt-5 p-3 border border-slate-200 rounded-xl max-w-3xl text-[11px] text-slate-700 space-y-3"><div class="text-xs font-bold text-slate-800">Memorándum (sale en la primera hoja del Excel)</div>' +
+        '<div>' + tit('Objetivo') + '<div>' + escapeHtml(m.objetivo) + '</div></div>' +
+        '<div>' + tit('Procedimiento') + lista(m.procedimiento) + '</div>' +
+        '<div>' + tit('Conclusión') + '<textarea rows="3" class="' + CB_INN + '" style="height:auto" placeholder="Escribe aquí la conclusión del auditor" onchange="cbSetTexto(\'memo\', \'concl\', this)">' + escapeHtml(m.concl) + '</textarea></div>' +
+        '<div>' + tit('Fuente de la información') + lista(m.fuente) + '</div>' +
+        '<div>' + tit('Responsable de la información') + '<input class="' + CB_INN + '" value="' + escapeHtml(m.resp) + '" placeholder="Nombre y cargo de quien entregó la información" onchange="cbSetTexto(\'memo\', \'resp\', this)"></div></div>';
+    }
     function cbHtmlLibros() {
       const L = cbE.cuentas, t = cbTotales(), tol = cbTol();
       if (!L.length) return '<p class="p-8 text-center text-slate-400 text-sm">Agrega cuentas en la pestaña 2 para compararlas con los libros.</p>';
@@ -14060,6 +14099,7 @@ ${cont.innerHTML}
       const bal = cbE.config.balance, hayBal = bal !== undefined && bal !== '', dBal = hayBal ? r2f(t.libros - cbN(bal)) : null;
       h += '<div class="mt-4 grid grid-cols-1 md:grid-cols-3 md:items-end gap-3 max-w-3xl"><div><label class="flex items-end min-h-[30px] font-semibold text-slate-600 mb-1">Saldo según balance (sumaria AA1 Bancos)</label><input class="' + CB_INN + '" inputmode="decimal" value="' + (hayBal ? cbIn(bal) : '') + '" onchange="cbSetConfig(\'balance\', this)"></div><div><label class="flex items-end min-h-[30px] font-semibold text-slate-600 mb-1">Total en libros</label><div class="h-7 px-1.5 flex items-center justify-end border border-slate-200 rounded bg-slate-50 font-bold">' + cbFmt(t.libros) + '</div></div><div><label class="flex items-end min-h-[30px] font-semibold text-slate-600 mb-1">Diferencia libros − balance</label><div class="h-7 px-1.5 flex items-center justify-end border border-slate-200 rounded bg-slate-50 font-bold ' + (hayBal ? (Math.abs(dBal) > tol ? 'text-amber-700' : 'text-emerald-700') : 'text-slate-400') + '">' + (hayBal ? cbFmt(dBal) : 'Falta el saldo') + '</div></div></div>';
       h += '<div class="mt-3 grid grid-cols-1 md:grid-cols-3 gap-3 max-w-3xl"><div><label class="flex items-end min-h-[30px] font-semibold text-slate-600 mb-1">Tolerancia de diferencia</label><input class="' + CB_INN + '" inputmode="decimal" value="' + (cbE.config.tol === undefined ? 1 : cbE.config.tol) + '" onchange="cbSetConfig(\'tol\', this)"></div><div><label class="flex items-end min-h-[30px] font-semibold text-slate-600 mb-1">Días para considerar una partida antigua</label><input class="' + CB_INN + '" inputmode="numeric" value="' + (cbE.config.dias === undefined ? 90 : cbE.config.dias) + '" onchange="cbSetConfig(\'dias\', this)"><div class="text-[10px] text-slate-500 mt-0.5">Puedes cambiarlo; las partidas con más días desde su fecha hasta el corte se marcan para revisar en la pestaña Verificaciones.</div></div></div></div>';
+      h += cbHtmlMemo() + '</div>';
       return h;
     }
     function cbHtmlVerif() {
@@ -14209,7 +14249,7 @@ ${cont.innerHTML}
       add('Resumen', [cbH(['Banco', 'Cuenta', 'Moneda', 'Saldo según estado de cuenta', ...CB_TIPOS.map(x => x[1]), 'Saldo conciliado', 'Saldo en libros', 'Diferencia']), ...cbE.cuentas.map(c => [c.banco, c.cuenta, c.moneda, cbN(c.saldo_estado), ...CB_TIPOS.map(x => cbSuma(c, x[0])), cbConciliado(c), cbN(c.saldo_libros), cbDif(c)]), cbT(['Total', '', '', t.estado, ...CB_TIPOS.map(x => t[x[0]]), t.conc, t.libros, t.dif])]);
       add('Detalle de partidas', [cbH(['Banco', 'Cuenta', 'Tipo de partida', 'Fecha', 'Referencia', 'Descripción', 'Valor', 'Efecto en la conciliación', 'Rastreo posterior', 'Observación']), ...cbE.cuentas.flatMap(c => (c.partidas || []).map(p => [c.banco, c.cuenta, (CB_TIPOS.find(x => x[0] === p.tipo) || [])[1] || p.tipo, p.fecha, p.ref, p.desc, cbN(p.valor), cbEfecto(p), p.rastreo, p.nota]))]);
       const hayBal = cbE.config.balance !== undefined && cbE.config.balance !== '';
-      add('Comparación con libros', [cbH(['Banco', 'Cuenta', 'Saldo conciliado', 'Saldo en libros', 'Diferencia', 'Resultado']), ...cbE.cuentas.map(c => [c.banco, c.cuenta, cbConciliado(c), cbN(c.saldo_libros), cbDif(c), Math.abs(cbDif(c)) <= cbTol() ? 'Cuadra' : 'Revisar']), [], cbT(['Total en libros', '', '', t.libros]), cbT(['Saldo según balance (AA1)', '', '', hayBal ? cbN(cbE.config.balance) : 'Sin ingresar']), cbT(['Diferencia libros − balance', '', '', hayBal ? r2f(t.libros - cbN(cbE.config.balance)) : ''])]);
+      add('Comparación con libros', [cbH(['Banco', 'Cuenta', 'Saldo conciliado', 'Saldo en libros', 'Diferencia', 'Resultado']), ...cbE.cuentas.map(c => [c.banco, c.cuenta, cbConciliado(c), cbN(c.saldo_libros), cbDif(c), Math.abs(cbDif(c)) <= cbTol() ? 'Cuadra' : 'Revisar']), [], cbT(['Total en libros', '', '', t.libros]), cbT(['Saldo según balance (AA1)', '', '', hayBal ? cbN(cbE.config.balance) : 'Sin ingresar']), cbT(['Diferencia libros − balance', '', '', hayBal ? r2f(t.libros - cbN(cbE.config.balance)) : '']), ...(() => { const m = cbMemo(); return [[], cbL(['Objetivo', m.objetivo]), cbL(['Procedimiento', m.procedimiento.join('\n')]), cbL(['Conclusión', m.concl || 'Pendiente: la escribe el auditor.']), cbL(['Fuente de la información', m.fuente.join('\n')]), cbL(['Responsable de la información', m.resp || 'Pendiente'])]; })()]);
       const resV = { ok: 'Cumple', rev: 'Revisar', info: 'Informativo' }, estV = { pendiente: 'Pendiente', cumple: 'Cumple', nocumple: 'No cumple', noaplica: 'No aplica' }, V = cbE.config.verif || {};
       add('Verificaciones', [cbH(['Programa', 'Verificaciones automáticas', 'Resultado', 'Detalle']), ...cbVerifAuto().map(([a, e, d, cod]) => [cod, a, resV[e], d]), [], cbH(['Programa', 'Evaluaciones del auditor', 'Referencia', 'Estado', 'Comentario']), ...CB_VERIF_MANUALES.map(([k, a, ref, cod]) => [cod, a, ref, estV[(V[k] || {}).e || 'pendiente'], (V[k] || {}).n || ''])]);
       const R = cbE.config.revel || {};
@@ -14257,7 +14297,7 @@ ${cont.innerHTML}
           if (f._l) {
             const a = row.getCell(1); a.value = f[0]; a.font = { bold: true }; a.alignment = { vertical: 'top', wrapText: true };
             ws.mergeCells('B' + r + ':' + letra(Math.max(ncol, 5)) + r); const c = ws.getCell('B' + r); c.value = f[1]; c.alignment = { wrapText: true, vertical: 'top', horizontal: 'left' };
-            row.height = Math.max(18, Math.ceil(String(f[1] || '').length / 70) * 15); r++; return;
+            row.height = Math.max(18, String(f[1] || '').split('\n').reduce((s, l) => s + Math.max(1, Math.ceil(l.length / 70)), 0) * 15); r++; return;
           }
           f.forEach((v, j) => {
             const c = row.getCell(j + 1); c.value = v === undefined ? null : v; c.border = bordes;
