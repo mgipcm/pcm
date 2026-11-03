@@ -1436,45 +1436,23 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
 
 
         <div class="flex flex-wrap items-center gap-1 p-1.5 bg-white border border-slate-200 rounded-2xl">
-          <button type="button" id="an-tab-programa" onclick="cambiarPestanaAnalisis('programa')" class="px-3 py-1.5 text-xs transition rounded-lg">1. Programa de trabajo</button>
-          <button type="button" id="an-tab-anexo" onclick="cambiarPestanaAnalisis('anexo')" class="px-3 py-1.5 text-xs transition rounded-lg">2. Anexo y cálculos</button>
-          <button type="button" id="an-tab-claude" onclick="cambiarPestanaAnalisis('claude')" class="px-3 py-1.5 text-xs transition rounded-lg">3. Análisis de Claude</button>
-          <button type="button" id="an-tab-criterio" onclick="cambiarPestanaAnalisis('criterio')" class="px-3 py-1.5 text-xs transition rounded-lg">4. Criterio final del auditor</button>
+          <button type="button" id="an-tab-anexo" onclick="cambiarPestanaAnalisis('anexo')" class="px-3 py-1.5 text-xs transition rounded-lg">1. Anexo y cálculos</button>
+          <button type="button" id="an-tab-claude" onclick="cambiarPestanaAnalisis('claude')" class="px-3 py-1.5 text-xs transition rounded-lg">2. Análisis de Claude</button>
+          <button type="button" id="an-tab-verif" onclick="cambiarPestanaAnalisis('verif')" class="px-3 py-1.5 text-xs transition rounded-lg">3. Verificaciones</button>
+          <button type="button" id="an-tab-programa" onclick="cambiarPestanaAnalisis('programa')" class="px-3 py-1.5 text-xs transition rounded-lg">4. Programa de trabajo</button>
+          <button type="button" id="an-tab-concluir" onclick="cambiarPestanaAnalisis('concluir')" class="px-3 py-1.5 text-xs transition rounded-lg">5. Por concluir</button>
+          <button type="button" id="an-tab-criterio" onclick="cambiarPestanaAnalisis('criterio')" class="px-3 py-1.5 text-xs transition rounded-lg">6. Criterio final del auditor</button>
         </div>
 
-        <!-- Programa de trabajo de la cuenta (texto predeterminado, editable) -->
-        <div id="an-panel-programa" class="space-y-3 max-w-4xl">
-          <div id="an-origen-programa"></div>
-          <h3 class="text-sm font-bold text-slate-800">Programa de trabajo de la cuenta</h3><p class="text-[11px] text-slate-500">Texto predeterminado editable. Se guarda por cliente y año.</p>
-          <div class="space-y-3">
-            <div>
-              <label class="block text-xs font-bold text-slate-600 mb-1" for="an-prog-objetivo">Objetivo</label>
-              <textarea id="an-prog-objetivo" rows="3" oninput="programarGuardadoPrograma()" class="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-indigo-500 outline-none"></textarea>
-            </div>
-            <div>
-              <label class="block text-xs font-bold text-slate-600 mb-1" for="an-prog-procedimiento">Procedimiento</label>
-              <textarea id="an-prog-procedimiento" rows="3" oninput="programarGuardadoPrograma()" class="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-indigo-500 outline-none"></textarea>
-            </div>
-            <div>
-              <label class="block text-xs font-bold text-slate-600 mb-1" for="an-prog-fuente">Fuente de información</label>
-              <textarea id="an-prog-fuente" rows="2" oninput="programarGuardadoPrograma()" class="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-indigo-500 outline-none"></textarea>
-            </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div>
-                <label class="block text-xs font-bold text-slate-600 mb-1" for="an-prog-responsable">Responsable de la información</label>
-                <input type="text" id="an-prog-responsable" oninput="programarGuardadoPrograma()" placeholder="Nombre de quien entrega la información del cliente" class="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-indigo-500 outline-none">
-              </div>
-              <div>
-                <label class="block text-xs font-bold text-slate-600 mb-1" for="an-prog-fecha">Fecha de elaboración</label>
-                <input type="date" id="an-prog-fecha" onchange="programarGuardadoPrograma()" class="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-indigo-500 outline-none">
-              </div>
-            </div>
-            <div class="flex flex-wrap items-center justify-between gap-2">
-              <button type="button" onclick="restablecerProgramaPredeterminado()" class="px-2.5 py-1 bg-white text-slate-700 hover:bg-slate-50 border border-slate-400 rounded text-[11px] font-bold transition">Restablecer el texto predeterminado</button>
-              <button type="button" onclick="traerProcedimientosPlantilla()" class="px-2.5 py-1 bg-white text-slate-700 hover:bg-slate-50 border border-slate-400 rounded text-[11px] font-bold transition">Traer procedimientos de la plantilla</button>
-              <p id="an-prog-estado" class="text-[11px] text-slate-400 min-h-[1rem]"></p>
-            </div>
-          </div>
+        <!-- Programa de trabajo por procedimientos (mismo formato que Bancos) -->
+        <div id="an-panel-programa" class="hidden">
+          <div id="an-procs-html" class="border border-slate-200 rounded-xl"></div>
+        </div>
+        <div id="an-panel-verif" class="hidden">
+          <div id="an-verif-html" class="border border-slate-200 rounded-xl overflow-auto"></div>
+        </div>
+        <div id="an-panel-concluir" class="hidden">
+          <div id="an-concluir-html" class="border border-slate-200 rounded-xl"></div>
         </div>
 
         <!-- 1. Anexo y cálculos programados -->
@@ -1615,6 +1593,43 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
               <p id="an-anexo-guardado" class="text-[11px] text-slate-400 min-h-[1rem]"></p>
             </div>
             <p class="text-[11px] text-slate-400 leading-relaxed">Método: interés simple = valor × tasa × días ÷ base. Los intereses del ejercicio se calculan desde el 1 de enero del año del cierre si la inversión viene del año anterior, o desde su fecha de emisión si se emitió dentro del año, hasta el cierre o el vencimiento, lo que ocurra primero (días = fecha final − fecha inicial). Una tasa de 1 o más se interpreta como porcentaje (8.5 = 8.5 %).</p>
+          </div>
+          <div id="an-memo" style="margin-top:24px;border-top:1px solid #b8b8b3;padding-top:16px">
+            <div class="p-4 max-w-4xl" style="background:#dcdcd8;border:1px solid #b8b8b3;border-radius:12px">
+        <!-- Memorándum de la cuenta (texto predeterminado, editable) -->
+        <div id="an-memo-inner" class="space-y-3">
+          <div id="an-origen-programa"></div>
+          <h3 class="text-sm font-bold text-slate-800">Memorándum</h3><p class="text-[11px] text-slate-500">Texto predeterminado editable. Se guarda por cliente y año.</p>
+          <div class="space-y-3">
+            <div>
+              <label class="block text-xs font-bold text-slate-600 mb-1" for="an-prog-objetivo">Objetivo</label>
+              <textarea id="an-prog-objetivo" rows="3" oninput="programarGuardadoPrograma()" class="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-indigo-500 outline-none"></textarea>
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-600 mb-1" for="an-prog-procedimiento">Procedimiento</label>
+              <textarea id="an-prog-procedimiento" rows="3" oninput="programarGuardadoPrograma()" class="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-indigo-500 outline-none"></textarea>
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-600 mb-1" for="an-prog-fuente">Fuente de información</label>
+              <textarea id="an-prog-fuente" rows="2" oninput="programarGuardadoPrograma()" class="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-indigo-500 outline-none"></textarea>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-bold text-slate-600 mb-1" for="an-prog-responsable">Responsable de la información</label>
+                <input type="text" id="an-prog-responsable" oninput="programarGuardadoPrograma()" placeholder="Nombre de quien entrega la información del cliente" class="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-indigo-500 outline-none">
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-slate-600 mb-1" for="an-prog-fecha">Fecha de elaboración</label>
+                <input type="date" id="an-prog-fecha" onchange="programarGuardadoPrograma()" class="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-indigo-500 outline-none">
+              </div>
+            </div>
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <button type="button" onclick="restablecerProgramaPredeterminado()" class="px-2.5 py-1 bg-white text-slate-700 hover:bg-slate-50 border border-slate-400 rounded text-[11px] font-bold transition">Restablecer el texto predeterminado</button>
+              <p id="an-prog-estado" class="text-[11px] text-slate-400 min-h-[1rem]"></p>
+            </div>
+          </div>
+        </div>
+            </div>
           </div>
         </div>
 
@@ -3338,7 +3353,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
     const SEP_CONCLUSION = ' ; ';
 
     let analisisEstado = {
-      rubro: 'activos', cuenta: '', clave: '', pestana: 'programa',
+      rubro: 'activos', cuenta: '', clave: '', pestana: 'anexo',
       analisis: [], criterio: null, cargaId: 0, responsable: '', actualizado: null
     };
     let archivosAnalisis = [];
@@ -3568,7 +3583,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       guardadoPrograma.snap = {
         cliente_id: valorAnalisis('an-cliente'), anio: Number(valorAnalisis('an-anio')), cuenta: analisisEstado.cuenta, visita: visitaAnalisis(),
         objetivo: p.objetivo, procedimiento: p.procedimiento, fuente: p.fuente, responsable: p.responsable || null,
-        fecha_elaboracion: p.fecha || null, ...(quienProg ? { actualizado_por: quienProg } : {}), ...camposEdicionOrigen('programa'), updated_at: new Date().toISOString()
+        fecha_elaboracion: p.fecha || null, procedimientos: invE.procs, verif: invE.verif, ...(quienProg ? { actualizado_por: quienProg } : {}), ...camposEdicionOrigen('programa'), updated_at: new Date().toISOString()
       };
       document.getElementById('an-prog-estado').textContent = 'Guardando...';
       guardadoPrograma.timer = setTimeout(vaciarGuardadoPrograma, 800);
@@ -3855,6 +3870,152 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       if (!window.confirm('Se reemplazará el texto del procedimiento por ' + data.length + ' pasos de la plantilla (' + sums.join(' y ') + ').\n\n¿Quieres continuar?')) return;
       document.getElementById('an-prog-procedimiento').value = data.map(r => (r.codigo ? r.codigo + '. ' : '') + (r.tipo_procedimiento ? '[' + r.tipo_procedimiento + '] ' : '') + r.procedimiento).join('\n\n');
       programarGuardadoPrograma();
+    }
+
+    // ===== Inversiones: Verificaciones, Programa por procedimientos y Por concluir (mismo formato que Bancos) =====
+    const invE = { procs: [], verif: {}, plantilla: null, ctx: null, verTodos: false, clave: '' };
+    const INV_VERIF_MANUALES = [
+      ['detalle', 'Se obtuvo el detalle de las inversiones (tipo, número, fechas, tasa y valor) y se archivó', 'Programa AB-02', 'AB-02'],
+      ['conf', 'Las confirmaciones se enviaron a todas las instituciones financieras y los saldos confirmados coinciden con el anexo', 'Programa AB-04', 'AB-04'],
+      ['deterioro', 'Se evaluó el deterioro de las inversiones a costo amortizado (pérdida crediticia esperada)', 'NIIF 9 párr. 5.5', 'AB-05'],
+      ['clasif', 'Las inversiones están clasificadas como corrientes o no corrientes según su vencimiento', 'NIC 1 párr. 66', 'AB-07'],
+      ['restr', 'Se indagó si existen restricciones, garantías o endosos sobre las inversiones y se obtuvo el soporte para la revelación', 'Programa AB-08', 'AB-08']
+    ];
+    const INV_ESTADOS = [['pendiente', 'Pendiente'], ['cumple', 'Cumple'], ['nocumple', 'No cumple'], ['noaplica', 'No aplica']];
+    function invClave() { return [valorAnalisis('an-cliente'), valorAnalisis('an-anio'), visitaAnalisis(), analisisEstado.cuenta].join('|'); }
+    function invAplicarGuardado(row) {
+      invE.procs = Array.isArray(row && row.procedimientos) ? row.procedimientos.map(x => ({ ...x })) : [];
+      invE.verif = (row && row.verif && typeof row.verif === 'object' && !Array.isArray(row.verif)) ? JSON.parse(JSON.stringify(row.verif)) : {};
+      invE.plantilla = null; invE.ctx = null; invE.clave = ''; invE.verTodos = false;
+    }
+    async function invCargarPlantilla() {
+      const def = Object.values(RUBROS_ANALISIS).flatMap(r => r.cuentas).find(c => c.clave === analisisEstado.cuenta);
+      const sums = def ? [def.sumariaCorto, def.sumariaLargo].filter(Boolean) : [];
+      const clave = invClave(); invE.clave = clave;
+      let data = [];
+      if (sums.length) { const r = await supabaseClient.from('programas_plantilla').select('*').in('sumaria', sums).eq('activo', true).order('orden', { ascending: true }); data = r.error ? [] : (r.data || []); }
+      data.sort((x, y) => (sums.indexOf(x.sumaria) - sums.indexOf(y.sumaria)) || ((x.orden || 0) - (y.orden || 0)));
+      const cont = {};
+      const plantilla = data.map(x => { cont[x.codigo] = (cont[x.codigo] || 0) + 1; return { ...x, k: cont[x.codigo] > 1 ? x.codigo + '#' + cont[x.codigo] : x.codigo }; });
+      const ctx = await traerContextoRiesgo(valorAnalisis('an-cliente'), valorAnalisis('an-anio'), visitaAnalisis());
+      if (invE.clave !== clave) return;
+      invE.plantilla = plantilla; invE.ctx = ctx; invRender();
+    }
+    function invFilasPrograma(todo) {
+      const todas = (invE.plantilla || []).map(x => { const g = invE.procs.find(k => k.k === x.k) || {}; return { ...x, donde: g.donde || '', quien: g.quien || '', estado: g.estado || 'pendiente', otro: !!g.otro, registrado_por: g.registrado_por || '', nota: g.nota || '', noAplica: motivosNoAplica(x, x.sumaria, invE.ctx) }; });
+      return todo ? todas : todas.filter(x => !x.noAplica.length || x.estado === 'hecho');
+    }
+    function invVerTodosProg(v) { invE.verTodos = !!v; invRender(); }
+    function invValorCasillero(id) { const el = document.getElementById(id); return el ? el.value : ''; }
+    function invVerifAuto() {
+      const out = [], calc = calculoActualAnexo(); if (!calc) return out;
+      const t = calc.tot, fm = n => formatoNumeroAnexo(n);
+      const cmp = (titulo, calculado, id, cod, asumeCero) => {
+        let lib = parsearNumeroAnexo(invValorCasillero(id));
+        if (lib === null && !asumeCero) { out.push([titulo, 'rev', 'Falta ingresar el valor en libros', cod]); return; }
+        if (lib === null) lib = 0;
+        const dif = Math.round((calculado - lib) * 100) / 100;
+        out.push([titulo, Math.abs(dif) < 0.005 ? 'ok' : 'rev', Math.abs(dif) < 0.005 ? 'Sin diferencia' : 'Diferencia de ' + fm(dif), cod]);
+      };
+      cmp('El total de inversiones del anexo coincide con el saldo en libros', t.valor, 'an-lib-total', 'AB-02');
+      cmp('Los intereses devengados calculados coinciden con los registrados en resultados', t.intAnio, 'an-lib-int', 'AB-02', true);
+      cmp('La porción de corto plazo coincide con el balance', t.corto, 'an-lib-corto', 'AB-07');
+      cmp('La porción de largo plazo coincide con el balance', t.largo, 'an-lib-largo', 'AB-07');
+      if (t.excluidas) out.push(['Todas las inversiones del anexo tienen los datos completos', 'rev', t.excluidas + ' inversión(es) con datos incompletos o posteriores al cierre no se incluyen en el cálculo', 'AB-02']);
+      if (t.vencidas) out.push(['Inversiones vencidas antes del cierre', 'info', t.vencidas + ' inversión(es) vencieron antes del cierre y no están en el saldo; confirmar su cobro', 'AB-02']);
+      return out;
+    }
+    function invCodigosConComentario() { const s = new Set(); invFilasPrograma(true).forEach(x => { if (x.estado === 'hecho' && String(x.nota || '').trim()) s.add(x.codigo); }); return s; }
+    function invComentarioDeCodigo(cod) { const x = invFilasPrograma(true).find(k => k.codigo === cod && k.estado === 'hecho' && String(k.nota || '').trim()); return x ? x.nota : ''; }
+    function invVerifDeProc(cod) {
+      let total = 0, abiertas = 0;
+      invVerifAuto().forEach(([t, e, d, c]) => { if (c === cod) { total++; if (e === 'rev') abiertas++; } });
+      INV_VERIF_MANUALES.forEach(([k, t, ref, c]) => { if (c === cod) { total++; const e = (invE.verif[k] || {}).e || 'pendiente'; if (e === 'pendiente' || e === 'nocumple') abiertas++; } });
+      return { total, abiertas };
+    }
+    function invPorConcluir() {
+      const ver = [], cerr = invCodigosConComentario();
+      invVerifAuto().forEach(([t, e, d, cod]) => { if (e === 'rev' && !cerr.has(cod)) ver.push({ t, d, cod, tipo: 'Automática' }); });
+      INV_VERIF_MANUALES.forEach(([k, t, ref, cod]) => { const e = (invE.verif[k] || {}).e || 'pendiente'; if ((e === 'pendiente' || e === 'nocumple') && !cerr.has(cod)) ver.push({ t, d: e === 'nocumple' ? 'Marcada como No cumple' : 'Sin evaluar', cod, tipo: 'Del auditor' }); });
+      const prog = invE.plantilla ? invFilasPrograma().filter(x => x.estado !== 'hecho' || (x.otro && !x.quien)) : [];
+      const mapa = new Map(), todos = invE.plantilla ? invFilasPrograma(true) : [];
+      const get = cod => { if (!mapa.has(cod)) mapa.set(cod, { cod, proc: todos.find(x => x.codigo === cod) || null, pendiente: false, ver: [] }); return mapa.get(cod); };
+      prog.forEach(x => { get(x.codigo).pendiente = true; });
+      ver.forEach(x => get(x.cod || '—').ver.push(x));
+      const grupos = [...mapa.values()].sort((a, b) => String(a.cod).localeCompare(String(b.cod), 'es', { numeric: true }));
+      return { ver, prog, grupos };
+    }
+    function invSetProg(k, campo, valor) {
+      const quien = nombreUsuarioActivo();
+      if (campo === 'estado' && valor !== 'pendiente' && !quien) { alert('Ingresa con tu usuario para marcar un procedimiento como hecho.'); invRender(); return; }
+      let e = invE.procs.find(x => x.k === k); if (!e) { e = { k, donde: '', quien: '', estado: 'pendiente' }; invE.procs.push(e); }
+      aplicarCambioProg(e, campo, valor, quien, esAnaliticaProg((invE.plantilla || []).find(p => p.k === k)));
+      programarGuardadoPrograma(); if (campo === 'estado' || campo === 'quien') invRender(true);
+    }
+    function invVerifEditar(k, campo, el) {
+      const v = invE.verif[k] || (invE.verif[k] = { e: 'pendiente', n: '' });
+      v[campo] = el.value; programarGuardadoPrograma(); if (campo === 'e') invRender(true);
+    }
+    function invIr(tab) { cambiarPestanaAnalisis(tab); }
+    function invHtmlPrograma() {
+      if (invE.plantilla === null) return '<div class="p-8 text-center text-slate-400 text-sm">Cargando el programa de trabajo...</div>';
+      if (!invE.plantilla.length) return '<div class="p-8 text-center text-slate-400 text-sm">No hay procedimientos cargados para esta cuenta en Configuración › Programas de trabajo.</div>';
+      const filas = invE.verTodos ? invFilasPrograma(true) : invFilasPrograma(), hechos = filas.filter(x => x.estado === 'hecho').length;
+      let s = '<div class="p-4 text-sm text-slate-700">' + htmlContextoPrograma(invE.ctx, 'AB', invE.plantilla.length, invFilasPrograma().length, invE.verTodos, 'invVerTodosProg') + '<div class="flex flex-wrap items-center gap-2 mb-3"><span class="pill-origen rev">Hechos: ' + hechos + '</span><span class="pill-origen mod">Pendientes: ' + (filas.length - hechos) + '</span></div><div class="overflow-x-auto border border-slate-200 rounded-xl"><table class="w-full text-left text-sm border-collapse"><thead class="bg-slate-100 text-slate-600 text-xs font-bold border-b border-slate-200"><tr><th class="p-3 w-16">Código</th><th class="p-3 min-w-[360px]">Procedimiento</th><th class="p-3 min-w-[200px]">Dónde está hecho</th><th class="p-3 min-w-[220px]">Comentario</th><th class="p-3 w-40">Quién lo hizo</th><th class="p-3 min-w-[170px]">Verificaciones (pestaña 3)</th><th class="p-3 w-36">Estado</th></tr></thead><tbody>';
+      filas.forEach(x => {
+        const v = invVerifDeProc(x.codigo), col = v.abiertas ? 'text-amber-700' : 'text-emerald-700';
+        s += '<tr class="align-top border-b border-slate-100' + (x.noAplica.length ? ' opacity-60' : '') + '"><td class="p-3 font-semibold">' + escapeHtml(x.codigo) + '</td><td class="p-3"><div class="text-xs text-slate-400">' + escapeHtml(x.tipo_procedimiento || '') + '</div>' + escapeHtml(x.procedimiento || '') + (x.noAplica.length ? '<div class="text-xs text-amber-700 mt-1">Ya no aplica por ' + escapeHtml(x.noAplica.join(' y ')) + (x.estado === 'hecho' ? ' (estaba hecho)' : '') + '</div>' : '') + '</td>' +
+          '<td class="p-3"><input type="text" value="' + escapeHtml(x.donde) + '" placeholder="Ej. Pestaña 1" onchange="invSetProg(\'' + x.k + '\', \'donde\', this.value)" class="w-full p-2 border border-slate-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500"></td>' +
+          '<td class="p-3"><input type="text" value="' + escapeHtml(x.nota || '') + '" placeholder="Ej. Inmaterial, no se ajustó" onchange="invSetProg(\'' + x.k + '\', \'nota\', this.value)" class="w-full p-2 border border-slate-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500"></td>' +
+          '<td class="p-3">' + htmlQuienProg(x, 'invSetProg', x.k, invRender) + '</td>' +
+          '<td class="p-3 text-xs">' + (v.total ? '<button type="button" onclick="invIr(\'verif\')" class="underline font-bold text-left ' + col + '">' + (v.abiertas ? v.abiertas + ' por resolver de ' + v.total : 'Todas cerradas (' + v.total + ')') + '</button>' + (x.estado !== 'hecho' && !v.abiertas ? '<div class="text-slate-500">Puedes marcarlo Hecho</div>' : '') + (x.estado === 'hecho' && v.abiertas ? (String(x.nota || '').trim() ? '<div class="text-slate-600">Hecho con verificaciones abiertas; queda el comentario como constancia</div>' : '<div class="text-amber-700">Está Hecho pero tiene verificaciones abiertas: agrega un comentario</div>') : '') : '<span class="text-slate-400">Sin verificaciones</span>') + '</td>' +
+          '<td class="p-3">' + htmlSelectEstadoProg(x, 'invSetProg', x.k) + '</td></tr>';
+      });
+      return s + '</tbody></table></div></div>';
+    }
+    function invHtmlVerif() {
+      const col = { ok: 'text-emerald-700', rev: 'text-amber-700', info: 'text-slate-500' }, tx = { ok: 'Cumple', rev: 'Revisar', info: 'Informativo' };
+      const lnk = cod => '<button type="button" onclick="invIr(\'programa\')" class="underline text-indigo-700 font-bold" title="Ir al programa de trabajo (pestaña 4)">' + cod + '</button>';
+      const aut = invVerifAuto();
+      let s = '<div class="px-2 py-1 text-[11px] font-bold text-slate-700 bg-slate-100 border-b border-slate-200">Verificaciones automáticas (se recalculan con el anexo y los saldos en libros)</div>';
+      if (!aut.length) s += '<p class="p-6 text-xs text-slate-400 text-center">Carga el anexo de inversiones en la pestaña 1 para ver las verificaciones.</p>';
+      else { s += '<table class="w-full table-fixed text-[11px] leading-tight border-collapse"><colgroup><col style="width:80px"><col style="width:46%"><col style="width:150px"><col></colgroup><thead class="bg-slate-50 text-slate-600"><tr><th class="px-2 py-1 border-b border-slate-200 text-left">Programa</th><th class="px-2 py-1 border-b border-slate-200 text-left">Verificación</th><th class="px-2 py-1 border-b border-slate-200 text-left">Resultado</th><th class="px-2 py-1 border-b border-slate-200 text-left">Detalle</th></tr></thead><tbody>';
+        aut.forEach(([t, e, d, cod]) => { s += '<tr class="border-b border-slate-100 align-top"><td class="px-2 py-0.5">' + lnk(cod) + '</td><td class="px-2 py-0.5 text-slate-700">' + escapeHtml(t) + '</td><td class="px-2 py-0.5 font-bold whitespace-nowrap ' + col[e] + '">' + tx[e] + '</td><td class="px-2 py-0.5 text-slate-600">' + escapeHtml(d) + (e === 'rev' && invComentarioDeCodigo(cod) ? '<div class="text-[10px] text-slate-500 mt-0.5">Comentario en el programa (' + escapeHtml(cod) + '): ' + escapeHtml(invComentarioDeCodigo(cod)) + '</div>' : '') + '</td></tr>'; });
+        s += '</tbody></table>'; }
+      const V = invE.verif, hechas = INV_VERIF_MANUALES.filter(x => ((V[x[0]] || {}).e || 'pendiente') !== 'pendiente').length;
+      s += '<div class="px-2 py-1 mt-2 text-[11px] font-bold text-slate-700 bg-slate-100 border-y border-slate-200">Evaluaciones del auditor (se guardan por cliente y año): ' + hechas + ' de ' + INV_VERIF_MANUALES.length + ' evaluadas</div><table class="w-full table-fixed text-[11px] leading-tight border-collapse"><colgroup><col style="width:80px"><col style="width:46%"><col style="width:150px"><col></colgroup><thead class="bg-slate-50 text-slate-600"><tr><th class="px-2 py-1 border-b border-slate-200 text-left">Programa</th><th class="px-2 py-1 border-b border-slate-200 text-left">Verificación</th><th class="px-2 py-1 border-b border-slate-200 text-left">Estado</th><th class="px-2 py-1 border-b border-slate-200 text-left">Comentario o papel de trabajo</th></tr></thead><tbody>';
+      INV_VERIF_MANUALES.forEach(([k, t, ref, cod]) => {
+        const v = V[k] || { e: 'pendiente', n: '' };
+        s += '<tr class="border-b border-slate-100 align-top"><td class="px-2 py-1">' + lnk(cod) + '</td><td class="px-2 py-1 text-slate-700">' + escapeHtml(t) + '</td><td class="px-2 py-1"><select onchange="invVerifEditar(\'' + k + '\', \'e\', this)" class="h-6 px-1 text-[11px] border border-slate-300 rounded bg-white">' + INV_ESTADOS.map(([val, nom]) => '<option value="' + val + '"' + ((v.e || 'pendiente') === val ? ' selected' : '') + '>' + nom + '</option>').join('') + '</select></td><td class="px-2 py-1"><input type="text" value="' + escapeHtml(v.n || '') + '" onchange="invVerifEditar(\'' + k + '\', \'n\', this)" class="w-full h-6 px-1.5 text-[11px] border border-slate-300 rounded"></td></tr>';
+      });
+      return s + '</tbody></table>';
+    }
+    function invHtmlConcluir() {
+      if (invE.plantilla === null) return '<div class="p-8 text-center text-slate-400 text-sm">Cargando...</div>';
+      const P = invPorConcluir();
+      if (!P.grupos.length) return '<div class="p-8 text-center text-emerald-700 text-sm font-semibold">Nada pendiente: todas las verificaciones están resueltas y todos los procedimientos están hechos.</div>';
+      const ir = (tab, txt) => '<button type="button" onclick="invIr(\'' + tab + '\')" class="underline text-indigo-700 font-bold">' + txt + '</button>';
+      let s = '<div class="p-4 text-sm text-slate-700"><div class="font-bold text-slate-800 mb-2">Programas por concluir (' + P.grupos.length + ') · ' + ir('programa', 'ir al Programa de trabajo') + ' · ' + ir('verif', 'ir a Verificaciones') + '</div>';
+      s += '<div class="overflow-x-auto border border-slate-200 rounded-xl"><table class="w-full text-left text-xs border-collapse"><thead class="bg-slate-100 text-slate-600 font-bold border-b border-slate-200"><tr><th class="p-2 w-20">Programa</th><th class="p-2 min-w-[320px]">Procedimiento</th><th class="p-2 w-28">Estado</th><th class="p-2 min-w-[300px]">Verificaciones por resolver</th></tr></thead><tbody>';
+      s += P.grupos.map(g => {
+        const x = g.proc;
+        const proc = x ? '<div class="text-[11px] text-slate-400">' + escapeHtml(x.tipo_procedimiento || '') + '</div>' + escapeHtml(x.procedimiento || '') : '<span class="text-slate-400">—</span>';
+        const est = g.pendiente ? '<span class="text-amber-700 font-semibold">' + (x && x.estado === 'hecho' && x.otro ? 'Falta indicar auditor' : 'Pendiente') + '</span>' : '<span class="text-emerald-700 font-semibold">Hecho</span>';
+        const ver = g.ver.length ? g.ver.map(v => '<div class="mb-1">• ' + escapeHtml(v.t) + ' <span class="text-amber-700">(' + escapeHtml(v.d || '') + ')</span> <span class="text-slate-400">· ' + v.tipo + '</span></div>').join('') : '<span class="text-emerald-700">Todas cerradas</span>';
+        return '<tr class="border-b border-slate-100 align-top"><td class="p-2 font-semibold">' + escapeHtml(g.cod) + '</td><td class="p-2">' + proc + '</td><td class="p-2">' + est + '</td><td class="p-2">' + ver + '</td></tr>';
+      }).join('') + '</tbody></table></div></div>';
+      return s;
+    }
+    let invRenderTimer = null;
+    function invRender(forzar) {
+      const p = document.getElementById('an-procs-html'); if (!p) return;
+      const foco = document.activeElement;
+      if (!forzar && foco && foco.closest && foco.closest('#an-panel-programa, #an-panel-verif') && /^(INPUT|SELECT|TEXTAREA)$/.test(foco.tagName)) return;
+      document.getElementById('an-procs-html').innerHTML = invHtmlPrograma();
+      document.getElementById('an-verif-html').innerHTML = invHtmlVerif();
+      document.getElementById('an-concluir-html').innerHTML = invHtmlConcluir();
+      let npc = 0; try { npc = invPorConcluir().grupos.length; } catch (e) { npc = 0; }
+      const tab = document.getElementById('an-tab-concluir'); if (tab) tab.innerHTML = '5. Por concluir' + (npc ? ' (' + npc + ')' : '');
     }
 
     // ===== Marca de origen: lo que prepara Claude como asistente y su revisión por una persona =====
@@ -4623,7 +4784,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       if (sa) { if (![...sa.options].some(o => o.value === String(r.anio))) sa.add(new Option('Año ' + r.anio, String(r.anio))); sa.value = String(r.anio); sa.dataset.tocado = '1'; }
       const sv = document.getElementById('an-visita'); if (sv) sv.value = r.visita === 'preliminar' ? 'preliminar' : 'final';
       cambiarSeleccionAnalisis();
-      cambiarPestanaAnalisis(r._t === 'claude' ? 'claude' : r._t);
+      cambiarPestanaAnalisis(r._t === 'programa' ? 'anexo' : (r._t === 'claude' ? 'claude' : r._t));
       const contScroll = document.querySelector('body > main'); if (contScroll) contScroll.scrollTop = 0;
     }
 
@@ -4664,6 +4825,8 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       analisisEstado.analisis = (anaR && anaR.data) || [];
       aplicarAnexoGuardado((anexR && anexR.data) || null, anio);
       aplicarPrograma((progR && progR.data) || null);
+      invAplicarGuardado((progR && progR.data) || null);
+      invCargarPlantilla();
       const rA = anexR && anexR.data, rC = critR && critR.data, rP = progR && progR.data;
       analisisEstado.responsable = (rA && rA.auditor) || (rC && rC.auditor) || '';
       let ultima = null;
@@ -4694,9 +4857,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       analisisEstado.pestana = p;
       anexoSub(analisisEstado.sub);
       // Hojas hechas: más oscuras; hojas por llenar: más claras
-      const rp = document.getElementById('an-prog-responsable');
-      const hechas = { programa: !!(rp && rp.value.trim()), anexo: anexoEstado.registros.length > 0, claude: analisisEstado.analisis.length > 0, criterio: !!(analisisEstado.criterio && analisisEstado.criterio.conclusion) };
-      ['programa', 'anexo', 'claude', 'criterio'].forEach(t => {
+      ['anexo', 'claude', 'verif', 'programa', 'concluir', 'criterio'].forEach(t => {
         const panel = document.getElementById('an-panel-' + t);
         const tab = document.getElementById('an-tab-' + t);
         if (panel) panel.classList.toggle('hidden', t !== p);
@@ -4711,15 +4872,10 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
 
     const PUNTO_HECHO = ' <span style="color:#000;font-size:9px;vertical-align:middle">●</span>';
     function actualizarInsigniasAnalisis() {
-      const tabP = document.getElementById('an-tab-programa');
-      if (tabP) { const rp = document.getElementById('an-prog-responsable'); tabP.innerHTML = '1. Programa de trabajo' + ''; }
-      const tabA = document.getElementById('an-tab-anexo');
-      setTimeout(() => cambiarPestanaAnalisis(analisisEstado.pestana), 0);
-      if (tabA) tabA.innerHTML = '2. Anexo y cálculos' + '';
-      const tabC = document.getElementById('an-tab-claude');
-      if (tabC) tabC.innerHTML = '3. Análisis de Claude' + '';
-      const tabK = document.getElementById('an-tab-criterio');
-      if (tabK) tabK.innerHTML = '4. Criterio final del auditor' + '';
+      const nombres = { anexo: '1. Anexo y cálculos', claude: '2. Análisis de Claude', verif: '3. Verificaciones', programa: '4. Programa de trabajo', concluir: '5. Por concluir', criterio: '6. Criterio final del auditor' };
+      let npc = 0; try { npc = invPorConcluir().grupos.length; } catch (e) { npc = 0; }
+      Object.keys(nombres).forEach(t => { const el = document.getElementById('an-tab-' + t); if (el) el.innerHTML = nombres[t] + (t === 'concluir' && npc ? ' (' + npc + ')' : ''); });
+      setTimeout(() => { cambiarPestanaAnalisis(analisisEstado.pestana); invRender(); }, 0);
     }
 
     // ----- 2. Análisis de Claude (usa automáticamente los resultados de la comparación) -----
@@ -5954,7 +6110,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
         const t = calc.tot;
         const prog = leerPrograma();
 
-        const TEAL = 'FF008F9A', AZUL = 'FF195999', NAVY = 'FF0B2C4D', GRIS = 'FFF1F5F9', NARANJA = 'FFFFF1E0', BLANCO = 'FFFFFFFF', TEAL_SUAVE = 'FF48A9B2';
+        const TEAL = 'FF008F9A', AZUL = 'FF195999', NAVY = 'FF0B2C4D', GRIS = 'FFF1F5F9', NARANJA = 'FFFFF1E0', BLANCO = 'FFFFFFFF', TEAL_SUAVE = 'FFD9D9D9';
         const FMT_NUM = '#,##0.00;[Red]-#,##0.00', FMT_PCT = '0.00%', FMT_FECHA = 'dd/mm/yyyy';
         const borde = { style: 'thin', color: { argb: 'FFCBD5E1' } };
         const bordes = { top: borde, left: borde, bottom: borde, right: borde };
@@ -5966,7 +6122,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
         wb.created = new Date();
 
         // ---------- Hoja Resumen ----------
-        const ws = wb.addWorksheet('Resumen', { views: [{ showGridLines: false }], pageSetup: { orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 0 } });
+        const ws = wb.addWorksheet('1. Anexo y cálculos', { views: [{ showGridLines: false }], pageSetup: { orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 0 } });
         ws.columns = [{ width: 44 }, { width: 22 }, { width: 30 }, { width: 20 }];
         ws.mergeCells('A1:D1');
         const tit = ws.getCell('A1');
@@ -6003,7 +6159,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
         ['Concepto', 'Según el anexo', 'Según libros / balance / resultados', 'Diferencia'].forEach((txt, i) => {
           const c = ws.getRow(filaEnc).getCell(i + 1);
           c.value = txt;
-          c.font = { bold: true, color: { argb: BLANCO } };
+          c.font = { bold: true, color: { argb: 'FF1F2937' } };
           c.fill = relleno(TEAL_SUAVE);
           c.border = bordes;
           c.alignment = { vertical: 'middle', horizontal: i === 0 ? 'left' : 'right', wrapText: true };
@@ -6121,7 +6277,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
           rp++;
           ['Cuenta contable', 'Debe', 'Haber'].forEach((txt, i) => {
             const c = ws.getRow(rp).getCell(i + 1);
-            c.value = txt; c.font = { bold: true, color: { argb: BLANCO } }; c.fill = relleno(TEAL_SUAVE); c.border = bordes;
+            c.value = txt; c.font = { bold: true, color: { argb: 'FF1F2937' } }; c.fill = relleno(TEAL_SUAVE); c.border = bordes;
             c.alignment = { horizontal: i === 0 ? 'left' : 'right' };
           });
           const primera = rp + 1;
@@ -6157,7 +6313,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
         }
 
         // ---------- Hoja Detalle ----------
-        const wd = wb.addWorksheet('Detalle', { views: [{ state: 'frozen', ySplit: 1, showGridLines: false }], pageSetup: { orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 0 } });
+        const wd = wb.addWorksheet('1a. Detalle por inversión', { views: [{ state: 'frozen', ySplit: 1, showGridLines: false }], pageSetup: { orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 0 } });
         const cols = [
           ['Fila', 7], ['Operación', 34], ['Emisión', 13], ['Vencimiento', 13], ['Tasa', 9], ['Valor', 16],
           ['Estado en el anexo', 16], ['Días del ejercicio', 11], ['Interés años anteriores', 17], ['Interés del ejercicio', 16],
@@ -6168,8 +6324,8 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
         cols.forEach(([h], i) => {
           const c = hd.getCell(i + 1);
           c.value = h;
-          c.font = { bold: true, color: { argb: BLANCO } };
-          c.fill = relleno(i >= 7 && i <= 10 ? AZUL : TEAL_SUAVE);
+          c.font = { bold: true, color: { argb: 'FF1F2937' } };
+          c.fill = relleno(TEAL_SUAVE);
           c.border = bordes;
           c.alignment = { vertical: 'middle', horizontal: [4, 5, 7, 8, 9, 10].includes(i) ? 'right' : (i === 11 ? 'center' : 'left'), wrapText: true };
         });
@@ -6225,6 +6381,17 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
           c.border = bordes;
         }
         wd.autoFilter = { from: { row: 1, column: 1 }, to: { row: ultima, column: cols.length } };
+
+        // Hojas de control, en el mismo orden y formato que Bancos
+        {
+          const hoy = new Date(), fechaHoy = String(hoy.getDate()).padStart(2, '0') + '/' + String(hoy.getMonth() + 1).padStart(2, '0') + '/' + hoy.getFullYear();
+          const infoPapel = [['Cliente', nombreCliente], ['Año', String(valorAnalisis('an-anio'))], ['Visita', etiquetaVisita().replace('Visita ', '')], ['Fecha de corte', calc.cierre || ''], ['Preparado por', nombreUsuarioActivo() || ''], ['Fecha de elaboración', fechaHoy]];
+          const resV = { ok: 'Cumple', rev: 'Revisar', info: 'Informativo' }, estV = { pendiente: 'Pendiente', cumple: 'Cumple', nocumple: 'No cumple', noaplica: 'No aplica' };
+          excelAgregarHoja(wb, { nombre: '3. Verificaciones', op: {}, filas: [cbH(['Programa', 'Verificaciones automáticas', 'Resultado', 'Detalle']), ...invVerifAuto().map(([a, e, d, cod]) => [cod, a, resV[e], d]), [], cbH(['Programa', 'Evaluaciones del auditor', 'Referencia', 'Estado', 'Comentario']), ...INV_VERIF_MANUALES.map(([k, a, ref, cod]) => [cod, a, ref, estV[(invE.verif[k] || {}).e || 'pendiente'], (invE.verif[k] || {}).n || ''])] }, infoPapel, 'Inversiones corrientes');
+          excelAgregarHoja(wb, { nombre: '4. Programa de trabajo', op: {}, filas: [cbH(['Código', 'Procedimiento', 'Dónde está hecho', 'Comentario', 'Quién lo hizo', 'Verificaciones (pestaña 3)', 'Estado']), ...invFilasPrograma().map(x => { const v = invVerifDeProc(x.codigo); return [x.codigo, x.procedimiento || '', x.donde, x.nota || '', x.quien, v.total ? (v.abiertas ? v.abiertas + ' por resolver de ' + v.total : 'Todas cerradas (' + v.total + ')') : 'Sin verificaciones', x.estado === 'hecho' ? (x.otro ? (esAnaliticaProg(x) ? 'Hecho en planificación' : 'Hecho por otro auditor') : 'Hecho') : 'Pendiente']; })] }, infoPapel, 'Inversiones corrientes');
+          const PC = invPorConcluir();
+          excelAgregarHoja(wb, { nombre: '5. Por concluir', op: {}, filas: [cbH(['Programa', 'Procedimiento', 'Estado', 'Verificaciones por resolver']), ...(PC.grupos.length ? PC.grupos.map(g => [g.cod, g.proc ? g.proc.procedimiento || '' : '', g.pendiente ? 'Pendiente' : 'Hecho', g.ver.length ? g.ver.map(v => '• ' + v.t + ' (' + (v.d || '') + ')').join('\n') : 'Todas cerradas']) : [['Nada pendiente']])] }, infoPapel, 'Inversiones corrientes');
+        }
 
         const buffer = await wb.xlsx.writeBuffer();
         const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
@@ -14238,6 +14405,48 @@ ${cont.innerHTML}
       else if (cbE.tab === 'concluir') { p.innerHTML = cbHtmlConcluir(); n.innerHTML = nota('Qué muestra', ['Cada programa aparece una sola vez, con su procedimiento y las verificaciones que le faltan por resolver. Cuando no queda nada, la cuenta está lista para revisión final.']); }
       else { p.innerHTML = cbHtmlPrograma(); n.innerHTML = nota('Cómo se usa', ['Marca cada procedimiento como Hecho e indica dónde está el papel de trabajo. Queda registrado quién lo hizo.']); }
     }
+    // Hoja con el formato de los papeles de trabajo (títulos grises, miles con decimales, totales con línea)
+    function excelAgregarHoja(wb, x, info, titulo) {
+      const NAVY = 'FF0B2C4D', GRIS_T = 'FFD9D9D9', GRIS_S = 'FFF2F2F2', FMT = '#,##0.00;[Red]-#,##0.00';
+      const bl = { style: 'thin', color: { argb: 'FFBFBFBF' } };
+      const bordes = { top: bl, left: bl, bottom: bl, right: bl };
+      const letra = n => { let s = ''; while (n > 0) { const m = (n - 1) % 26; s = String.fromCharCode(65 + m) + s; n = Math.floor((n - 1) / 26); } return s; };
+      {
+        const filas = x.filas, texto = !!x.op.texto, ncol = Math.max(4, filas.reduce((m, f) => Math.max(m, f.length), 0));
+        const ws = wb.addWorksheet(x.nombre.slice(0, 31), { views: [{ showGridLines: false }], pageSetup: { orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 0, paperSize: 9 } });
+        const anchos = Array.from({ length: ncol }, () => 10);
+        filas.forEach(f => { if (texto || f._l) return; f.forEach((v, j) => { const len = typeof v === 'number' ? 16 : String(v == null ? '' : v).length + 2; anchos[j] = Math.max(anchos[j], f._h ? Math.min(len, 24) : Math.min(len, 55)); }); });
+        if (texto) { anchos.fill(16); anchos[0] = 5; }
+        ws.columns = anchos.map(w => ({ width: w }));
+        ws.mergeCells('A1:' + letra(Math.min(ncol, 6)) + '1');
+        const tit = ws.getCell('A1'); tit.value = titulo + ' — ' + x.nombre; tit.font = { name: 'Calibri', size: 14, bold: true, color: { argb: NAVY } }; tit.alignment = { vertical: 'middle' }; ws.getRow(1).height = 26;
+        info.forEach((f, i) => { const r = 3 + i, a = ws.getCell('A' + r); a.value = f[0]; a.font = { bold: true, color: { argb: NAVY } }; const c = ws.getCell('B' + r); c.value = f[1]; c.alignment = { horizontal: 'left' }; });
+        let r = 3 + info.length + 1;
+        filas.forEach(f => {
+          if (!f.length) { r++; return; }
+          const row = ws.getRow(r);
+          if (texto) {
+            if (f.length === 1) { const c = row.getCell(1); c.value = f[0]; c.font = { bold: true, size: 11, color: { argb: NAVY } }; row.height = 22; }
+            else { ws.mergeCells('B' + r + ':H' + r); const c = ws.getCell('B' + r); c.value = f[1]; c.alignment = { wrapText: true, vertical: 'top', horizontal: 'left' }; row.height = Math.max(16, Math.ceil(String(f[1] || '').length / 105) * 15); }
+            r++; return;
+          }
+          if (f._l) {
+            const a = row.getCell(1); a.value = f[0]; a.font = { bold: true }; a.alignment = { vertical: 'top', wrapText: true };
+            ws.mergeCells('B' + r + ':' + letra(Math.max(ncol, 5)) + r); const c = ws.getCell('B' + r); c.value = f[1]; c.alignment = { wrapText: true, vertical: 'top', horizontal: 'left' };
+            row.height = Math.max(18, String(f[1] || '').split('\n').reduce((s, l) => s + Math.max(1, Math.ceil(l.length / 70)), 0) * 15); r++; return;
+          }
+          f.forEach((v, j) => {
+            const c = row.getCell(j + 1); c.value = v === undefined ? null : v; c.border = bordes;
+            if (f._h) { c.font = { bold: true, color: { argb: 'FF1F2937' } }; c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: GRIS_T } }; c.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true }; }
+            else if (typeof v === 'number') { c.numFmt = FMT; c.alignment = { horizontal: 'right', vertical: 'top' }; }
+            else c.alignment = { horizontal: 'left', vertical: 'top', wrapText: true };
+            if (f._t) { c.font = { bold: true }; c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: GRIS_S } }; c.border = { top: { style: 'thin', color: { argb: 'FF000000' } }, bottom: { style: 'double', color: { argb: 'FF000000' } }, left: bl, right: bl }; }
+          });
+          if (f._h) row.height = 32;
+          r++;
+        });
+      }
+    }
     // Marcas de fila para el Excel: cbH = títulos de columnas, cbT = totales, cbL = título con texto largo al lado
     const cbH = f => { f._h = true; return f; }, cbT = f => { f._t = true; return f; }, cbL = f => { f._l = true; return f; };
     async function cbDescargar() {
@@ -14274,42 +14483,7 @@ ${cont.innerHTML}
       const bl = { style: 'thin', color: { argb: 'FFBFBFBF' } };
       const bordes = { top: bl, left: bl, bottom: bl, right: bl };
       const wb = new ExcelJS.Workbook(); wb.creator = 'MGI Guerra'; wb.created = new Date();
-      const letra = n => { let s = ''; while (n > 0) { const m = (n - 1) % 26; s = String.fromCharCode(65 + m) + s; n = Math.floor((n - 1) / 26); } return s; };
-      hojas.forEach(x => {
-        const filas = x.filas, texto = !!x.op.texto, ncol = Math.max(4, filas.reduce((m, f) => Math.max(m, f.length), 0));
-        const ws = wb.addWorksheet(x.nombre.slice(0, 31), { views: [{ showGridLines: false }], pageSetup: { orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 0, paperSize: 9 } });
-        const anchos = Array.from({ length: ncol }, () => 10);
-        filas.forEach(f => { if (texto || f._l) return; f.forEach((v, j) => { const len = typeof v === 'number' ? 16 : String(v == null ? '' : v).length + 2; anchos[j] = Math.max(anchos[j], f._h ? Math.min(len, 24) : Math.min(len, 55)); }); });
-        if (texto) { anchos.fill(16); anchos[0] = 5; }
-        ws.columns = anchos.map(w => ({ width: w }));
-        ws.mergeCells('A1:' + letra(Math.min(ncol, 6)) + '1');
-        const tit = ws.getCell('A1'); tit.value = 'Conciliaciones bancarias — ' + x.nombre; tit.font = { name: 'Calibri', size: 14, bold: true, color: { argb: NAVY } }; tit.alignment = { vertical: 'middle' }; ws.getRow(1).height = 26;
-        info.forEach((f, i) => { const r = 3 + i, a = ws.getCell('A' + r); a.value = f[0]; a.font = { bold: true, color: { argb: NAVY } }; const c = ws.getCell('B' + r); c.value = f[1]; c.alignment = { horizontal: 'left' }; });
-        let r = 3 + info.length + 1;
-        filas.forEach(f => {
-          if (!f.length) { r++; return; }
-          const row = ws.getRow(r);
-          if (texto) {
-            if (f.length === 1) { const c = row.getCell(1); c.value = f[0]; c.font = { bold: true, size: 11, color: { argb: NAVY } }; row.height = 22; }
-            else { ws.mergeCells('B' + r + ':H' + r); const c = ws.getCell('B' + r); c.value = f[1]; c.alignment = { wrapText: true, vertical: 'top', horizontal: 'left' }; row.height = Math.max(16, Math.ceil(String(f[1] || '').length / 105) * 15); }
-            r++; return;
-          }
-          if (f._l) {
-            const a = row.getCell(1); a.value = f[0]; a.font = { bold: true }; a.alignment = { vertical: 'top', wrapText: true };
-            ws.mergeCells('B' + r + ':' + letra(Math.max(ncol, 5)) + r); const c = ws.getCell('B' + r); c.value = f[1]; c.alignment = { wrapText: true, vertical: 'top', horizontal: 'left' };
-            row.height = Math.max(18, String(f[1] || '').split('\n').reduce((s, l) => s + Math.max(1, Math.ceil(l.length / 70)), 0) * 15); r++; return;
-          }
-          f.forEach((v, j) => {
-            const c = row.getCell(j + 1); c.value = v === undefined ? null : v; c.border = bordes;
-            if (f._h) { c.font = { bold: true, color: { argb: 'FF1F2937' } }; c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: GRIS_T } }; c.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true }; }
-            else if (typeof v === 'number') { c.numFmt = FMT; c.alignment = { horizontal: 'right', vertical: 'top' }; }
-            else c.alignment = { horizontal: 'left', vertical: 'top', wrapText: true };
-            if (f._t) { c.font = { bold: true }; c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: GRIS_S } }; c.border = { top: { style: 'thin', color: { argb: 'FF000000' } }, bottom: { style: 'double', color: { argb: 'FF000000' } }, left: bl, right: bl }; }
-          });
-          if (f._h) row.height = 32;
-          r++;
-        });
-      });
+      hojas.forEach(x => excelAgregarHoja(wb, x, info, 'Conciliaciones bancarias'));
       const buffer = await wb.xlsx.writeBuffer();
       const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
       const enlace = document.createElement('a'); enlace.href = URL.createObjectURL(blob); enlace.download = archivo;
