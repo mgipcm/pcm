@@ -14083,12 +14083,12 @@ ${cont.innerHTML}
     function cbHtmlMemo() {
       const m = cbMemo(), tit = t => '<div class="font-bold text-slate-800 underline mb-0.5">' + t + '.-</div>';
       const lista = a => a.length ? a.map(x => '<div>' + escapeHtml(x) + '</div>').join('') : '<div class="text-slate-400">Agrega cuentas para completar esta parte.</div>';
-      return '<div class="mt-5 p-4 border border-slate-300 rounded-xl max-w-3xl text-[11px] text-slate-700 space-y-3" style="background:#dcdcd8;border-color:#b8b8b3"><div class="text-xs font-bold text-slate-800">Memorándum (sale en la primera hoja del Excel)</div>' +
+      return '<div style="margin-top:24px;border-top:1px solid #b8b8b3;padding-top:16px"><div class="p-4 max-w-3xl text-[11px] text-slate-700 space-y-3" style="background:#dcdcd8;border:1px solid #b8b8b3;border-radius:12px"><div class="text-xs font-bold text-slate-800">Memorándum (sale en la primera hoja del Excel)</div>' +
         '<div>' + tit('Objetivo') + '<div>' + escapeHtml(m.objetivo) + '</div></div>' +
         '<div>' + tit('Procedimiento') + lista(m.procedimiento) + '</div>' +
         '<div>' + tit('Fuente de la información') + lista(m.fuente) + '</div>' +
         '<div>' + tit('Responsable de la información') + '<input class="' + CB_INN + '" style="text-align:left" value="' + escapeHtml(m.resp) + '" placeholder="Nombre y cargo de quien entregó la información" onchange="cbSetTexto(\'memo\', \'resp\', this)"></div>' +
-        '<div>' + tit('Conclusión') + '<textarea rows="3" class="' + CB_INN + '" style="height:auto;text-align:left" placeholder="Escribe aquí la conclusión del auditor" onchange="cbSetTexto(\'memo\', \'concl\', this)">' + escapeHtml(m.concl) + '</textarea></div></div>';
+        '<div>' + tit('Conclusión') + '<textarea rows="3" class="' + CB_INN + '" style="height:auto;text-align:left" placeholder="Escribe aquí la conclusión del auditor" onchange="cbSetTexto(\'memo\', \'concl\', this)">' + escapeHtml(m.concl) + '</textarea></div></div></div>';
     }
     function cbHtmlLibros() {
       const L = cbE.cuentas, t = cbTotales(), tol = cbTol();
