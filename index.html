@@ -3514,7 +3514,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       resp.value = analisisEstado.responsable || act || '';
       const up = document.getElementById('an-actualizado');
       const a = analisisEstado.actualizado;
-      if (up) up.value = a && a.por ? a.por + (a.cuando ? ' · ' + formatoFechaContrato(a.cuando) : '') : '';
+      if (up) up.value = a && a.por ? a.por : '';
       const av = document.getElementById('an-identidad-aviso');
       if (av) {
         av.textContent = act ? '' : 'Sin sesión activa. Vuelve a ingresar al sistema.';
