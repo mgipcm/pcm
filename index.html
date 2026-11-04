@@ -5620,10 +5620,11 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       document.getElementById('an-anexo-alertas').innerHTML = alertas.map(a =>
         `<p class="text-xs text-slate-700 border border-orange-400 rounded-lg px-3 py-2">${escapeHtml(a)}</p>`).join('');
 
-      document.getElementById('an-anexo-conteo').textContent =
-        `${t.vigentes} vigente(s) · ${t.vencidas} vencida(s) · ${t.liquidadas} liquidada(s) · ${t.excluidas} excluida(s) · Intereses acumulados desde el inicio de las vigentes: ${formatoNumeroAnexo(t.intAcum)}`;
+      document.getElementById('an-anexo-conteo').innerHTML =
+        `${t.vigentes} vigente(s) · ${t.vencidas} vencida(s) · ${t.liquidadas} liquidada(s) · ${t.excluidas} excluida(s) · Intereses acumulados desde el inicio de las vigentes: ${formatoNumeroAnexo(t.intAcum)}` +
+        (incompletas.length ? ` <button type="button" onclick="quitarFilasIncompletasAnexo()" class="ml-2 px-2 py-0.5 bg-white text-rose-600 hover:bg-rose-50 border border-rose-300 rounded text-[11px] font-bold transition">Quitar las ${incompletas.length} fila(s) incompletas</button>` : '');
 
-      const filas = calc.filas.map(f => `
+      const filas = calc.filas.map((f, idx) => `
         <tr class="${claseFilaAnexo(f.estado)}">
           <td class="p-2 text-slate-400">${f.fila}</td>
           <td class="p-2">${escapeHtml(f.tipo || '—')}</td>
@@ -5637,6 +5638,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
           <td class="p-2 text-right">${['incompleta', 'posterior', 'liquidada'].includes(f.estado) ? '—' : formatoNumeroAnexo(f.intAnio)}</td>
           <td class="p-2 text-center font-semibold">${escapeHtml(f.plazo || '—')}</td>
           <td class="p-2 text-[11px]">${escapeHtml(f.nota)}</td>
+          <td class="p-2 text-center"><button type="button" onclick="quitarFilaAnexo(${idx})" class="text-slate-400 hover:text-red-600 font-bold" title="Quitar esta fila del anexo">✕</button></td>
         </tr>`).join('');
       document.getElementById('an-anexo-detalle').innerHTML = `
         <table class="w-full text-xs border-collapse min-w-[1000px]">
@@ -5654,6 +5656,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
               <th class="p-2 border-b border-slate-200 text-right">Interés del ejercicio</th>
               <th class="p-2 border-b border-slate-200 text-center">Plazo</th>
               <th class="p-2 border-b border-slate-200">Observación</th>
+              <th class="p-2 border-b border-slate-200 text-center">Quitar</th>
             </tr>
           </thead>
           <tbody>${filas}</tbody>
@@ -5664,7 +5667,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
               <td class="p-2" colspan="2"></td>
               <td class="p-2 text-right">${formatoNumeroAnexo(t.intPrev)}</td>
               <td class="p-2 text-right">${formatoNumeroAnexo(t.intAnio)}</td>
-              <td class="p-2" colspan="2"></td>
+              <td class="p-2" colspan="3"></td>
             </tr>
           </tfoot>
         </table>`;
@@ -5966,6 +5969,25 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       programarGuardadoAnexo();
     }
 
+    // Quitar filas que no corresponden a inversiones (totales, títulos, filas vacías del archivo)
+    function quitarFilaAnexo(i) {
+      const r = anexoEstado.registros[i]; if (!r) return;
+      if (!window.confirm('¿Quitar la fila ' + (r.fila || (i + 1)) + ' del anexo? Ya no se incluirá en los cálculos.')) return;
+      anexoEstado.registros.splice(i, 1);
+      actualizarAnexoUI();
+      if (anexoEstado.registros.length) programarGuardadoAnexo();
+      else { const e = document.getElementById('an-anexo-estado'); if (e) e.textContent = 'Quitaste todas las filas. Sube el anexo otra vez o usa "Borrar este anexo".'; }
+    }
+    function quitarFilasIncompletasAnexo() {
+      const calc = calculoActualAnexo(); if (!calc) return;
+      const malas = calc.filas.filter(f => f.estado === 'incompleta').length;
+      if (!malas) return;
+      if (!window.confirm('¿Quitar las ' + malas + ' fila(s) con datos incompletos del anexo? Ya no se incluirán en los cálculos.')) return;
+      anexoEstado.registros = anexoEstado.registros.filter((r, idx) => calc.filas[idx].estado !== 'incompleta');
+      actualizarAnexoUI();
+      if (anexoEstado.registros.length) programarGuardadoAnexo();
+      else { const e = document.getElementById('an-anexo-estado'); if (e) e.textContent = 'Quitaste todas las filas. Sube el anexo otra vez o usa "Borrar este anexo".'; }
+    }
     function alCambiarParametrosAnexo() {
       anexoEstado.cierre = valorAnalisis('an-cierre');
       anexoEstado.base = Number(valorAnalisis('an-base')) === 365 ? 365 : 360;
