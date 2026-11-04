@@ -1202,7 +1202,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
             <option value="">Todos</option>
             <option value="solicitado">Por autorizar</option>
             <option value="autorizado">Autorizados (esperan a Claude)</option>
-            <option value="hecho">Hechos</option>
+            <option value="hecho">Procesados por Claude</option>
             <option value="rechazado">Rechazados</option>
             <option value="cancelado">Cancelados</option>
           </select>
@@ -4391,11 +4391,11 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
     }
 
 
-    // ===== Pedidos a Claude: el auditor solicita, el Socio o Supervisor autoriza, Claude hace y deja a revisión =====
+    // ===== Pedidos a Claude: el auditor solicita, el Socio o Supervisor autoriza, Claude procesa y deja el trabajo aplicado =====
     let pedidosClaude = [];
     function cargoUsuarioNorm() { return usuarioActivo ? String(usuarioActivo.cargo || '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, '').toLowerCase() : ''; }
     function puedeAutorizarPedidos() { const c = cargoUsuarioNorm(); return c === 'socio' || c === 'supervisor'; }
-    const ESTADOS_PEDIDO = { solicitado: ['Por autorizar', 'pill-origen mod'], autorizado: ['Autorizado, espera a Claude', 'pill-origen'], hecho: ['Hecho, pasa a revisión', 'pill-origen rev'], rechazado: ['Rechazado', 'pill-origen'], cancelado: ['Cancelado', 'pill-origen'] };
+    const ESTADOS_PEDIDO = { solicitado: ['Por autorizar', 'pill-origen mod'], autorizado: ['Autorizado, espera a Claude', 'pill-origen'], hecho: ['Procesado por Claude', 'pill-origen rev'], rechazado: ['Rechazado', 'pill-origen'], cancelado: ['Cancelado', 'pill-origen'] };
     async function abrirPedidosClaude() {
       asegurarClientesEn('pc-cliente'); asegurarClientesEn('pc-f-cliente');
       const fc = document.getElementById('pc-f-cliente'), previo = fc.value;
@@ -4634,7 +4634,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
     function pintarPedidosClaude() {
       pintarMisPedidos();
       const f = valorAnalisis('pc-f-estado'), fcli = valorAnalisis('pc-f-cliente'), n = e => pedidosClaude.filter(p => p.estado === e).length;
-      document.getElementById('pc-resumen').innerHTML = '<span class="pill-origen mod">Por autorizar: ' + n('solicitado') + '</span><span class="pill-origen">Autorizados, esperan a Claude: ' + n('autorizado') + '</span><span class="pill-origen rev">Hechos: ' + n('hecho') + '</span>';
+      document.getElementById('pc-resumen').innerHTML = '<span class="pill-origen mod">Por autorizar: ' + n('solicitado') + '</span><span class="pill-origen">Autorizados, esperan a Claude: ' + n('autorizado') + '</span><span class="pill-origen rev">Procesados por Claude: ' + n('hecho') + '</span>';
       const lista = pedidosClaude.filter(p => (!f || p.estado === f) && (!fcli || fcli === '__todos__' || p.cliente_id === fcli)), tb = document.getElementById('pc-filas');
       if (!lista.length) { tb.innerHTML = '<tr><td colspan="6" class="p-8 text-center text-slate-400">No hay pedidos con este filtro.</td></tr>'; return; }
       const aut = puedeAutorizarPedidos(), miNombre = nombreUsuarioActivo();
