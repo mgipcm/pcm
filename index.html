@@ -4481,7 +4481,12 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
     };
     const PC_HOJAS = { caja: 'Caja', bancos: 'Bancos', equivalentes: 'Equivalentes de efectivo' };
     function pcNombreHoja(h) { return PC_HOJAS[h] || h || ''; }
-    function pcEtiquetas(sumaria, hoja) { return PC_ETIQ[sumaria === 'AA' ? 'AA:' + (hoja || '') : sumaria] || ['Documento de soporte', 'Otro']; }
+    const PC_TODO = 'Todo en un archivo (todos los documentos juntos)';
+    function pcEtiquetas(sumaria, hoja) {
+      const l = PC_ETIQ[sumaria === 'AA' ? 'AA:' + (hoja || '') : sumaria] || ['Documento de soporte', 'Otro'];
+      const i = l.indexOf('Otro');
+      return i < 0 ? l.concat([PC_TODO]) : l.slice(0, i).concat([PC_TODO], l.slice(i));
+    }
     function pcCambioCuenta() {
       const caja = document.getElementById('pc-hoja-caja'), esAA = valorAnalisis('pc-sumaria') === 'AA';
       if (caja) caja.classList.toggle('hidden', !esAA);
@@ -4515,7 +4520,8 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       const el = document.getElementById('pc-checklist'); if (!el) return;
       const sum = valorAnalisis('pc-sumaria'); if (!sum) { el.innerHTML = ''; return; }
       const et = pcEtiquetas(sum, valorAnalisis('pc-hoja')).filter(x => x !== 'Otro');
-      el.innerHTML = '<b>Qué subir:</b> ' + et.map(x => (pcEtiquetasElegidas.includes(x) ? '<span class="text-emerald-700">✓ ' : '<span class="text-slate-500">○ ') + escapeHtml(x) + '</span>').join(' · ');
+      const todo = pcEtiquetasElegidas.includes(PC_TODO);
+      el.innerHTML = '<b>Qué subir:</b> ' + et.filter(x => x !== PC_TODO).map(x => ((todo || pcEtiquetasElegidas.includes(x)) ? '<span class="text-emerald-700">✓ ' : '<span class="text-slate-500">○ ') + escapeHtml(x) + '</span>').join(' · ');
     }
     function pcAgregarArchivos(id) {
       const sel = document.getElementById('pc-et-' + id), msg = document.getElementById('pc-msg');
@@ -4597,7 +4603,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
         h += '<div class="space-y-0.5">' + vivos.map(a => '<div class="break-all">📎 ' + (a.etiqueta ? '<span class="text-slate-500">[' + escapeHtml(a.etiqueta) + ']</span> ' : '') + (puedeAutorizarPedidos() ? '<a href="#" onclick="descargarArchivoPedido(\'' + escapeHtml(a.ruta).replace(/'/g, '') + '\', \'' + escapeHtml(a.nombre).replace(/'/g, '') + '\'); return false;" class="underline text-slate-800">' + escapeHtml(a.nombre) + '</a>' : escapeHtml(a.nombre)) + ' <span class="text-slate-400">(' + tamanoLegible(a.tamano) + ')</span> ' + (a._lectura ? (a._lectura.error ? '<span class="text-amber-700" title="' + escapeHtml(a._lectura.error) + '">⚠ no se pudo leer: ' + escapeHtml(a._lectura.error) + '</span>' : (a._lectura.origen_lectura === 'transcripcion' ? '<span class="text-amber-700">✓ transcrito de imagen: verifica las cifras</span>' : '<span class="text-emerald-700">✓ leído</span>')) : '<span class="text-slate-400">leyendo…</span>') + '</div>').join('') + '</div><div class="text-[11px] text-slate-400 mt-1">Se eliminan al revisar el trabajo o el ' + fechaCortaOrigen(vence.toISOString()) + '</div>';
       }
       if (idos.length) h += '<div class="text-[11px] text-slate-500 mt-1">Archivos eliminados (' + escapeHtml(idos[0].eliminado_motivo || '') + ', ' + fechaCortaOrigen(idos[0].eliminado_at) + '): ' + idos.map(a => escapeHtml(a.nombre) + ' (' + tamanoLegible(a.tamano) + ')').join('; ') + '</div>';
-      if (!sinAgregar && ['solicitado', 'autorizado'].includes(p.estado) && (puedeAutorizarPedidos() || p.solicitado_por === nombreUsuarioActivo())) h += '<div class="mt-2 flex flex-wrap items-center gap-1"><select id="pc-et-' + p.id + '" class="p-1 border border-slate-300 rounded text-[11px] bg-white"><option value="">Tipo de archivo…</option>' + pcEtiquetas(p.sumaria).map(x => '<option value="' + escapeHtml(x) + '">' + escapeHtml(x) + '</option>').join('') + '</select><button type="button" onclick="pcAgregarArchivos(\'' + p.id + '\')" class="px-2 py-1 text-[11px] rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-100 font-medium">Agregar archivos</button></div>';
+      if (!sinAgregar && ['solicitado', 'autorizado'].includes(p.estado) && (puedeAutorizarPedidos() || p.solicitado_por === nombreUsuarioActivo())) h += '<div class="mt-2 flex flex-wrap items-center gap-1"><select id="pc-et-' + p.id + '" class="p-1 border border-slate-300 rounded text-[11px] bg-white"><option value="">Tipo de archivo…</option>' + pcEtiquetas(p.sumaria, p.hoja).map(x => '<option value="' + escapeHtml(x) + '">' + escapeHtml(x) + '</option>').join('') + '</select><button type="button" onclick="pcAgregarArchivos(\'' + p.id + '\')" class="px-2 py-1 text-[11px] rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-100 font-medium">Agregar archivos</button></div>';
       if (!arch.length && p.carpeta) h += '<div class="break-all">' + escapeHtml(p.carpeta) + '</div>';
       if (p.doc_confirmada_por) h += '<div class="text-[11px] text-slate-500 mt-1">Documentación confirmada por ' + escapeHtml(p.doc_confirmada_por) + '</div>';
       return h;
