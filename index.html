@@ -1640,6 +1640,12 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
             <div class="space-y-4">
               <div id="an-claude-datos"></div>
 
+              <div class="border border-slate-300 rounded-xl p-4 space-y-2" style="background:#ecece9">
+                <h2 class="text-xs font-bold text-slate-700">Cómo se pide el análisis</h2>
+                <p class="text-[11px] text-slate-600 leading-relaxed">El análisis lo prepara Claude a partir de un pedido, igual que en Bancos. Sube la documentación (certificados o pólizas, estados de cuenta, confirmaciones) en "Pedidos a Claude", el Socio o Supervisor lo autoriza y Claude lo procesa de forma automática. El resultado aparece aquí, a la derecha, para que lo revises.</p>
+                <button type="button" onclick="solicitarAnalisisInversiones()" class="w-full py-2.5 rounded-lg text-xs transition bg-slate-200 text-slate-900 hover:bg-slate-300 font-semibold">Solicitar análisis a Claude</button>
+              </div>
+              <div class="hidden">
               <div>
                 <h2 class="text-xs font-bold text-slate-600 mb-1">Archivos adicionales (opcional)</h2>
                 <label for="an-archivo" ondragover="event.preventDefault()" ondrop="event.preventDefault(); agregarArchivosAnalisis(event.dataTransfer.files)"
@@ -1664,6 +1670,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
               </button>
               <p id="an-estado" class="text-xs text-slate-500 min-h-[1rem]"></p>
               <p class="text-[11px] text-slate-400 leading-relaxed">Los archivos se envían a Claude (Anthropic) solo para generar el análisis. Confirma que la política de confidencialidad con tu cliente lo permite.</p>
+              </div>
             </div>
 
             <div class="border border-slate-200 rounded-xl flex flex-col min-h-[420px]">
@@ -1672,7 +1679,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
                 <button id="an-btn-copiar" onclick="copiarAnalisisCuenta()" class="hidden px-2.5 py-1 bg-white text-slate-700 hover:bg-slate-50 border border-slate-400 rounded text-[11px] font-bold transition">Copiar</button>
               </div>
               <div id="an-resultado" class="p-4 text-xs text-slate-700 leading-relaxed overflow-y-auto flex-1">
-                <p class="text-slate-400">El análisis aparecerá aquí.</p>
+                <p class="text-slate-400">Claude todavía no preparó un análisis para este cliente y año. Solicítalo con el botón de la izquierda.</p>
               </div>
               <p class="px-4 py-2 border-t border-slate-200 text-[11px] text-slate-400">Es un apoyo preliminar: verifica siempre contra la documentación. La conclusión es del auditor.</p>
             </div>
@@ -4388,7 +4395,9 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       AA1: ['Conciliación bancaria', 'Estado de cuenta', 'Confirmación bancaria', 'Firmas autorizadas', 'Otro'],
       AOO: ['Contrato', 'Adenda o renovación', 'Evaluación NIIF 16', 'Factura o soporte de pagos', 'Otro'],
       PCC: ['Contrato', 'Adenda o renovación', 'Evaluación NIIF 16', 'Factura o soporte de pagos', 'Otro'],
-      PLL: ['Contrato', 'Adenda o renovación', 'Evaluación NIIF 16', 'Factura o soporte de pagos', 'Otro']
+      PLL: ['Contrato', 'Adenda o renovación', 'Evaluación NIIF 16', 'Factura o soporte de pagos', 'Otro'],
+      AB: ['Certificado o póliza de inversión', 'Estado de cuenta', 'Confirmación bancaria', 'Detalle o anexo de inversiones', 'Otro'],
+      AS: ['Certificado o póliza de inversión', 'Estado de cuenta', 'Confirmación bancaria', 'Detalle o anexo de inversiones', 'Otro']
     };
     function pcEtiquetas(sumaria) { return PC_ETIQ[sumaria] || ['Documento de soporte', 'Otro']; }
     let pcEtiquetasElegidas = [];
@@ -4404,7 +4413,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       pcArchivosElegidos();
     }
     function pcEtiquetaSugerida(nombre, et) {
-      const reglas = [[/concilia/i, 'Conciliación bancaria'], [/estado.?de.?cuenta|extracto/i, 'Estado de cuenta'], [/confirma/i, 'Confirmación bancaria'], [/firma/i, 'Firmas autorizadas'], [/adenda|renov/i, 'Adenda o renovación'], [/contrato/i, 'Contrato'], [/niif|evaluaci/i, 'Evaluación NIIF 16'], [/factura|pago/i, 'Factura o soporte de pagos']];
+      const reglas = [[/concilia/i, 'Conciliación bancaria'], [/estado.?de.?cuenta|extracto/i, 'Estado de cuenta'], [/confirma/i, 'Confirmación bancaria'], [/firma/i, 'Firmas autorizadas'], [/adenda|renov/i, 'Adenda o renovación'], [/contrato/i, 'Contrato'], [/niif|evaluaci/i, 'Evaluación NIIF 16'], [/factura|pago/i, 'Factura o soporte de pagos'], [/certificado|p[oó]liza|dep[oó]sito|dpf/i, 'Certificado o póliza de inversión'], [/anexo|detalle/i, 'Detalle o anexo de inversiones']];
       const r = reglas.find(x => x[0].test(nombre) && et.includes(x[1])); return r ? r[1] : '';
     }
     function pcArchivosElegidos() {
@@ -4910,7 +4919,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       const btnCopiar = document.getElementById('an-btn-copiar');
       if (!registro) {
         ultimoAnalisisTexto = '';
-        resultado.innerHTML = '<p class="text-slate-400">El análisis aparecerá aquí.</p>';
+        resultado.innerHTML = '<p class="text-slate-400">Claude todavía no preparó un análisis para este cliente y año. Solicítalo con el botón de la izquierda.</p>';
         btnCopiar.classList.add('hidden');
         return;
       }
@@ -4939,6 +4948,14 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       }).join('');
     }
 
+    function solicitarAnalisisInversiones() {
+      const cli = valorAnalisis('an-cliente'), anio = valorAnalisis('an-anio'), vis = visitaAnalisis();
+      navegarMenu('pedidos-claude');
+      setTimeout(() => {
+        const poner = (id, v) => { const el = document.getElementById(id); if (el && v && [...el.options].some(o => o.value === v)) { el.value = v; el.dispatchEvent(new Event('change')); } };
+        poner('pc-cliente', cli); poner('pc-anio', anio); poner('pc-visita', vis); poner('pc-sumaria', 'AB');
+      }, 400);
+    }
     function verAnalisisGuardadoCuenta(i) {
       mostrarAnalisisEnPanel(analisisEstado.analisis[i] || null);
       const r = document.getElementById('an-resultado');
