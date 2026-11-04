@@ -1094,7 +1094,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
           <label class="block text-xs font-semibold text-slate-600 mb-1">Buscar</label>
           <input type="text" id="pg-buscar" oninput="pintarProgramas()" placeholder="Palabra del procedimiento" class="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs sm:text-sm outline-none">
         </div>
-        <div class="flex items-end"><button type="button" onclick="agregarProcedimientoPlantilla()" class="px-3 py-2 rounded-lg text-xs transition bg-slate-100 text-slate-800 hover:bg-slate-200 font-medium">+ Agregar procedimiento</button></div>
+        <div class="flex items-end gap-2"><select id="pg-hoja" class="p-2 bg-white border border-slate-300 rounded-lg text-xs outline-none" title="Solo para la cuenta AA"><option value="">Hoja (solo AA)</option><option value="caja">Caja</option><option value="bancos">Bancos</option><option value="equivalentes">Equivalentes de efectivo</option></select><button type="button" onclick="agregarProcedimientoPlantilla()" class="px-3 py-2 rounded-lg text-xs transition bg-slate-100 text-slate-800 hover:bg-slate-200 font-medium">+ Agregar procedimiento</button></div>
       </div>
       <p id="pg-conteo" class="text-xs text-slate-500 min-h-[1rem]"></p>
       <div class="overflow-x-auto border border-slate-200 rounded-xl shadow-sm bg-white">
@@ -1140,7 +1140,11 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
           </div>
           <div>
             <label class="block text-xs font-semibold text-slate-600 mb-1">Cuenta (sumaria)</label>
-            <select id="pc-sumaria" onchange="pcArchivosElegidos()" class="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs sm:text-sm outline-none"></select>
+            <select id="pc-sumaria" onchange="pcCambioCuenta()" class="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs sm:text-sm outline-none"></select>
+          </div>
+          <div id="pc-hoja-caja" class="hidden">
+            <label class="block text-xs font-semibold text-slate-600 mb-1">Hoja de la cuenta AA</label>
+            <select id="pc-hoja" onchange="pcArchivosElegidos()" class="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs sm:text-sm outline-none"><option value="">-- Elige la hoja --</option><option value="caja">Caja</option><option value="bancos">Bancos</option><option value="equivalentes">Equivalentes de efectivo</option></select>
           </div>
         </div>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1487,7 +1491,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
             </div>
           </div>
               <div id="an-sub-subir" class="space-y-2">
-              <h2 class="text-xs font-bold text-slate-600">Anexo de inversiones</h2>
+              <h2 id="an-anexo-titulo" class="text-xs font-bold text-slate-600">Anexo de inversiones</h2>
               <label for="an-anexo-archivo" ondragover="event.preventDefault()" ondrop="event.preventDefault(); alElegirArchivoAnexo(event.dataTransfer.files)"
                      class="block border-2 border-dashed border-slate-300 hover:border-indigo-400 hover:bg-slate-50 rounded-xl p-4 text-center cursor-pointer transition">
                 <p class="text-xs font-bold text-slate-700 mt-1">Haz clic o arrastra el anexo aquí (Excel o CSV)</p>
@@ -1574,18 +1578,18 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
                 </thead>
                 <tbody>
                   <tr class="border-b border-slate-200">
-                    <td class="p-2.5 font-semibold text-slate-800">Total de inversiones (valor)<span id="an-sub-total" class="block text-[10px] font-normal text-slate-500">Vigentes a la fecha de corte. En libros = corto plazo + largo plazo</span></td>
+                    <td class="p-2.5 font-semibold text-slate-800"><span id="an-lbl-total">Total de inversiones (valor)</span><span id="an-sub-total" class="block text-[10px] font-normal text-slate-500">Vigentes a la fecha de corte. En libros = corto plazo + largo plazo</span></td>
                     <td id="an-calc-total" class="p-2.5 text-right font-bold text-slate-800"></td>
                     <td class="p-2.5"><input type="text" inputmode="decimal" id="an-lib-total" oninput="alCambiarCasilleroAnexo()" onblur="formatearCasilleroAnexo(this)" placeholder="Valor en libros" class="w-full p-2 border border-slate-300 rounded-lg text-xs text-right outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-slate-800"></td>
                     <td id="an-dif-total" class="p-2.5 text-right"></td>
                   </tr>
-                  <tr class="border-b border-slate-200">
+                  <tr id="an-fila-corto" class="border-b border-slate-200">
                     <td class="p-2.5 font-semibold text-slate-800">Porción corto plazo<span class="block text-[10px] font-normal text-slate-500">Vencen dentro de los 12 meses siguientes al cierre</span></td>
                     <td id="an-calc-corto" class="p-2.5 text-right font-bold text-slate-800"></td>
                     <td class="p-2.5"><input type="text" inputmode="decimal" id="an-lib-corto" oninput="alCambiarCasilleroAnexo()" onblur="formatearCasilleroAnexo(this)" placeholder="Corto plazo en balance" class="w-full p-2 border border-slate-300 rounded-lg text-xs text-right outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-slate-800"></td>
                     <td id="an-dif-corto" class="p-2.5 text-right"></td>
                   </tr>
-                  <tr class="border-b border-slate-200">
+                  <tr id="an-fila-largo" class="border-b border-slate-200">
                     <td class="p-2.5 font-semibold text-slate-800">Porción largo plazo<span class="block text-[10px] font-normal text-slate-500">Vencen después de los 12 meses</span></td>
                     <td id="an-calc-largo" class="p-2.5 text-right font-bold text-slate-800"></td>
                     <td class="p-2.5"><input type="text" inputmode="decimal" id="an-lib-largo" oninput="alCambiarCasilleroAnexo()" onblur="formatearCasilleroAnexo(this)" placeholder="Largo plazo en balance" class="w-full p-2 border border-slate-300 rounded-lg text-xs text-right outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-slate-800"></td>
@@ -1599,6 +1603,16 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
                   </tr>
                 </tbody>
               </table>
+            </div>
+          </div>
+          <div id="an-eq-extra" class="hidden space-y-3" style="margin-top:24px;border-top:1px solid #b8b8b3;padding-top:16px">
+            <h3 class="text-sm font-bold text-slate-800">Partidas manuales (notas de crédito u otros)</h3>
+            <p class="text-[11px] text-slate-500">Valores que no vienen en el anexo. Escribe el valor con signo: positivo suma y negativo resta al total de equivalentes. Se guardan por cliente y año.</p>
+            <div id="an-eq-partidas"></div>
+            <button type="button" onclick="eqAgregarPartida()" class="px-2.5 py-1 bg-white text-slate-700 hover:bg-slate-50 border border-slate-400 rounded text-[11px] font-bold transition">+ Agregar partida</button>
+            <div>
+              <label class="block text-xs font-bold text-slate-600 mb-1" for="an-eq-notas">Notas y otros comentarios</label>
+              <textarea id="an-eq-notas" rows="3" oninput="eqCambioNotas(this)" placeholder="Escribe aquí cualquier aclaración sobre los equivalentes o las partidas manuales" class="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-indigo-500 outline-none"></textarea>
             </div>
           </div>
           <div id="an-memo" style="margin-top:24px;border-top:1px solid #b8b8b3;padding-top:16px">
@@ -2069,7 +2083,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
     <section id="sec-concil" class="hidden bg-white rounded-2xl shadow-xl border border-slate-200 p-6 min-h-[92vh] space-y-5">
       <div class="border-b pb-4">
         <h1 id="cb-titulo" class="text-xl font-bold text-slate-800">2. Auditoría/Análisis Claves: Activos › Efectivo y equivalentes de efectivo › Bancos (conciliaciones bancarias)</h1>
-        <p class="text-xs text-slate-500">Resumen de conciliaciones bancarias por cuenta, con el detalle de sus partidas, la comparación con los saldos en libros, verificaciones, revelaciones, análisis de Claude y programa de trabajo (sumaria AA1).</p>
+        <p class="text-xs text-slate-500">Resumen de conciliaciones bancarias por cuenta, con el detalle de sus partidas, la comparación con los saldos en libros, verificaciones, revelaciones, análisis de Claude y programa de trabajo (sumaria AA, hoja Bancos).</p>
       </div>
       <div class="grid grid-cols-1 md:grid-cols-4 xl:grid-cols-8 gap-4">
         <div class="md:col-span-2">
@@ -3297,6 +3311,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
         const cuentaElegida = cuenta || ((RUBROS_ANALISIS[rubro] && RUBROS_ANALISIS[rubro].cuentas[0]) || {}).clave || '';
         const b = document.getElementById(`nav-cuenta-${rubro}-${cuentaElegida}`);
         if (b) b.className = "w-full text-left px-3 py-1.5 rounded-lg text-xs font-bold bg-indigo-600 text-white shadow-md transition flex items-center gap-2";
+        if (cuentaElegida === 'equivalentes') { const gAA = document.getElementById('submenu-grupo-activos-AA'); if (gAA) gAA.classList.remove('hidden'); }
         document.getElementById('submenu-analisis').classList.remove('hidden');
         document.getElementById('icon-analisis').classList.add('rotate-180');
         const caja = document.getElementById('submenu-rubro-' + rubro);
@@ -3346,13 +3361,13 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
     const EXTRAS_ANALISIS = {
       // Se ordenan por la letra de la sumaria; "hijos" arma una cuenta con subcuentas (las que no tienen id aún están en desarrollo)
       'activos': [
-        { sumaria: 'AA', nombre: 'AA Efectivo y equivalentes de efectivo', hijos: [{ clave: 'caja', nombre: 'Caja' }, { id: 'concil', nombre: 'Bancos' }, { clave: 'equivalentes', nombre: 'Equivalentes de efectivo' }] },
+        { sumaria: 'AA', nombre: 'AA Efectivo y equivalentes de efectivo', hijos: [{ clave: 'caja', nombre: 'Caja' }, { id: 'concil', nombre: 'Bancos' }, { clave: 'equivalentes', cuentaAn: 'equivalentes', nombre: 'Equivalentes de efectivo' }] },
         { sumaria: 'AF', id: 'import', nombre: 'AF Inventarios (Importaciones)' },
         { sumaria: 'AOO', id: 'arrend', nombre: 'AOO Activos por derecho de uso y pasivos por arrendamiento' }
       ]
     };
     const RUBROS_ANALISIS = {
-      'activos': { titulo: 'Activos', cuentas: [{ clave: 'inversiones_corrientes', nombre: 'Inversiones corrientes', sumariaCorto: 'AB', sumariaLargo: 'AS' }] },
+      'activos': { titulo: 'Activos', cuentas: [{ clave: 'inversiones_corrientes', nombre: 'Inversiones corrientes', sumariaCorto: 'AB', sumariaLargo: 'AS' }, { clave: 'equivalentes', nombre: 'Efectivo y equivalentes de efectivo › Equivalentes de efectivo', sumariaCorto: 'AA', hoja: 'equivalentes', oculta: true }] },
       'pasivos': { titulo: 'Pasivos', cuentas: [] },
       'patrimonio': { titulo: 'Patrimonio', cuentas: [] },
       'ingresos-gastos': { titulo: 'Ingresos y Gastos', cuentas: [] }
@@ -3426,12 +3441,14 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
         </button>`;
       cont.innerHTML = botonSumarias + Object.entries(RUBROS_ANALISIS).map(([r, def], i) => {
         const claseBtn = 'w-full text-left px-2 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:bg-slate-800 hover:text-white transition flex items-center gap-2';
-        const botonExtra = x => x.id
+        const botonExtra = x => x.cuentaAn
+          ? `<button type="button" onclick="navegarMenu('analisis', 'activos', '${x.cuentaAn}')" id="nav-cuenta-${r}-${x.cuentaAn}" class="${claseBtn}"><span>${escapeHtml(x.nombre)}</span></button>`
+          : x.id
           ? `<button type="button" onclick="navegarMenu('${x.id}', 'analisis')" id="nav-cuenta-extra-${r}-${x.id}" class="${claseBtn}"><span>${escapeHtml(x.nombre)}</span></button>`
           : `<button type="button" onclick="avisarEnDesarrollo()" id="nav-cuenta-extra-${r}-${x.clave}" class="${claseBtn} opacity-60"><span>${escapeHtml(x.nombre)}</span><span class="ml-auto text-[9px] text-slate-500">Pronto</span></button>`;
         const grupoExtra = x => `<div class="space-y-1"><button type="button" onclick="toggleGrupoAnalisis('${r}-${x.sumaria}')" class="w-full flex items-center justify-between px-2 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:bg-slate-800 hover:text-white transition"><span>${escapeHtml(x.nombre)}</span><span id="icon-grupo-${r}-${x.sumaria}" class="inline-block text-[11px] leading-none transition-transform duration-200">▾</span></button><div id="submenu-grupo-${r}-${x.sumaria}" class="hidden pl-2 space-y-1">${x.hijos.map(botonExtra).join('')}</div></div>`;
         const items = [
-          ...def.cuentas.map(c => ({ sumaria: c.sumariaCorto || 'ZZ', html: `<button type="button" onclick="navegarMenu('analisis', '${r}', '${c.clave}')" id="nav-cuenta-${r}-${c.clave}" class="${claseBtn}"><span>${c.sumariaCorto ? escapeHtml(c.sumariaCorto) + ' ' : ''}${escapeHtml(c.nombre)}</span></button>` })),
+          ...def.cuentas.filter(c => !c.oculta).map(c => ({ sumaria: c.sumariaCorto || 'ZZ', html: `<button type="button" onclick="navegarMenu('analisis', '${r}', '${c.clave}')" id="nav-cuenta-${r}-${c.clave}" class="${claseBtn}"><span>${c.sumariaCorto ? escapeHtml(c.sumariaCorto) + ' ' : ''}${escapeHtml(c.nombre)}</span></button>` })),
           ...(EXTRAS_ANALISIS[r] || []).map(x => ({ sumaria: x.sumaria || 'ZZZ', html: x.hijos ? grupoExtra(x) : botonExtra(x) }))
         ].sort((a, b) => (a.sumaria < b.sumaria ? -1 : (a.sumaria > b.sumaria ? 1 : 0)));
         const cuentas = items.length ? items.map(i => i.html).join('') : '<p class="px-3 py-1 text-[11px] italic text-slate-400">Aún sin cuentas</p>';
@@ -3492,6 +3509,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       poblarAniosAnalisis();
       poblarAuditoresAnalisis();
       cambiarSeleccionAnalisis();
+      eqRenderPartidas();
     }
 
     function poblarClientesAnalisis() {
@@ -3559,6 +3577,12 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
         fuente: 'i) estado de cuenta bancarias, ii) mayores contables, iii) pólizas y/o certificados de inversiones.'
       }
     };
+    PROGRAMA_POR_CUENTA.equivalentes = {
+      objetivo: 'Determinar la razonabilidad de los equivalentes de efectivo, evaluando su existencia, su clasificación como equivalentes (plazo original de tres meses o menos desde la adquisición), su valuación, los intereses devengados, la presentación y la revelación.',
+      procedimiento: 'Se solicitó: i) el detalle de los equivalentes de efectivo, ii) los certificados, pólizas y estados de cuenta, iii) el detalle de otras partidas (por ejemplo, notas de crédito desmaterializadas).\nSe realizó: iv) el resumen de los equivalentes, v) el cálculo de intereses, vi) el cruce con libros contables y la determinación de diferencias.',
+      fuente: 'i) certificados y pólizas de inversión, ii) estados de cuenta, iii) mayores contables, iv) confirmaciones de las instituciones financieras.'
+    };
+    function esEq() { return analisisEstado.cuenta === 'equivalentes'; }
     let programaEstado = { existe: false };
     const guardadoPrograma = { timer: null, snap: null, cola: Promise.resolve() };
 
@@ -3724,7 +3748,8 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       const nombreSum = x => { const c = catalogoCuentas.find(k => k.sumaria === x); return c ? c.cuenta : x; };
       let ult = null, html = '';
       lista.forEach(r => {
-        if (!s && r.sumaria !== ult) { html += '<tr><td colspan="7" class="px-3 py-2 bg-slate-100 text-slate-700 font-bold">' + escapeHtml(nombreSum(r.sumaria)) + '</td></tr>'; ult = r.sumaria; }
+        const kg = r.sumaria + '|' + (r.hoja || '');
+        if ((!s || r.hoja) && kg !== ult) { html += '<tr><td colspan="7" class="px-3 py-2 bg-slate-100 text-slate-700 font-bold">' + escapeHtml(nombreSum(r.sumaria) + (r.hoja ? ' · Hoja ' + pcNombreHoja(r.hoja) : '')) + '</td></tr>'; ult = kg; }
         html += '<tr class="align-top' + (r.activo ? '' : ' opacity-50') + '">' +
           '<td class="p-2 border-r border-slate-200"><input type="text" value="' + escapeHtml(r.codigo || '') + '" onchange="guardarCampoPlantilla(' + r.id + ',\'codigo\',this.value)" class="w-full p-1 border border-slate-200 rounded outline-none bg-white"></td>' +
           '<td class="p-2 border-r border-slate-200"><input type="text" value="' + escapeHtml(r.tipo_procedimiento || '') + '" onchange="guardarCampoPlantilla(' + r.id + ',\'tipo_procedimiento\',this.value)" class="w-full p-1 border border-slate-200 rounded outline-none bg-white"></td>' +
@@ -3804,8 +3829,10 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
     async function agregarProcedimientoPlantilla() {
       const s = valorAnalisis('pg-sumaria'), est = document.getElementById('pg-estado');
       if (!s) { est.textContent = 'Elige primero una sumaria para agregarle el procedimiento.'; est.className = 'text-[11px] min-h-[1rem] text-red-600 font-bold'; return; }
+      const hoja = s === 'AA' ? valorAnalisis('pg-hoja') : '';
+      if (s === 'AA' && !hoja) { est.textContent = 'Para la cuenta AA elige también la hoja (Caja, Bancos o Equivalentes de efectivo).'; est.className = 'text-[11px] min-h-[1rem] text-red-600 font-bold'; return; }
       const maxOrden = programasPlantilla.reduce((m, r) => Math.max(m, r.orden || 0), 0);
-      const { data, error } = await supabaseClient.from('programas_plantilla').insert([{ sumaria: s, codigo: '', procedimiento: 'Nuevo procedimiento', activo: true, orden: maxOrden + 1, actualizado_por: nombreUsuarioActivo() || null }]).select().single();
+      const { data, error } = await supabaseClient.from('programas_plantilla').insert([{ sumaria: s, hoja: hoja || null, codigo: '', procedimiento: 'Nuevo procedimiento', activo: true, orden: maxOrden + 1, actualizado_por: nombreUsuarioActivo() || null }]).select().single();
       if (error) { est.textContent = 'No se pudo agregar: ' + (error.message || error); est.className = 'text-[11px] min-h-[1rem] text-red-600 font-bold'; return; }
       programasPlantilla.push(data); pintarProgramas();
     }
@@ -3832,8 +3859,10 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
         if (!f) return;
         const cat = g(f, 'CATEGORIA'), codigo = g(f, 'CODIGO'), proc = g(f, 'PROCEDIMIENTO');
         const m = cat.match(/^\[([^\]]+)\]/); if (!m || !proc) return;
-        const k = m[1], sumaria = k === '001' ? 'FG' : k.split('.').pop();
+        const k = m[1], sumariaRep = k === '001' ? 'FG' : k.split('.').pop();
+        const hojaAA = { AA0: 'caja', AA1: 'bancos', AA2: 'equivalentes' }[sumariaRep] || null, sumaria = hojaAA ? 'AA' : sumariaRep;
         out.push({
+          ...(hojaAA ? { hoja: hojaAA } : {}),
           sumaria: sumaria, codigo: codigo, tipo_procedimiento: oracionPlantilla(g(f, 'TIPO PROCEDIMIENTO').replace(/^\[\d+\]\s*/, '')) || null, procedimiento: oracionPlantilla(proc),
           tamanos: ext(g(f, 'TAMAÑO(S) EMPRESA'), { '02': 'Grande', '03': 'Pequeña', '04': 'Mediana' }) || null,
           riesgos: ext(g(f, 'TIPO RIESGO(S)'), { A: 'Alto', B: 'Bajo', M: 'Medio' }) || null,
@@ -3874,7 +3903,8 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       const sums = def ? [def.sumariaCorto, def.sumariaLargo].filter(Boolean) : [];
       const est = document.getElementById('an-prog-estado');
       if (!sums.length) { est.textContent = 'Esta cuenta no tiene sumarias asociadas.'; return; }
-      let { data, error } = await supabaseClient.from('programas_plantilla').select('*').in('sumaria', sums).eq('activo', true).order('orden', { ascending: true });
+      let qpl = supabaseClient.from('programas_plantilla').select('*').in('sumaria', sums).eq('activo', true); if (def && def.hoja) qpl = qpl.eq('hoja', def.hoja);
+      let { data, error } = await qpl.order('orden', { ascending: true });
       if (error) { est.textContent = 'No se pudo leer la plantilla: ' + (error.message || error); return; }
       const ctxP = await traerContextoRiesgo(valorAnalisis('an-cliente'), valorAnalisis('an-anio'), valorAnalisis('an-visita'));
       const totalP = (data || []).length;
@@ -3888,13 +3918,22 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
 
     // ===== Inversiones: Verificaciones, Programa por procedimientos y Por concluir (mismo formato que Bancos) =====
     const invE = { procs: [], verif: {}, plantilla: null, ctx: null, verTodos: false, clave: '' };
-    const INV_VERIF_MANUALES = [
+    const INV_VERIF_MANUALES_INV = [
       ['detalle', 'Se obtuvo el detalle de las inversiones (tipo, número, fechas, tasa y valor) y se archivó', 'Programa AB-02', 'AB-02'],
       ['conf', 'Las confirmaciones se enviaron a todas las instituciones financieras y los saldos confirmados coinciden con el anexo', 'Programa AB-04', 'AB-04'],
       ['deterioro', 'Se evaluó el deterioro de las inversiones a costo amortizado (pérdida crediticia esperada)', 'NIIF 9 párr. 5.5', 'AB-05'],
       ['clasif', 'Las inversiones están clasificadas como corrientes o no corrientes según su vencimiento', 'NIC 1 párr. 66', 'AB-07'],
       ['restr', 'Se indagó si existen restricciones, garantías o endosos sobre las inversiones y se obtuvo el soporte para la revelación', 'Programa AB-08', 'AB-08']
     ];
+    const INV_VERIF_MANUALES_EQ = [
+      ['detalle', 'Se obtuvo el detalle de los equivalentes de efectivo (tipo, número, fechas, tasa y valor) y se archivó', 'Programa AA-16', 'AA-16'],
+      ['nc', 'Se evaluó la existencia de otros equivalentes (notas de crédito desmaterializadas u otros) y su política contable', 'NIC 7 párr. 46', 'AA-15'],
+      ['conf', 'Las confirmaciones se enviaron a las instituciones financieras y los saldos confirmados coinciden con el anexo', 'Programa AA-17', 'AA-17'],
+      ['riesgo', 'Se evaluó el riesgo de crédito de las instituciones emisoras y la pérdida crediticia esperada', 'NIIF 9 párr. 5.5', 'AA-18'],
+      ['restr', 'Se indagó si existen restricciones, garantías o endosos y se obtuvo el soporte para la revelación', 'Programa AA-19', 'AA-19'],
+      ['flujo', 'El efectivo y equivalentes del estado de flujos de efectivo cuadra con el estado de situación financiera', 'NIC 7 párr. 45', 'AA-20']
+    ];
+    function invVerifManuales() { return esEq() ? INV_VERIF_MANUALES_EQ : INV_VERIF_MANUALES_INV; }
     const INV_ESTADOS = [['pendiente', 'Pendiente'], ['cumple', 'Cumple'], ['nocumple', 'No cumple'], ['noaplica', 'No aplica']];
     function invClave() { return [valorAnalisis('an-cliente'), valorAnalisis('an-anio'), visitaAnalisis(), analisisEstado.cuenta].join('|'); }
     function invAplicarGuardado(row) {
@@ -3907,7 +3946,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       const sums = def ? [def.sumariaCorto, def.sumariaLargo].filter(Boolean) : [];
       const clave = invClave(); invE.clave = clave;
       let data = [];
-      if (sums.length) { const r = await supabaseClient.from('programas_plantilla').select('*').in('sumaria', sums).eq('activo', true).order('orden', { ascending: true }); data = r.error ? [] : (r.data || []); }
+      if (sums.length) { let q = supabaseClient.from('programas_plantilla').select('*').in('sumaria', sums).eq('activo', true); if (def && def.hoja) q = q.eq('hoja', def.hoja); const r = await q.order('orden', { ascending: true }); data = r.error ? [] : (r.data || []); }
       data.sort((x, y) => (sums.indexOf(x.sumaria) - sums.indexOf(y.sumaria)) || ((x.orden || 0) - (y.orden || 0)));
       const cont = {};
       const plantilla = data.map(x => { cont[x.codigo] = (cont[x.codigo] || 0) + 1; return { ...x, k: cont[x.codigo] > 1 ? x.codigo + '#' + cont[x.codigo] : x.codigo }; });
@@ -3931,6 +3970,16 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
         const dif = Math.round((calculado - lib) * 100) / 100;
         out.push([titulo, Math.abs(dif) < 0.005 ? 'ok' : 'rev', Math.abs(dif) < 0.005 ? 'Sin diferencia' : 'Diferencia de ' + fm(dif), cod]);
       };
+      if (esEq()) {
+        const tot = Math.round((t.valor + eqTotalPartidas()) * 100) / 100;
+        cmp('El total de equivalentes del anexo (más partidas manuales) coincide con el saldo en libros', tot, 'an-lib-total', 'AA-16');
+        cmp('Los intereses devengados calculados coinciden con los registrados en resultados', t.intAnio, 'an-lib-int', 'AA-16', true);
+        const largos = calc.filas.filter(f => (f.estado === 'vigente' || f.estado === 'vencida') && f.inicio !== null && f.vencimiento !== null && f.inicio !== undefined && f.vencimiento !== undefined && (f.vencimiento - f.inicio) / 86400000 > 93);
+        out.push(['Todos los equivalentes tienen plazo original de tres meses o menos (NIC 7 párr. 7)', largos.length ? 'rev' : 'ok', largos.length ? largos.length + ' inversión(es) con plazo original mayor a tres meses (filas ' + largos.slice(0, 12).map(f => f.fila).join(', ') + '): no calificarían como equivalentes de efectivo' : 'Sin excepciones', 'AA-16']);
+        if (t.excluidas) out.push(['Todas las inversiones del anexo tienen los datos completos', 'rev', t.excluidas + ' inversión(es) con datos incompletos o posteriores a la fecha de corte no se incluyen en el cálculo', 'AA-16']);
+        if (t.vencidas) out.push(['Equivalentes vencidos antes de la fecha de corte', 'info', t.vencidas + ' inversión(es) vencieron antes de la fecha de corte y no están en el saldo; confirmar su cobro', 'AA-16']);
+        return out;
+      }
       cmp('El total de inversiones del anexo coincide con el saldo en libros', t.valor, 'an-lib-total', 'AB-02');
       cmp('La porción de corto plazo coincide con el balance', t.corto, 'an-lib-corto', 'AB-07');
       cmp('La porción de largo plazo coincide con el balance', t.largo, 'an-lib-largo', 'AB-07');
@@ -3944,13 +3993,13 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
     function invVerifDeProc(cod) {
       let total = 0, abiertas = 0;
       invVerifAuto().forEach(([t, e, d, c]) => { if (c === cod) { total++; if (e === 'rev') abiertas++; } });
-      INV_VERIF_MANUALES.forEach(([k, t, ref, c]) => { if (c === cod) { total++; const e = (invE.verif[k] || {}).e || 'pendiente'; if (e === 'pendiente' || e === 'nocumple') abiertas++; } });
+      invVerifManuales().forEach(([k, t, ref, c]) => { if (c === cod) { total++; const e = (invE.verif[k] || {}).e || 'pendiente'; if (e === 'pendiente' || e === 'nocumple') abiertas++; } });
       return { total, abiertas };
     }
     function invPorConcluir() {
       const ver = [], cerr = invCodigosConComentario();
       invVerifAuto().forEach(([t, e, d, cod]) => { if (e === 'rev' && !cerr.has(cod)) ver.push({ t, d, cod, tipo: 'Automática' }); });
-      INV_VERIF_MANUALES.forEach(([k, t, ref, cod]) => { const e = (invE.verif[k] || {}).e || 'pendiente'; if ((e === 'pendiente' || e === 'nocumple') && !cerr.has(cod)) ver.push({ t, d: e === 'nocumple' ? 'Marcada como No cumple' : 'Sin evaluar', cod, tipo: 'Del auditor' }); });
+      invVerifManuales().forEach(([k, t, ref, cod]) => { const e = (invE.verif[k] || {}).e || 'pendiente'; if ((e === 'pendiente' || e === 'nocumple') && !cerr.has(cod)) ver.push({ t, d: e === 'nocumple' ? 'Marcada como No cumple' : 'Sin evaluar', cod, tipo: 'Del auditor' }); });
       const prog = invE.plantilla ? invFilasPrograma().filter(x => x.estado !== 'hecho' || (x.otro && !x.quien)) : [];
       const mapa = new Map(), todos = invE.plantilla ? invFilasPrograma(true) : [];
       const get = cod => { if (!mapa.has(cod)) mapa.set(cod, { cod, proc: todos.find(x => x.codigo === cod) || null, pendiente: false, ver: [] }); return mapa.get(cod); };
@@ -3975,7 +4024,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       if (invE.plantilla === null) return '<div class="p-8 text-center text-slate-400 text-sm">Cargando el programa de trabajo...</div>';
       if (!invE.plantilla.length) return '<div class="p-8 text-center text-slate-400 text-sm">No hay procedimientos cargados para esta cuenta en Configuración › Programas de trabajo.</div>';
       const filas = invE.verTodos ? invFilasPrograma(true) : invFilasPrograma(), hechos = filas.filter(x => x.estado === 'hecho').length;
-      let s = '<div class="p-4 text-sm text-slate-700">' + htmlContextoPrograma(invE.ctx, 'AB', invE.plantilla.length, invFilasPrograma().length, invE.verTodos, 'invVerTodosProg') + '<div class="flex flex-wrap items-center gap-2 mb-3"><span class="pill-origen rev">Hechos: ' + hechos + '</span><span class="pill-origen mod">Pendientes: ' + (filas.length - hechos) + '</span></div><div class="overflow-x-auto border border-slate-200 rounded-xl"><table class="w-full text-left text-sm border-collapse"><thead class="bg-slate-100 text-slate-600 text-xs font-bold border-b border-slate-200"><tr><th class="p-3 w-16">Código</th><th class="p-3 min-w-[360px]">Procedimiento</th><th class="p-3 min-w-[200px]">Dónde está hecho</th><th class="p-3 min-w-[220px]">Comentario</th><th class="p-3 w-40">Quién lo hizo</th><th class="p-3 min-w-[170px]">Verificaciones (pestaña 3)</th><th class="p-3 w-36">Estado</th></tr></thead><tbody>';
+      let s = '<div class="p-4 text-sm text-slate-700">' + htmlContextoPrograma(invE.ctx, esEq() ? 'AA' : 'AB', invE.plantilla.length, invFilasPrograma().length, invE.verTodos, 'invVerTodosProg') + '<div class="flex flex-wrap items-center gap-2 mb-3"><span class="pill-origen rev">Hechos: ' + hechos + '</span><span class="pill-origen mod">Pendientes: ' + (filas.length - hechos) + '</span></div><div class="overflow-x-auto border border-slate-200 rounded-xl"><table class="w-full text-left text-sm border-collapse"><thead class="bg-slate-100 text-slate-600 text-xs font-bold border-b border-slate-200"><tr><th class="p-3 w-16">Código</th><th class="p-3 min-w-[360px]">Procedimiento</th><th class="p-3 min-w-[200px]">Dónde está hecho</th><th class="p-3 min-w-[220px]">Comentario</th><th class="p-3 w-40">Quién lo hizo</th><th class="p-3 min-w-[170px]">Verificaciones (pestaña 3)</th><th class="p-3 w-36">Estado</th></tr></thead><tbody>';
       filas.forEach(x => {
         const v = invVerifDeProc(x.codigo), col = v.abiertas ? 'text-amber-700' : 'text-emerald-700';
         s += '<tr class="align-top border-b border-slate-100' + (x.noAplica.length ? ' opacity-60' : '') + '"><td class="p-3 font-semibold">' + escapeHtml(x.codigo) + '</td><td class="p-3"><div class="text-xs text-slate-400">' + escapeHtml(x.tipo_procedimiento || '') + '</div>' + escapeHtml(x.procedimiento || '') + (x.noAplica.length ? '<div class="text-xs text-amber-700 mt-1">Ya no aplica por ' + escapeHtml(x.noAplica.join(' y ')) + (x.estado === 'hecho' ? ' (estaba hecho)' : '') + '</div>' : '') + '</td>' +
@@ -3996,9 +4045,9 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       else { s += '<table class="w-full table-fixed text-[11px] leading-tight border-collapse"><colgroup><col style="width:80px"><col style="width:46%"><col style="width:150px"><col></colgroup><thead class="bg-slate-50 text-slate-600"><tr><th class="px-2 py-1 border-b border-slate-200 text-left">Programa</th><th class="px-2 py-1 border-b border-slate-200 text-left">Verificación</th><th class="px-2 py-1 border-b border-slate-200 text-left">Resultado</th><th class="px-2 py-1 border-b border-slate-200 text-left">Detalle</th></tr></thead><tbody>';
         aut.forEach(([t, e, d, cod]) => { s += '<tr class="border-b border-slate-100 align-top"><td class="px-2 py-0.5">' + lnk(cod) + '</td><td class="px-2 py-0.5 text-slate-700">' + escapeHtml(t) + '</td><td class="px-2 py-0.5 font-bold whitespace-nowrap ' + col[e] + '">' + tx[e] + '</td><td class="px-2 py-0.5 text-slate-600">' + escapeHtml(d) + (e === 'rev' && invComentarioDeCodigo(cod) ? '<div class="text-[10px] text-slate-500 mt-0.5">Comentario en el programa (' + escapeHtml(cod) + '): ' + escapeHtml(invComentarioDeCodigo(cod)) + '</div>' : '') + '</td></tr>'; });
         s += '</tbody></table>'; }
-      const V = invE.verif, hechas = INV_VERIF_MANUALES.filter(x => ((V[x[0]] || {}).e || 'pendiente') !== 'pendiente').length;
-      s += '<div class="px-2 py-1 mt-2 text-[11px] font-bold text-slate-700 bg-slate-100 border-y border-slate-200">Evaluaciones del auditor (se guardan por cliente y año): ' + hechas + ' de ' + INV_VERIF_MANUALES.length + ' evaluadas</div><table class="w-full table-fixed text-[11px] leading-tight border-collapse"><colgroup><col style="width:80px"><col style="width:46%"><col style="width:150px"><col></colgroup><thead class="bg-slate-50 text-slate-600"><tr><th class="px-2 py-1 border-b border-slate-200 text-left">Programa</th><th class="px-2 py-1 border-b border-slate-200 text-left">Verificación</th><th class="px-2 py-1 border-b border-slate-200 text-left">Estado</th><th class="px-2 py-1 border-b border-slate-200 text-left">Comentario o papel de trabajo</th></tr></thead><tbody>';
-      INV_VERIF_MANUALES.forEach(([k, t, ref, cod]) => {
+      const V = invE.verif, hechas = invVerifManuales().filter(x => ((V[x[0]] || {}).e || 'pendiente') !== 'pendiente').length;
+      s += '<div class="px-2 py-1 mt-2 text-[11px] font-bold text-slate-700 bg-slate-100 border-y border-slate-200">Evaluaciones del auditor (se guardan por cliente y año): ' + hechas + ' de ' + invVerifManuales().length + ' evaluadas</div><table class="w-full table-fixed text-[11px] leading-tight border-collapse"><colgroup><col style="width:80px"><col style="width:46%"><col style="width:150px"><col></colgroup><thead class="bg-slate-50 text-slate-600"><tr><th class="px-2 py-1 border-b border-slate-200 text-left">Programa</th><th class="px-2 py-1 border-b border-slate-200 text-left">Verificación</th><th class="px-2 py-1 border-b border-slate-200 text-left">Estado</th><th class="px-2 py-1 border-b border-slate-200 text-left">Comentario o papel de trabajo</th></tr></thead><tbody>';
+      invVerifManuales().forEach(([k, t, ref, cod]) => {
         const v = V[k] || { e: 'pendiente', n: '' };
         s += '<tr class="border-b border-slate-100 align-top"><td class="px-2 py-1">' + lnk(cod) + '</td><td class="px-2 py-1 text-slate-700">' + escapeHtml(t) + '</td><td class="px-2 py-1"><select onchange="invVerifEditar(\'' + k + '\', \'e\', this)" class="h-6 px-1 text-[11px] border border-slate-300 rounded bg-white">' + INV_ESTADOS.map(([val, nom]) => '<option value="' + val + '"' + ((v.e || 'pendiente') === val ? ' selected' : '') + '>' + nom + '</option>').join('') + '</select></td><td class="px-2 py-1"><input type="text" value="' + escapeHtml(v.n || '') + '" onchange="invVerifEditar(\'' + k + '\', \'n\', this)" class="w-full h-6 px-1.5 text-[11px] border border-slate-300 rounded"></td></tr>';
       });
@@ -4353,13 +4402,14 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       if (!v('pc-cliente')) return err('Elige el cliente.');
       if (!v('pc-anio')) return err('Elige el año a evaluar.');
       if (!v('pc-sumaria')) return err('Elige la cuenta (sumaria).');
+      if (v('pc-sumaria') === 'AA' && !v('pc-hoja')) return err('Elige la hoja de la cuenta AA (Caja, Bancos o Equivalentes de efectivo).');
       const archivos = [...pcArchivosSel];
       if (!archivos.length) return err('Sube al menos un archivo con la documentación.');
       const grande = archivos.find(f => f.size > 52428800); if (grande) return err('El archivo "' + grande.name + '" supera los 50 MB. Sube una versión resumida o filtrada a lo que se va a analizar.');
       if (archivos.some((f, i) => !pcEtiquetasElegidas[i])) return err('Elige el tipo de cada archivo (conciliación, estado de cuenta, etc.).');
       if (!document.getElementById('pc-confirma').checked) return err('Marca la confirmación de que la documentación es completa y adecuada.');
       if (confirmado !== true) { pcResumenAntesDeEnviar(archivos); return; }
-      const fila = { cliente_id: v('pc-cliente'), anio: Number(v('pc-anio')), visita: v('pc-visita') || 'final', sumaria: v('pc-sumaria'), carpeta: null, nota: v('pc-nota') || null, doc_confirmada_por: nombreUsuarioActivo(), doc_confirmada_at: new Date().toISOString(), solicitado_por: nombreUsuarioActivo(), solicitado_email: usuarioActivo.email || null };
+      const fila = { cliente_id: v('pc-cliente'), anio: Number(v('pc-anio')), visita: v('pc-visita') || 'final', sumaria: v('pc-sumaria'), hoja: v('pc-sumaria') === 'AA' ? v('pc-hoja') : null, carpeta: null, nota: v('pc-nota') || null, doc_confirmada_por: nombreUsuarioActivo(), doc_confirmada_at: new Date().toISOString(), solicitado_por: nombreUsuarioActivo(), solicitado_email: usuarioActivo.email || null };
       const { data: ins, error } = await supabaseClient.from('pedidos_claude').insert([fila]).select('id').single();
       if (error) return err('No se pudo enviar: ' + (error.message || error));
       msg.textContent = 'Subiendo ' + archivos.length + ' archivo(s)…'; msg.className = 'text-[11px] min-h-[1rem] text-slate-500';
@@ -4399,14 +4449,24 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
 
     // ===== Tipos de documento por cuenta y lista de qué subir =====
     const PC_ETIQ = {
-      AA1: ['Conciliación bancaria', 'Estado de cuenta', 'Confirmación bancaria', 'Firmas autorizadas', 'Otro'],
+      'AA:bancos': ['Conciliación bancaria', 'Estado de cuenta', 'Confirmación bancaria', 'Firmas autorizadas', 'Otro'],
+      'AA:caja': ['Acta de arqueo de caja', 'Detalle de fondos y caja chica', 'Documento de soporte', 'Otro'],
+      'AA:equivalentes': ['Certificado o póliza de inversión', 'Estado de cuenta', 'Confirmación de la institución', 'Detalle de equivalentes de efectivo', 'Otro'],
       AOO: ['Contrato', 'Adenda o renovación', 'Evaluación NIIF 16', 'Factura o soporte de pagos', 'Otro'],
       PCC: ['Contrato', 'Adenda o renovación', 'Evaluación NIIF 16', 'Factura o soporte de pagos', 'Otro'],
       PLL: ['Contrato', 'Adenda o renovación', 'Evaluación NIIF 16', 'Factura o soporte de pagos', 'Otro'],
       AB: ['Certificado o póliza de inversión', 'Estado de cuenta', 'Confirmación bancaria', 'Detalle o anexo de inversiones', 'Otro'],
       AS: ['Certificado o póliza de inversión', 'Estado de cuenta', 'Confirmación bancaria', 'Detalle o anexo de inversiones', 'Otro']
     };
-    function pcEtiquetas(sumaria) { return PC_ETIQ[sumaria] || ['Documento de soporte', 'Otro']; }
+    const PC_HOJAS = { caja: 'Caja', bancos: 'Bancos', equivalentes: 'Equivalentes de efectivo' };
+    function pcNombreHoja(h) { return PC_HOJAS[h] || h || ''; }
+    function pcEtiquetas(sumaria, hoja) { return PC_ETIQ[sumaria === 'AA' ? 'AA:' + (hoja || '') : sumaria] || ['Documento de soporte', 'Otro']; }
+    function pcCambioCuenta() {
+      const caja = document.getElementById('pc-hoja-caja'), esAA = valorAnalisis('pc-sumaria') === 'AA';
+      if (caja) caja.classList.toggle('hidden', !esAA);
+      if (!esAA) { const h = document.getElementById('pc-hoja'); if (h) h.value = ''; }
+      pcArchivosElegidos();
+    }
     let pcEtiquetasElegidas = [];
     let pcArchivosSel = [];
     function pcAgregarSeleccion(inp) {
@@ -4424,7 +4484,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       const r = reglas.find(x => x[0].test(nombre) && et.includes(x[1])); return r ? r[1] : '';
     }
     function pcArchivosElegidos() {
-      const fs = pcArchivosSel, et = pcEtiquetas(valorAnalisis('pc-sumaria')), prev = pcEtiquetasElegidas;
+      const fs = pcArchivosSel, et = pcEtiquetas(valorAnalisis('pc-sumaria'), valorAnalisis('pc-hoja')), prev = pcEtiquetasElegidas;
       pcEtiquetasElegidas = fs.map((f, i) => (et.includes(prev[i]) ? prev[i] : pcEtiquetaSugerida(f.name, et)));
       const lista = document.getElementById('pc-lista-arch');
       if (lista) lista.innerHTML = fs.map((f, i) => '<div class="flex flex-wrap items-center gap-2 text-[11px]"><span class="flex-1 min-w-[10rem] break-all">📎 ' + escapeHtml(f.name) + ' <span class="text-slate-400">(' + tamanoLegible(f.size) + ')</span></span><select onchange="pcEtiquetasElegidas[' + i + '] = this.value; pcChecklist()" class="p-1 border border-slate-300 rounded text-[11px] bg-white"><option value="">— Elige el tipo —</option>' + et.map(x => '<option value="' + escapeHtml(x) + '"' + (pcEtiquetasElegidas[i] === x ? ' selected' : '') + '>' + escapeHtml(x) + '</option>').join('') + '</select><button type="button" onclick="pcQuitarArchivo(' + i + ')" class="px-2 py-0.5 rounded border border-slate-300 text-slate-600 hover:bg-slate-100" title="Quitar este archivo">✕ Quitar</button></div>').join('');
@@ -4433,7 +4493,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
     function pcChecklist() {
       const el = document.getElementById('pc-checklist'); if (!el) return;
       const sum = valorAnalisis('pc-sumaria'); if (!sum) { el.innerHTML = ''; return; }
-      const et = pcEtiquetas(sum).filter(x => x !== 'Otro');
+      const et = pcEtiquetas(sum, valorAnalisis('pc-hoja')).filter(x => x !== 'Otro');
       el.innerHTML = '<b>Qué subir:</b> ' + et.map(x => (pcEtiquetasElegidas.includes(x) ? '<span class="text-emerald-700">✓ ' : '<span class="text-slate-500">○ ') + escapeHtml(x) + '</span>').join(' · ');
     }
     function pcAgregarArchivos(id) {
@@ -4536,7 +4596,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
         else if (p.estado === 'hecho') acc = '<button type="button" onclick="navegarMenu(\'claude-revisar\')" class="px-3 py-1.5 text-[11px] rounded-lg transition bg-slate-100 text-slate-800 hover:bg-slate-200 font-medium">Ver el trabajo</button>';
         return '<tr class="align-top hover:bg-slate-50/80">' +
           '<td class="p-3 border-r border-slate-200"><div class="font-bold text-slate-800">' + escapeHtml(nom) + '</div><div class="text-[11px] text-slate-500">' + p.anio + ' · ' + (p.visita === 'preliminar' ? 'Visita preliminar' : 'Visita final') + '</div></td>' +
-          '<td class="p-3 border-r border-slate-200 font-medium text-slate-800">' + escapeHtml(c ? c.cuenta : p.sumaria) + '</td>' +
+          '<td class="p-3 border-r border-slate-200 font-medium text-slate-800">' + escapeHtml((c ? c.cuenta : p.sumaria) + (p.hoja ? ' · ' + pcNombreHoja(p.hoja) : '')) + '</td>' +
           '<td class="p-3 border-r border-slate-200">' + htmlArchivosPedido(p, true) + (p.nota ? '<div class="text-[11px] text-slate-500 mt-1">' + escapeHtml(p.nota) + '</div>' : '') + '</td>' +
           '<td class="p-3 border-r border-slate-200"><span class="' + est[1] + '">' + est[0] + '</span>' + (detalle ? '<div class="text-[11px] text-slate-500 mt-1">' + detalle + '</div>' : '') + '</td>' +
           '<td class="p-3 text-center whitespace-nowrap">' + acc + '</td></tr>';
@@ -4564,7 +4624,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
         } else if (p.estado === 'hecho') acc = '<button type="button" onclick="navegarMenu(\'claude-revisar\')" class="px-3 py-1.5 text-[11px] rounded-lg transition bg-slate-100 text-slate-800 hover:bg-slate-200 font-medium">Ver el trabajo</button>' + (aut ? ' <button type="button" onclick="eliminarPedidoClaude(\'' + p.id + '\')" class="px-3 py-1.5 text-[11px] rounded-lg transition text-slate-500 hover:bg-slate-100 font-medium" title="Solo Socio o Supervisor">Eliminar</button>' : '');
         return '<tr class="align-top hover:bg-slate-50/80">' +
           '<td class="p-3 border-r border-slate-200"><div class="font-bold text-slate-800">' + escapeHtml(nom) + '</div><div class="text-[11px] text-slate-500">' + p.anio + ' · ' + (p.visita === 'preliminar' ? 'Visita preliminar' : 'Visita final') + '</div></td>' +
-          '<td class="p-3 border-r border-slate-200 font-medium text-slate-800">' + escapeHtml(c ? c.cuenta : p.sumaria) + '</td>' +
+          '<td class="p-3 border-r border-slate-200 font-medium text-slate-800">' + escapeHtml((c ? c.cuenta : p.sumaria) + (p.hoja ? ' · ' + pcNombreHoja(p.hoja) : '')) + '</td>' +
           '<td class="p-3 border-r border-slate-200">' + htmlArchivosPedido(p) + (p.nota ? '<div class="text-[11px] text-slate-500 mt-1">' + escapeHtml(p.nota) + '</div>' : '') + '</td>' +
           '<td class="p-3 border-r border-slate-200 text-[11px] text-slate-600">' + escapeHtml(p.solicitado_por || '') + '<div class="text-slate-400">' + fechaCortaOrigen(p.created_at) + '</div></td>' +
           '<td class="p-3 border-r border-slate-200"><span class="' + est[1] + '">' + est[0] + '</span>' + (detalle ? '<div class="text-[11px] text-slate-500 mt-1">' + detalle + '</div>' : '') + (p.resumen_resultado ? '<div class="text-[11px] text-slate-600 mt-1">' + escapeHtml(p.resumen_resultado) + '</div>' : '') + '</td>' +
@@ -4598,7 +4658,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
     }
     async function copiarOrdenClaude() {
       const m = document.getElementById('pc-aviso-msg');
-      const txt = 'Claude, ejecuta los pedidos autorizados en PCM Inteligente: revisa la tabla pedidos_claude (estado autorizado), lee los archivos adjuntos de cada uno (tabla pedidos_claude_archivos, bucket pedidos-claude), haz el análisis y déjalo en "Trabajo de Claude por revisar".';
+      const txt = 'Claude, ejecuta los pedidos autorizados en PCM Inteligente: revisa la tabla pedidos_claude (estado autorizado), lee los archivos adjuntos de cada uno (tabla pedidos_claude_archivos, bucket pedidos-claude), haz el análisis y déjalo en "Trabajo de Claude por revisar". Si la cuenta es AA, la columna hoja del pedido dice si es caja, bancos o equivalentes.';
       try { await navigator.clipboard.writeText(txt); m.textContent = 'Orden copiada. Pégala en tu conversación con Claude y envíala.'; }
       catch (e) { m.textContent = 'Copia esta orden: ' + txt; }
     }
@@ -4641,7 +4701,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       m.className = 'fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 p-4';
       m.innerHTML = '<div class="bg-white rounded-xl shadow-xl max-w-xl w-full max-h-[88vh] flex flex-col"><div class="px-5 py-3 border-b font-bold text-slate-800">Revisa tu pedido antes de enviarlo</div><div class="p-5 overflow-y-auto text-sm">' +
         fila('Cliente', escapeHtml(nomCli)) + fila('Año y visita', v('pc-anio') + ' · ' + ((v('pc-visita') || 'final') === 'preliminar' ? 'Visita preliminar' : 'Visita final')) +
-        fila('Cuenta', escapeHtml((cta ? cta.cuenta : v('pc-sumaria')) + ' (' + v('pc-sumaria') + ')')) + fila('Archivos (' + archivos.length + ')', lista) + fila('Nota', escapeHtml(v('pc-nota') || '—')) +
+        fila('Cuenta', escapeHtml((cta ? cta.cuenta : v('pc-sumaria')) + ' (' + v('pc-sumaria') + ')' + (v('pc-hoja') && v('pc-sumaria') === 'AA' ? ' · Hoja ' + pcNombreHoja(v('pc-hoja')) : ''))) + fila('Archivos (' + archivos.length + ')', lista) + fila('Nota', escapeHtml(v('pc-nota') || '—')) +
         '<div class="text-[11px] text-slate-500 mt-3">¿El cliente, la cuenta y los documentos son los correctos? Si algo está mal, corrige antes de enviar.</div></div>' +
         '<div class="px-5 py-3 border-t flex justify-end gap-2"><button type="button" class="px-3 py-1.5 text-xs rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-100" onclick="this.closest(\'.fixed\').remove()">Corregir</button>' +
         '<button type="button" class="px-3 py-1.5 text-xs rounded-lg bg-slate-200 text-slate-900 hover:bg-slate-300 font-semibold" onclick="this.closest(\'.fixed\').remove(); solicitarPedidoClaude(true)">Sí, enviar</button></div></div>';
@@ -4926,7 +4986,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       const btnCopiar = document.getElementById('an-btn-copiar');
       if (!registro) {
         ultimoAnalisisTexto = '';
-        resultado.innerHTML = pcHtmlAviso((analisisEstado.cuenta === 'AS' ? 'AS' : 'AB'), valorAnalisis('an-cliente'), valorAnalisis('an-anio'), visitaAnalisis());
+        resultado.innerHTML = esEq() ? pcHtmlAviso('AA', valorAnalisis('an-cliente'), valorAnalisis('an-anio'), visitaAnalisis(), 'equivalentes') : pcHtmlAviso('AB', valorAnalisis('an-cliente'), valorAnalisis('an-anio'), visitaAnalisis());
         btnCopiar.classList.add('hidden');
         return;
       }
@@ -4957,27 +5017,28 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
 
 
     // ===== Aviso "Realizar pedido" para pantallas sin información (sirve para Bancos, Inversiones y las que vengan) =====
-    function pcIrAPedido(sumaria, cli, anio, vis) {
+    function pcIrAPedido(sumaria, cli, anio, vis, hoja) {
       navegarMenu('pedidos-claude');
       let intentos = 0;
       const poner = (id, v) => { const el = document.getElementById(id); if (el && v && [...el.options].some(o => o.value === String(v))) { el.value = String(v); el.dispatchEvent(new Event('change')); return true; } return !v; };
       const t = setInterval(() => {
         intentos++;
-        const ok = poner('pc-cliente', cli) & poner('pc-anio', anio) & poner('pc-visita', vis) & poner('pc-sumaria', sumaria);
+        const ok = poner('pc-cliente', cli) & poner('pc-anio', anio) & poner('pc-visita', vis) & poner('pc-sumaria', sumaria) & poner('pc-hoja', hoja);
         if (ok || intentos > 20) clearInterval(t);
       }, 300);
     }
-    function pcHtmlAviso(sumaria, cli, anio, vis, extra) {
+    function pcHtmlAviso(sumaria, cli, anio, vis, hoja) {
       setTimeout(pcRefrescarAvisos, 0);
       const e = a => escapeHtml(String(a == null ? '' : a));
-      return '<div class="pc-aviso p-8 text-center text-sm text-slate-600 space-y-3" data-sum="' + e(sumaria) + '" data-cli="' + e(cli) + '" data-anio="' + e(anio) + '" data-vis="' + e(vis) + '"><p>Aún no hay información cargada para esta cuenta, cliente, año y visita.' + (extra ? ' ' + e(extra) : '') + '<br>Para comenzar, realiza un pedido de análisis.</p><button type="button" onclick="pcIrAPedido(\'' + e(sumaria) + '\', \'' + e(cli) + '\', \'' + e(anio) + '\', \'' + e(vis) + '\')" class="px-4 py-2 bg-slate-200 text-slate-900 hover:bg-slate-300 rounded-lg text-xs font-bold transition">Realizar pedido</button></div>';
+      return '<div class="pc-aviso p-8 text-center text-sm text-slate-600 space-y-3" data-sum="' + e(sumaria) + '" data-cli="' + e(cli) + '" data-anio="' + e(anio) + '" data-vis="' + e(vis) + '" data-hoja="' + e(hoja) + '"><p>Aún no hay información cargada para esta cuenta, cliente, año y visita.<br>Para comenzar, realiza un pedido de análisis.</p><button type="button" onclick="pcIrAPedido(\'' + e(sumaria) + '\', \'' + e(cli) + '\', \'' + e(anio) + '\', \'' + e(vis) + '\', \'' + e(hoja) + '\')" class="px-4 py-2 bg-slate-200 text-slate-900 hover:bg-slate-300 rounded-lg text-xs font-bold transition">Realizar pedido</button></div>';
     }
     async function pcRefrescarAvisos() {
       const cajas = [...document.querySelectorAll('.pc-aviso')];
       for (const c of cajas) {
-        const { sum, cli, anio, vis } = c.dataset;
+        const { sum, cli, anio, vis, hoja } = c.dataset;
         if (!cli || !anio || !sum) continue;
-        const { data } = await supabaseClient.from('pedidos_claude').select('estado').eq('cliente_id', cli).eq('anio', Number(anio)).eq('visita', vis || 'final').eq('sumaria', sum).in('estado', ['solicitado', 'autorizado', 'hecho']).order('created_at', { ascending: false }).limit(1);
+        let qp = supabaseClient.from('pedidos_claude').select('estado').eq('cliente_id', cli).eq('anio', Number(anio)).eq('visita', vis || 'final').eq('sumaria', sum); if (hoja) qp = qp.eq('hoja', hoja);
+        const { data } = await qp.in('estado', ['solicitado', 'autorizado', 'hecho']).order('created_at', { ascending: false }).limit(1);
         const est = data && data[0] ? data[0].estado : '';
         if (!est || !c.isConnected) continue;
         const txt = { solicitado: 'Pedido enviado, esperando autorización del Socio o Supervisor.', autorizado: 'Pedido autorizado: Claude lo está analizando.', hecho: 'El pedido ya está hecho y pasó a revisión. Cuando se revise, la información aparecerá aquí.' }[est];
@@ -4986,11 +5047,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
     }
     function solicitarAnalisisInversiones() {
       const cli = valorAnalisis('an-cliente'), anio = valorAnalisis('an-anio'), vis = visitaAnalisis();
-      navegarMenu('pedidos-claude');
-      setTimeout(() => {
-        const poner = (id, v) => { const el = document.getElementById(id); if (el && v && [...el.options].some(o => o.value === v)) { el.value = v; el.dispatchEvent(new Event('change')); } };
-        poner('pc-cliente', cli); poner('pc-anio', anio); poner('pc-visita', vis); poner('pc-sumaria', 'AB');
-      }, 400);
+      if (esEq()) pcIrAPedido('AA', cli, anio, vis, 'equivalentes'); else pcIrAPedido('AB', cli, anio, vis);
     }
     function verAnalisisGuardadoCuenta(i) {
       mostrarAnalisisEnPanel(analisisEstado.analisis[i] || null);
@@ -5373,7 +5430,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
     const REGEX_LIQUIDADA = /liquid|cancel|pagad|cobrad|rescat|redimid|canjead|cerrad|anulad/;
 
     function anexoVacio() {
-      return { existe: false, archivo: '', registros: [], cierre: '', base: 360, libros: { total: '', int: '', corto: '', largo: '' }, sumarPrev: false, matriz: null, filaEnc: 0, mapeo: null };
+      return { existe: false, archivo: '', registros: [], cierre: '', base: 360, libros: { total: '', int: '', corto: '', largo: '' }, partidas: [], notas: '', sumarPrev: false, matriz: null, filaEnc: 0, mapeo: null };
     }
     let anexoEstado = anexoVacio();
     const guardadoAnexo = { timer: null, snap: null, cola: Promise.resolve() };
@@ -5601,7 +5658,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
     function actualizarDiferenciasAnexo(calc) {
       if (!calc) return;
       const l = anexoEstado.libros;
-      pintarDiferenciaAnexo('an-dif-total', calc.tot.valor, l.total);
+      pintarDiferenciaAnexo('an-dif-total', esEq() ? Math.round((calc.tot.valor + eqTotalPartidas()) * 100) / 100 : calc.tot.valor, l.total);
       pintarDiferenciaAnexo('an-dif-int', calc.tot.intAnio, l.int, true);
       pintarDiferenciaAnexo('an-dif-corto', calc.tot.corto, l.corto);
       pintarDiferenciaAnexo('an-dif-largo', calc.tot.largo, l.largo);
@@ -5627,7 +5684,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
         res.classList.add('hidden');
         { const cv = document.getElementById('an-comp-vacio'), cr = document.getElementById('an-comp-resultados'); if (cv) cv.classList.remove('hidden'); if (cr) cr.classList.add('hidden'); }
         if (anexoEstado.registros.length && !anexoEstado.cierre) vacio.textContent = 'Indica la fecha de corte para calcular.';
-        else vacio.textContent = 'Sube el anexo de inversiones para calcular los intereses y las porciones de corto y largo plazo.';
+        else vacio.textContent = esEq() ? 'Sube el anexo de equivalentes de efectivo para calcular los intereses y compararlo con libros.' : 'Sube el anexo de inversiones para calcular los intereses y las porciones de corto y largo plazo.';
         return;
       }
       vacio.classList.add('hidden');
@@ -5635,10 +5692,11 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       { const cv = document.getElementById('an-comp-vacio'), cr = document.getElementById('an-comp-resultados'); if (cv) cv.classList.add('hidden'); if (cr) cr.classList.remove('hidden'); }
 
       const t = calc.tot;
-      document.getElementById('an-calc-total').textContent = formatoNumeroAnexo(t.valor);
+      document.getElementById('an-calc-total').textContent = formatoNumeroAnexo(esEq() ? Math.round((t.valor + eqTotalPartidas()) * 100) / 100 : t.valor);
       document.getElementById('an-sub-total').textContent = calc.sumarPrev
         ? `Vigentes al cierre: capital ${formatoNumeroAnexo(t.capital)} + intereses reconocidos hasta el 31/12/${calc.anioPrev} ${formatoNumeroAnexo(t.intPrev)}`
         : 'Vigentes a la fecha de corte';
+      if (esEq() && eqTotalPartidas() !== 0) document.getElementById('an-sub-total').textContent += ' · Incluye partidas manuales por ' + formatoNumeroAnexo(eqTotalPartidas());
       document.getElementById('an-calc-int').textContent = formatoNumeroAnexo(t.intAnio);
       document.getElementById('an-calc-corto').textContent = formatoNumeroAnexo(t.corto);
       document.getElementById('an-calc-largo').textContent = formatoNumeroAnexo(t.largo);
@@ -5736,8 +5794,11 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
         anexoEstado.base = Number(row.base_dias) === 365 ? 365 : 360;
         anexoEstado.sumarPrev = row.sumar_intereses_previos === true;
         anexoEstado.libros = { total: num(row.valor_libros), int: num(row.intereses_resultados), corto: num(row.balance_corto), largo: num(row.balance_largo) };
+        anexoEstado.partidas = Array.isArray(row.partidas) ? row.partidas.map(x => ({ ...x })) : [];
+        anexoEstado.notas = row.notas || '';
       }
       renderAnexoControles();
+      eqRenderPartidas();
     }
 
     // ----- Armar el anexo desde documentos escaneados -----
@@ -6069,6 +6130,43 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       if (anexoEstado.registros.length) programarGuardadoAnexo();
     }
 
+    // ----- Equivalentes de efectivo: partidas manuales (notas de crédito u otros) y notas libres -----
+    function eqTotalPartidas() {
+      if (!esEq()) return 0;
+      return Math.round((anexoEstado.partidas || []).reduce((t, p) => t + (parsearNumeroAnexo(p.valor) || 0), 0) * 100) / 100;
+    }
+    function eqRenderPartidas() {
+      const caja = document.getElementById('an-eq-extra'); if (!caja) return;
+      caja.classList.toggle('hidden', !esEq());
+      ['an-fila-corto', 'an-fila-largo'].forEach(id => { const f = document.getElementById(id); if (f) f.classList.toggle('hidden', esEq()); });
+      const lbl = document.getElementById('an-lbl-total'); if (lbl) lbl.textContent = esEq() ? 'Total de equivalentes de efectivo (valor)' : 'Total de inversiones (valor)';
+      const ta = document.getElementById('an-anexo-titulo'); if (ta) ta.textContent = esEq() ? 'Anexo de equivalentes de efectivo' : 'Anexo de inversiones';
+      if (!esEq()) return;
+      const P = anexoEstado.partidas || [];
+      const inp = 'w-full p-1.5 bg-white border border-slate-300 rounded text-xs outline-none focus:ring-2 focus:ring-indigo-500';
+      document.getElementById('an-eq-partidas').innerHTML = P.length ? '<table class="w-full text-xs border-collapse"><thead><tr class="text-left text-slate-600"><th class="p-1.5 w-[130px]">Fecha</th><th class="p-1.5 w-[170px]">Tipo</th><th class="p-1.5">Descripción</th><th class="p-1.5 w-[140px] text-right">Valor (con signo)</th><th class="p-1.5 w-8"></th></tr></thead><tbody>' + P.map((p, i) =>
+        '<tr><td class="p-1"><input type="date" value="' + escapeHtml(p.fecha || '') + '" onchange="eqSetPartida(' + i + ',\'fecha\',this.value)" class="' + inp + '"></td>' +
+        '<td class="p-1"><select onchange="eqSetPartida(' + i + ',\'tipo\',this.value)" class="' + inp + '">' + ['Nota de crédito', 'Otro'].map(o => '<option' + ((p.tipo || 'Nota de crédito') === o ? ' selected' : '') + '>' + o + '</option>').join('') + '</select></td>' +
+        '<td class="p-1"><input type="text" value="' + escapeHtml(p.descripcion || '') + '" onchange="eqSetPartida(' + i + ',\'descripcion\',this.value)" placeholder="Detalle de la partida" class="' + inp + '" style="text-align:left"></td>' +
+        '<td class="p-1"><input type="text" inputmode="decimal" value="' + escapeHtml(p.valor === undefined || p.valor === '' ? '' : String(p.valor)) + '" onchange="eqSetPartida(' + i + ',\'valor\',this.value)" onblur="eqFormatearValor(' + i + ',this)" class="' + inp + ' text-right"></td>' +
+        '<td class="p-1 text-center"><button type="button" onclick="eqQuitarPartida(' + i + ')" class="text-slate-400 hover:text-red-600 font-bold" title="Quitar la partida">✕</button></td></tr>').join('') +
+        '<tr class="font-bold border-t border-slate-300"><td class="p-1.5" colspan="3">Total de partidas manuales</td><td class="p-1.5 text-right" id="an-eq-total-partidas">' + formatoNumeroAnexo(eqTotalPartidas()) + '</td><td></td></tr></tbody></table>'
+        : '<p class="text-[11px] text-slate-500">Sin partidas manuales. Agrega una si hay notas de crédito u otros valores que deban sumarse o restarse al anexo.</p>';
+      const nt = document.getElementById('an-eq-notas'); if (nt && nt.value !== (anexoEstado.notas || '')) nt.value = anexoEstado.notas || '';
+    }
+    function eqRefrescar() {
+      const el = document.getElementById('an-eq-total-partidas'); if (el) el.textContent = formatoNumeroAnexo(eqTotalPartidas());
+      const calc = calculoActualAnexo();
+      if (calc) { actualizarAnexoUI(); } else { renderDatosClaudeAnalisis(); }
+      programarGuardadoAnexo();
+      try { invRender(true); } catch (e) { }
+    }
+    function eqAgregarPartida() { (anexoEstado.partidas = anexoEstado.partidas || []).push({ fecha: '', tipo: 'Nota de crédito', descripcion: '', valor: '' }); eqRenderPartidas(); programarGuardadoAnexo(); }
+    function eqSetPartida(i, campo, valor) { const p = (anexoEstado.partidas || [])[i]; if (!p) return; p[campo] = valor; eqRefrescar(); }
+    function eqFormatearValor(i, el) { const n = parsearNumeroAnexo(el.value); const p = (anexoEstado.partidas || [])[i]; if (n !== null && p) { p.valor = formatoNumeroAnexo(n); el.value = p.valor; eqRefrescar(); } }
+    function eqQuitarPartida(i) { (anexoEstado.partidas || []).splice(i, 1); eqRenderPartidas(); eqRefrescar(); }
+    function eqCambioNotas(el) { anexoEstado.notas = el.value; programarGuardadoAnexo(); }
+
     function alCambiarCasilleroAnexo() {
       aplicarSaldoSumariaACasillero(); // el total en libros siempre es corto plazo + largo plazo
       anexoEstado.libros = {
@@ -6110,6 +6208,8 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
         intereses_resultados: parsearNumeroAnexo(l.int),
         balance_corto: parsearNumeroAnexo(l.corto),
         balance_largo: parsearNumeroAnexo(l.largo),
+        partidas: anexoEstado.partidas || [],
+        notas: anexoEstado.notas || '',
         ...(quienAnexo ? { auditor: analisisEstado.responsable || quienAnexo, actualizado_por: quienAnexo } : {}),
         ...camposEdicionOrigen('anexo'),
         updated_at: new Date().toISOString()
@@ -6203,7 +6303,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
         ws.columns = [{ width: 44 }, { width: 22 }, { width: 30 }, { width: 20 }];
         ws.mergeCells('A1:D1');
         const tit = ws.getCell('A1');
-        tit.value = 'Anexo de inversiones corrientes';
+        tit.value = esEq() ? 'Anexo de equivalentes de efectivo' : 'Anexo de inversiones corrientes';
         tit.font = { name: 'Calibri', size: 14, bold: true, underline: true, color: { argb: NAVY } };
         tit.alignment = { vertical: 'middle', horizontal: 'left' };
         ws.getRow(1).height = 28;
@@ -6243,7 +6343,10 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
         });
         ws.getRow(filaEnc).height = 32;
 
-        const conceptos = [
+        const conceptos = esEq() ? [
+          ['Total de equivalentes de efectivo (valor)' + (eqTotalPartidas() !== 0 ? ' - incluye partidas manuales' : ''), Math.round((t.valor + eqTotalPartidas()) * 100) / 100, lib.total],
+          ['Intereses devengados del ejercicio', t.intAnio, lib.int]
+        ] : [
           ['Total de inversiones (valor)', t.valor, lib.total],
           ['Porción corto plazo', t.corto, lib.corto],
           ['Porción largo plazo', t.largo, lib.largo],
@@ -6274,6 +6377,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
         const notas = [
           'Método: interés simple = valor × tasa × días ÷ base. Inversiones del año anterior: se calcula desde el 1 de enero del año del cierre; las del año, desde su fecha de emisión.',
           'Corto plazo: vence dentro de los 12 meses siguientes al cierre. Las inversiones con estado liquidado o similar no se calculan.',
+          ...(esEq() ? ['Equivalentes de efectivo: inversiones con plazo original de tres meses o menos desde su adquisición (NIC 7 párr. 7).'].concat((anexoEstado.partidas || []).map(p => 'Partida manual: ' + (p.fecha || 'sin fecha') + ' · ' + (p.tipo || '') + ' · ' + (p.descripcion || '') + ' · ' + (p.valor || '0'))).concat(anexoEstado.notas ? ['Notas: ' + anexoEstado.notas] : []) : []),
           'Diferencia = según el anexo − según libros. Las celdas de la columna "Según libros" están resaltadas para que puedas corregirlas; la diferencia se recalcula sola.'
         ];
         notas.forEach((txt, i) => {
@@ -6464,7 +6568,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
           const hoy = new Date(), fechaHoy = String(hoy.getDate()).padStart(2, '0') + '/' + String(hoy.getMonth() + 1).padStart(2, '0') + '/' + hoy.getFullYear();
           const infoPapel = [['Cliente', nombreCliente], ['Año', String(valorAnalisis('an-anio'))], ['Visita', etiquetaVisita().replace('Visita ', '')], ['Fecha de corte', calc.cierre || ''], ['Preparado por', nombreUsuarioActivo() || ''], ['Fecha de elaboración', fechaHoy]];
           const resV = { ok: 'Cumple', rev: 'Revisar', info: 'Informativo' }, estV = { pendiente: 'Pendiente', cumple: 'Cumple', nocumple: 'No cumple', noaplica: 'No aplica' };
-          excelAgregarHoja(wb, { nombre: '3. Verificaciones', op: {}, filas: [cbH(['Programa', 'Verificaciones automáticas', 'Resultado', 'Detalle']), ...invVerifAuto().map(([a, e, d, cod]) => [cod, a, resV[e], d]), [], cbH(['Programa', 'Evaluaciones del auditor', 'Referencia', 'Estado', 'Comentario']), ...INV_VERIF_MANUALES.map(([k, a, ref, cod]) => [cod, a, ref, estV[(invE.verif[k] || {}).e || 'pendiente'], (invE.verif[k] || {}).n || ''])] }, infoPapel, 'Inversiones corrientes');
+          excelAgregarHoja(wb, { nombre: '3. Verificaciones', op: {}, filas: [cbH(['Programa', 'Verificaciones automáticas', 'Resultado', 'Detalle']), ...invVerifAuto().map(([a, e, d, cod]) => [cod, a, resV[e], d]), [], cbH(['Programa', 'Evaluaciones del auditor', 'Referencia', 'Estado', 'Comentario']), ...invVerifManuales().map(([k, a, ref, cod]) => [cod, a, ref, estV[(invE.verif[k] || {}).e || 'pendiente'], (invE.verif[k] || {}).n || ''])] }, infoPapel, 'Inversiones corrientes');
           excelAgregarHoja(wb, { nombre: '4. Programa de trabajo', op: {}, filas: [cbH(['Código', 'Procedimiento', 'Dónde está hecho', 'Comentario', 'Quién lo hizo', 'Verificaciones (pestaña 3)', 'Estado']), ...invFilasPrograma().map(x => { const v = invVerifDeProc(x.codigo); return [x.codigo, x.procedimiento || '', x.donde, x.nota || '', x.quien, v.total ? (v.abiertas ? v.abiertas + ' por resolver de ' + v.total : 'Todas cerradas (' + v.total + ')') : 'Sin verificaciones', x.estado === 'hecho' ? (x.otro ? (esAnaliticaProg(x) ? 'Hecho en planificación' : 'Hecho por otro auditor') : 'Hecho') : 'Pendiente']; })] }, infoPapel, 'Inversiones corrientes');
           const PC = invPorConcluir();
           excelAgregarHoja(wb, { nombre: '5. Por concluir', op: {}, filas: [cbH(['Programa', 'Procedimiento', 'Estado', 'Verificaciones por resolver']), ...(PC.grupos.length ? PC.grupos.map(g => [g.cod, g.proc ? g.proc.procedimiento || '' : '', g.pendiente ? 'Pendiente' : 'Hecho', g.ver.length ? g.ver.map(v => '• ' + v.t + ' (' + (v.d || '') + ')').join('\n') : 'Todas cerradas']) : [['Nada pendiente']])] }, infoPapel, 'Inversiones corrientes');
@@ -6475,7 +6579,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
         const corto = (cli && cli.nombre_corto ? cli.nombre_corto : 'cliente').replace(/[^A-Za-z0-9_-]+/g, '_');
         const enlace = document.createElement('a');
         enlace.href = URL.createObjectURL(blob);
-        enlace.download = `Anexo_inversiones_${corto}_${valorAnalisis('an-anio')}_${visitaAnalisis()}.xlsx`;
+        enlace.download = `${esEq() ? 'Anexo_equivalentes' : 'Anexo_inversiones'}_${corto}_${valorAnalisis('an-anio')}_${visitaAnalisis()}.xlsx`;
         document.body.appendChild(enlace);
         enlace.click();
         setTimeout(() => { URL.revokeObjectURL(enlace.href); enlace.remove(); }, 1500);
@@ -13444,6 +13548,11 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
     function aplicarSaldoSumariaACasillero() {
       const corto = document.getElementById('an-lib-corto'), largo = document.getElementById('an-lib-largo'), total = document.getElementById('an-lib-total');
       if (!corto || !largo || !total) return false;
+      if (esEq()) {
+        [corto, largo, total].forEach(inp => { inp.readOnly = false; inp.classList.remove('bg-slate-100'); });
+        if (anexoEstado && anexoEstado.libros) anexoEstado.libros.total = total.value;
+        return false;
+      }
       let cambio = false;
       const auto = saldoSumariaAuto.clave === claveSumariaActual() && saldoSumariaAuto.corto !== null;
       [[corto, saldoSumariaAuto.corto], [largo, saldoSumariaAuto.largo]].forEach(([inp, val]) => {
@@ -14150,7 +14259,7 @@ ${cont.innerHTML}
       const [r1, r2, r3] = await Promise.all([
         supabaseClient.from('conciliaciones_datos').select('*').eq('cliente_id', cli).eq('anio', Number(anio)).eq('visita', vis).maybeSingle(),
         supabaseClient.from('analisis_claude_cuentas').select('id, created_at, anio, visita, analisis, origen, estado_revision, revisado_por, revisado_at, pendientes, criterio_final, criterio_por, criterio_at').eq('cliente_id', cli).eq('cuenta', 'bancos').eq('anio', Number(anio)).order('created_at', { ascending: false }).limit(1),
-        cbE.plantilla ? Promise.resolve({ data: cbE.plantilla }) : supabaseClient.from('programas_plantilla').select('sumaria, codigo, tipo_procedimiento, procedimiento, orden, alcance, tamanos').eq('sumaria', 'AA1').order('orden', { ascending: true })
+        cbE.plantilla ? Promise.resolve({ data: cbE.plantilla }) : supabaseClient.from('programas_plantilla').select('sumaria, codigo, tipo_procedimiento, procedimiento, orden, alcance, tamanos').eq('sumaria', 'AA').eq('hoja', 'bancos').order('orden', { ascending: true })
       ]);
       if (id !== cbE.cargaId) return;
       if (r1.error) cbMsg(/does not exist|schema cache/i.test(r1.error.message || '') ? 'Falta la tabla conciliaciones_datos en Supabase.' : 'No se pudo cargar: ' + (r1.error.message || r1.error), 'text-red-600 font-bold'); else cbMsg('');
@@ -14235,8 +14344,8 @@ ${cont.innerHTML}
       const sd = L.filter(c => Math.abs(cbDif(c)) > tol);
       add('El saldo conciliado coincide con el saldo en libros (tolerancia ' + formatoNumeroAnexo(tol) + ')', sd.length ? 'rev' : 'ok', sd.length ? sd.length + ' cuenta(s) con diferencia: ' + sd.slice(0, 5).map(c => cbNombre(c) + ' (' + formatoNumeroAnexo(cbDif(c)) + ')').join('; ') : 'Todas las cuentas cuadran', 'AA-04');
       const bal = cbE.config.balance;
-      if (bal !== undefined && bal !== '') { const d = r2f(cbTotales().libros - cbN(bal)); add('El total en libros coincide con el saldo del balance (AA1 Bancos)', Math.abs(d) > tol ? 'rev' : 'ok', Math.abs(d) > tol ? 'Diferencia de ' + formatoNumeroAnexo(d) + ' entre libros y balance' : 'Libros y balance coinciden', 'AA-04'); }
-      else add('El total en libros coincide con el saldo del balance (AA1 Bancos)', 'info', 'Falta ingresar el saldo según balance en la pestaña 1', 'AA-04');
+      if (bal !== undefined && bal !== '') { const d = r2f(cbTotales().libros - cbN(bal)); add('El total en libros coincide con el saldo del balance (AA Bancos)', Math.abs(d) > tol ? 'rev' : 'ok', Math.abs(d) > tol ? 'Diferencia de ' + formatoNumeroAnexo(d) + ' entre libros y balance' : 'Libros y balance coinciden', 'AA-04'); }
+      else add('El total en libros coincide con el saldo del balance (AA Bancos)', 'info', 'Falta ingresar el saldo según balance en la pestaña 1', 'AA-04');
       const todas = L.flatMap(c => (c.partidas || []).map(p => ({ c, p })));
       const sinDato = todas.filter(x => !x.p.fecha || x.p.valor === '' || x.p.valor === undefined);
       add('Partidas conciliatorias con fecha y valor', sinDato.length ? 'rev' : 'ok', sinDato.length ? sinDato.length + ' partida(s) sin fecha o sin valor' : 'Todas las partidas tienen fecha y valor', 'AA-07');
@@ -14268,7 +14377,7 @@ ${cont.innerHTML}
     function cbHtmlResumen() {
       const L = cbE.cuentas, t = cbTotales();
       let h = '<div class="p-3 text-[11px]"><div class="flex flex-wrap items-center gap-2 mb-2"><button type="button" onclick="cbAgregarCuenta()" class="' + CB_BTN + '">+ Agregar cuenta bancaria</button><span class="text-slate-500">Haz clic en cualquier valor de las partidas para abrir y editar su detalle.</span></div>';
-      if (!L.length) return '<div class="p-3">' + pcHtmlAviso('AA1', cbE.cliente, cbE.anio, cbE.visita) + '</div>';
+      if (!L.length) return '<div class="p-3">' + pcHtmlAviso('AA', cbE.cliente, cbE.anio, cbE.visita, 'bancos') + '</div>';
       h += '<div class="overflow-x-auto border border-slate-200 rounded-xl"><table class="w-full text-[11px] leading-tight border-collapse"><thead><tr><th class="' + CB_TH + '">Banco</th><th class="' + CB_TH + '">Cuenta</th><th class="' + CB_TH + '">Moneda</th><th class="' + CB_TH + ' text-right">Saldo según estado de cuenta</th>' + CB_TIPOS.map(x => '<th class="' + CB_TH + ' text-right">' + x[1] + '</th>').join('') + '<th class="' + CB_TH + ' text-right">Saldo conciliado</th><th class="' + CB_TH + ' text-right">Saldo en libros</th><th class="' + CB_TH + ' text-right">Diferencia</th><th class="' + CB_TH + '"></th></tr></thead><tbody>';
       L.forEach(c => {
         const dif = cbDif(c);
@@ -14314,7 +14423,7 @@ ${cont.innerHTML}
       const proc = [];
       if (L.length) {
         proc.push('Solicitamos las conciliaciones bancarias de la compañía' + al + ' (' + L.length + (L.length === 1 ? ' cuenta' : ' cuentas') + (nBancos ? ' en ' + nBancos + (nBancos === 1 ? ' banco' : ' bancos') : '') + ').');
-        proc.push('Realizamos un resumen de las conciliaciones bancarias' + (hayBal ? ' y cruzamos el total en libros con la sumaria AA1.' : '.'));
+        proc.push('Realizamos un resumen de las conciliaciones bancarias' + (hayBal ? ' y cruzamos el total en libros con la sumaria AA.' : '.'));
         if (conStd) proc.push('Cotejamos los saldos según estado de cuenta con las conciliaciones.');
         if (conPart) proc.push('Revisamos las partidas conciliatorias (cheques girados y no cobrados, depósitos en tránsito, notas y otras partidas).');
         if (confOk) proc.push('Verificamos las confirmaciones bancarias.');
@@ -14324,7 +14433,7 @@ ${cont.innerHTML}
       if (L.length) fuente.push('Conciliaciones bancarias' + al);
       if (conStd) fuente.push('Estados de cuenta bancarios' + al);
       if (conLib) fuente.push('Mayores contables' + al);
-      if (hayBal) fuente.push('Sumaria AA1 / balance general' + al);
+      if (hayBal) fuente.push('Sumaria AA / balance general' + al);
       if (confOk) fuente.push('Confirmaciones bancarias');
       return { objetivo: 'Verificar la correcta preparación y presentación de las conciliaciones bancarias.', procedimiento: proc, fuente, concl: M.concl || '', resp: M.resp || '' };
     }
@@ -14340,12 +14449,12 @@ ${cont.innerHTML}
     }
     function cbHtmlLibros() {
       const L = cbE.cuentas, t = cbTotales(), tol = cbTol();
-      if (!L.length) return pcHtmlAviso('AA1', cbE.cliente, cbE.anio, cbE.visita);
+      if (!L.length) return pcHtmlAviso('AA', cbE.cliente, cbE.anio, cbE.visita, 'bancos');
       let h = '<div class="p-3 text-[11px]"><div class="overflow-x-auto border border-slate-200 rounded-xl"><table class="w-full text-[11px] leading-tight border-collapse"><thead><tr><th class="' + CB_TH + '">Banco</th><th class="' + CB_TH + '">Cuenta</th><th class="' + CB_TH + ' text-right">Saldo conciliado</th><th class="' + CB_TH + ' text-right">Saldo en libros</th><th class="' + CB_TH + ' text-right">Diferencia</th><th class="' + CB_TH + '">Resultado</th></tr></thead><tbody>';
       L.forEach(c => { const d = cbDif(c), ok = Math.abs(d) <= tol; h += '<tr class="border-b border-slate-100"><td class="px-2 py-1">' + escapeHtml(c.banco || '') + '</td><td class="px-2 py-1">' + escapeHtml(c.cuenta || '') + '</td><td class="px-2 py-1 text-right">' + cbFmt(cbConciliado(c)) + '</td><td class="px-2 py-1 text-right">' + cbFmt(c.saldo_libros) + '</td><td class="px-2 py-1 text-right font-bold">' + cbFmt(d) + '</td><td class="px-2 py-1 font-bold ' + (ok ? 'text-emerald-700' : 'text-amber-700') + '">' + (ok ? 'Cuadra' : 'Revisar') + '</td></tr>'; });
       h += '<tr class="bg-slate-50 font-bold"><td class="px-2 py-1.5" colspan="2">Total cuentas bancarias</td><td class="px-2 py-1.5 text-right">' + cbFmt(t.conc) + '</td><td class="px-2 py-1.5 text-right">' + cbFmt(t.libros) + '</td><td class="px-2 py-1.5 text-right">' + cbFmt(t.dif) + '</td><td></td></tr></tbody></table></div>';
       const bal = cbE.config.balance, hayBal = bal !== undefined && bal !== '', dBal = hayBal ? r2f(t.libros - cbN(bal)) : null;
-      h += '<div class="mt-4 grid grid-cols-1 md:grid-cols-3 md:items-end gap-3 max-w-3xl"><div><label class="flex items-end min-h-[30px] font-semibold text-slate-600 mb-1">Saldo según balance (sumaria AA1 Bancos)</label><input class="' + CB_INN + '" inputmode="decimal" value="' + (hayBal ? cbIn(bal) : '') + '" onchange="cbSetConfig(\'balance\', this)"></div><div><label class="flex items-end min-h-[30px] font-semibold text-slate-600 mb-1">Total en libros</label><div class="h-7 px-1.5 flex items-center justify-end border border-slate-200 rounded bg-slate-50 font-bold">' + cbFmt(t.libros) + '</div></div><div><label class="flex items-end min-h-[30px] font-semibold text-slate-600 mb-1">Diferencia libros − balance</label><div class="h-7 px-1.5 flex items-center justify-end border border-slate-200 rounded bg-slate-50 font-bold ' + (hayBal ? (Math.abs(dBal) > tol ? 'text-amber-700' : 'text-emerald-700') : 'text-slate-400') + '">' + (hayBal ? cbFmt(dBal) : 'Falta el saldo') + '</div></div></div>';
+      h += '<div class="mt-4 grid grid-cols-1 md:grid-cols-3 md:items-end gap-3 max-w-3xl"><div><label class="flex items-end min-h-[30px] font-semibold text-slate-600 mb-1">Saldo según balance (sumaria AA, hoja Bancos)</label><input class="' + CB_INN + '" inputmode="decimal" value="' + (hayBal ? cbIn(bal) : '') + '" onchange="cbSetConfig(\'balance\', this)"></div><div><label class="flex items-end min-h-[30px] font-semibold text-slate-600 mb-1">Total en libros</label><div class="h-7 px-1.5 flex items-center justify-end border border-slate-200 rounded bg-slate-50 font-bold">' + cbFmt(t.libros) + '</div></div><div><label class="flex items-end min-h-[30px] font-semibold text-slate-600 mb-1">Diferencia libros − balance</label><div class="h-7 px-1.5 flex items-center justify-end border border-slate-200 rounded bg-slate-50 font-bold ' + (hayBal ? (Math.abs(dBal) > tol ? 'text-amber-700' : 'text-emerald-700') : 'text-slate-400') + '">' + (hayBal ? cbFmt(dBal) : 'Falta el saldo') + '</div></div></div>';
       h += '<div class="mt-3 grid grid-cols-1 md:grid-cols-3 gap-3 max-w-3xl"><div><label class="flex items-end min-h-[30px] font-semibold text-slate-600 mb-1">Tolerancia de diferencia</label><input class="' + CB_INN + '" inputmode="decimal" value="' + (cbE.config.tol === undefined ? 1 : cbE.config.tol) + '" onchange="cbSetConfig(\'tol\', this)"></div><div><label class="flex items-end min-h-[30px] font-semibold text-slate-600 mb-1">Días para considerar una partida antigua</label><input class="' + CB_INN + '" inputmode="numeric" value="' + (cbE.config.dias === undefined ? 90 : cbE.config.dias) + '" onchange="cbSetConfig(\'dias\', this)"><div class="text-[10px] text-slate-500 mt-0.5">Puedes cambiarlo; las partidas con más días desde su fecha hasta el corte se marcan para revisar en la pestaña Verificaciones.</div></div></div></div>';
       h += cbHtmlMemo() + '</div>';
       return h;
@@ -14355,7 +14464,7 @@ ${cont.innerHTML}
       const lnk = cod => '<button type="button" onclick="cbTab(\'programa\')" class="underline text-indigo-700 font-bold" title="Ir al programa de trabajo (pestaña 6)">' + cod + '</button>';
       const aut = cbVerifAuto();
       let h = '<div class="px-2 py-1 text-[11px] font-bold text-slate-700 bg-slate-100 border-b border-slate-200">Verificaciones automáticas (se recalculan con las cuentas cargadas)</div>';
-      if (!aut.length) h += pcHtmlAviso('AA1', cbE.cliente, cbE.anio, cbE.visita);
+      if (!aut.length) h += pcHtmlAviso('AA', cbE.cliente, cbE.anio, cbE.visita, 'bancos');
       else { h += '<table class="w-full table-fixed text-[11px] leading-tight border-collapse"><colgroup><col style="width:80px"><col style="width:46%"><col style="width:150px"><col></colgroup><thead class="bg-slate-50 text-slate-600"><tr><th class="px-2 py-1 border-b border-slate-200 text-left">Programa</th><th class="px-2 py-1 border-b border-slate-200 text-left">Verificación</th><th class="px-2 py-1 border-b border-slate-200 text-left">Resultado</th><th class="px-2 py-1 border-b border-slate-200 text-left">Detalle</th></tr></thead><tbody>';
         aut.forEach(([t, e, d, cod]) => { h += '<tr class="border-b border-slate-100 align-top"><td class="px-2 py-0.5">' + lnk(cod) + '</td><td class="px-2 py-0.5 text-slate-700">' + escapeHtml(t) + '</td><td class="px-2 py-0.5 font-bold whitespace-nowrap ' + col[e] + '">' + tx[e] + '</td><td class="px-2 py-0.5 text-slate-600">' + escapeHtml(d) + (e === 'rev' && cbComentarioDeCodigo(cod) ? '<div class="text-[10px] text-slate-500 mt-0.5">Comentario en el programa (' + escapeHtml(cod) + '): ' + escapeHtml(cbComentarioDeCodigo(cod)) + '</div>' : '') + '</td></tr>'; });
         h += '</tbody></table>'; }
@@ -14372,7 +14481,7 @@ ${cont.innerHTML}
       const pos = L.filter(c => cbN(c.saldo_libros) >= 0), neg = L.filter(c => cbN(c.saldo_libros) < 0);
       const fila = c => '<tr class="border-b border-slate-100"><td class="px-2 py-1">' + escapeHtml(c.banco || '') + '</td><td class="px-2 py-1">' + escapeHtml(c.cuenta || '') + '</td><td class="px-2 py-1">' + escapeHtml(c.tipo || '') + '</td><td class="px-2 py-1">' + escapeHtml(c.moneda || '') + '</td><td class="px-2 py-1 text-right">' + cbFmt(c.saldo_libros) + '</td></tr>';
       let h = '<div class="p-3 text-[11px]"><div class="font-bold text-slate-700 mb-1">Composición del efectivo en bancos (saldo en libros)</div>';
-      if (!L.length) return '<div class="p-3">' + pcHtmlAviso('AA1', cbE.cliente, cbE.anio, cbE.visita) + '</div>';
+      if (!L.length) return '<div class="p-3">' + pcHtmlAviso('AA', cbE.cliente, cbE.anio, cbE.visita, 'bancos') + '</div>';
       h += '<div class="overflow-x-auto border border-slate-200 rounded-xl"><table class="w-full text-[11px] leading-tight border-collapse"><thead><tr><th class="' + CB_TH + '">Banco</th><th class="' + CB_TH + '">Cuenta</th><th class="' + CB_TH + '">Tipo</th><th class="' + CB_TH + '">Moneda</th><th class="' + CB_TH + ' text-right">Saldo</th></tr></thead><tbody>' + pos.map(fila).join('') + '<tr class="bg-slate-50 font-bold"><td class="px-2 py-1.5" colspan="4">Total bancos</td><td class="px-2 py-1.5 text-right">' + cbFmt(pos.reduce((s, c) => s + cbN(c.saldo_libros), 0)) + '</td></tr></tbody></table></div>';
       if (neg.length) h += '<div class="font-bold text-slate-700 mt-4 mb-1">Cuentas con saldo negativo (sobregiros): evalúa su presentación según NIC 7 párr. 8</div><div class="overflow-x-auto border border-slate-200 rounded-xl"><table class="w-full text-[11px] border-collapse"><tbody>' + neg.map(fila).join('') + '</tbody></table></div>';
       h += '<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4"><div><label class="block font-bold text-slate-700 mb-1">Restricciones sobre el efectivo (garantías, endosos, avales)</label><textarea rows="5" class="w-full p-2 border border-slate-300 rounded-lg text-[11px] outline-none focus:ring-1 focus:ring-indigo-400" onchange="cbSetTexto(\'revel\', \'restr\', this)" placeholder="Describe las restricciones y su importe. Si no hay, indícalo.">' + escapeHtml(R.restr || '') + '</textarea></div><div><label class="block font-bold text-slate-700 mb-1">Otras revelaciones (saldos no disponibles, líneas de sobregiro, otros)</label><textarea rows="5" class="w-full p-2 border border-slate-300 rounded-lg text-[11px] outline-none focus:ring-1 focus:ring-indigo-400" onchange="cbSetTexto(\'revel\', \'otras\', this)">' + escapeHtml(R.otras || '') + '</textarea></div></div></div>';
@@ -14380,7 +14489,7 @@ ${cont.innerHTML}
     }
     function cbHtmlClaude() {
       const a = cbE.analisis;
-      if (!a) return pcHtmlAviso('AA1', cbE.cliente, cbE.anio, cbE.visita);
+      if (!a) return pcHtmlAviso('AA', cbE.cliente, cbE.anio, cbE.visita, 'bancos');
       const e = estadoOrigen(a), cls = e === 'revisado' ? 'rev' : (e === 'modificado' ? 'mod' : '');
       const h2 = 'font-bold text-slate-800 text-base border-b border-slate-200 mt-5 mb-2 pb-1';
       return '<div class="p-4 text-sm text-slate-700"><div class="marca-origen ' + cls + '"><b>Claude</b><span>Análisis de Claude · ' + a.anio + ' · ' + (a.visita === 'preliminar' ? 'Visita preliminar' : 'Visita final') + ' · ' + escapeHtml(textoOrigen(a)) + '</span>' + (e === 'pendiente' ? '<button type="button" onclick="cbMarcarRevisado()">Marcar como revisado</button>' : '') + '</div>' +
@@ -14407,15 +14516,15 @@ ${cont.innerHTML}
       bitacoraClaude('Guardó criterio final', 'Bancos (conciliaciones)', cbE.cliente, String(a.anio));
     }
     function cbFilasPrograma(todo) {
-      const todas = (cbE.plantilla || []).map(x => { const g = cbE.programa.find(k => k.k === x.k) || {}; return { ...x, donde: g.donde || '', quien: g.quien || '', estado: g.estado || 'pendiente', otro: !!g.otro, registrado_por: g.registrado_por || '', nota: g.nota || '', noAplica: motivosNoAplica(x, 'AA1', cbE.ctx) }; });
+      const todas = (cbE.plantilla || []).map(x => { const g = cbE.programa.find(k => k.k === x.k) || {}; return { ...x, donde: g.donde || '', quien: g.quien || '', estado: g.estado || 'pendiente', otro: !!g.otro, registrado_por: g.registrado_por || '', nota: g.nota || '', noAplica: motivosNoAplica(x, 'AA', cbE.ctx) }; });
       return todo ? todas : todas.filter(x => !x.noAplica.length || x.estado === 'hecho');
     }
     function cbVerTodosProg(v) { cbE.verTodos = !!v; cbRender(); }
     function cbHtmlPrograma() {
       if (cbE.plantilla === null) return '<div class="p-8 text-center text-slate-400 text-sm">Cargando el programa de trabajo...</div>';
-      if (!cbE.plantilla.length) return '<div class="p-8 text-center text-slate-400 text-sm">No hay procedimientos cargados para AA1 en Configuración › Programas de trabajo.</div>';
+      if (!cbE.plantilla.length) return '<div class="p-8 text-center text-slate-400 text-sm">No hay procedimientos cargados para AA (hoja Bancos) en Configuración › Programas de trabajo.</div>';
       const filas = cbE.verTodos ? cbFilasPrograma(true) : cbFilasPrograma(), hechos = filas.filter(x => x.estado === 'hecho').length;
-      let h = '<div class="p-4 text-sm text-slate-700">' + htmlContextoPrograma(cbE.ctx, 'AA1', cbE.plantilla.length, cbFilasPrograma().length, cbE.verTodos, 'cbVerTodosProg') + '<div class="flex flex-wrap items-center gap-2 mb-3"><span class="pill-origen rev">Hechos: ' + hechos + '</span><span class="pill-origen mod">Pendientes: ' + (filas.length - hechos) + '</span></div><div class="overflow-x-auto border border-slate-200 rounded-xl"><table class="w-full text-left text-sm border-collapse"><thead class="bg-slate-100 text-slate-600 text-xs font-bold border-b border-slate-200"><tr><th class="p-3 w-16">Código</th><th class="p-3 min-w-[360px]">Procedimiento</th><th class="p-3 min-w-[200px]">Dónde está hecho</th><th class="p-3 min-w-[220px]">Comentario</th><th class="p-3 w-40">Quién lo hizo</th><th class="p-3 min-w-[170px]">Verificaciones (pestaña 5)</th><th class="p-3 w-36">Estado</th></tr></thead><tbody>';
+      let h = '<div class="p-4 text-sm text-slate-700">' + htmlContextoPrograma(cbE.ctx, 'AA', cbE.plantilla.length, cbFilasPrograma().length, cbE.verTodos, 'cbVerTodosProg') + '<div class="flex flex-wrap items-center gap-2 mb-3"><span class="pill-origen rev">Hechos: ' + hechos + '</span><span class="pill-origen mod">Pendientes: ' + (filas.length - hechos) + '</span></div><div class="overflow-x-auto border border-slate-200 rounded-xl"><table class="w-full text-left text-sm border-collapse"><thead class="bg-slate-100 text-slate-600 text-xs font-bold border-b border-slate-200"><tr><th class="p-3 w-16">Código</th><th class="p-3 min-w-[360px]">Procedimiento</th><th class="p-3 min-w-[200px]">Dónde está hecho</th><th class="p-3 min-w-[220px]">Comentario</th><th class="p-3 w-40">Quién lo hizo</th><th class="p-3 min-w-[170px]">Verificaciones (pestaña 5)</th><th class="p-3 w-36">Estado</th></tr></thead><tbody>';
       filas.forEach(x => {
         const v = cbVerifDeProc(x.codigo), col = v.abiertas ? 'text-amber-700' : 'text-emerald-700';
         h += '<tr class="align-top border-b border-slate-100' + (x.noAplica.length ? ' opacity-60' : '') + '"><td class="p-3 font-semibold">' + escapeHtml(x.codigo) + '</td><td class="p-3"><div class="text-xs text-slate-400">' + escapeHtml(x.tipo_procedimiento || '') + '</div>' + escapeHtml(x.procedimiento || '') + (x.noAplica.length ? '<div class="text-xs text-amber-700 mt-1">Ya no aplica por ' + escapeHtml(x.noAplica.join(' y ')) + (x.estado === 'hecho' ? ' (estaba hecho)' : '') + '</div>' : '') + '</td>' +
@@ -14539,7 +14648,7 @@ ${cont.innerHTML}
       add('Resumen', [cbH(['Banco', 'Cuenta', 'Moneda', 'Saldo según estado de cuenta', ...CB_TIPOS.map(x => x[1]), 'Saldo conciliado', 'Saldo en libros', 'Diferencia']), ...cbE.cuentas.map(c => [c.banco, c.cuenta, c.moneda, cbN(c.saldo_estado), ...CB_TIPOS.map(x => cbSuma(c, x[0])), cbConciliado(c), cbN(c.saldo_libros), cbDif(c)]), cbT(['Total', '', '', t.estado, ...CB_TIPOS.map(x => t[x[0]]), t.conc, t.libros, t.dif])]);
       add('Detalle de partidas', [cbH(['Banco', 'Cuenta', 'Tipo de partida', 'Fecha', 'Referencia', 'Descripción', 'Valor', 'Efecto en la conciliación', 'Rastreo posterior', 'Observación']), ...cbE.cuentas.flatMap(c => (c.partidas || []).map(p => [c.banco, c.cuenta, (CB_TIPOS.find(x => x[0] === p.tipo) || [])[1] || p.tipo, p.fecha, p.ref, p.desc, cbN(p.valor), cbEfecto(p), p.rastreo, p.nota]))]);
       const hayBal = cbE.config.balance !== undefined && cbE.config.balance !== '';
-      add('Comparación con libros', [cbH(['Banco', 'Cuenta', 'Saldo conciliado', 'Saldo en libros', 'Diferencia', 'Resultado']), ...cbE.cuentas.map(c => [c.banco, c.cuenta, cbConciliado(c), cbN(c.saldo_libros), cbDif(c), Math.abs(cbDif(c)) <= cbTol() ? 'Cuadra' : 'Revisar']), [], cbT(['Total en libros', '', '', t.libros]), cbT(['Saldo según balance (AA1)', '', '', hayBal ? cbN(cbE.config.balance) : 'Sin ingresar']), cbT(['Diferencia libros − balance', '', '', hayBal ? r2f(t.libros - cbN(cbE.config.balance)) : '']), ...(() => { const m = cbMemo(); return [[], cbL(['Objetivo', m.objetivo]), cbL(['Procedimiento', m.procedimiento.join('\n')]), cbL(['Fuente de la información', m.fuente.join('\n')]), cbL(['Responsable de la información', m.resp || 'Pendiente']), cbL(['Conclusión', m.concl || 'Pendiente: la escribe el auditor.'])]; })()]);
+      add('Comparación con libros', [cbH(['Banco', 'Cuenta', 'Saldo conciliado', 'Saldo en libros', 'Diferencia', 'Resultado']), ...cbE.cuentas.map(c => [c.banco, c.cuenta, cbConciliado(c), cbN(c.saldo_libros), cbDif(c), Math.abs(cbDif(c)) <= cbTol() ? 'Cuadra' : 'Revisar']), [], cbT(['Total en libros', '', '', t.libros]), cbT(['Saldo según balance (AA)', '', '', hayBal ? cbN(cbE.config.balance) : 'Sin ingresar']), cbT(['Diferencia libros − balance', '', '', hayBal ? r2f(t.libros - cbN(cbE.config.balance)) : '']), ...(() => { const m = cbMemo(); return [[], cbL(['Objetivo', m.objetivo]), cbL(['Procedimiento', m.procedimiento.join('\n')]), cbL(['Fuente de la información', m.fuente.join('\n')]), cbL(['Responsable de la información', m.resp || 'Pendiente']), cbL(['Conclusión', m.concl || 'Pendiente: la escribe el auditor.'])]; })()]);
       const resV = { ok: 'Cumple', rev: 'Revisar', info: 'Informativo' }, estV = { pendiente: 'Pendiente', cumple: 'Cumple', nocumple: 'No cumple', noaplica: 'No aplica' }, V = cbE.config.verif || {};
       add('Verificaciones', [cbH(['Programa', 'Verificaciones automáticas', 'Resultado', 'Detalle']), ...cbVerifAuto().map(([a, e, d, cod]) => [cod, a, resV[e], d]), [], cbH(['Programa', 'Evaluaciones del auditor', 'Referencia', 'Estado', 'Comentario']), ...CB_VERIF_MANUALES.map(([k, a, ref, cod]) => [cod, a, ref, estV[(V[k] || {}).e || 'pendiente'], (V[k] || {}).n || ''])]);
       const R = cbE.config.revel || {};
@@ -14581,6 +14690,7 @@ ${cont.innerHTML}
       { clave: 'pedidos-claude', nombre: '     ↳ 2. Análisis Claves › Pedidos a Claude', btn: 'nav-pedidos-claude', defecto: false },
       { clave: 'claude-revisar', nombre: '     ↳ 2. Análisis Claves › Trabajo de Claude por revisar', btn: 'nav-claude-revisar', defecto: false },
       { clave: 'cta:inversiones_corrientes', nombre: '     ↳ 2. Análisis Claves › Activos › Inversiones corrientes', btn: 'nav-cuenta-activos-inversiones_corrientes', defecto: false },
+      { clave: 'cta:equivalentes', nombre: '     ↳ 2. Análisis Claves › Activos › AA Efectivo y equivalentes › Equivalentes de efectivo', btn: 'nav-cuenta-activos-equivalentes', defecto: false },
       { clave: 'arrend', nombre: '     ↳ 2. Análisis Claves › Activos › Activos por derecho de uso y pasivos por arrendamiento', btn: 'nav-cuenta-extra-activos-arrend', defecto: false },
       { clave: 'import', nombre: '     ↳ 2. Análisis Claves › Activos › Inventarios (Importaciones)', btn: 'nav-cuenta-extra-activos-import', defecto: false },
       { clave: 'concil', nombre: '     ↳ 2. Análisis Claves › Activos › AA Efectivo y equivalentes › Bancos (conciliaciones)', btn: 'nav-cuenta-extra-activos-concil', defecto: false },
