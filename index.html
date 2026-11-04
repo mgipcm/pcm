@@ -1395,6 +1395,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
     </section>
 
     <section id="sec-analisis" class="hidden bg-white rounded-2xl shadow-xl border border-slate-200 p-6 min-h-[92vh] space-y-5">
+      <div id="an-hojas" class="hidden flex flex-wrap items-center gap-1 pb-1"></div>
       <div class="border-b pb-4">
         <h1 id="an-titulo" class="text-xl font-bold text-slate-800">2. Auditoría/Análisis Claves</h1>
         <p class="text-xs text-slate-500">Procedimientos clave (no incluye todos los procedimientos de auditoría): análisis de Claude y criterio final del auditor, cuenta por cuenta</p>
@@ -2081,6 +2082,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
     </section>
 
     <section id="sec-concil" class="hidden bg-white rounded-2xl shadow-xl border border-slate-200 p-6 min-h-[92vh] space-y-5">
+      <div id="cb-hojas" class="flex flex-wrap items-center gap-1 pb-1"></div>
       <div class="border-b pb-4">
         <h1 id="cb-titulo" class="text-xl font-bold text-slate-800">2. Auditoría/Análisis Claves: Activos › Efectivo y equivalentes de efectivo › Bancos (conciliaciones bancarias)</h1>
         <p class="text-xs text-slate-500">Resumen de conciliaciones bancarias por cuenta, con el detalle de sus partidas, la comparación con los saldos en libros, verificaciones, revelaciones, análisis de Claude y programa de trabajo (sumaria AA, hoja Bancos).</p>
@@ -3323,7 +3325,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
 
       const desdeAnalisis = ((seccion === 'arrend' || seccion === 'import' || seccion === 'concil') && sub === 'analisis');
       if (seccion === 'arrend') { const t = document.getElementById('ar-titulo'); if (t) t.textContent = desdeAnalisis ? '2. Auditoría/Análisis Claves: Activos › Activos por derecho de uso y pasivos por arrendamiento' : 'Arrendamientos NIIF 16'; }
-      if (seccion === 'concil') { const t = document.getElementById('cb-titulo'); if (t) t.textContent = '2. Auditoría/Análisis Claves: Activos › Efectivo y equivalentes de efectivo › Bancos (conciliaciones bancarias)'; }
+      if (seccion === 'concil') { pintarHojasAA(); const t = document.getElementById('cb-titulo'); if (t) t.textContent = '2. Auditoría/Análisis Claves: Activos › Efectivo y equivalentes de efectivo › Bancos (conciliaciones bancarias)'; }
       if (desdeAnalisis) {
         const bx = document.getElementById('nav-cuenta-extra-activos-' + seccion);
         if (bx) bx.className = "w-full text-left px-3 py-1.5 rounded-lg text-xs font-bold bg-indigo-600 text-white shadow-md transition flex items-center gap-2";
@@ -3510,6 +3512,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       poblarAuditoresAnalisis();
       cambiarSeleccionAnalisis();
       eqRenderPartidas();
+      pintarHojasAA();
     }
 
     function poblarClientesAnalisis() {
@@ -3583,6 +3586,21 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       fuente: 'i) certificados y pólizas de inversión, ii) estados de cuenta, iii) mayores contables, iv) confirmaciones de las instituciones financieras.'
     };
     function esEq() { return analisisEstado.cuenta === 'equivalentes'; }
+    // Hojas de la cuenta AA (Efectivo y equivalentes de efectivo): se cambia de una a otra desde la parte de arriba
+    function pintarHojasAA() {
+      const hojas = [['caja', 'Caja'], ['bancos', 'Bancos'], ['equivalentes', 'Equivalentes de efectivo']];
+      const enBancos = !document.getElementById('sec-concil').classList.contains('hidden');
+      const enEq = !document.getElementById('sec-analisis').classList.contains('hidden') && esEq();
+      const actual = enBancos ? 'bancos' : (enEq ? 'equivalentes' : '');
+      const html = '<span class="text-[11px] font-bold text-slate-500 mr-1">AA Efectivo y equivalentes · Hoja:</span>' + hojas.map(([k, n]) =>
+        '<button type="button" onclick="irHojaAA(\'' + k + '\')" class="px-3 py-1 text-xs rounded-lg transition border ' + (k === actual ? 'bg-slate-700 text-white border-slate-700 font-bold' : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-100 font-medium') + '">' + n + (k === 'caja' ? ' <span class="text-[9px] opacity-70">pronto</span>' : '') + '</button>').join('');
+      const cb = document.getElementById('cb-hojas'); if (cb) cb.innerHTML = html;
+      const an = document.getElementById('an-hojas'); if (an) { an.innerHTML = html; an.classList.toggle('hidden', !esEq()); }
+    }
+    function irHojaAA(h) {
+      if (h === 'caja') { avisarEnDesarrollo(); return; }
+      if (h === 'bancos') navegarMenu('concil', 'analisis'); else navegarMenu('analisis', 'activos', 'equivalentes');
+    }
     let programaEstado = { existe: false };
     const guardadoPrograma = { timer: null, snap: null, cola: Promise.resolve() };
 
