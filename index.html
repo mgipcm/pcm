@@ -1445,7 +1445,6 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
           <button type="button" id="an-tab-verif" onclick="cambiarPestanaAnalisis('verif')" class="px-3 py-1.5 text-xs transition rounded-lg">4. Verificaciones</button>
           <button type="button" id="an-tab-programa" onclick="cambiarPestanaAnalisis('programa')" class="px-3 py-1.5 text-xs transition rounded-lg">5. Programa de trabajo</button>
           <button type="button" id="an-tab-concluir" onclick="cambiarPestanaAnalisis('concluir')" class="px-3 py-1.5 text-xs transition rounded-lg">6. Por concluir</button>
-          <button type="button" id="an-tab-criterio" onclick="cambiarPestanaAnalisis('criterio')" class="px-3 py-1.5 text-xs transition rounded-lg">7. Criterio final del auditor</button>
         </div>
 
         <!-- Programa de trabajo por procedimientos (mismo formato que Bancos) -->
@@ -1631,6 +1630,65 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
                 <input type="date" id="an-prog-fecha" onchange="programarGuardadoPrograma()" class="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-indigo-500 outline-none">
               </div>
             </div>
+            <div style="border-top:1px solid #b8b8b3;padding-top:12px" class="space-y-4">
+              <p class="text-[11px] text-slate-500">Conclusión del auditor responsable. El análisis de Claude es solo un apoyo y no reemplaza este criterio.</p>
+          <div>
+            <label class="block text-xs font-bold text-slate-600 mb-1">Conclusión (marca una o varias)</label>
+            <div id="an-conclusion-lista" class="border border-slate-300 rounded-lg bg-white p-1.5 space-y-0.5 shadow-xs"></div>
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-600 mb-1">Criterio y fundamento</label>
+            <textarea id="an-criterio" data-min="140" rows="7" oninput="autoajustarTextarea(this)" placeholder="Describe el trabajo realizado, los hallazgos, los ajustes propuestos y el fundamento de tu conclusión..."
+                      class="ta-respuesta w-full p-2.5 border border-slate-300 rounded-lg text-xs outline-none focus:ring-2 focus:ring-indigo-500 bg-white leading-relaxed text-slate-800 resize-none overflow-hidden" style="min-height:140px"></textarea>
+            <div class="flex flex-wrap items-center gap-2 mt-2">
+              <button type="button" id="an-btn-mejorar" onclick="mejorarRedaccionCriterio()" class="px-3 py-1.5 rounded-lg text-[11px] transition disabled:opacity-60 disabled:cursor-not-allowed bg-slate-100 text-slate-800 hover:bg-slate-200 font-medium">Mejorar redacción con Claude</button>
+              <span id="an-mejorar-estado" class="text-[11px] text-slate-500"></span>
+            </div>
+            <div id="an-mejorar-panel" class="hidden mt-2 border border-indigo-300 bg-indigo-50/40 rounded-lg p-3 space-y-2">
+              <p class="text-[11px] font-bold text-indigo-700 tracking-wide">Propuesta de Claude (revísala antes de usarla)</p>
+              <div id="an-mejorar-texto" class="text-xs text-slate-800 leading-relaxed whitespace-pre-wrap bg-white border border-slate-200 rounded-lg p-2.5"></div>
+              <div id="an-mejorar-obs" class="hidden border border-amber-400 bg-amber-50 rounded-lg p-2.5">
+                <p class="text-[11px] font-bold text-amber-800 mb-1">Por revisar: no concuerda o falta algo</p>
+                <ul id="an-mejorar-obs-lista" class="list-disc pl-4 text-[11px] text-amber-900 space-y-0.5"></ul>
+              </div>
+              <div class="flex flex-wrap gap-2">
+                <button type="button" onclick="usarRedaccionMejorada()" class="px-3 py-1.5 bg-white text-slate-700 hover:bg-emerald-50 border border-emerald-600 rounded-lg text-[11px] font-bold transition">Usar esta redacción</button>
+                <button type="button" onclick="descartarRedaccionMejorada()" class="px-3 py-1.5 bg-white text-slate-700 hover:bg-slate-100 border border-slate-400 rounded-lg text-[11px] font-bold transition">Descartar</button>
+              </div>
+            </div>
+            <div id="an-mejorar-deshacer" class="hidden mt-2">
+              <button type="button" onclick="volverTextoOriginalCriterio()" class="px-3 py-1.5 bg-white text-slate-700 hover:bg-slate-100 border border-slate-400 rounded-lg text-[11px] font-bold transition">Volver a mi texto original</button>
+              <span class="text-[11px] text-slate-500 ml-1">Recuerda pulsar "Guardar criterio final" para conservar el cambio.</span>
+            </div>
+          </div>
+          <div class="space-y-2">
+            <label class="block text-xs font-bold text-slate-600">Asiento de ajuste propuesto (Debe / Haber)</label>
+            <div class="border border-slate-300 rounded-lg bg-white overflow-x-auto">
+              <table class="w-full text-xs border-collapse min-w-[520px]">
+                <thead>
+                  <tr class="bg-slate-50 text-slate-600 text-left">
+                    <th class="p-2 border-b border-slate-200">Cuenta contable</th>
+                    <th class="p-2 border-b border-slate-200 text-right w-[22%]">Debe</th>
+                    <th class="p-2 border-b border-slate-200 text-right w-[22%]">Haber</th>
+                    <th class="p-2 border-b border-slate-200 w-[10%]"></th>
+                  </tr>
+                </thead>
+                <tbody id="an-asiento-filas"></tbody>
+                <tfoot id="an-asiento-totales"></tfoot>
+              </table>
+            </div>
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <button type="button" onclick="agregarLineaAsiento()" class="px-2.5 py-1 bg-white text-slate-700 hover:bg-slate-50 border border-slate-400 rounded text-[11px] font-bold transition">+ Agregar línea</button>
+              <p id="an-asiento-cuadre" class="text-[11px] font-bold"></p>
+            </div>
+            <input type="text" id="an-asiento-glosa" oninput="asientoEstado.glosa = this.value" placeholder="Glosa o concepto del asiento (opcional)" class="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-indigo-500 outline-none">
+          </div>
+          <button id="an-btn-criterio" onclick="guardarCriterioAnalisis()" class="px-5 py-2.5 rounded-lg text-xs transition disabled:opacity-60 disabled:cursor-not-allowed bg-slate-200 text-slate-900 hover:bg-slate-300 font-semibold">
+            Guardar criterio final
+          </button>
+          <p id="an-criterio-estado" class="text-xs text-slate-500 min-h-[1rem]"></p>
+          <p id="an-criterio-meta" class="text-[11px] text-slate-400"></p>
+            </div>
             <div class="flex flex-wrap items-center justify-between gap-2">
               <button type="button" onclick="restablecerProgramaPredeterminado()" class="px-2.5 py-1 bg-white text-slate-700 hover:bg-slate-50 border border-slate-400 rounded text-[11px] font-bold transition">Restablecer el texto predeterminado</button>
               <p id="an-prog-estado" class="text-[11px] text-slate-400 min-h-[1rem]"></p>
@@ -1702,65 +1760,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
         </div>
 
         <!-- 3. Criterio final del auditor -->
-        <div id="an-panel-criterio" class="hidden space-y-4 max-w-3xl">
-          <p class="text-xs text-slate-500 leading-relaxed">Esta es la conclusión del auditor responsable. El análisis de Claude es solo un apoyo y no reemplaza este criterio.</p>
-          <div>
-            <label class="block text-xs font-bold text-slate-600 mb-1">Conclusión (marca una o varias)</label>
-            <div id="an-conclusion-lista" class="border border-slate-300 rounded-lg bg-white p-1.5 space-y-0.5 shadow-xs"></div>
-          </div>
-          <div>
-            <label class="block text-xs font-bold text-slate-600 mb-1">Criterio y fundamento</label>
-            <textarea id="an-criterio" data-min="140" rows="7" oninput="autoajustarTextarea(this)" placeholder="Describe el trabajo realizado, los hallazgos, los ajustes propuestos y el fundamento de tu conclusión..."
-                      class="ta-respuesta w-full p-2.5 border border-slate-300 rounded-lg text-xs outline-none focus:ring-2 focus:ring-indigo-500 bg-white leading-relaxed text-slate-800 resize-none overflow-hidden" style="min-height:140px"></textarea>
-            <div class="flex flex-wrap items-center gap-2 mt-2">
-              <button type="button" id="an-btn-mejorar" onclick="mejorarRedaccionCriterio()" class="px-3 py-1.5 rounded-lg text-[11px] transition disabled:opacity-60 disabled:cursor-not-allowed bg-slate-100 text-slate-800 hover:bg-slate-200 font-medium">Mejorar redacción con Claude</button>
-              <span id="an-mejorar-estado" class="text-[11px] text-slate-500"></span>
-            </div>
-            <div id="an-mejorar-panel" class="hidden mt-2 border border-indigo-300 bg-indigo-50/40 rounded-lg p-3 space-y-2">
-              <p class="text-[11px] font-bold text-indigo-700 tracking-wide">Propuesta de Claude (revísala antes de usarla)</p>
-              <div id="an-mejorar-texto" class="text-xs text-slate-800 leading-relaxed whitespace-pre-wrap bg-white border border-slate-200 rounded-lg p-2.5"></div>
-              <div id="an-mejorar-obs" class="hidden border border-amber-400 bg-amber-50 rounded-lg p-2.5">
-                <p class="text-[11px] font-bold text-amber-800 mb-1">Por revisar: no concuerda o falta algo</p>
-                <ul id="an-mejorar-obs-lista" class="list-disc pl-4 text-[11px] text-amber-900 space-y-0.5"></ul>
-              </div>
-              <div class="flex flex-wrap gap-2">
-                <button type="button" onclick="usarRedaccionMejorada()" class="px-3 py-1.5 bg-white text-slate-700 hover:bg-emerald-50 border border-emerald-600 rounded-lg text-[11px] font-bold transition">Usar esta redacción</button>
-                <button type="button" onclick="descartarRedaccionMejorada()" class="px-3 py-1.5 bg-white text-slate-700 hover:bg-slate-100 border border-slate-400 rounded-lg text-[11px] font-bold transition">Descartar</button>
-              </div>
-            </div>
-            <div id="an-mejorar-deshacer" class="hidden mt-2">
-              <button type="button" onclick="volverTextoOriginalCriterio()" class="px-3 py-1.5 bg-white text-slate-700 hover:bg-slate-100 border border-slate-400 rounded-lg text-[11px] font-bold transition">Volver a mi texto original</button>
-              <span class="text-[11px] text-slate-500 ml-1">Recuerda pulsar "Guardar criterio final" para conservar el cambio.</span>
-            </div>
-          </div>
-          <div class="space-y-2">
-            <label class="block text-xs font-bold text-slate-600">Asiento de ajuste propuesto (Debe / Haber)</label>
-            <div class="border border-slate-300 rounded-lg bg-white overflow-x-auto">
-              <table class="w-full text-xs border-collapse min-w-[520px]">
-                <thead>
-                  <tr class="bg-slate-50 text-slate-600 text-left">
-                    <th class="p-2 border-b border-slate-200">Cuenta contable</th>
-                    <th class="p-2 border-b border-slate-200 text-right w-[22%]">Debe</th>
-                    <th class="p-2 border-b border-slate-200 text-right w-[22%]">Haber</th>
-                    <th class="p-2 border-b border-slate-200 w-[10%]"></th>
-                  </tr>
-                </thead>
-                <tbody id="an-asiento-filas"></tbody>
-                <tfoot id="an-asiento-totales"></tfoot>
-              </table>
-            </div>
-            <div class="flex flex-wrap items-center justify-between gap-2">
-              <button type="button" onclick="agregarLineaAsiento()" class="px-2.5 py-1 bg-white text-slate-700 hover:bg-slate-50 border border-slate-400 rounded text-[11px] font-bold transition">+ Agregar línea</button>
-              <p id="an-asiento-cuadre" class="text-[11px] font-bold"></p>
-            </div>
-            <input type="text" id="an-asiento-glosa" oninput="asientoEstado.glosa = this.value" placeholder="Glosa o concepto del asiento (opcional)" class="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-indigo-500 outline-none">
-          </div>
-          <button id="an-btn-criterio" onclick="guardarCriterioAnalisis()" class="px-5 py-2.5 rounded-lg text-xs transition disabled:opacity-60 disabled:cursor-not-allowed bg-slate-200 text-slate-900 hover:bg-slate-300 font-semibold">
-            Guardar criterio final
-          </button>
-          <p id="an-criterio-estado" class="text-xs text-slate-500 min-h-[1rem]"></p>
-          <p id="an-criterio-meta" class="text-[11px] text-slate-400"></p>
-        </div>
+
       </div>
     </section>
 
@@ -4874,7 +4874,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       analisisEstado.pestana = p;
       anexoSub(analisisEstado.sub);
       // Hojas hechas: más oscuras; hojas por llenar: más claras
-      ['anexo', 'comp', 'claude', 'verif', 'programa', 'concluir', 'criterio'].forEach(t => {
+      ['anexo', 'comp', 'claude', 'verif', 'programa', 'concluir'].forEach(t => {
         const panel = document.getElementById('an-panel-' + t);
         const tab = document.getElementById('an-tab-' + t);
         if (panel) panel.classList.toggle('hidden', t !== p);
@@ -4889,7 +4889,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
 
     const PUNTO_HECHO = ' <span style="color:#000;font-size:9px;vertical-align:middle">●</span>';
     function actualizarInsigniasAnalisis() {
-      const nombres = { anexo: '2. Anexo y cálculos', comp: '1. Comparación con libros', claude: '3. Análisis de Claude', verif: '4. Verificaciones', programa: '5. Programa de trabajo', concluir: '6. Por concluir', criterio: '7. Criterio final del auditor' };
+      const nombres = { anexo: '2. Anexo y cálculos', comp: '1. Comparación con libros', claude: '3. Análisis de Claude', verif: '4. Verificaciones', programa: '5. Programa de trabajo', concluir: '6. Por concluir' };
       let npc = 0; try { npc = invPorConcluir().grupos.length; } catch (e) { npc = 0; }
       Object.keys(nombres).forEach(t => { const el = document.getElementById('an-tab-' + t); if (el) el.innerHTML = nombres[t] + (t === 'concluir' && npc ? ' (' + npc + ')' : ''); });
       setTimeout(() => { cambiarPestanaAnalisis(analisisEstado.pestana); invRender(); }, 0);
@@ -12945,7 +12945,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       const sv = document.getElementById('an-visita');
       if (sv) sv.value = r.visita === 'preliminar' ? 'preliminar' : 'final';
       cambiarSeleccionAnalisis();
-      cambiarPestanaAnalisis('criterio');
+      cambiarPestanaAnalisis('comp');
       const contScroll = document.querySelector('body > main'); if (contScroll) contScroll.scrollTop = 0;
     }
 
@@ -14518,7 +14518,7 @@ ${cont.innerHTML}
       add('Revelaciones', [cbH(['Banco', 'Cuenta', 'Tipo', 'Moneda', 'Saldo en libros']), ...cbE.cuentas.map(c => [c.banco, c.cuenta, c.tipo, c.moneda, cbN(c.saldo_libros)]), [], cbL(['Restricciones sobre el efectivo', R.restr || '']), cbL(['Otras revelaciones', R.otras || ''])]);
       if (cbE.analisis) add('Análisis de Claude', arrFilasClaude(cbE.analisis), { texto: true });
       add('Programa de trabajo', [cbH(['Código', 'Procedimiento', 'Dónde está hecho', 'Comentario', 'Quién lo hizo', 'Verificaciones (pestaña 5)', 'Estado']), ...cbFilasPrograma().map(x => { const v = cbVerifDeProc(x.codigo); return [x.codigo, x.procedimiento || '', x.donde, x.nota || '', x.quien, v.total ? (v.abiertas ? v.abiertas + ' por resolver de ' + v.total : 'Todas cerradas (' + v.total + ')') : 'Sin verificaciones', x.estado === 'hecho' ? (x.otro ? (esAnaliticaProg(x) ? 'Hecho en planificación' : 'Hecho por otro auditor') : 'Hecho') : 'Pendiente']; })]);
-      // Por concluir (igual que la pestaña 7)
+      // Por concluir (igual que la pestaña 6)
       { const P = cbPorConcluir(); add('Por concluir', [cbH(['Programa', 'Procedimiento', 'Estado', 'Verificaciones por resolver']), ...(P.grupos.length ? P.grupos.map(g => [g.cod, g.proc ? g.proc.procedimiento || '' : '', g.pendiente ? 'Pendiente' : 'Hecho', g.ver.length ? g.ver.map(v => '• ' + v.t + ' (' + (v.d || '') + ')').join('\n') : 'Todas cerradas']) : [['Nada pendiente']])]); }
       // Mismo orden y nombres que las pestañas de la pantalla
       const ORDEN = { 'Comparación con libros': '1. Comparación con libros', 'Resumen': '2. Resumen de conciliaciones', 'Detalle de partidas': '2a. Detalle de partidas', 'Análisis de Claude': '3. Análisis de Claude', 'Revelaciones': '4. Revelaciones', 'Verificaciones': '5. Verificaciones', 'Programa de trabajo': '6. Programa de trabajo', 'Por concluir': '7. Por concluir' };
