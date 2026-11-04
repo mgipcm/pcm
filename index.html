@@ -3363,7 +3363,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
     const EXTRAS_ANALISIS = {
       // Se ordenan por la letra de la sumaria; "hijos" arma una cuenta con subcuentas (las que no tienen id aún están en desarrollo)
       'activos': [
-        { sumaria: 'AA', id: 'concil', nombre: 'AA Efectivo y equivalentes de efectivo' },
+        { sumaria: 'AA', id: 'concil', abrir: "irHojaAA(herramientaHabilitada('concil') || !herramientaHabilitada('cta:equivalentes') ? 'bancos' : 'equivalentes')", nombre: 'AA Efectivo y equivalentes de efectivo' },
         { sumaria: 'AF', id: 'import', nombre: 'AF Inventarios (Importaciones)' },
         { sumaria: 'AOO', id: 'arrend', nombre: 'AOO Activos por derecho de uso y pasivos por arrendamiento' }
       ]
@@ -3446,7 +3446,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
         const botonExtra = x => x.cuentaAn
           ? `<button type="button" onclick="navegarMenu('analisis', 'activos', '${x.cuentaAn}')" id="nav-cuenta-${r}-${x.cuentaAn}" class="${claseBtn}"><span>${escapeHtml(x.nombre)}</span></button>`
           : x.id
-          ? `<button type="button" onclick="navegarMenu('${x.id}', 'analisis')" id="nav-cuenta-extra-${r}-${x.id}" class="${claseBtn}"><span>${escapeHtml(x.nombre)}</span></button>`
+          ? `<button type="button" onclick="${x.abrir ? x.abrir : `navegarMenu('${x.id}', 'analisis')`}" id="nav-cuenta-extra-${r}-${x.id}" class="${claseBtn}"><span>${escapeHtml(x.nombre)}</span></button>`
           : `<button type="button" onclick="avisarEnDesarrollo()" id="nav-cuenta-extra-${r}-${x.clave}" class="${claseBtn} opacity-60"><span>${escapeHtml(x.nombre)}</span><span class="ml-auto text-[9px] text-slate-500">Pronto</span></button>`;
         const grupoExtra = x => `<div class="space-y-1"><button type="button" onclick="toggleGrupoAnalisis('${r}-${x.sumaria}')" class="w-full flex items-center justify-between px-2 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:bg-slate-800 hover:text-white transition"><span>${escapeHtml(x.nombre)}</span><span id="icon-grupo-${r}-${x.sumaria}" class="inline-block text-[11px] leading-none transition-transform duration-200">▾</span></button><div id="submenu-grupo-${r}-${x.sumaria}" class="hidden pl-2 space-y-1">${x.hijos.map(botonExtra).join('')}</div></div>`;
         const items = [
@@ -14761,7 +14761,7 @@ ${cont.innerHTML}
         const suelta = btn.nextElementSibling;
         if (suelta && suelta.classList.contains('etiqueta-desarrollo')) suelta.remove();
         btn.style.opacity = '';
-        if (!herramientaOn(h.clave)) {
+        if (!(herramientaOn(h.clave) || (h.clave === 'concil' && herramientaOn('cta:equivalentes')))) {
           // etiqueta corta "Off" en la misma línea del nombre
           const et = document.createElement('span');
           et.className = 'etiqueta-desarrollo';
