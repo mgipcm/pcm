@@ -4926,7 +4926,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       const btnCopiar = document.getElementById('an-btn-copiar');
       if (!registro) {
         ultimoAnalisisTexto = '';
-        resultado.innerHTML = '<p class="text-slate-400">Claude todavía no preparó un análisis para este cliente y año. Solicítalo con el botón de la izquierda.</p>';
+        resultado.innerHTML = pcHtmlAviso((analisisEstado.cuenta === 'AS' ? 'AS' : 'AB'), valorAnalisis('an-cliente'), valorAnalisis('an-anio'), visitaAnalisis());
         btnCopiar.classList.add('hidden');
         return;
       }
@@ -4955,6 +4955,35 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       }).join('');
     }
 
+
+    // ===== Aviso "Realizar pedido" para pantallas sin información (sirve para Bancos, Inversiones y las que vengan) =====
+    function pcIrAPedido(sumaria, cli, anio, vis) {
+      navegarMenu('pedidos-claude');
+      let intentos = 0;
+      const poner = (id, v) => { const el = document.getElementById(id); if (el && v && [...el.options].some(o => o.value === String(v))) { el.value = String(v); el.dispatchEvent(new Event('change')); return true; } return !v; };
+      const t = setInterval(() => {
+        intentos++;
+        const ok = poner('pc-cliente', cli) & poner('pc-anio', anio) & poner('pc-visita', vis) & poner('pc-sumaria', sumaria);
+        if (ok || intentos > 20) clearInterval(t);
+      }, 300);
+    }
+    function pcHtmlAviso(sumaria, cli, anio, vis, extra) {
+      setTimeout(pcRefrescarAvisos, 0);
+      const e = a => escapeHtml(String(a == null ? '' : a));
+      return '<div class="pc-aviso p-8 text-center text-sm text-slate-600 space-y-3" data-sum="' + e(sumaria) + '" data-cli="' + e(cli) + '" data-anio="' + e(anio) + '" data-vis="' + e(vis) + '"><p>Aún no hay información cargada para esta cuenta, cliente, año y visita.' + (extra ? ' ' + e(extra) : '') + '<br>Para comenzar, realiza un pedido de análisis.</p><button type="button" onclick="pcIrAPedido(\'' + e(sumaria) + '\', \'' + e(cli) + '\', \'' + e(anio) + '\', \'' + e(vis) + '\')" class="px-4 py-2 bg-slate-200 text-slate-900 hover:bg-slate-300 rounded-lg text-xs font-bold transition">Realizar pedido</button></div>';
+    }
+    async function pcRefrescarAvisos() {
+      const cajas = [...document.querySelectorAll('.pc-aviso')];
+      for (const c of cajas) {
+        const { sum, cli, anio, vis } = c.dataset;
+        if (!cli || !anio || !sum) continue;
+        const { data } = await supabaseClient.from('pedidos_claude').select('estado').eq('cliente_id', cli).eq('anio', Number(anio)).eq('visita', vis || 'final').eq('sumaria', sum).in('estado', ['solicitado', 'autorizado', 'hecho']).order('created_at', { ascending: false }).limit(1);
+        const est = data && data[0] ? data[0].estado : '';
+        if (!est || !c.isConnected) continue;
+        const txt = { solicitado: 'Pedido enviado, esperando autorización del Socio o Supervisor.', autorizado: 'Pedido autorizado: Claude lo está analizando.', hecho: 'El pedido ya está hecho y pasó a revisión. Cuando se revise, la información aparecerá aquí.' }[est];
+        c.innerHTML = '<p>' + txt + '</p><button type="button" onclick="navegarMenu(\'pedidos-claude\')" class="px-4 py-2 bg-white text-slate-700 hover:bg-slate-50 border border-slate-400 rounded-lg text-xs font-bold transition">Ver pedidos</button>';
+      }
+    }
     function solicitarAnalisisInversiones() {
       const cli = valorAnalisis('an-cliente'), anio = valorAnalisis('an-anio'), vis = visitaAnalisis();
       navegarMenu('pedidos-claude');
@@ -14239,7 +14268,7 @@ ${cont.innerHTML}
     function cbHtmlResumen() {
       const L = cbE.cuentas, t = cbTotales();
       let h = '<div class="p-3 text-[11px]"><div class="flex flex-wrap items-center gap-2 mb-2"><button type="button" onclick="cbAgregarCuenta()" class="' + CB_BTN + '">+ Agregar cuenta bancaria</button><span class="text-slate-500">Haz clic en cualquier valor de las partidas para abrir y editar su detalle.</span></div>';
-      if (!L.length) return h + '<p class="p-8 text-center text-slate-400 text-sm">Todavía no hay cuentas. Agrega la primera cuenta bancaria para comenzar la conciliación.</p></div>';
+      if (!L.length) return '<div class="p-3">' + pcHtmlAviso('AA1', cbE.cliente, cbE.anio, cbE.visita) + '</div>';
       h += '<div class="overflow-x-auto border border-slate-200 rounded-xl"><table class="w-full text-[11px] leading-tight border-collapse"><thead><tr><th class="' + CB_TH + '">Banco</th><th class="' + CB_TH + '">Cuenta</th><th class="' + CB_TH + '">Moneda</th><th class="' + CB_TH + ' text-right">Saldo según estado de cuenta</th>' + CB_TIPOS.map(x => '<th class="' + CB_TH + ' text-right">' + x[1] + '</th>').join('') + '<th class="' + CB_TH + ' text-right">Saldo conciliado</th><th class="' + CB_TH + ' text-right">Saldo en libros</th><th class="' + CB_TH + ' text-right">Diferencia</th><th class="' + CB_TH + '"></th></tr></thead><tbody>';
       L.forEach(c => {
         const dif = cbDif(c);
@@ -14311,7 +14340,7 @@ ${cont.innerHTML}
     }
     function cbHtmlLibros() {
       const L = cbE.cuentas, t = cbTotales(), tol = cbTol();
-      if (!L.length) return '<p class="p-8 text-center text-slate-400 text-sm">Agrega cuentas en la pestaña 2 para compararlas con los libros.</p>';
+      if (!L.length) return pcHtmlAviso('AA1', cbE.cliente, cbE.anio, cbE.visita);
       let h = '<div class="p-3 text-[11px]"><div class="overflow-x-auto border border-slate-200 rounded-xl"><table class="w-full text-[11px] leading-tight border-collapse"><thead><tr><th class="' + CB_TH + '">Banco</th><th class="' + CB_TH + '">Cuenta</th><th class="' + CB_TH + ' text-right">Saldo conciliado</th><th class="' + CB_TH + ' text-right">Saldo en libros</th><th class="' + CB_TH + ' text-right">Diferencia</th><th class="' + CB_TH + '">Resultado</th></tr></thead><tbody>';
       L.forEach(c => { const d = cbDif(c), ok = Math.abs(d) <= tol; h += '<tr class="border-b border-slate-100"><td class="px-2 py-1">' + escapeHtml(c.banco || '') + '</td><td class="px-2 py-1">' + escapeHtml(c.cuenta || '') + '</td><td class="px-2 py-1 text-right">' + cbFmt(cbConciliado(c)) + '</td><td class="px-2 py-1 text-right">' + cbFmt(c.saldo_libros) + '</td><td class="px-2 py-1 text-right font-bold">' + cbFmt(d) + '</td><td class="px-2 py-1 font-bold ' + (ok ? 'text-emerald-700' : 'text-amber-700') + '">' + (ok ? 'Cuadra' : 'Revisar') + '</td></tr>'; });
       h += '<tr class="bg-slate-50 font-bold"><td class="px-2 py-1.5" colspan="2">Total cuentas bancarias</td><td class="px-2 py-1.5 text-right">' + cbFmt(t.conc) + '</td><td class="px-2 py-1.5 text-right">' + cbFmt(t.libros) + '</td><td class="px-2 py-1.5 text-right">' + cbFmt(t.dif) + '</td><td></td></tr></tbody></table></div>';
@@ -14326,7 +14355,7 @@ ${cont.innerHTML}
       const lnk = cod => '<button type="button" onclick="cbTab(\'programa\')" class="underline text-indigo-700 font-bold" title="Ir al programa de trabajo (pestaña 6)">' + cod + '</button>';
       const aut = cbVerifAuto();
       let h = '<div class="px-2 py-1 text-[11px] font-bold text-slate-700 bg-slate-100 border-b border-slate-200">Verificaciones automáticas (se recalculan con las cuentas cargadas)</div>';
-      if (!aut.length) h += '<p class="p-6 text-xs text-slate-400 text-center">Agrega cuentas para ver las verificaciones.</p>';
+      if (!aut.length) h += pcHtmlAviso('AA1', cbE.cliente, cbE.anio, cbE.visita);
       else { h += '<table class="w-full table-fixed text-[11px] leading-tight border-collapse"><colgroup><col style="width:80px"><col style="width:46%"><col style="width:150px"><col></colgroup><thead class="bg-slate-50 text-slate-600"><tr><th class="px-2 py-1 border-b border-slate-200 text-left">Programa</th><th class="px-2 py-1 border-b border-slate-200 text-left">Verificación</th><th class="px-2 py-1 border-b border-slate-200 text-left">Resultado</th><th class="px-2 py-1 border-b border-slate-200 text-left">Detalle</th></tr></thead><tbody>';
         aut.forEach(([t, e, d, cod]) => { h += '<tr class="border-b border-slate-100 align-top"><td class="px-2 py-0.5">' + lnk(cod) + '</td><td class="px-2 py-0.5 text-slate-700">' + escapeHtml(t) + '</td><td class="px-2 py-0.5 font-bold whitespace-nowrap ' + col[e] + '">' + tx[e] + '</td><td class="px-2 py-0.5 text-slate-600">' + escapeHtml(d) + (e === 'rev' && cbComentarioDeCodigo(cod) ? '<div class="text-[10px] text-slate-500 mt-0.5">Comentario en el programa (' + escapeHtml(cod) + '): ' + escapeHtml(cbComentarioDeCodigo(cod)) + '</div>' : '') + '</td></tr>'; });
         h += '</tbody></table>'; }
@@ -14343,7 +14372,7 @@ ${cont.innerHTML}
       const pos = L.filter(c => cbN(c.saldo_libros) >= 0), neg = L.filter(c => cbN(c.saldo_libros) < 0);
       const fila = c => '<tr class="border-b border-slate-100"><td class="px-2 py-1">' + escapeHtml(c.banco || '') + '</td><td class="px-2 py-1">' + escapeHtml(c.cuenta || '') + '</td><td class="px-2 py-1">' + escapeHtml(c.tipo || '') + '</td><td class="px-2 py-1">' + escapeHtml(c.moneda || '') + '</td><td class="px-2 py-1 text-right">' + cbFmt(c.saldo_libros) + '</td></tr>';
       let h = '<div class="p-3 text-[11px]"><div class="font-bold text-slate-700 mb-1">Composición del efectivo en bancos (saldo en libros)</div>';
-      if (!L.length) return h + '<p class="p-6 text-center text-slate-400 text-sm">Agrega cuentas en la pestaña 2.</p></div>';
+      if (!L.length) return '<div class="p-3">' + pcHtmlAviso('AA1', cbE.cliente, cbE.anio, cbE.visita) + '</div>';
       h += '<div class="overflow-x-auto border border-slate-200 rounded-xl"><table class="w-full text-[11px] leading-tight border-collapse"><thead><tr><th class="' + CB_TH + '">Banco</th><th class="' + CB_TH + '">Cuenta</th><th class="' + CB_TH + '">Tipo</th><th class="' + CB_TH + '">Moneda</th><th class="' + CB_TH + ' text-right">Saldo</th></tr></thead><tbody>' + pos.map(fila).join('') + '<tr class="bg-slate-50 font-bold"><td class="px-2 py-1.5" colspan="4">Total bancos</td><td class="px-2 py-1.5 text-right">' + cbFmt(pos.reduce((s, c) => s + cbN(c.saldo_libros), 0)) + '</td></tr></tbody></table></div>';
       if (neg.length) h += '<div class="font-bold text-slate-700 mt-4 mb-1">Cuentas con saldo negativo (sobregiros): evalúa su presentación según NIC 7 párr. 8</div><div class="overflow-x-auto border border-slate-200 rounded-xl"><table class="w-full text-[11px] border-collapse"><tbody>' + neg.map(fila).join('') + '</tbody></table></div>';
       h += '<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4"><div><label class="block font-bold text-slate-700 mb-1">Restricciones sobre el efectivo (garantías, endosos, avales)</label><textarea rows="5" class="w-full p-2 border border-slate-300 rounded-lg text-[11px] outline-none focus:ring-1 focus:ring-indigo-400" onchange="cbSetTexto(\'revel\', \'restr\', this)" placeholder="Describe las restricciones y su importe. Si no hay, indícalo.">' + escapeHtml(R.restr || '') + '</textarea></div><div><label class="block font-bold text-slate-700 mb-1">Otras revelaciones (saldos no disponibles, líneas de sobregiro, otros)</label><textarea rows="5" class="w-full p-2 border border-slate-300 rounded-lg text-[11px] outline-none focus:ring-1 focus:ring-indigo-400" onchange="cbSetTexto(\'revel\', \'otras\', this)">' + escapeHtml(R.otras || '') + '</textarea></div></div></div>';
@@ -14351,7 +14380,7 @@ ${cont.innerHTML}
     }
     function cbHtmlClaude() {
       const a = cbE.analisis;
-      if (!a) return '<div class="p-8 text-center text-slate-400 text-sm">Claude todavía no preparó un análisis de Bancos para este cliente y año. Solicítalo en "Pedidos a Claude" eligiendo la cuenta AA1 - Bancos.</div>';
+      if (!a) return pcHtmlAviso('AA1', cbE.cliente, cbE.anio, cbE.visita);
       const e = estadoOrigen(a), cls = e === 'revisado' ? 'rev' : (e === 'modificado' ? 'mod' : '');
       const h2 = 'font-bold text-slate-800 text-base border-b border-slate-200 mt-5 mb-2 pb-1';
       return '<div class="p-4 text-sm text-slate-700"><div class="marca-origen ' + cls + '"><b>Claude</b><span>Análisis de Claude · ' + a.anio + ' · ' + (a.visita === 'preliminar' ? 'Visita preliminar' : 'Visita final') + ' · ' + escapeHtml(textoOrigen(a)) + '</span>' + (e === 'pendiente' ? '<button type="button" onclick="cbMarcarRevisado()">Marcar como revisado</button>' : '') + '</div>' +
