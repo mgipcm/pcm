@@ -3313,7 +3313,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
         const cuentaElegida = cuenta || ((RUBROS_ANALISIS[rubro] && RUBROS_ANALISIS[rubro].cuentas[0]) || {}).clave || '';
         const b = document.getElementById(`nav-cuenta-${rubro}-${cuentaElegida}`);
         if (b) b.className = "w-full text-left px-3 py-1.5 rounded-lg text-xs font-bold bg-indigo-600 text-white shadow-md transition flex items-center gap-2";
-        if (cuentaElegida === 'equivalentes') { const gAA = document.getElementById('submenu-grupo-activos-AA'); if (gAA) gAA.classList.remove('hidden'); }
+        if (cuentaElegida === 'equivalentes') { const bAA = document.getElementById('nav-cuenta-extra-activos-concil'); if (bAA) bAA.className = "w-full text-left px-3 py-1.5 rounded-lg text-xs font-bold bg-indigo-600 text-white shadow-md transition flex items-center gap-2"; }
         document.getElementById('submenu-analisis').classList.remove('hidden');
         document.getElementById('icon-analisis').classList.add('rotate-180');
         const caja = document.getElementById('submenu-rubro-' + rubro);
@@ -3363,7 +3363,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
     const EXTRAS_ANALISIS = {
       // Se ordenan por la letra de la sumaria; "hijos" arma una cuenta con subcuentas (las que no tienen id aún están en desarrollo)
       'activos': [
-        { sumaria: 'AA', nombre: 'AA Efectivo y equivalentes de efectivo', hijos: [{ clave: 'caja', nombre: 'Caja' }, { id: 'concil', nombre: 'Bancos' }, { clave: 'equivalentes', cuentaAn: 'equivalentes', nombre: 'Equivalentes de efectivo' }] },
+        { sumaria: 'AA', id: 'concil', nombre: 'AA Efectivo y equivalentes de efectivo' },
         { sumaria: 'AF', id: 'import', nombre: 'AF Inventarios (Importaciones)' },
         { sumaria: 'AOO', id: 'arrend', nombre: 'AOO Activos por derecho de uso y pasivos por arrendamiento' }
       ]
@@ -14715,7 +14715,7 @@ ${cont.innerHTML}
       { clave: 'cta:equivalentes', nombre: '     ↳ 2. Análisis Claves › Activos › AA Efectivo y equivalentes › Equivalentes de efectivo', btn: 'nav-cuenta-activos-equivalentes', defecto: false },
       { clave: 'arrend', nombre: '     ↳ 2. Análisis Claves › Activos › Activos por derecho de uso y pasivos por arrendamiento', btn: 'nav-cuenta-extra-activos-arrend', defecto: false },
       { clave: 'import', nombre: '     ↳ 2. Análisis Claves › Activos › Inventarios (Importaciones)', btn: 'nav-cuenta-extra-activos-import', defecto: false },
-      { clave: 'concil', nombre: '     ↳ 2. Análisis Claves › Activos › AA Efectivo y equivalentes › Bancos (conciliaciones)', btn: 'nav-cuenta-extra-activos-concil', defecto: false },
+      { clave: 'concil', nombre: '     ↳ 2. Análisis Claves › Activos › AA Efectivo y equivalentes › hoja Bancos', btn: 'nav-cuenta-extra-activos-concil', defecto: false },
       { clave: 'visitas', nombre: '3. Visitas (Calendario)', btn: 'nav-visitas' },
       { clave: 'asignacion', nombre: '4. Asignación de Cuentas', btn: 'nav-asignacion' },
       { clave: 'indices', nombre: '5a) Índices financieros', btn: 'nav-indices' },
