@@ -3361,7 +3361,8 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
     const CONCLUSIONES_AUDITOR = [
       'Quick Lett',
       'Opinión',
-      'To/Do'
+      'To/Do',
+      'Ajustes propuestos'
     ];
     const SEP_CONCLUSION = ' ; ';
 
@@ -5150,7 +5151,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
 
     function renderCriterioAnalisis() {
       const c = analisisEstado.criterio;
-      const marcadas = (c && c.conclusion) ? String(c.conclusion).split(SEP_CONCLUSION).map(x => x.trim()).filter(Boolean).map(x => (x === 'Requiere procedimientos adicionales' || x === 'Procedimientos adicionales - To/Do') ? 'To/Do' : x) : [];
+      const marcadas = (c && c.conclusion) ? String(c.conclusion).split(SEP_CONCLUSION).map(x => x.trim()).filter(Boolean).map(x => (x === 'Requiere procedimientos adicionales' || x === 'Procedimientos adicionales - To/Do') ? 'To/Do' : (x === 'Con ajustes propuestos' ? 'Ajustes propuestos' : x)) : [];
       const opciones = [...CONCLUSIONES_AUDITOR, ...marcadas.filter(m => !CONCLUSIONES_AUDITOR.includes(m))];
       document.getElementById('an-conclusion-lista').innerHTML = opciones.map(o => `
         <label class="flex items-start gap-2 py-1 px-1.5 rounded hover:bg-slate-50 cursor-pointer text-xs text-slate-800 font-medium leading-snug">
