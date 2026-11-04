@@ -9818,7 +9818,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
 
     function asigChip(r, conAuditor) {
       const editable = true;
-      return `<button type="button" ${editable ? `onclick="asigCiclo(${r.id})"` : 'disabled'} data-asig-id="${r.id}" class="asig-chip inline-block px-2 py-0.5 m-0.5 rounded border text-[11px] font-bold ${ASIG_CLASE[r.estado] || ASIG_CLASE.pendiente} ${editable ? 'hover:opacity-80' : 'cursor-default'}">${escapeHtml(r.sumaria)}</button>`;
+      return `<button type="button" ${editable ? `onclick="asigCiclo(${r.id})"` : 'disabled'} data-asig-id="${r.id}" style="${r.estado === 'terminada' ? 'background:#10b981;color:#fff;border-color:#059669;' : ''}" class="asig-chip inline-block px-2 py-0.5 m-0.5 rounded border text-[11px] font-bold ${ASIG_CLASE[r.estado] || ASIG_CLASE.pendiente} ${editable ? 'hover:opacity-80' : 'cursor-default'}">${escapeHtml(r.sumaria)}</button>`;
     }
     // Globo de ayuda propio (con el estado en color) al pasar el cursor sobre una cuenta asignada
     (function () {
