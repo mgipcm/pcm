@@ -9818,7 +9818,9 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
 
     function asigChip(r, conAuditor) {
       const editable = true;
-      return `<button type="button" ${editable ? `onclick="asigCiclo(${r.id})"` : 'disabled'} data-asig-id="${r.id}" style="${r.estado === 'terminada' ? 'background:#059669 !important;color:#ffffff !important;border:1px solid #047857 !important;border-radius:6px !important;box-shadow:0 1px 2px rgba(0,0,0,.25);' : ''}" class="asig-chip inline-block px-2.5 py-0.5 m-0.5 rounded ${r.estado === 'terminada' ? '' : 'border '}text-[11px] font-bold ${r.estado === 'terminada' ? '' : (ASIG_CLASE[r.estado] || ASIG_CLASE.pendiente)} ${editable ? 'hover:opacity-80' : 'cursor-default'}">${escapeHtml(r.sumaria)}</button>`;
+      const EST = { terminada: ['#059669', '#ffffff', '#047857'], en_proceso: ['#d97706', '#ffffff', '#b45309'], pendiente: ['#e2e4e8', '#374151', '#9ca3af'] };
+      const [fondo, letra, borde] = EST[r.estado] || EST.pendiente;
+      return `<button type="button" ${editable ? `onclick="asigCiclo(${r.id})"` : 'disabled'} data-asig-id="${r.id}" style="background:${fondo} !important;color:${letra} !important;border:1px solid ${borde} !important;border-radius:6px !important;box-shadow:0 1px 2px rgba(0,0,0,.2);" class="asig-chip inline-block px-2.5 py-0.5 m-0.5 text-[11px] font-bold ${editable ? 'hover:opacity-80' : 'cursor-default'}">${escapeHtml(r.sumaria)}</button>`;
     }
     // Globo de ayuda propio (con el estado en color) al pasar el cursor sobre una cuenta asignada
     (function () {
