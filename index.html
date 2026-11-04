@@ -14601,6 +14601,7 @@ ${cont.innerHTML}
     }
     function cbRender() {
       const tabs = $cb('cb-tabs'); if (!tabs) return;
+      try { pintarHojasAA(); } catch (e) { }
       const _pc = cbPorConcluir(), _npc = _pc.grupos.length;
       tabs.innerHTML = CB_TABS.map(([t, n]) => '<button type="button" onclick="cbTab(\'' + t + '\')" class="px-3 py-1.5 text-xs transition rounded-lg ' + (cbE.tab === t ? 'bg-slate-200 text-slate-900 font-semibold' : 'text-slate-600 hover:bg-slate-100 font-medium') + '">' + n + (t === 'concluir' && _npc ? ' (' + _npc + ')' : '') + '</button>').join('') + '<button type="button" onclick="cbDescargar()" class="ml-auto px-3 py-1.5 rounded-lg text-xs bg-slate-100 text-slate-800 hover:bg-slate-200 font-medium transition">Descargar todo (Excel)</button>';
       const p = $cb('cb-panel'), n = $cb('cb-notas');
