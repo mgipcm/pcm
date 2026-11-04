@@ -3255,7 +3255,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
         return;
       }
 
-      const claveLinea = (seccion === 'analisis' && cuenta) ? 'cta:' + cuenta : (seccion === 'aprobaciones-claude' ? 'pedidos-claude' : seccion);
+      const claveLinea = (seccion === 'analisis' && cuenta) ? (cuenta === 'equivalentes' ? 'concil' : 'cta:' + cuenta) : (seccion === 'aprobaciones-claude' ? 'pedidos-claude' : seccion);
       if ((seccion === 'sumarias' || seccion === 'pendientes' || seccion === 'claude-revisar' || seccion === 'pedidos-claude' || seccion === 'aprobaciones-claude' || seccion === 'arrend' || seccion === 'import' || seccion === 'concil' || (seccion === 'analisis' && cuenta)) && !herramientaHabilitada(claveLinea)) { avisarEnDesarrollo(); return; }
       if (!herramientaHabilitada(seccion === 'aprobaciones-claude' ? 'pedidos-claude' : seccion)) {
         if (seccion === 'auditoria') seccion = 'desarrollo'; // pantalla principal: se muestra un aviso en vez de un mensaje emergente
@@ -3363,7 +3363,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
     const EXTRAS_ANALISIS = {
       // Se ordenan por la letra de la sumaria; "hijos" arma una cuenta con subcuentas (las que no tienen id aún están en desarrollo)
       'activos': [
-        { sumaria: 'AA', id: 'concil', abrir: "irHojaAA(herramientaHabilitada('concil') || !herramientaHabilitada('cta:equivalentes') ? 'bancos' : 'equivalentes')", nombre: 'AA Efectivo y equivalentes de efectivo' },
+        { sumaria: 'AA', id: 'concil', nombre: 'AA Efectivo y equivalentes de efectivo' },
         { sumaria: 'AF', id: 'import', nombre: 'AF Inventarios (Importaciones)' },
         { sumaria: 'AOO', id: 'arrend', nombre: 'AOO Activos por derecho de uso y pasivos por arrendamiento' }
       ]
@@ -14714,10 +14714,9 @@ ${cont.innerHTML}
       { clave: 'pedidos-claude', nombre: '     ↳ 2. Análisis Claves › Pedidos a Claude', btn: 'nav-pedidos-claude', defecto: false },
       { clave: 'claude-revisar', nombre: '     ↳ 2. Análisis Claves › Trabajo de Claude por revisar', btn: 'nav-claude-revisar', defecto: false },
       { clave: 'cta:inversiones_corrientes', nombre: '     ↳ 2. Análisis Claves › Activos › Inversiones corrientes', btn: 'nav-cuenta-activos-inversiones_corrientes', defecto: false },
-      { clave: 'cta:equivalentes', nombre: '     ↳ 2. Análisis Claves › Activos › AA Efectivo y equivalentes › Equivalentes de efectivo', btn: 'nav-cuenta-activos-equivalentes', defecto: false },
       { clave: 'arrend', nombre: '     ↳ 2. Análisis Claves › Activos › Activos por derecho de uso y pasivos por arrendamiento', btn: 'nav-cuenta-extra-activos-arrend', defecto: false },
       { clave: 'import', nombre: '     ↳ 2. Análisis Claves › Activos › Inventarios (Importaciones)', btn: 'nav-cuenta-extra-activos-import', defecto: false },
-      { clave: 'concil', nombre: '     ↳ 2. Análisis Claves › Activos › AA Efectivo y equivalentes › hoja Bancos', btn: 'nav-cuenta-extra-activos-concil', defecto: false },
+      { clave: 'concil', nombre: '     ↳ 2. Análisis Claves › Activos › AA Efectivo y equivalentes de efectivo (hojas Bancos y Equivalentes)', btn: 'nav-cuenta-extra-activos-concil', defecto: false },
       { clave: 'visitas', nombre: '3. Visitas (Calendario)', btn: 'nav-visitas' },
       { clave: 'asignacion', nombre: '4. Asignación de Cuentas', btn: 'nav-asignacion' },
       { clave: 'indices', nombre: '5a) Índices financieros', btn: 'nav-indices' },
@@ -14761,7 +14760,7 @@ ${cont.innerHTML}
         const suelta = btn.nextElementSibling;
         if (suelta && suelta.classList.contains('etiqueta-desarrollo')) suelta.remove();
         btn.style.opacity = '';
-        if (!(herramientaOn(h.clave) || (h.clave === 'concil' && herramientaOn('cta:equivalentes')))) {
+        if (!herramientaOn(h.clave)) {
           // etiqueta corta "Off" en la misma línea del nombre
           const et = document.createElement('span');
           et.className = 'etiqueta-desarrollo';
