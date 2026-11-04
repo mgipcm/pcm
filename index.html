@@ -1046,9 +1046,10 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
         <div>
           <label class="block text-xs font-semibold text-slate-600 mb-1">Estado</label>
           <select id="cr-estado" onchange="pintarClaudeRevisar()" class="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs sm:text-sm outline-none">
-            <option value="pendiente">Pendientes de revisión</option>
             <option value="">Todos</option>
-            <option value="revisado">Revisados</option>
+            <option value="procesado">Procesados por Claude</option>
+            <option value="pendiente">Pendientes de revisión</option>
+            <option value="revisado">Ratificados</option>
             <option value="modificado">Modificados</option>
           </select>
         </div>
@@ -4106,22 +4107,23 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
     const ORIGEN = { programa: null, anexo: null, claude: null };
     const TABLAS_ORIGEN = { programa: 'programa_trabajo_cuentas', anexo: 'anexo_inversiones', claude: 'analisis_claude_cuentas', arrend: 'arrendamientos_contratos', import: 'importaciones_datos' };
     const NOMBRE_ORIGEN = { programa: 'Programa de trabajo', anexo: 'Anexo', claude: 'Análisis de Claude', arrend: 'Contratos de arrendamiento', import: 'Importaciones' };
-    function estadoOrigen(r) { return r && r.origen === 'claude' ? (r.estado_revision === 'revisado' ? 'revisado' : (r.estado_revision === 'modificado' ? 'modificado' : 'pendiente')) : ''; }
+    function estadoOrigen(r) { return r && r.origen === 'claude' ? (r.estado_revision === 'revisado' ? 'revisado' : (r.estado_revision === 'modificado' ? 'modificado' : (r.estado_revision === 'procesado' ? 'procesado' : 'pendiente'))) : ''; }
     function fechaCortaOrigen(iso) { try { return iso ? new Date(iso).toLocaleDateString('es-EC', { day: '2-digit', month: '2-digit', year: 'numeric' }) : ''; } catch (e) { return ''; } }
     function textoOrigen(r) {
       const e = estadoOrigen(r);
-      if (e === 'revisado') return 'Revisado por ' + (r.revisado_por || 'una persona') + (r.revisado_at ? ' · ' + fechaCortaOrigen(r.revisado_at) : '');
+      if (e === 'procesado') return 'Procesado por Claude, sujeto a modificaciones en caso de existir';
+      if (e === 'revisado') return 'Ratificado por ' + (r.revisado_por || 'una persona') + (r.revisado_at ? ' · ' + fechaCortaOrigen(r.revisado_at) : '');
       if (e === 'modificado') return 'Modificado por ' + (r.revisado_por || 'una persona') + (r.revisado_at ? ' · ' + fechaCortaOrigen(r.revisado_at) : '');
       return 'Preparado por Claude, pendiente de revisión';
     }
     function pillOrigen(r) {
       const e = estadoOrigen(r); if (!e) return '';
-      return '<span class="pill-origen ' + (e === 'revisado' ? 'rev' : (e === 'modificado' ? 'mod' : '')) + '">' + escapeHtml(textoOrigen(r)) + '</span>';
+      return '<span class="pill-origen ' + (e === 'revisado' || e === 'procesado' ? 'rev' : (e === 'modificado' ? 'mod' : '')) + '">' + escapeHtml(textoOrigen(r)) + '</span>';
     }
     function htmlOrigen(r, tipo) {
       const e = estadoOrigen(r); if (!e) return '';
-      const cls = e === 'revisado' ? 'rev' : (e === 'modificado' ? 'mod' : '');
-      const boton = e === 'pendiente' ? '<button type="button" onclick="marcarRevisadoAnalisis(\'' + tipo + '\')">Marcar como revisado</button>' : '';
+      const cls = e === 'revisado' || e === 'procesado' ? 'rev' : (e === 'modificado' ? 'mod' : '');
+      const boton = e === 'pendiente' || e === 'procesado' ? '<button type="button" onclick="marcarRevisadoAnalisis(\'' + tipo + '\')">Ratificar</button>' : '';
       return '<div class="marca-origen ' + cls + '"><b>Claude</b><span>' + escapeHtml(textoOrigen(r)) + '</span>' + boton + '</div>';
     }
     function pintarOrigenAnalisis() {
@@ -4265,7 +4267,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
     function arrHtmlClaude() {
       const a = ORIGEN.arrend;
       if (!a) return '<div class="p-8 text-center text-slate-400 text-sm">Claude todavía no preparó un análisis para este cliente.</div>';
-      const e = estadoOrigen(a), cls = e === 'revisado' ? 'rev' : (e === 'modificado' ? 'mod' : '');
+      const e = estadoOrigen(a), cls = e === 'revisado' || e === 'procesado' ? 'rev' : (e === 'modificado' ? 'mod' : '');
       const pend = Array.isArray(a.pendientes) ? a.pendientes : [];
       const abiertos = pend.filter(x => x.estado === 'abierto'), enviados = pend.filter(x => x.estado !== 'abierto');
       const NOM = { todo: 'To/Do', quicklett: 'Quick Lett', opinion: 'Opinión' };
@@ -4343,14 +4345,14 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       let html = '';
       const lista = (arrEstado.contratos || []).filter(c => c.origen === 'claude');
       if (lista.length) {
-        const pend = lista.filter(c => estadoOrigen(c) === 'pendiente').length, rev = lista.filter(c => estadoOrigen(c) === 'revisado').length, mod = lista.filter(c => estadoOrigen(c) === 'modificado').length;
+        const pend = lista.filter(c => estadoOrigen(c) === 'pendiente').length, rev = lista.filter(c => estadoOrigen(c) === 'revisado').length, mod = lista.filter(c => estadoOrigen(c) === 'modificado').length, pro = lista.filter(c => estadoOrigen(c) === 'procesado').length;
         const cls = pend ? '' : (mod ? 'mod' : 'rev');
-        const txt = pend ? pend + ' contrato(s) preparados por Claude, pendientes de revisión' : 'Contratos preparados por Claude: ' + rev + ' revisado(s), ' + mod + ' modificado(s)';
-        html += '<div class="marca-origen ' + cls + '"><b>Claude</b><span>' + escapeHtml(txt) + (pend && (rev || mod) ? ' (' + rev + ' revisados, ' + mod + ' modificados)' : '') + '</span>' + (pend ? '<button type="button" onclick="marcarRevisadoArrend()">Marcar todos como revisados</button>' : '') + '</div>';
+        const txt = pend ? pend + ' contrato(s) preparados por Claude, pendientes de revisión' : (pro ? 'Procesado por Claude, sujeto a modificaciones en caso de existir (' + pro + ' contrato(s))' + (rev || mod ? ' · ' + rev + ' ratificado(s), ' + mod + ' modificado(s)' : '') : 'Contratos preparados por Claude: ' + rev + ' ratificado(s), ' + mod + ' modificado(s)');
+        html += '<div class="marca-origen ' + cls + '"><b>Claude</b><span>' + escapeHtml(txt) + (pend && (rev || mod) ? ' (' + rev + ' revisados, ' + mod + ' modificados)' : '') + '</span>' + ((pend || pro) ? '<button type="button" onclick="marcarRevisadoArrend()">Ratificar todos</button>' : '') + '</div>';
       }
       const a = ORIGEN.arrend;
       if (a) {
-        const e = estadoOrigen(a), cls = e === 'revisado' ? 'rev' : (e === 'modificado' ? 'mod' : '');
+        const e = estadoOrigen(a), cls = e === 'revisado' || e === 'procesado' ? 'rev' : (e === 'modificado' ? 'mod' : '');
         html += '<div class="marca-origen ' + cls + '" style="margin-top:6px"><b>Claude</b><span>Análisis de Claude · ' + a.anio + ' · ' + (a.visita === 'preliminar' ? 'Visita preliminar' : 'Visita final') + ' · ' + escapeHtml(textoOrigen(a)) + '</span>' + (e === 'pendiente' ? '<button type="button" onclick="marcarRevisadoClaudeArrend()">Marcar como revisado</button>' : '') + '<button type="button" onclick="arrTab(\'claude\')">Ver el análisis (pestaña 11)</button></div>';
       }
       el.innerHTML = html;
@@ -4381,9 +4383,9 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       const quien = nombreUsuarioActivo();
       if (!quien) { alert('Ingresa con tu usuario para marcar el trabajo como revisado.'); return; }
       const cambios = { estado_revision: 'revisado', revisado_por: quien, revisado_at: new Date().toISOString() };
-      const { error } = await supabaseClient.from('arrendamientos_contratos').update(cambios).eq('cliente_id', arrEstado.cliente).eq('origen', 'claude').or('estado_revision.is.null,estado_revision.eq.pendiente');
+      const { error } = await supabaseClient.from('arrendamientos_contratos').update(cambios).eq('cliente_id', arrEstado.cliente).eq('origen', 'claude').or('estado_revision.is.null,estado_revision.eq.pendiente,estado_revision.eq.procesado');
       if (error) { alert('No se pudo marcar como revisado: ' + (error.message || error)); return; }
-      (arrEstado.contratos || []).forEach(c => { if (estadoOrigen(c) === 'pendiente') Object.assign(c, cambios); });
+      (arrEstado.contratos || []).forEach(c => { if (estadoOrigen(c) === 'pendiente' || estadoOrigen(c) === 'procesado') Object.assign(c, cambios); });
       pintarOrigenArrend();
       bitacoraClaude('Revisó trabajo de Claude', NOMBRE_ORIGEN.arrend, arrEstado.cliente, '');
     }
@@ -4711,6 +4713,12 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
     }
     function autorizarPedidoClaude(id) {
       if (!puedeAutorizarPedidos()) { alert('Solo el Socio o el Supervisor pueden autorizar.'); return; }
+      const pp = pedidosClaude.find(x => x.id === id), vivosP = pp ? (pp._arch || []).filter(a => !a.eliminado_at) : [];
+      const malos = vivosP.filter(a => a._lectura && a._lectura.error), sinLeer = vivosP.filter(a => !a._lectura);
+      if (malos.length || sinLeer.length) {
+        const l = malos.map(a => '• ' + a.nombre + ': no se pudo leer').concat(sinLeer.map(a => '• ' + a.nombre + ': todavía se está leyendo'));
+        if (!confirm('Atención: Claude no podrá analizar completo este pedido.\n\n' + l.join('\n') + '\n\n¿Autorizar de todas formas?\n(Aceptar = autorizar; Cancelar = esperar o pedir que vuelvan a subir esos archivos)')) return;
+      }
       cambiarEstadoPedido(id, { estado: 'autorizado', autorizado_por: nombreUsuarioActivo(), autorizado_at: new Date().toISOString() }, 'Autorizó pedido a Claude');
     }
     function rechazarPedidoClaude(id) {
@@ -4819,7 +4827,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       const f = document.getElementById('cr-estado').value;
       const cuenta = e => claudeRevisarDatos.filter(r => estadoOrigen(r) === e).length;
       document.getElementById('cr-resumen').innerHTML =
-        '<span class="pill-origen">Pendientes de revisión: ' + cuenta('pendiente') + '</span><span class="pill-origen rev">Revisados: ' + cuenta('revisado') + '</span><span class="pill-origen mod">Modificados: ' + cuenta('modificado') + '</span>';
+        '<span class="pill-origen rev">Procesados por Claude: ' + cuenta('procesado') + '</span><span class="pill-origen">Pendientes de revisión: ' + cuenta('pendiente') + '</span><span class="pill-origen rev">Ratificados: ' + cuenta('revisado') + '</span><span class="pill-origen mod">Modificados: ' + cuenta('modificado') + '</span>';
       const lista = claudeRevisarDatos.filter(r => !f || estadoOrigen(r) === f)
         .sort((x, y) => String(x.cliente_id).localeCompare(String(y.cliente_id)) || ((y.anio || 0) - (x.anio || 0)) || String(x.cuenta).localeCompare(String(y.cuenta)));
       const tb = document.getElementById('cr-filas');
@@ -4835,7 +4843,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
           '<td class="p-3 border-r border-slate-200">' + escapeHtml(que) + '<div class="text-[11px] text-slate-400">' + (r.updated_at ? escapeHtml(formatoFechaContrato(r.updated_at)) : '') + '</div>' + (r.analisis ? '<details class="mt-1"><summary class="cursor-pointer text-slate-600 font-semibold">Ver el análisis</summary><div class="mt-2 max-w-[640px] leading-relaxed">' + renderTextoResumenContrato(r.analisis) + '</div></details>' : '') + '</td>' +
           '<td class="p-3 border-r border-slate-200">' + pillOrigen(r) + '</td>' +
           '<td class="p-3 text-center whitespace-nowrap"><button type="button" onclick="irAlTrabajoClaude(' + idx + ')" class="px-3 py-1.5 text-[11px] rounded-lg transition bg-slate-100 text-slate-800 hover:bg-slate-200 font-medium">Ir al análisis</button>' +
-          (e === 'pendiente' ? ' <button type="button" onclick="marcarRevisadoBandeja(' + idx + ')" class="px-3 py-1.5 text-[11px] rounded-lg transition border border-slate-300 text-slate-700 hover:bg-slate-100 font-medium">Marcar revisado</button>' : '') +
+          ((e === 'pendiente' || e === 'procesado') ? ' <button type="button" onclick="marcarRevisadoBandeja(' + idx + ')" class="px-3 py-1.5 text-[11px] rounded-lg transition border border-slate-300 text-slate-700 hover:bg-slate-100 font-medium">Ratificar</button>' : '') +
           (r._t === 'claude' && puedeConfigurar() ? ' <button type="button" onclick="eliminarAnalisisClaude(' + idx + ')" class="px-3 py-1.5 text-[11px] rounded-lg transition text-slate-500 hover:bg-slate-100 font-medium" title="Elimina este análisis de Claude (solo Socio o Supervisor)">Eliminar</button>' : '') + '</td></tr>';
       }).join('');
     }
@@ -4857,7 +4865,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       const cambios = { estado_revision: 'revisado', revisado_por: quien, revisado_at: new Date().toISOString() };
       let q = supabaseClient.from(TABLAS_ORIGEN[r._t]).update(cambios).eq('cliente_id', r.cliente_id);
       if (r._t === 'claude') q = supabaseClient.from(TABLAS_ORIGEN.claude).update(cambios).eq('id', r.id);
-      else if (r._t === 'arrend') q = q.eq('origen', 'claude').or('estado_revision.is.null,estado_revision.eq.pendiente');
+      else if (r._t === 'arrend') q = q.eq('origen', 'claude').or('estado_revision.is.null,estado_revision.eq.pendiente,estado_revision.eq.procesado');
       else if (r._t === 'import') q = q.eq('origen', 'claude').eq('anio', r.anio).eq('visita', r.visita);
       else q = q.eq('anio', r.anio).eq('cuenta', r.cuenta).eq('visita', r.visita);
       const { error } = await q;
@@ -5068,7 +5076,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
         const { data } = await qp.in('estado', ['solicitado', 'autorizado', 'hecho']).order('created_at', { ascending: false }).limit(1);
         const est = data && data[0] ? data[0].estado : '';
         if (!est || !c.isConnected) continue;
-        const txt = { solicitado: 'Pedido enviado, esperando autorización del Socio o Supervisor.', autorizado: 'Pedido autorizado: Claude lo está analizando.', hecho: 'El pedido ya está hecho y pasó a revisión. Cuando se revise, la información aparecerá aquí.' }[est];
+        const txt = { solicitado: 'Pedido enviado, esperando autorización del Socio o Supervisor.', autorizado: 'Pedido autorizado: Claude lo está analizando.', hecho: 'Claude ya procesó este pedido. Actualiza la pantalla (F5) para ver la información; si sigue vacía, avísale al administrador.' }[est];
         c.innerHTML = '<p>' + txt + '</p><button type="button" onclick="navegarMenu(\'pedidos-claude\')" class="px-4 py-2 bg-white text-slate-700 hover:bg-slate-50 border border-slate-400 rounded-lg text-xs font-bold transition">Ver pedidos</button>';
       }
     }
@@ -14304,7 +14312,7 @@ ${cont.innerHTML}
     function cbSync() {
       const f = $cb('cb-fecha'); if (f) f.value = cbE.corte || '';
       const a = $cb('cb-auditor'); if (a) a.value = cbE.config.resp || nombreUsuarioActivo() || '';
-      const u = $cb('cb-actualizado'); if (u) u.value = cbE.act && cbE.act.por ? cbE.act.por : '';
+      const u = $cb('cb-actualizado'); if (u) u.value = cbE.act && cbE.act.por ? (cbE.act.por === 'Claude' ? 'Claude · Procesado por Claude, sujeto a modificaciones en caso de existir' : cbE.act.por) : '';
     }
     function cbCambiarCorte(v) { cbE.corte = v; cbGuardar(); cbRender(); }
     function cbGuardar() {
@@ -14519,7 +14527,7 @@ ${cont.innerHTML}
     function cbHtmlClaude() {
       const a = cbE.analisis;
       if (!a) return pcHtmlAviso('AA', cbE.cliente, cbE.anio, cbE.visita, 'bancos');
-      const e = estadoOrigen(a), cls = e === 'revisado' ? 'rev' : (e === 'modificado' ? 'mod' : '');
+      const e = estadoOrigen(a), cls = e === 'revisado' || e === 'procesado' ? 'rev' : (e === 'modificado' ? 'mod' : '');
       const h2 = 'font-bold text-slate-800 text-base border-b border-slate-200 mt-5 mb-2 pb-1';
       return '<div class="p-4 text-sm text-slate-700"><div class="marca-origen ' + cls + '"><b>Claude</b><span>Análisis de Claude · ' + a.anio + ' · ' + (a.visita === 'preliminar' ? 'Visita preliminar' : 'Visita final') + ' · ' + escapeHtml(textoOrigen(a)) + '</span>' + (e === 'pendiente' ? '<button type="button" onclick="cbMarcarRevisado()">Marcar como revisado</button>' : '') + '</div>' +
         '<div class="mt-3 leading-relaxed text-sm text-slate-700">' + renderTextoResumenContrato(a.analisis || '') + '</div>' +
