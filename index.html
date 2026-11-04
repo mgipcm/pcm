@@ -1396,7 +1396,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
         <p class="text-xs text-slate-500">Procedimientos clave (no incluye todos los procedimientos de auditoría): análisis de Claude y criterio final del auditor, cuenta por cuenta</p>
       </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-[1fr_1fr_1fr_1fr_1.8fr] gap-4">
+      <div class="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-[1fr_1fr_1fr_1fr_1fr_1.6fr] gap-4">
         <div>
           <label class="block text-xs font-semibold text-slate-600 mb-1">Cliente</label>
           <select id="an-cliente" onchange="cambiarSeleccionAnalisis()" class="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs sm:text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
@@ -1415,6 +1415,10 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
             <option value="preliminar">Visita preliminar</option>
             <option value="final" selected>Visita final</option>
           </select>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Fecha de corte</label>
+          <input type="date" id="an-cierre" onchange="alCambiarParametrosAnexo()" class="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs sm:text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
         </div>
         <div>
           <label class="block text-xs font-semibold text-slate-600 mb-1">Auditor responsable</label>
@@ -1498,10 +1502,6 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
             </div>
             <div class="space-y-3">
               <div>
-                <label class="block text-xs font-bold text-slate-600 mb-1">Fecha de cierre</label>
-                <input type="date" id="an-cierre" onchange="alCambiarParametrosAnexo()" class="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs sm:text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
-              </div>
-              <div>
                 <label class="block text-xs font-bold text-slate-600 mb-1">Base de días para los intereses</label>
                 <select id="an-base" onchange="alCambiarParametrosAnexo()" class="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs sm:text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
                   <option value="360">360 días (año comercial)</option>
@@ -1550,7 +1550,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
                 </thead>
                 <tbody>
                   <tr class="border-b border-slate-200">
-                    <td class="p-2.5 font-semibold text-slate-800">Total de inversiones (valor)<span id="an-sub-total" class="block text-[10px] font-normal text-slate-500">Vigentes a la fecha de cierre. En libros = corto plazo + largo plazo</span></td>
+                    <td class="p-2.5 font-semibold text-slate-800">Total de inversiones (valor)<span id="an-sub-total" class="block text-[10px] font-normal text-slate-500">Vigentes a la fecha de corte. En libros = corto plazo + largo plazo</span></td>
                     <td id="an-calc-total" class="p-2.5 text-right font-bold text-slate-800"></td>
                     <td class="p-2.5"><input type="text" inputmode="decimal" id="an-lib-total" oninput="alCambiarCasilleroAnexo()" onblur="formatearCasilleroAnexo(this)" placeholder="Valor en libros" class="w-full p-2 border border-slate-300 rounded-lg text-xs text-right outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-slate-800"></td>
                     <td id="an-dif-total" class="p-2.5 text-right"></td>
@@ -1820,7 +1820,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
             <label class="space-y-1"><span class="font-bold text-slate-600 block">Duplicados desde (US$) <span data-tip="Solo se buscan posibles duplicados (misma cuenta, fecha e importe en documentos distintos) desde este importe. Más bajo trae muchos casos sin importancia, como comisiones. Se aplica al leer el archivo." class="ayuda inline-flex items-center justify-center w-4 h-4 rounded-full bg-slate-200 text-slate-600 text-[10px] cursor-help align-middle">?</span></span><input id="my-p-dup" type="number" value="500" min="0" class="w-full border rounded-lg px-2 py-1.5 text-xs"></label>
             <label class="space-y-1"><span class="font-bold text-slate-600 block">Saldo contrario mínimo (US$) <span data-tip="Una cuenta con saldo contrario a su naturaleza (por ejemplo una cuenta por cobrar con saldo acreedor) solo se lista si la diferencia es de este valor o más. Sirve para ignorar saldos de centavos." class="ayuda inline-flex items-center justify-center w-4 h-4 rounded-full bg-slate-200 text-slate-600 text-[10px] cursor-help align-middle">?</span></span><input id="my-p-nat" type="number" value="1" min="0" class="w-full border rounded-lg px-2 py-1.5 text-xs"></label>
           </div>
-          <p class="text-[11px] text-slate-400">Materialidad, fecha de cierre, días de corte, tolerancia y saldo contrario se pueden cambiar después sin volver a leer el archivo (botón «Recalcular»).</p>
+          <p class="text-[11px] text-slate-400">Materialidad, fecha de corte, días de corte, tolerancia y saldo contrario se pueden cambiar después sin volver a leer el archivo (botón «Recalcular»).</p>
           <div class="pt-1">
             <button id="my-btn-analizar" onclick="mayorAnalizar()" class="px-5 py-2.5 rounded-xl text-xs bg-slate-200 text-slate-900 hover:bg-slate-300 font-semibold">Analizar mayor</button>
           </div>
@@ -5589,7 +5589,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       if (!calc) {
         vacio.classList.remove('hidden');
         res.classList.add('hidden');
-        if (anexoEstado.registros.length && !anexoEstado.cierre) vacio.textContent = 'Indica la fecha de cierre para calcular.';
+        if (anexoEstado.registros.length && !anexoEstado.cierre) vacio.textContent = 'Indica la fecha de corte para calcular.';
         else vacio.textContent = 'Sube el anexo de inversiones para calcular los intereses y las porciones de corto y largo plazo.';
         return;
       }
@@ -5600,7 +5600,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       document.getElementById('an-calc-total').textContent = formatoNumeroAnexo(t.valor);
       document.getElementById('an-sub-total').textContent = calc.sumarPrev
         ? `Vigentes al cierre: capital ${formatoNumeroAnexo(t.capital)} + intereses reconocidos hasta el 31/12/${calc.anioPrev} ${formatoNumeroAnexo(t.intPrev)}`
-        : 'Vigentes a la fecha de cierre';
+        : 'Vigentes a la fecha de corte';
       document.getElementById('an-calc-int').textContent = formatoNumeroAnexo(t.intAnio);
       document.getElementById('an-calc-corto').textContent = formatoNumeroAnexo(t.corto);
       document.getElementById('an-calc-largo').textContent = formatoNumeroAnexo(t.largo);
@@ -5614,7 +5614,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       const sinTasa = calc.filas.filter(f => (f.estado === 'vigente' || f.estado === 'vencida') && (f.tasa === null || f.tasa === undefined));
       if (incompletas.length) alertas.push(`${incompletas.length} fila(s) con datos incompletos o no válidos (filas ${incompletas.map(f => f.fila).slice(0, 12).join(', ')}${incompletas.length > 12 ? '…' : ''}): no se incluyen en los cálculos.`);
       if (liquidadas.length) alertas.push(`${liquidadas.length} inversión(es) con estado liquidado o similar (filas ${liquidadas.map(f => f.fila).slice(0, 12).join(', ')}${liquidadas.length > 12 ? '…' : ''}): no se incluyen en los cálculos.`);
-      if (posteriores.length) alertas.push(`${posteriores.length} inversión(es) se emitieron después de la fecha de cierre: no se incluyen.`);
+      if (posteriores.length) alertas.push(`${posteriores.length} inversión(es) se emitieron después de la fecha de corte: no se incluyen.`);
       if (t.vencidas) alertas.push(`${t.vencidas} inversión(es) vencieron antes del cierre: se incluyen sus intereses del ejercicio, pero no su valor en el saldo. Verifica que estén cobradas.`);
       if (sinTasa.length) alertas.push(`${sinTasa.length} inversión(es) sin tasa de interés: se calculó en cero.`);
       document.getElementById('an-anexo-alertas').innerHTML = alertas.map(a =>
@@ -5687,7 +5687,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
 
     function aplicarAnexoGuardado(row, anio) {
       anexoEstado = anexoVacio();
-      // Sin anexo guardado: la fecha de cierre sugerida es la del balance de Sumarias (si ya se conoce); si no, el 31 de diciembre
+      // Sin anexo guardado: la fecha de corte sugerida es la del balance de Sumarias (si ya se conoce); si no, el 31 de diciembre
       anexoEstado.cierre = (!row && balanceFechaCorte.clave === claveSumariaActual() && balanceFechaCorte.fecha) ? balanceFechaCorte.fecha : `${anio}-12-31`;
       if (row) {
         const num = v => (v === null || v === undefined || v === '') ? '' : formatoNumeroAnexo(v);
@@ -5874,7 +5874,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       renderRevisionDocAnexo();
       document.getElementById('an-doc-estado').textContent = '';
       renderAnexoControles();
-      document.getElementById('an-anexo-estado').textContent = `Anexo armado desde ${nombres || 'ingreso manual'} documento(s). Revisa la fecha de cierre y escribe los valores de libros.`;
+      document.getElementById('an-anexo-estado').textContent = `Anexo armado desde ${nombres || 'ingreso manual'} documento(s). Revisa la fecha de corte y escribe los valores de libros.`;
       programarGuardadoAnexo();
     }
 
@@ -6002,7 +6002,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       if (!cliente || !anio) return;
       const cli = buscarCliente(cliente);
       const nombreCli = cli ? (cli.nombre_corto || cli.nombre_completo || '') : '';
-      const ok = window.confirm(`Vas a BORRAR el anexo de la ${etiquetaVisita(visita).toLowerCase()}${nombreCli ? ' de ' + nombreCli : ''} (año ${anio}): ${anexoEstado.archivo ? '"' + anexoEstado.archivo + '", ' : ''}${anexoEstado.registros.length} fila(s), con su fecha de cierre y los valores de libros.\n\nNo afecta a la otra visita. No se puede deshacer.\n\n¿Quieres borrarlo?`);
+      const ok = window.confirm(`Vas a BORRAR el anexo de la ${etiquetaVisita(visita).toLowerCase()}${nombreCli ? ' de ' + nombreCli : ''} (año ${anio}): ${anexoEstado.archivo ? '"' + anexoEstado.archivo + '", ' : ''}${anexoEstado.registros.length} fila(s), con su fecha de corte y los valores de libros.\n\nNo afecta a la otra visita. No se puede deshacer.\n\n¿Quieres borrarlo?`);
       if (!ok) return;
       try {
         clearTimeout(guardadoAnexo.timer); guardadoAnexo.snap = null; // se cancela cualquier guardado pendiente
@@ -6174,7 +6174,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
           ['Cliente', nombreCliente],
           ['Año evaluado', Number(valorAnalisis('an-anio')) || valorAnalisis('an-anio')],
           ['Visita', etiquetaVisita().replace('Visita ', '')],
-          ['Fecha de cierre', aFecha(calc.cierre)],
+          ['Fecha de corte', aFecha(calc.cierre)],
           ['Base de días', calc.base],
           ['Suma intereses de años anteriores al total', calc.sumarPrev ? `Sí (hasta el 31/12/${calc.anioPrev}: ${formatoNumeroAnexo(t.intPrev)})` : 'No'],
           ['Archivo', anexoEstado.archivo || ''],
@@ -6462,7 +6462,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
         ['Cliente', nombreCliente],
         ['Año evaluado', valorAnalisis('an-anio')],
         ['Visita', etiquetaVisita().replace('Visita ', '')],
-        ['Fecha de cierre', formatoFechaAnexo(calc.cierre)],
+        ['Fecha de corte', formatoFechaAnexo(calc.cierre)],
         ['Base de días', calc.base],
         ['Suma intereses de años anteriores al total', calc.sumarPrev ? `Sí (hasta el 31/12/${calc.anioPrev}: ${calc.tot.intPrev})` : 'No'],
         ['Archivo', anexoEstado.archivo || ''],
@@ -6559,7 +6559,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       };
       const lin = [
         `${etiquetaVisita()} (el análisis corresponde a esta visita; fecha de corte ${formatoFechaAnexo(calc.cierre)}).`,
-        `Fecha de cierre: ${formatoFechaAnexo(calc.cierre)} | Base de días: ${calc.base} | Método: interés simple (valor x tasa x días / base). Inversiones del año anterior: días desde el 1 de enero hasta el cierre o vencimiento; inversiones del año: desde su fecha de emisión. Plazo: corto si vence dentro de 12 meses del cierre. Las inversiones con estado liquidado o similar no se calculan. ${calc.sumarPrev ? `El total y las porciones corto/largo INCLUYEN los intereses reconocidos por ingresos de años anteriores (hasta el 31/12/${calc.anioPrev}: ${formatoNumeroAnexo(t.intPrev)}), no como capitalización.` : `El total NO incluye intereses de años anteriores (los de las vigentes suman ${formatoNumeroAnexo(t.intPrev)}).`} Diferencia = calculado por la aplicación menos libros/balance.`,
+        `Fecha de corte: ${formatoFechaAnexo(calc.cierre)} | Base de días: ${calc.base} | Método: interés simple (valor x tasa x días / base). Inversiones del año anterior: días desde el 1 de enero hasta el cierre o vencimiento; inversiones del año: desde su fecha de emisión. Plazo: corto si vence dentro de 12 meses del cierre. Las inversiones con estado liquidado o similar no se calculan. ${calc.sumarPrev ? `El total y las porciones corto/largo INCLUYEN los intereses reconocidos por ingresos de años anteriores (hasta el 31/12/${calc.anioPrev}: ${formatoNumeroAnexo(t.intPrev)}), no como capitalización.` : `El total NO incluye intereses de años anteriores (los de las vigentes suman ${formatoNumeroAnexo(t.intPrev)}).`} Diferencia = calculado por la aplicación menos libros/balance.`,
         `Total inversiones vigentes (anexo): ${formatoNumeroAnexo(t.valor)} | Valor en libros: ${l.total || 'no informado'} | Diferencia: ${dif(t.valor, l.total)}`,
         `Intereses devengados del ejercicio (anexo): ${formatoNumeroAnexo(t.intAnio)} | Intereses en resultados: ${textoInteresesLibros(l.int)}${interesesLibrosVacio(l.int) ? ' (no se registró valor en libros: se asume CERO, por lo que la diferencia es el total de intereses devengados y debe resolverse)' : ''} | Diferencia: ${dif(t.intAnio, textoInteresesLibros(l.int))}`,
         `Porción corto plazo (anexo): ${formatoNumeroAnexo(t.corto)} | Balance: ${l.corto || 'no informado'} | Diferencia: ${dif(t.corto, l.corto)}`,
@@ -13475,7 +13475,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
             actualizarAnexoUI();
           }
           if (anexoEstado.cierre && anexoEstado.cierre !== fechaBal) {
-            avisoFecha = `<p class="mt-1 border border-amber-400 bg-amber-50 text-amber-800 rounded-lg px-2 py-1.5"><b>La fecha de cierre del anexo (${formatoFechaAnexo(anexoEstado.cierre)}) no coincide con la del balance (${formatoFechaAnexo(fechaBal)}).</b> Para que el cruce sea válido deben ser la misma. <button type="button" onclick="alinearCierreConBalance('${fechaBal}')" class="ml-1 px-2 py-0.5 bg-white text-slate-700 border border-amber-500 rounded-lg font-bold hover:bg-amber-100">Usar la fecha del balance</button></p>`;
+            avisoFecha = `<p class="mt-1 border border-amber-400 bg-amber-50 text-amber-800 rounded-lg px-2 py-1.5"><b>La fecha de corte del anexo (${formatoFechaAnexo(anexoEstado.cierre)}) no coincide con la del balance (${formatoFechaAnexo(fechaBal)}).</b> Para que el cruce sea válido deben ser la misma. <button type="button" onclick="alinearCierreConBalance('${fechaBal}')" class="ml-1 px-2 py-0.5 bg-white text-slate-700 border border-amber-500 rounded-lg font-bold hover:bg-amber-100">Usar la fecha del balance</button></p>`;
           }
         } else {
           avisoFecha = '<p class="mt-1 text-slate-500">El balance no tiene fecha de corte registrada; indícala en Sumarias para confirmar que coincide con el cierre del anexo.</p>';
