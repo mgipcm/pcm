@@ -1023,8 +1023,8 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
 
     <section id="sec-claude-revisar" class="hidden bg-white rounded-2xl shadow-xl border border-slate-200 p-6 min-h-[92vh] space-y-5">
       <div class="border-b pb-4">
-        <h1 class="text-xl font-bold text-slate-800">Trabajo de Claude por revisar</h1>
-        <p class="text-xs text-slate-500">Todo lo que Claude preparó como asistente y está guardado en la aplicación. Cada fila lleva su marca: preparado por Claude (pendiente), revisado o modificado por una persona. Usa "Ir al análisis" para abrir el trabajo y "Marcar como revisado" cuando lo hayas visto.</p>
+        <h1 class="text-xl font-bold text-slate-800">Trabajo procesado por Claude</h1>
+        <p class="text-xs text-slate-500">Todo lo que Claude preparó como asistente y está guardado en la aplicación. Cada fila lleva su marca: procesado por Claude (sujeto a modificaciones en caso de existir), ratificado o modificado por una persona. Usa "Ir al análisis" para abrir el trabajo y "Ratificar" cuando lo hayas visto.</p>
       </div>
       <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div>
@@ -1119,7 +1119,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
     <section id="sec-pedidos-claude" class="hidden bg-white rounded-2xl shadow-xl border border-slate-200 p-6 min-h-[92vh] space-y-5">
       <div class="border-b pb-4">
         <h1 class="text-xl font-bold text-slate-800">Pedidos a Claude</h1>
-        <p class="text-xs text-slate-500">El auditor sube aquí la documentación que se necesita para el análisis y es responsable de que sea completa y adecuada. El Socio o el Supervisor lo autoriza. Claude solo trabaja los pedidos autorizados y deja el resultado en "Trabajo de Claude por revisar". Los archivos son temporales: se eliminan a los 3 días de hacer el pedido (si Claude ya lo trabajó, se mantienen 3 días más desde ese momento) o si el pedido se cancela o se rechaza, y queda el registro con sus nombres.</p>
+        <p class="text-xs text-slate-500">El auditor sube aquí la documentación que se necesita para el análisis y es responsable de que sea completa y adecuada. El Socio o el Supervisor lo autoriza. Claude solo trabaja los pedidos autorizados y deja el resultado en "Trabajo procesado por Claude". Los archivos son temporales: se eliminan a los 3 días de hacer el pedido (si Claude ya lo trabajó, se mantienen 3 días más desde ese momento) o si el pedido se cancela o se rechaza, y queda el registro con sus nombres.</p>
       </div>
       <div class="border border-slate-300 rounded-xl p-4 space-y-3">
         <h2 class="text-xs font-bold text-slate-700">Nuevo pedido</h2>
@@ -1189,7 +1189,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
     <section id="sec-aprobaciones-claude" class="hidden bg-white rounded-2xl shadow-xl border border-slate-200 p-6 min-h-[92vh] space-y-5">
       <div class="border-b pb-4">
         <h1 class="text-xl font-bold text-slate-800">Aprobaciones de pedidos</h1>
-        <p class="text-xs text-slate-500">Aquí el Socio o el Supervisor autorizan, rechazan o cancelan los pedidos a Claude. Claude solo trabaja los pedidos autorizados y deja el resultado en "Trabajo de Claude por revisar".</p>
+        <p class="text-xs text-slate-500">Aquí el Socio o el Supervisor autorizan, rechazan o cancelan los pedidos a Claude. Claude solo trabaja los pedidos autorizados y deja el resultado en "Trabajo procesado por Claude".</p>
       </div>
       <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div>
@@ -3439,8 +3439,8 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
         <button type="button" onclick="navegarMenu('aprobaciones-claude')" id="nav-aprobaciones-claude" style="display:none" class="w-full text-left px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:bg-slate-800 hover:text-white transition flex items-center gap-2">
           <span>Aprobaciones de pedidos</span><span id="badge-pedidos-claude" class="hidden ml-auto text-[10px] font-bold bg-slate-200 text-slate-900 rounded-full px-2 py-0.5"></span>
         </button>
-        <button type="button" onclick="navegarMenu('claude-revisar')" id="nav-claude-revisar" class="w-full text-left px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:bg-slate-800 hover:text-white transition flex items-center gap-2">
-          <span>Trabajo de Claude por revisar</span>
+        <button type="button" onclick="navegarMenu('claude-revisar')" id="nav-claude-revisar" style="display:none" class="w-full text-left px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:bg-slate-800 hover:text-white transition flex items-center gap-2">
+          <span>Trabajo procesado por Claude</span>
         </button>`;
       cont.innerHTML = botonSumarias + Object.entries(RUBROS_ANALISIS).map(([r, def], i) => {
         const claseBtn = 'w-full text-left px-2 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:bg-slate-800 hover:text-white transition flex items-center gap-2';
@@ -4687,7 +4687,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
     }
     async function copiarOrdenClaude() {
       const m = document.getElementById('pc-aviso-msg');
-      const txt = 'Claude, ejecuta los pedidos autorizados en PCM Inteligente: revisa la tabla pedidos_claude (estado autorizado), lee los archivos adjuntos de cada uno (tabla pedidos_claude_archivos, bucket pedidos-claude), haz el análisis y déjalo en "Trabajo de Claude por revisar". Si la cuenta es AA, la columna hoja del pedido dice si es caja, bancos o equivalentes.';
+      const txt = 'Claude, ejecuta los pedidos autorizados en PCM Inteligente: revisa la tabla pedidos_claude (estado autorizado), lee los archivos adjuntos de cada uno (tabla pedidos_claude_archivos, bucket pedidos-claude), haz el análisis y déjalo en "Trabajo procesado por Claude". Si la cuenta es AA, la columna hoja del pedido dice si es caja, bancos o equivalentes.';
       try { await navigator.clipboard.writeText(txt); m.textContent = 'Orden copiada. Pégala en tu conversación con Claude y envíala.'; }
       catch (e) { m.textContent = 'Copia esta orden: ' + txt; }
     }
@@ -4763,7 +4763,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       cambiarEstadoPedido(id, { estado: 'cancelado' }, 'Canceló pedido a Claude');
     }
 
-    // ===== Bandeja "Trabajo de Claude por revisar" =====
+    // ===== Bandeja "Trabajo procesado por Claude" =====
     let claudeRevisarDatos = [];
     function abrirClaudeRevisar() {
       asegurarClientesEn('cr-cliente');
@@ -14726,7 +14726,7 @@ ${cont.innerHTML}
       { clave: 'sumarias', nombre: '     ↳ 2. Análisis Claves › Sumarias', btn: 'nav-sumarias', defecto: false },
       { clave: 'pendientes', nombre: '     ↳ 2. Análisis Claves › To/Do - Quick Lett - Opinión', btn: 'nav-pendientes', defecto: false },
       { clave: 'pedidos-claude', nombre: '     ↳ 2. Análisis Claves › Pedidos a Claude', btn: 'nav-pedidos-claude', defecto: false },
-      { clave: 'claude-revisar', nombre: '     ↳ 2. Análisis Claves › Trabajo de Claude por revisar', btn: 'nav-claude-revisar', defecto: false },
+      { clave: 'claude-revisar', nombre: '     ↳ 2. Análisis Claves › Trabajo procesado por Claude', btn: 'nav-claude-revisar', defecto: false },
       { clave: 'cta:inversiones_corrientes', nombre: '     ↳ 2. Análisis Claves › Activos › Inversiones corrientes', btn: 'nav-cuenta-activos-inversiones_corrientes', defecto: false },
       { clave: 'arrend', nombre: '     ↳ 2. Análisis Claves › Activos › Activos por derecho de uso y pasivos por arrendamiento', btn: 'nav-cuenta-extra-activos-arrend', defecto: false },
       { clave: 'import', nombre: '     ↳ 2. Análisis Claves › Activos › Inventarios (Importaciones)', btn: 'nav-cuenta-extra-activos-import', defecto: false },
@@ -14848,7 +14848,7 @@ ${cont.innerHTML}
     // ===== Históricos de visitas: quién ingresa y qué hace (bitácora en Supabase) =====
     const NOMBRE_PANTALLA = {
       auditoria: '1. Auditoría/Planificación', desarrollo: 'Pantalla principal', analisis: '2. Auditoría/Análisis Claves',
-      sumarias: 'Sumarias', pendientes: 'Pendientes', 'claude-revisar': 'Trabajo de Claude por revisar', 'pedidos-claude': 'Pedidos a Claude', 'aprobaciones-claude': 'Aprobaciones de pedidos', visitas: '3. Visitas (Calendario)', asignacion: '4. Asignación de Cuentas',
+      sumarias: 'Sumarias', pendientes: 'Pendientes', 'claude-revisar': 'Trabajo procesado por Claude', 'pedidos-claude': 'Pedidos a Claude', 'aprobaciones-claude': 'Aprobaciones de pedidos', visitas: '3. Visitas (Calendario)', asignacion: '4. Asignación de Cuentas',
       indices: 'Herramienta: Índices', mayor: 'Herramienta: Mayor', contratos: 'Herramienta: Resumen de contratos',
       flujo: 'Herramienta: Flujo de efectivo', arrend: 'Herramienta: Arrendamientos NIIF 16', pce: 'Herramienta: Matriz PCE',
       reuniones: 'Herramienta: Resumen de reuniones', clientes: 'Configuración: Clientes', usuarios: 'Configuración: Usuarios / Auditores',
