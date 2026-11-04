@@ -1439,12 +1439,13 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
 
 
         <div class="flex flex-wrap items-center gap-1 p-1.5 bg-white border border-slate-200 rounded-2xl">
-          <button type="button" id="an-tab-anexo" onclick="cambiarPestanaAnalisis('anexo')" class="px-3 py-1.5 text-xs transition rounded-lg">1. Anexo y cálculos</button>
-          <button type="button" id="an-tab-claude" onclick="cambiarPestanaAnalisis('claude')" class="px-3 py-1.5 text-xs transition rounded-lg">2. Análisis de Claude</button>
-          <button type="button" id="an-tab-verif" onclick="cambiarPestanaAnalisis('verif')" class="px-3 py-1.5 text-xs transition rounded-lg">3. Verificaciones</button>
-          <button type="button" id="an-tab-programa" onclick="cambiarPestanaAnalisis('programa')" class="px-3 py-1.5 text-xs transition rounded-lg">4. Programa de trabajo</button>
-          <button type="button" id="an-tab-concluir" onclick="cambiarPestanaAnalisis('concluir')" class="px-3 py-1.5 text-xs transition rounded-lg">5. Por concluir</button>
-          <button type="button" id="an-tab-criterio" onclick="cambiarPestanaAnalisis('criterio')" class="px-3 py-1.5 text-xs transition rounded-lg">6. Criterio final del auditor</button>
+          <button type="button" id="an-tab-comp" onclick="cambiarPestanaAnalisis('comp')" class="px-3 py-1.5 text-xs transition rounded-lg">1. Comparación con libros</button>
+          <button type="button" id="an-tab-anexo" onclick="cambiarPestanaAnalisis('anexo')" class="px-3 py-1.5 text-xs transition rounded-lg">2. Anexo y cálculos</button>
+          <button type="button" id="an-tab-claude" onclick="cambiarPestanaAnalisis('claude')" class="px-3 py-1.5 text-xs transition rounded-lg">3. Análisis de Claude</button>
+          <button type="button" id="an-tab-verif" onclick="cambiarPestanaAnalisis('verif')" class="px-3 py-1.5 text-xs transition rounded-lg">4. Verificaciones</button>
+          <button type="button" id="an-tab-programa" onclick="cambiarPestanaAnalisis('programa')" class="px-3 py-1.5 text-xs transition rounded-lg">5. Programa de trabajo</button>
+          <button type="button" id="an-tab-concluir" onclick="cambiarPestanaAnalisis('concluir')" class="px-3 py-1.5 text-xs transition rounded-lg">6. Por concluir</button>
+          <button type="button" id="an-tab-criterio" onclick="cambiarPestanaAnalisis('criterio')" class="px-3 py-1.5 text-xs transition rounded-lg">7. Criterio final del auditor</button>
         </div>
 
         <!-- Programa de trabajo por procedimientos (mismo formato que Bancos) -->
@@ -1535,6 +1536,30 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
           <div id="an-anexo-resultados" class="hidden space-y-4">
             <div id="an-anexo-alertas" class="space-y-1.5"></div>
 
+
+            <div class="border border-slate-200 rounded-xl">
+              <div class="px-4 py-2.5 border-b border-slate-200 bg-slate-50 rounded-t-xl flex flex-wrap items-center justify-between gap-2">
+                <h2 class="text-xs font-bold text-slate-600">Detalle por inversión</h2>
+                <p id="an-anexo-conteo" class="text-[11px] text-slate-500"></p>
+              </div>
+              <div id="an-anexo-detalle" class="overflow-auto max-h-[420px]"></div>
+            </div>
+
+            <div class="flex flex-wrap items-center justify-between gap-3">
+              <div class="flex flex-wrap items-center gap-2">
+                <button type="button" onclick="descargarPapelAnexo()" class="px-3 py-1.5 bg-white text-slate-700 hover:bg-slate-50 border border-slate-400 rounded text-[11px] font-bold transition">Descargar papel de trabajo (Excel)</button>
+                <button type="button" onclick="borrarAnexoVisita()" class="px-3 py-1.5 bg-white text-rose-600 hover:bg-rose-50 border border-rose-300 rounded text-[11px] font-bold transition">Borrar este anexo</button>
+              </div>
+              <p id="an-anexo-guardado" class="text-[11px] text-slate-400 min-h-[1rem]"></p>
+            </div>
+            <p class="text-[11px] text-slate-400 leading-relaxed">Método: interés simple = valor × tasa × días ÷ base. Los intereses del ejercicio se calculan desde el 1 de enero del año del cierre si la inversión viene del año anterior, o desde su fecha de emisión si se emitió dentro del año, hasta el cierre o el vencimiento, lo que ocurra primero (días = fecha final − fecha inicial). Una tasa de 1 o más se interpreta como porcentaje (8.5 = 8.5 %).</p>
+          </div>
+        </div>
+
+        <!-- 2. Comparación con libros -->
+        <div id="an-panel-comp" class="hidden space-y-5">
+          <div id="an-comp-vacio" class="text-xs text-slate-500 border border-dashed border-slate-300 rounded-xl p-4">Primero sube el anexo en la pestaña "2. Anexo y cálculos" para compararlo con libros.</div>
+          <div id="an-comp-resultados" class="hidden space-y-4">
             <div id="an-sumaria-ref"></div>
 
             <div class="border border-slate-200 rounded-xl overflow-x-auto">
@@ -1576,23 +1601,6 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
                 </tbody>
               </table>
             </div>
-
-            <div class="border border-slate-200 rounded-xl">
-              <div class="px-4 py-2.5 border-b border-slate-200 bg-slate-50 rounded-t-xl flex flex-wrap items-center justify-between gap-2">
-                <h2 class="text-xs font-bold text-slate-600">Detalle por inversión</h2>
-                <p id="an-anexo-conteo" class="text-[11px] text-slate-500"></p>
-              </div>
-              <div id="an-anexo-detalle" class="overflow-auto max-h-[420px]"></div>
-            </div>
-
-            <div class="flex flex-wrap items-center justify-between gap-3">
-              <div class="flex flex-wrap items-center gap-2">
-                <button type="button" onclick="descargarPapelAnexo()" class="px-3 py-1.5 bg-white text-slate-700 hover:bg-slate-50 border border-slate-400 rounded text-[11px] font-bold transition">Descargar papel de trabajo (Excel)</button>
-                <button type="button" onclick="borrarAnexoVisita()" class="px-3 py-1.5 bg-white text-rose-600 hover:bg-rose-50 border border-rose-300 rounded text-[11px] font-bold transition">Borrar este anexo</button>
-              </div>
-              <p id="an-anexo-guardado" class="text-[11px] text-slate-400 min-h-[1rem]"></p>
-            </div>
-            <p class="text-[11px] text-slate-400 leading-relaxed">Método: interés simple = valor × tasa × días ÷ base. Los intereses del ejercicio se calculan desde el 1 de enero del año del cierre si la inversión viene del año anterior, o desde su fecha de emisión si se emitió dentro del año, hasta el cierre o el vencimiento, lo que ocurra primero (días = fecha final − fecha inicial). Una tasa de 1 o más se interpreta como porcentaje (8.5 = 8.5 %).</p>
           </div>
           <div id="an-memo" style="margin-top:24px;border-top:1px solid #b8b8b3;padding-top:16px">
             <div class="p-4 max-w-4xl" style="background:#dcdcd8;border:1px solid #b8b8b3;border-radius:12px">
@@ -4022,7 +4030,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       document.getElementById('an-verif-html').innerHTML = invHtmlVerif();
       document.getElementById('an-concluir-html').innerHTML = invHtmlConcluir();
       let npc = 0; try { npc = invPorConcluir().grupos.length; } catch (e) { npc = 0; }
-      const tab = document.getElementById('an-tab-concluir'); if (tab) tab.innerHTML = '5. Por concluir' + (npc ? ' (' + npc + ')' : '');
+      const tab = document.getElementById('an-tab-concluir'); if (tab) tab.innerHTML = '6. Por concluir' + (npc ? ' (' + npc + ')' : '');
     }
 
     // ===== Marca de origen: lo que prepara Claude como asistente y su revisión por una persona =====
@@ -4866,7 +4874,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       analisisEstado.pestana = p;
       anexoSub(analisisEstado.sub);
       // Hojas hechas: más oscuras; hojas por llenar: más claras
-      ['anexo', 'claude', 'verif', 'programa', 'concluir', 'criterio'].forEach(t => {
+      ['anexo', 'comp', 'claude', 'verif', 'programa', 'concluir', 'criterio'].forEach(t => {
         const panel = document.getElementById('an-panel-' + t);
         const tab = document.getElementById('an-tab-' + t);
         if (panel) panel.classList.toggle('hidden', t !== p);
@@ -4881,7 +4889,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
 
     const PUNTO_HECHO = ' <span style="color:#000;font-size:9px;vertical-align:middle">●</span>';
     function actualizarInsigniasAnalisis() {
-      const nombres = { anexo: '1. Anexo y cálculos', claude: '2. Análisis de Claude', verif: '3. Verificaciones', programa: '4. Programa de trabajo', concluir: '5. Por concluir', criterio: '6. Criterio final del auditor' };
+      const nombres = { anexo: '2. Anexo y cálculos', comp: '1. Comparación con libros', claude: '3. Análisis de Claude', verif: '4. Verificaciones', programa: '5. Programa de trabajo', concluir: '6. Por concluir', criterio: '7. Criterio final del auditor' };
       let npc = 0; try { npc = invPorConcluir().grupos.length; } catch (e) { npc = 0; }
       Object.keys(nombres).forEach(t => { const el = document.getElementById('an-tab-' + t); if (el) el.innerHTML = nombres[t] + (t === 'concluir' && npc ? ' (' + npc + ')' : ''); });
       setTimeout(() => { cambiarPestanaAnalisis(analisisEstado.pestana); invRender(); }, 0);
@@ -5589,12 +5597,14 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       if (!calc) {
         vacio.classList.remove('hidden');
         res.classList.add('hidden');
+        { const cv = document.getElementById('an-comp-vacio'), cr = document.getElementById('an-comp-resultados'); if (cv) cv.classList.remove('hidden'); if (cr) cr.classList.add('hidden'); }
         if (anexoEstado.registros.length && !anexoEstado.cierre) vacio.textContent = 'Indica la fecha de corte para calcular.';
         else vacio.textContent = 'Sube el anexo de inversiones para calcular los intereses y las porciones de corto y largo plazo.';
         return;
       }
       vacio.classList.add('hidden');
       res.classList.remove('hidden');
+      { const cv = document.getElementById('an-comp-vacio'), cr = document.getElementById('an-comp-resultados'); if (cv) cv.classList.add('hidden'); if (cr) cr.classList.remove('hidden'); }
 
       const t = calc.tot;
       document.getElementById('an-calc-total').textContent = formatoNumeroAnexo(t.valor);
