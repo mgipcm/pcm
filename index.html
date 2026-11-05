@@ -1157,6 +1157,11 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
             <p class="mt-1 text-[11px] text-slate-400">Se leen PDF (con texto o escaneados), Excel, CSV, TXT y fotos JPG o PNG. Las fotos y los escaneos los transcribe Claude y las cifras deben verificarse contra el original.</p>
             <label class="flex items-start gap-2 mt-2 text-[11px] text-slate-600"><input type="checkbox" id="pc-confirma" class="mt-0.5"><span>Confirmo que esta documentación es completa y adecuada para realizar el análisis solicitado.</span></label>
           </div>
+          <div id="pc-ctas-caja" class="hidden">
+            <label class="block text-xs font-semibold text-slate-600 mb-1">Cuentas del inventario para la venta (obligatorio)</label>
+            <input type="text" id="pc-ctas-inv" placeholder="Códigos contables separados por coma. Ej. 110301001, 110301002, 110394001" class="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs sm:text-sm outline-none">
+            <p class="mt-1 text-[11px] text-slate-400">Indica los códigos de las cuentas que son inventario para la venta. Claude solo armará el movimiento de esas cuentas. Las importaciones en tránsito, materia prima y producción en proceso se trabajan en sus propias hojas.</p>
+          </div>
           <div>
             <label class="block text-xs font-semibold text-slate-600 mb-1">Nota para Claude (opcional)</label>
             <input type="text" id="pc-nota" placeholder="Ej. Revisar también las renovaciones de los contratos" class="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs sm:text-sm outline-none">
@@ -4428,13 +4433,14 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       if (!v('pc-anio')) return err('Elige el año a evaluar.');
       if (!v('pc-sumaria')) return err('Elige la cuenta (sumaria).');
       if (PC_HOJAS_SUM[v('pc-sumaria')] && !v('pc-hoja')) return err('Elige la hoja de la cuenta ' + v('pc-sumaria') + '.');
+      if (v('pc-sumaria') === 'AF' && !v('pc-ctas-inv').trim()) return err('Indica los códigos de las cuentas del inventario para la venta.');
       const archivos = [...pcArchivosSel];
       if (!archivos.length) return err('Sube al menos un archivo con la documentación.');
       const grande = archivos.find(f => f.size > 209715200); if (grande) return err('El archivo "' + grande.name + '" supera los 200 MB. Sube una versión resumida o filtrada a lo que se va a analizar.');
       if (archivos.some((f, i) => !pcEtiquetasElegidas[i])) return err('Elige el tipo de cada archivo (conciliación, estado de cuenta, etc.).');
       if (!document.getElementById('pc-confirma').checked) return err('Marca la confirmación de que la documentación es completa y adecuada.');
       if (confirmado !== true) { pcResumenAntesDeEnviar(archivos); return; }
-      const fila = { cliente_id: v('pc-cliente'), anio: Number(v('pc-anio')), visita: v('pc-visita') || 'final', sumaria: v('pc-sumaria'), hoja: PC_HOJAS_SUM[v('pc-sumaria')] ? v('pc-hoja') : null, carpeta: null, nota: v('pc-nota') || null, doc_confirmada_por: nombreUsuarioActivo(), doc_confirmada_at: new Date().toISOString(), solicitado_por: nombreUsuarioActivo(), solicitado_email: usuarioActivo.email || null };
+      const fila = { cliente_id: v('pc-cliente'), anio: Number(v('pc-anio')), visita: v('pc-visita') || 'final', sumaria: v('pc-sumaria'), hoja: PC_HOJAS_SUM[v('pc-sumaria')] ? v('pc-hoja') : null, carpeta: null, nota: ((v('pc-sumaria') === 'AF' && v('pc-ctas-inv').trim() ? 'CUENTAS DE INVENTARIO PARA LA VENTA (elegidas por el auditor): ' + v('pc-ctas-inv').trim() + '. ' : '') + (v('pc-nota') || '')).trim() || null, doc_confirmada_por: nombreUsuarioActivo(), doc_confirmada_at: new Date().toISOString(), solicitado_por: nombreUsuarioActivo(), solicitado_email: usuarioActivo.email || null };
       const { data: ins, error } = await supabaseClient.from('pedidos_claude').insert([fila]).select('id').single();
       if (error) return err('No se pudo enviar: ' + (error.message || error));
       msg.textContent = 'Subiendo ' + archivos.length + ' archivo(s)…'; msg.className = 'text-[11px] min-h-[1rem] text-slate-500';
@@ -4451,7 +4457,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       msg.textContent = 'Pedido enviado. Avisando por correo al Socio y al Supervisor…';
       const av = await avisarPedidoCorreo(ins.id, 'solicitado');
       msg.textContent = 'Pedido enviado con ' + archivos.length + ' archivo(s). ' + av;
-      document.getElementById('pc-nota').value = ''; document.getElementById('pc-archivos').value = ''; pcArchivosSel = []; pcEtiquetasElegidas = []; document.getElementById('pc-confirma').checked = false; pcArchivosElegidos();
+      document.getElementById('pc-nota').value = ''; { const ci = document.getElementById('pc-ctas-inv'); if (ci) ci.value = ''; } document.getElementById('pc-archivos').value = ''; pcArchivosSel = []; pcEtiquetasElegidas = []; document.getElementById('pc-confirma').checked = false; pcArchivosElegidos();
       registrarActividad('Solicitó análisis a Claude', fila.sumaria + ' · ' + fila.visita, { cliente: fila.cliente_id, anio: String(fila.anio) });
       cargarPedidosClaude();
     }
@@ -4496,6 +4502,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
     function pcCambioCuenta() {
       const caja = document.getElementById('pc-hoja-caja'), sum = valorAnalisis('pc-sumaria'), esAA = !!PC_HOJAS_SUM[sum];
       if (caja) caja.classList.toggle('hidden', !esAA);
+      const cc = document.getElementById('pc-ctas-caja'); if (cc) cc.classList.toggle('hidden', sum !== 'AF');
       const h = document.getElementById('pc-hoja');
       if (h) {
         if (esAA) {
