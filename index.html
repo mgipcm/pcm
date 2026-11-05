@@ -1618,7 +1618,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
             </div>
           </div>
           <div id="an-memo" style="margin-top:24px;border-top:1px solid #b8b8b3;padding-top:16px">
-            <div class="p-4 max-w-4xl" style="background:#dcdcd8;border:1px solid #b8b8b3;border-radius:12px">
+            <div class="p-4 max-w-4xl" style="background:#e3e3e0;border:1px solid #b8b8b3;border-radius:12px">
         <!-- Memorándum de la cuenta (texto predeterminado, editable) -->
         <div id="an-memo-inner" class="space-y-3">
           <div id="an-origen-programa"></div>
@@ -14477,7 +14477,7 @@ ${cont.innerHTML}
     function cbHtmlMemo() {
       const m = cbMemo(), tit = t => '<div class="font-bold text-slate-800 underline mb-0.5">' + t + '.-</div>';
       const lista = a => a.length ? a.map(x => '<div>' + escapeHtml(x) + '</div>').join('') : '<div class="text-slate-400">Agrega cuentas para completar esta parte.</div>';
-      return '<div style="margin-top:24px;border-top:1px solid #b8b8b3;padding-top:16px"><div class="p-4 max-w-3xl text-[11px] text-slate-700 space-y-3" style="background:#dcdcd8;border:1px solid #b8b8b3;border-radius:12px"><div class="text-xs font-bold text-slate-800">Memorándum (sale en la primera hoja del Excel)</div>' +
+      return '<div style="margin-top:24px;border-top:1px solid #b8b8b3;padding-top:16px"><div class="p-4 max-w-3xl text-[11px] text-slate-700 space-y-3" style="background:#e3e3e0;border:1px solid #b8b8b3;border-radius:12px"><div class="text-xs font-bold text-slate-800">Memorándum (sale en la primera hoja del Excel)</div>' +
         '<div>' + tit('Objetivo') + '<div>' + escapeHtml(m.objetivo) + '</div></div>' +
         '<div>' + tit('Procedimiento') + lista(m.procedimiento) + '</div>' +
         '<div>' + tit('Fuente de la información') + lista(m.fuente) + '</div>' +
