@@ -14887,6 +14887,19 @@ ${cont.innerHTML}
     }
     // Marcas de fila para el Excel: cbH = títulos de columnas, cbT = totales, cbL = título con texto largo al lado
     const cbH = f => { f._h = true; return f; }, cbT = f => { f._t = true; return f; }, cbL = f => { f._l = true; return f; };
+    // Conclusión del memorándum para el Excel: conclusiones marcadas, criterio y asiento de ajuste propuesto (igual que en pantalla)
+    function cbFilasConclusionExcel(m) {
+      const D = cbDr(), crit = String(D.criterio || m.concl || '').trim();
+      const filas = [cbL(['Conclusión', D.marcadas.length ? D.marcadas.join('\n') : 'Pendiente: la escribe el auditor.']), cbL(['Criterio y fundamento', crit || 'Pendiente: la escribe el auditor.'])];
+      const lineas = D.asiento.lineas.map(x => ({ cuenta: String(x.cuenta || '').trim(), debe: parsearNumeroAnexo(x.debe), haber: parsearNumeroAnexo(x.haber) })).filter(x => x.cuenta || x.debe !== null || x.haber !== null);
+      if (lineas.length) {
+        const sd = r2f(lineas.reduce((n, l) => n + (l.debe || 0), 0)), sh = r2f(lineas.reduce((n, l) => n + (l.haber || 0), 0));
+        filas.push([], cbL(['Asiento de ajuste propuesto', String(D.asiento.glosa || '').trim() || '(Debe / Haber)']), cbH(['Cuenta contable', 'Debe', 'Haber']));
+        lineas.forEach(l => filas.push([l.cuenta, l.debe === null ? '' : l.debe, l.haber === null ? '' : l.haber]));
+        filas.push(cbT(['Total', sd, sh]), cbL(['Cuadre', r2f(sd - sh) === 0 ? 'El asiento cuadra (Debe = Haber).' : 'El asiento NO cuadra: diferencia ' + formatoNumeroAnexo(r2f(sd - sh))]));
+      }
+      return filas;
+    }
     async function cbDescargar() {
       if (!cbE.cliente) return;
       const cli = buscarClienteNombre(cbE.cliente), nomCli = cli ? (cli.nombre_corto || cli.nombre_completo || cbE.cliente) : cbE.cliente;
@@ -14896,7 +14909,7 @@ ${cont.innerHTML}
       add('Resumen', [cbH(['Banco', 'Cuenta', 'Moneda', 'Saldo según estado de cuenta', ...CB_TIPOS.map(x => x[1]), 'Saldo conciliado', 'Saldo en libros', 'Diferencia']), ...cbE.cuentas.map(c => [c.banco, c.cuenta, c.moneda, cbN(c.saldo_estado), ...CB_TIPOS.map(x => cbSuma(c, x[0])), cbConciliado(c), cbN(c.saldo_libros), cbDif(c)]), cbT(['Total', '', '', t.estado, ...CB_TIPOS.map(x => t[x[0]]), t.conc, t.libros, t.dif])]);
       add('Detalle de partidas', [cbH(['Banco', 'Cuenta', 'Tipo de partida', 'Fecha', 'Referencia', 'Descripción', 'Valor', 'Efecto en la conciliación', 'Rastreo posterior', 'Observación']), ...cbE.cuentas.flatMap(c => (c.partidas || []).map(p => [c.banco, c.cuenta, (CB_TIPOS.find(x => x[0] === p.tipo) || [])[1] || p.tipo, p.fecha, p.ref, p.desc, cbN(p.valor), cbEfecto(p), p.rastreo, p.nota]))]);
       const hayBal = cbE.config.balance !== undefined && cbE.config.balance !== '';
-      add('Comparación con libros', [cbH(['Banco', 'Cuenta', 'Saldo conciliado', 'Saldo en libros', 'Diferencia', 'Resultado']), ...cbE.cuentas.map(c => [c.banco, c.cuenta, cbConciliado(c), cbN(c.saldo_libros), cbDif(c), Math.abs(cbDif(c)) <= cbTol() ? 'Cuadra' : 'Revisar']), [], cbT(['Total en libros', '', '', t.libros]), cbT(['Saldo según balance (AA)', '', '', hayBal ? cbN(cbE.config.balance) : 'Sin ingresar']), cbT(['Diferencia libros − balance', '', '', hayBal ? r2f(t.libros - cbN(cbE.config.balance)) : '']), ...(() => { const m = cbMemo(); return [[], cbL(['Objetivo', m.objetivo]), cbL(['Procedimiento', m.procedimiento.join('\n')]), cbL(['Fuente de la información', m.fuente.join('\n')]), cbL(['Responsable de la información', m.resp || 'Pendiente']), cbL(['Conclusión', m.concl || 'Pendiente: la escribe el auditor.'])]; })()]);
+      add('Comparación con libros', [cbH(['Banco', 'Cuenta', 'Saldo conciliado', 'Saldo en libros', 'Diferencia', 'Resultado']), ...cbE.cuentas.map(c => [c.banco, c.cuenta, cbConciliado(c), cbN(c.saldo_libros), cbDif(c), Math.abs(cbDif(c)) <= cbTol() ? 'Cuadra' : 'Revisar']), [], cbT(['Total en libros', '', '', t.libros]), cbT(['Saldo según balance (AA)', '', '', hayBal ? cbN(cbE.config.balance) : 'Sin ingresar']), cbT(['Diferencia libros − balance', '', '', hayBal ? r2f(t.libros - cbN(cbE.config.balance)) : '']), ...(() => { const m = cbMemo(); return [[], cbL(['Objetivo', m.objetivo]), cbL(['Procedimiento', m.procedimiento.join('\n')]), cbL(['Fuente de la información', m.fuente.join('\n')]), cbL(['Responsable de la información', m.resp || 'Pendiente']), ...cbFilasConclusionExcel(m)]; })()]);
       const resV = { ok: 'Cumple', rev: 'Revisar', info: 'Informativo' }, estV = { pendiente: 'Pendiente', cumple: 'Cumple', nocumple: 'No cumple', noaplica: 'No aplica' }, V = cbE.config.verif || {};
       add('Verificaciones', [cbH(['Programa', 'Verificaciones automáticas', 'Resultado', 'Detalle']), ...cbVerifAuto().map(([a, e, d, cod]) => [cod, a, resV[e], d]), [], cbH(['Programa', 'Evaluaciones del auditor', 'Referencia', 'Estado', 'Comentario']), ...CB_VERIF_MANUALES.map(([k, a, ref, cod]) => [cod, a, ref, estV[(V[k] || {}).e || 'pendiente'], (V[k] || {}).n || ''])]);
       const R = cbE.config.revel || {};
