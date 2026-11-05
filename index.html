@@ -13024,6 +13024,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
     }
 
     function nombreCuentaPorClave(clave) {
+      if (clave === 'bancos') return 'Efectivo y equivalentes de efectivo › Bancos (conciliaciones)';
       for (const r of Object.values(RUBROS_ANALISIS)) {
         const c = r.cuentas.find(x => x.clave === clave);
         if (c) return c.nombre;
@@ -13102,6 +13103,15 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
     function irAlAnalisisDesdePendiente(idx) {
       const r = pendientesDatos[idx];
       if (!r) return;
+      if (r.cuenta === 'bancos') {
+        navegarMenu('concil', 'analisis');
+        const sc = document.getElementById('cb-cliente'); if (sc) sc.value = String(r.cliente_id);
+        const sa = document.getElementById('cb-anio');
+        if (sa) { if (![...sa.options].some(o => o.value === String(r.anio))) sa.add(new Option('Año ' + r.anio, String(r.anio))); sa.value = String(r.anio); }
+        const sv = document.getElementById('cb-visita'); if (sv) sv.value = r.visita === 'preliminar' ? 'preliminar' : 'final';
+        cbE.tab = 'libros'; cbCargar();
+        return;
+      }
       const rubro = Object.keys(RUBROS_ANALISIS).find(k => RUBROS_ANALISIS[k].cuentas.some(c => c.clave === r.cuenta)) || 'activos';
       navegarMenu('analisis', rubro, r.cuenta);
       const sc = document.getElementById('an-cliente');
@@ -14288,15 +14298,16 @@ ${cont.innerHTML}
     }
     async function cbCargar() {
       const cli = $cb('cb-cliente').value, anio = $cb('cb-anio').value, vis = $cb('cb-visita').value;
-      Object.assign(cbE, { cliente: cli, anio, visita: vis, cuentas: [], config: {}, programa: [], analisis: null, det: null, act: null });
+      Object.assign(cbE, { cliente: cli, anio, visita: vis, cuentas: [], config: {}, programa: [], analisis: null, det: null, act: null, crit: null, draft: null });
       const aviso = $cb('cb-aviso'), esp = $cb('cb-espacio');
       if (!cli) { aviso.classList.remove('hidden'); esp.classList.add('hidden'); cbSync(); return; }
       aviso.classList.add('hidden'); esp.classList.remove('hidden');
       const id = ++cbE.cargaId; cbMsg('Cargando…');
-      const [r1, r2, r3] = await Promise.all([
+      const [r1, r2, r3, r4] = await Promise.all([
         supabaseClient.from('conciliaciones_datos').select('*').eq('cliente_id', cli).eq('anio', Number(anio)).eq('visita', vis).maybeSingle(),
         supabaseClient.from('analisis_claude_cuentas').select('id, created_at, anio, visita, analisis, origen, estado_revision, revisado_por, revisado_at, pendientes, criterio_final, criterio_por, criterio_at').eq('cliente_id', cli).eq('cuenta', 'bancos').eq('anio', Number(anio)).order('created_at', { ascending: false }).limit(1),
         cbE.plantilla ? Promise.resolve({ data: cbE.plantilla }) : supabaseClient.from('programas_plantilla').select('sumaria, codigo, tipo_procedimiento, procedimiento, orden, alcance, tamanos').eq('sumaria', 'AA').eq('hoja', 'bancos').order('orden', { ascending: true })
+        ,supabaseClient.from('criterio_auditor_cuentas').select('*').eq('cliente_id', cli).eq('anio', Number(anio)).eq('cuenta', 'bancos').eq('visita', vis).maybeSingle()
       ]);
       if (id !== cbE.cargaId) return;
       if (r1.error) cbMsg(/does not exist|schema cache/i.test(r1.error.message || '') ? 'Falta la tabla conciliaciones_datos en Supabase.' : 'No se pudo cargar: ' + (r1.error.message || r1.error), 'text-red-600 font-bold'); else cbMsg('');
@@ -14304,6 +14315,7 @@ ${cont.innerHTML}
       if (d) { cbE.cuentas = Array.isArray(d.cuentas) ? d.cuentas : []; cbE.config = d.config || {}; cbE.programa = Array.isArray(d.programa) ? d.programa : []; cbE.corte = d.corte || ''; cbE.act = { por: d.actualizado_por, en: d.updated_at }; }
       if (!cbE.corte) cbE.corte = vis === 'final' ? anio + '-12-31' : anio + '-09-30';
       cbE.analisis = (r2.data && r2.data[0]) || null;
+      cbE.crit = (r4 && !r4.error && r4.data) ? r4.data : null; cbE.draft = cbDraftDesde(cbE.crit);
       cbE.ctx = await traerContextoRiesgo(cli, anio, vis);
       if (id !== cbE.cargaId) return;
       if (!cbE.plantilla && !r3.error) { const cont = {}; cbE.plantilla = (r3.data || []).map(x => { cont[x.codigo] = (cont[x.codigo] || 0) + 1; return { ...x, k: cont[x.codigo] > 1 ? x.codigo + '#' + cont[x.codigo] : x.codigo }; }); }
@@ -14472,7 +14484,7 @@ ${cont.innerHTML}
       if (conLib) fuente.push('Mayores contables' + al);
       if (hayBal) fuente.push('Sumaria AA / balance general' + al);
       if (confOk) fuente.push('Confirmaciones bancarias');
-      return { objetivo: 'Verificar la correcta preparación y presentación de las conciliaciones bancarias.', procedimiento: proc, fuente, concl: M.concl || '', resp: M.resp || '' };
+      return { objetivo: 'Verificar la correcta preparación y presentación de las conciliaciones bancarias.', procedimiento: proc, fuente, concl: (cbE.crit && cbE.crit.criterio) ? cbE.crit.criterio : (M.concl || ''), resp: M.resp || '' };
     }
     function cbHtmlMemo() {
       const m = cbMemo(), tit = t => '<div class="font-bold text-slate-800 underline mb-0.5">' + t + '.-</div>';
@@ -14482,7 +14494,149 @@ ${cont.innerHTML}
         '<div>' + tit('Procedimiento') + lista(m.procedimiento) + '</div>' +
         '<div>' + tit('Fuente de la información') + lista(m.fuente) + '</div>' +
         '<div>' + tit('Responsable de la información') + '<input class="' + CB_INN + '" style="text-align:left" value="' + escapeHtml(m.resp) + '" placeholder="Nombre y cargo de quien entregó la información" onchange="cbSetTexto(\'memo\', \'resp\', this)"></div>' +
-        '<div>' + tit('Conclusión') + '<textarea rows="3" class="' + CB_INN + '" style="height:auto;text-align:left" placeholder="Escribe aquí la conclusión del auditor" onchange="cbSetTexto(\'memo\', \'concl\', this)">' + escapeHtml(m.concl) + '</textarea></div></div></div>';
+        '<div>' + tit('Conclusión') + cbHtmlConclusion() + '</div></div></div>';
+    }
+
+    // ===== Conclusión del auditor (igual que en Inversiones); alimenta Pendientes: To/Do, Quick Lett y Opinión =====
+    const CB_SEP = typeof SEP_CONCLUSION !== 'undefined' ? SEP_CONCLUSION : ' ; ';
+    function cbDraftDesde(c) {
+      const marc = (c && c.conclusion) ? String(c.conclusion).split(CB_SEP).map(x => x.trim()).filter(Boolean) : [];
+      return { marcadas: marc, criterio: (c && c.criterio) || '', asiento: asientoDesdeGuardado(c && c.asiento), prop: null, original: null, msg: '', meta: true };
+    }
+    function cbDr() { if (!cbE.draft) cbE.draft = cbDraftDesde(cbE.crit); return cbE.draft; }
+    function cbHtmlConclusion() {
+      const D = cbDr(), c = cbE.crit;
+      const opciones = [...CONCLUSIONES_AUDITOR, ...D.marcadas.filter(m => !CONCLUSIONES_AUDITOR.includes(m))];
+      const lista = opciones.map(o => '<label class="flex items-start gap-2 py-1 px-1.5 rounded hover:bg-slate-50 cursor-pointer text-xs text-slate-800 font-medium leading-snug"><input type="checkbox" ' + (D.marcadas.includes(o) ? 'checked ' : '') + 'onchange="cbConclMarcar(this, \'' + escapeHtml(o).replace(/'/g, "\\'") + '\')" class="mt-0.5 h-3.5 w-3.5 shrink-0 accent-indigo-600"><span>' + escapeHtml(o) + (CONCLUSIONES_AUDITOR.includes(o) ? '' : ' (anterior)') + '</span></label>').join('');
+      const filas = D.asiento.lineas.map((x, i) => '<tr class="border-b border-slate-200"><td class="p-1.5"><input type="text" value="' + escapeHtml(x.cuenta) + '" oninput="cbAsLinea(' + i + ', \'cuenta\', this.value)" placeholder="Código y nombre de la cuenta" class="w-full p-1.5 border border-slate-300 rounded text-xs outline-none focus:ring-2 focus:ring-indigo-500"></td>' +
+        ['debe', 'haber'].map(k => '<td class="p-1.5"><input type="text" inputmode="decimal" value="' + escapeHtml(x[k]) + '" oninput="cbAsLinea(' + i + ', \'' + k + '\', this.value)" onblur="cbAsFormato(this, ' + i + ', \'' + k + '\')" placeholder="0.00" class="w-full p-1.5 border border-slate-300 rounded text-xs text-right outline-none focus:ring-2 focus:ring-indigo-500"></td>').join('') +
+        '<td class="p-1.5 text-center">' + (D.asiento.lineas.length > 2 ? '<button type="button" onclick="cbAsQuitar(' + i + ')" class="text-[11px] font-bold text-rose-600 hover:underline">Quitar</button>' : '') + '</td></tr>').join('');
+      const meta = c ? 'Última actualización: ' + formatoFechaContrato(c.updated_at) + ((c.actualizado_por || c.auditor) ? ' · Actualizado por: ' + escapeHtml(c.actualizado_por || c.auditor) : '') : 'Aún no se ha registrado el criterio final.';
+      const BTN = 'px-3 py-1.5 rounded-lg text-[11px] transition disabled:opacity-60 bg-slate-100 text-slate-800 hover:bg-slate-200 font-medium';
+      const BTN2 = 'px-3 py-1.5 bg-white text-slate-700 hover:bg-slate-100 border border-slate-400 rounded-lg text-[11px] font-bold transition';
+      let prop = '';
+      if (D.prop) {
+        prop = '<div class="mt-2 border border-indigo-300 bg-indigo-50/40 rounded-lg p-3 space-y-2"><p class="text-[11px] font-bold text-indigo-700 tracking-wide">Propuesta de Claude (revísala antes de usarla)</p><div class="text-xs text-slate-800 leading-relaxed whitespace-pre-wrap bg-white border border-slate-200 rounded-lg p-2.5">' + escapeHtml(D.prop.texto) + '</div>' +
+          (D.prop.obs.length ? '<div class="border border-amber-400 bg-amber-50 rounded-lg p-2.5"><p class="text-[11px] font-bold text-amber-800 mb-1">Por revisar: no concuerda o falta algo</p><ul class="list-disc pl-4 text-[11px] text-amber-900 space-y-0.5">' + D.prop.obs.map(o => '<li>' + escapeHtml(o) + '</li>').join('') + '</ul></div>' : '') +
+          '<div class="flex flex-wrap gap-2"><button type="button" onclick="cbRedUsar()" class="px-3 py-1.5 bg-white text-slate-700 hover:bg-emerald-50 border border-emerald-600 rounded-lg text-[11px] font-bold transition">Usar esta redacción</button><button type="button" onclick="cbRedDescartar()" class="' + BTN2 + '">Descartar</button></div></div>';
+      }
+      return '<div class="space-y-3 not-italic" style="text-align:left"><p class="text-[11px] text-slate-500">Conclusión del auditor responsable. El análisis de Claude es solo un apoyo y no reemplaza este criterio. Lo que marques aquí aparece en el resumen de To/Do, Quick Lett y Opinión del menú.</p>' +
+        '<div><label class="block text-xs font-bold text-slate-600 mb-1">Conclusión (marca una o varias)</label><div class="border border-slate-300 rounded-lg bg-white p-1.5 space-y-0.5 shadow-xs">' + lista + '</div></div>' +
+        '<div><label class="block text-xs font-bold text-slate-600 mb-1">Criterio y fundamento</label><textarea id="cb-crit" rows="7" oninput="cbCritEscribe(this)" placeholder="Describe el trabajo realizado, los hallazgos, los ajustes propuestos y el fundamento de tu conclusión..." class="w-full p-2.5 border border-slate-300 rounded-lg text-xs outline-none focus:ring-2 focus:ring-indigo-500 bg-white leading-relaxed text-slate-800" style="min-height:140px;background:#fff">' + escapeHtml(D.criterio) + '</textarea>' +
+        '<div class="flex flex-wrap items-center gap-2 mt-2"><button type="button" id="cb-btn-mejorar" onclick="cbRedMejorar()" class="' + BTN + '">Mejorar redacción con Claude</button><span id="cb-red-msg" class="text-[11px] text-slate-500">' + escapeHtml(D.msg || '') + '</span></div>' + prop +
+        (D.original !== null ? '<div class="mt-2"><button type="button" onclick="cbRedVolver()" class="' + BTN2 + '">Volver a mi texto original</button><span class="text-[11px] text-slate-500 ml-1">Recuerda pulsar "Guardar criterio final" para conservar el cambio.</span></div>' : '') + '</div>' +
+        '<div class="space-y-2"><label class="block text-xs font-bold text-slate-600">Asiento de ajuste propuesto (Debe / Haber)</label><div class="border border-slate-300 rounded-lg bg-white overflow-x-auto"><table class="w-full text-xs border-collapse min-w-[520px]"><thead><tr class="bg-slate-50 text-slate-600 text-left"><th class="p-2 border-b border-slate-200">Cuenta contable</th><th class="p-2 border-b border-slate-200 text-right w-[22%]">Debe</th><th class="p-2 border-b border-slate-200 text-right w-[22%]">Haber</th><th class="p-2 border-b border-slate-200 w-[10%]"></th></tr></thead><tbody>' + filas + '</tbody><tfoot id="cb-as-tot"></tfoot></table></div>' +
+        '<div class="flex flex-wrap items-center justify-between gap-2"><button type="button" onclick="cbAsAgregar()" class="px-2.5 py-1 bg-white text-slate-700 hover:bg-slate-50 border border-slate-400 rounded text-[11px] font-bold transition">+ Agregar línea</button><p id="cb-as-cuadre" class="text-[11px] font-bold"></p></div>' +
+        '<input type="text" value="' + escapeHtml(D.asiento.glosa || '') + '" oninput="cbDr().asiento.glosa = this.value" placeholder="Glosa o concepto del asiento (opcional)" class="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-indigo-500 outline-none"></div>' +
+        '<div class="flex flex-wrap items-center gap-3"><button type="button" id="cb-btn-crit" onclick="cbCritGuardar()" class="px-5 py-2.5 rounded-lg text-xs transition disabled:opacity-60 bg-slate-200 text-slate-900 hover:bg-slate-300 font-semibold">Guardar criterio final</button><button type="button" onclick="cbCritRestablecer()" class="' + BTN2 + '">Restablecer texto predeterminado</button></div>' +
+        '<p id="cb-crit-msg" class="text-xs text-slate-500 min-h-[1rem]"></p><p class="text-[11px] text-slate-500">' + meta + '</p></div>' +
+        '';
+    }
+    function cbAsTotales() {
+      const D = cbDr(); let debe = 0, haber = 0;
+      D.asiento.lineas.forEach(x => { debe += parsearNumeroAnexo(x.debe) || 0; haber += parsearNumeroAnexo(x.haber) || 0; });
+      debe = r2f(debe); haber = r2f(haber); return { debe, haber, dif: r2f(debe - haber) };
+    }
+    function cbAsPintar() {
+      const t = cbAsTotales(), f = $cb('cb-as-tot'), el = $cb('cb-as-cuadre');
+      if (f) f.innerHTML = '<tr class="bg-slate-50 font-bold text-slate-800"><td class="p-2">Total</td><td class="p-2 text-right">' + formatoNumeroAnexo(t.debe) + '</td><td class="p-2 text-right">' + formatoNumeroAnexo(t.haber) + '</td><td class="p-2"></td></tr>';
+      if (!el) return;
+      if (t.debe === 0 && t.haber === 0) { el.textContent = ''; el.className = 'text-[11px] font-bold'; }
+      else if (t.dif === 0) { el.textContent = '✓ El asiento cuadra'; el.className = 'text-[11px] font-bold text-teal-700'; }
+      else { el.textContent = 'El asiento no cuadra: diferencia ' + formatoNumeroAnexo(t.dif); el.className = 'text-[11px] font-bold text-red-600'; }
+    }
+    function cbAsLinea(i, campo, v) { const D = cbDr(); if (D.asiento.lineas[i]) { D.asiento.lineas[i][campo] = v; cbAsPintar(); } }
+    function cbAsFormato(el, i, campo) { const n = parsearNumeroAnexo(el.value); if (n !== null) { el.value = formatoNumeroAnexo(n); cbDr().asiento.lineas[i][campo] = el.value; cbAsPintar(); } }
+    function cbAsAgregar() { cbDr().asiento.lineas.push({ cuenta: '', debe: '', haber: '' }); cbRenderConScroll(); }
+    function cbAsQuitar(i) { const D = cbDr(); if (D.asiento.lineas.length <= 2) return; D.asiento.lineas.splice(i, 1); cbRenderConScroll(); }
+    function cbConclMarcar(el, valor) {
+      const D = cbDr();
+      if (el.checked) {
+        const incomp = { 'Diferencias inmateriales': ['Con ajustes propuestos', 'Procedimientos adicionales - To/Do'], 'Con ajustes propuestos': ['Diferencias inmateriales'], 'Procedimientos adicionales - To/Do': ['Diferencias inmateriales'] }[valor] || [];
+        D.marcadas = D.marcadas.filter(m => !incomp.includes(m));
+        if (!D.marcadas.includes(valor)) D.marcadas.push(valor);
+        cbRenderConScroll();
+      } else D.marcadas = D.marcadas.filter(m => m !== valor);
+    }
+    function cbCritEscribe(el) { cbDr().criterio = el.value; }
+    function cbCritMsg(t, cls) { const e = $cb('cb-crit-msg'); if (e) { e.textContent = t || ''; e.className = 'text-xs min-h-[1rem] ' + (cls || 'text-slate-500'); } }
+    function cbTextoParaClaude() {
+      const t = cbTotales(), bal = cbE.config.balance, hayBal = bal !== undefined && bal !== '';
+      let x = 'Conciliaciones bancarias al ' + (cbFechaLarga(cbE.corte) || cbE.corte || '') + '. Tolerancia de diferencia: ' + formatoNumeroAnexo(cbTol()) + '.\n';
+      cbE.cuentas.forEach(c => { x += '- ' + (c.banco || '') + ' ' + (c.cuenta || '') + ': saldo estado de cuenta ' + formatoNumeroAnexo(cbN(c.saldo_estado)) + '; saldo conciliado ' + formatoNumeroAnexo(cbConciliado(c)) + '; saldo en libros ' + formatoNumeroAnexo(cbN(c.saldo_libros)) + '; diferencia ' + formatoNumeroAnexo(cbDif(c)) + '; partidas conciliatorias: ' + (c.partidas || []).length + '.\n'; });
+      x += 'Total conciliado ' + formatoNumeroAnexo(t.conc) + '; total en libros ' + formatoNumeroAnexo(t.libros) + '; diferencia ' + formatoNumeroAnexo(t.dif) + '.\n';
+      if (hayBal) x += 'Saldo según balance (sumaria AA, hoja Bancos): ' + formatoNumeroAnexo(cbN(bal)) + '; diferencia libros vs balance: ' + formatoNumeroAnexo(r2f(t.libros - cbN(bal))) + '.\n';
+      return x;
+    }
+    function cbCritPredeterminado() {
+      const L = cbE.cuentas, t = cbTotales(), tol = cbTol(), f = cbFechaLarga(cbE.corte), bal = cbE.config.balance, hayBal = bal !== undefined && bal !== '';
+      if (!L.length) return '';
+      const con = L.filter(c => Math.abs(cbDif(c)) > tol);
+      let x = 'Revisamos las conciliaciones bancarias de ' + L.length + (L.length === 1 ? ' cuenta' : ' cuentas') + (f ? ' al ' + f : '') + '. El total conciliado es ' + formatoNumeroAnexo(t.conc) + ' frente a ' + formatoNumeroAnexo(t.libros) + ' en libros (diferencia ' + formatoNumeroAnexo(t.dif) + ').';
+      if (hayBal) x += ' El saldo en libros ' + (Math.abs(r2f(t.libros - cbN(bal))) <= tol ? 'coincide' : 'difiere (' + formatoNumeroAnexo(r2f(t.libros - cbN(bal))) + ')') + ' con la sumaria AA (' + formatoNumeroAnexo(cbN(bal)) + ').';
+      x += con.length ? ' Las cuentas con diferencia mayor a la tolerancia son: ' + con.map(c => (c.banco || '') + ' ' + (c.cuenta || '')).join(', ') + '.' : ' Ninguna cuenta supera la tolerancia de diferencia.';
+      return x;
+    }
+    function cbCritRestablecer() {
+      const D = cbDr(), t = cbCritPredeterminado();
+      if (!t) { alert('Primero carga las cuentas de la conciliación para generar el texto.'); return; }
+      if (D.criterio.trim() && !window.confirm('Esto reemplaza el texto actual del criterio por el texto predeterminado. ¿Continuar?')) return;
+      D.criterio = t; D.original = null; D.prop = null; D.msg = ''; cbRenderConScroll();
+    }
+    async function cbRedMejorar() {
+      const D = cbDr(), texto = ($cb('cb-crit') ? $cb('cb-crit').value : D.criterio).trim(); D.criterio = texto;
+      if (!cbE.cliente || !cbE.anio) { alert('Primero selecciona el cliente y el año.'); return; }
+      if (!texto) { alert('Primero escribe el criterio y fundamento; luego Claude mejora la redacción.'); return; }
+      const cli = buscarCliente(cbE.cliente), nombre = cli ? ((cli.nombre_corto || '') + ' ' + (cli.nombre_completo ? '(' + cli.nombre_completo + ')' : '')).trim() : cbE.cliente;
+      const a = cbAsParaGuardar();
+      const asientoTxt = (a.lineas.length === 0 && !a.glosa) ? '' : (a.glosa ? 'Glosa: ' + a.glosa + '. ' : '') + a.lineas.map(l => (l.cuenta || '(sin cuenta)') + ': Debe ' + (l.debe === null ? '-' : formatoNumeroAnexo(l.debe)) + ' / Haber ' + (l.haber === null ? '-' : formatoNumeroAnexo(l.haber))).join('; ');
+      const b = $cb('cb-btn-mejorar'), m = $cb('cb-red-msg'), cli0 = cbE.cliente, anio0 = cbE.anio, vis0 = cbE.visita;
+      if (b) b.disabled = true; if (m) m.textContent = 'Claude está revisando la redacción...';
+      try {
+        const { data, error } = await supabaseClient.functions.invoke(FUNCION_ANALISIS_CUENTA, { body: { accion: 'mejorar_redaccion', cuenta: 'bancos', cliente: nombre, anio: cbE.anio, texto, conclusiones: D.marcadas.join(CB_SEP), asiento: asientoTxt, anexo: cbTextoParaClaude() } });
+        if (error) throw error;
+        if (!data || data.error) throw new Error((data && data.error) || 'La función no devolvió la redacción.');
+        if (cbE.cliente !== cli0 || cbE.anio !== anio0 || cbE.visita !== vis0) return;
+        D.prop = { texto: String(data.texto_mejorado || ''), obs: Array.isArray(data.observaciones) ? data.observaciones : [] };
+        D.msg = data.truncado ? 'La propuesta quedó cortada por su extensión: revísala bien.' : 'Listo. Compara y decide.';
+        cbRenderConScroll();
+      } catch (err) {
+        console.error('No se pudo mejorar la redacción:', err);
+        D.msg = 'No se pudo mejorar la redacción: ' + await mensajeErrorContratos(err, FUNCION_ANALISIS_CUENTA); cbRenderConScroll();
+      }
+    }
+    function cbRedUsar() { const D = cbDr(); if (!D.prop) return; D.original = D.criterio; D.criterio = D.prop.texto; D.prop = null; D.msg = 'Redacción aplicada (aún no guardada).'; cbRenderConScroll(); }
+    function cbRedDescartar() { const D = cbDr(); D.prop = null; D.msg = ''; cbRenderConScroll(); }
+    function cbRedVolver() { const D = cbDr(); if (D.original === null) return; D.criterio = D.original; D.original = null; D.msg = 'Se recuperó tu texto original.'; cbRenderConScroll(); }
+    function cbAsParaGuardar() {
+      const lineas = cbDr().asiento.lineas.map(x => ({ cuenta: String(x.cuenta || '').trim(), debe: parsearNumeroAnexo(x.debe), haber: parsearNumeroAnexo(x.haber) })).filter(x => x.cuenta || x.debe !== null || x.haber !== null);
+      return { glosa: String(cbDr().asiento.glosa || '').trim(), lineas };
+    }
+    async function cbCritGuardar() {
+      const D = cbDr(), quien = nombreUsuarioActivo(), ta = $cb('cb-crit'); if (ta) D.criterio = ta.value;
+      if (!cbE.cliente || !cbE.anio) { alert('Primero selecciona el cliente y el año.'); return; }
+      if (!quien) { alert('Tu sesión no está activa. Vuelve a ingresar al sistema para guardar el criterio final.'); return; }
+      if (D.marcadas.length === 0) { alert('Marca al menos una conclusión.'); return; }
+      const t = cbAsTotales();
+      if ((t.debe !== 0 || t.haber !== 0) && t.dif !== 0 && !window.confirm('El asiento de ajuste no cuadra: el Debe y el Haber tienen una diferencia de ' + formatoNumeroAnexo(t.dif) + '.\n\n¿Quieres guardar de todas formas?')) return;
+      const fila = { cliente_id: cbE.cliente, anio: Number(cbE.anio), cuenta: 'bancos', visita: cbE.visita, conclusion: D.marcadas.join(CB_SEP), criterio: D.criterio.trim() || null, auditor: (cbE.config.resp || quien), actualizado_por: quien, asiento: cbAsParaGuardar(), updated_at: new Date().toISOString() };
+      const b = $cb('cb-btn-crit'); if (b) b.disabled = true; cbCritMsg('Guardando...');
+      try {
+        let sinAsiento = false;
+        let { error } = await upsertConFallbackActualizado('criterio_auditor_cuentas', fila);
+        if (error && /asiento/.test(String(error.message || ''))) { const { asiento, ...resto } = fila; ({ error } = await supabaseClient.from('criterio_auditor_cuentas').upsert([resto], { onConflict: 'cliente_id,anio,cuenta,visita' })); sinAsiento = !error; }
+        if (error) throw error;
+        cbE.crit = fila; D.original = null;
+        cbE.config.memo = cbE.config.memo || {}; cbE.config.memo.concl = fila.criterio || ''; cbGuardar();
+        try { marcarActualizacion(); } catch (e) { }
+        bitacoraClaude('Guardó criterio final', 'Bancos (conciliaciones)', cbE.cliente, String(cbE.anio));
+        cbRenderConScroll();
+        cbCritMsg(sinAsiento ? 'Criterio guardado, pero el asiento NO: ejecuta el SQL actualizado en Supabase y vuelve a guardar.' : 'Criterio final guardado ✓');
+      } catch (err) {
+        console.error('No se pudo guardar el criterio final:', err);
+        cbCritMsg('No se guardó: ' + textoErrorTablaAnalisis(err), 'text-red-600 font-bold');
+        if (b) b.disabled = false;
+      }
     }
     function cbHtmlLibros() {
       const L = cbE.cuentas, t = cbTotales(), tol = cbTol();
@@ -14531,9 +14685,7 @@ ${cont.innerHTML}
       const h2 = 'font-bold text-slate-800 text-base border-b border-slate-200 mt-5 mb-2 pb-1';
       return '<div class="p-4 text-sm text-slate-700"><div class="marca-origen ' + cls + '"><b>Claude</b><span>Análisis de Claude · ' + a.anio + ' · ' + (a.visita === 'preliminar' ? 'Visita preliminar' : 'Visita final') + ' · ' + escapeHtml(textoOrigen(a)) + '</span>' + (e === 'pendiente' ? '<button type="button" onclick="cbMarcarRevisado()">Marcar como revisado</button>' : '') + '</div>' +
         '<div class="mt-3 leading-relaxed text-sm text-slate-700">' + renderTextoResumenContrato(a.analisis || '') + '</div>' +
-        '<h2 class="' + h2 + '">Criterio final</h2><p class="text-xs text-slate-500 mb-2">Lo escribe el auditor. Claude no lo llena.</p>' +
-        '<textarea id="cb-criterio" rows="6" class="w-full p-3 border border-slate-300 rounded-lg text-sm leading-relaxed outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Escribe aquí el criterio final del auditor...">' + escapeHtml(a.criterio_final || '') + '</textarea>' +
-        '<div class="flex flex-wrap items-center gap-3 mt-2"><button type="button" onclick="cbGuardarCriterio()" class="' + CB_BTN + '">Guardar criterio</button><span id="cb-criterio-msg" class="text-xs text-slate-500">' + (a.criterio_por ? 'Guardado por ' + escapeHtml(a.criterio_por) + (a.criterio_at ? ' · ' + escapeHtml(fechaCortaOrigen(a.criterio_at)) : '') : '') + '</span></div></div>';
+        '<h2 class="' + h2 + '">Criterio final</h2><p class="text-xs text-slate-500 mb-2">Ahora el criterio final, la conclusión (Quick Lett, Opinión, To/Do) y el asiento de ajuste se registran en el Memorándum, en la pestaña 2. Allí quedan unidos al resumen de pendientes.</p><button type="button" onclick="cbTab(\'libros\')" class="' + CB_BTN + '">Ir al Memorándum</button></div>';
     }
     async function cbMarcarRevisado() {
       const a = cbE.analisis; if (!a) return; const quien = nombreUsuarioActivo();
@@ -14632,6 +14784,7 @@ ${cont.innerHTML}
       else if (cbE.tab === 'claude') { p.innerHTML = cbHtmlClaude(); n.innerHTML = ''; }
       else if (cbE.tab === 'concluir') { p.innerHTML = cbHtmlConcluir(); n.innerHTML = nota('Qué muestra', ['Cada programa aparece una sola vez, con su procedimiento y las verificaciones que le faltan por resolver. Cuando no queda nada, la cuenta está lista para revisión final.']); }
       else { p.innerHTML = cbHtmlPrograma(); n.innerHTML = nota('Cómo se usa', ['Marca cada procedimiento como Hecho e indica dónde está el papel de trabajo. Queda registrado quién lo hizo.']); }
+      try { cbAsPintar(); } catch (e) { }
     }
     // Hoja con el formato de los papeles de trabajo (títulos grises, miles con decimales, totales con línea)
     function excelAgregarHoja(wb, x, info, titulo) {
