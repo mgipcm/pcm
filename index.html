@@ -1144,7 +1144,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
             <select id="pc-sumaria" onchange="pcCambioCuenta()" class="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs sm:text-sm outline-none"></select>
           </div>
           <div id="pc-hoja-caja" class="hidden">
-            <label class="block text-xs font-semibold text-slate-600 mb-1">Hoja de la cuenta AA</label>
+            <label id="pc-hoja-lbl" class="block text-xs font-semibold text-slate-600 mb-1">Hoja de la cuenta AA</label>
             <select id="pc-hoja" onchange="pcArchivosElegidos()" class="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs sm:text-sm outline-none"><option value="">-- Elige la hoja --</option><option value="caja">Caja</option><option value="bancos">Bancos</option><option value="equivalentes">Equivalentes de efectivo</option></select>
           </div>
         </div>
@@ -4427,14 +4427,14 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       if (!v('pc-cliente')) return err('Elige el cliente.');
       if (!v('pc-anio')) return err('Elige el año a evaluar.');
       if (!v('pc-sumaria')) return err('Elige la cuenta (sumaria).');
-      if (v('pc-sumaria') === 'AA' && !v('pc-hoja')) return err('Elige la hoja de la cuenta AA (Caja, Bancos o Equivalentes de efectivo).');
+      if (PC_HOJAS_SUM[v('pc-sumaria')] && !v('pc-hoja')) return err('Elige la hoja de la cuenta ' + v('pc-sumaria') + '.');
       const archivos = [...pcArchivosSel];
       if (!archivos.length) return err('Sube al menos un archivo con la documentación.');
       const grande = archivos.find(f => f.size > 52428800); if (grande) return err('El archivo "' + grande.name + '" supera los 50 MB. Sube una versión resumida o filtrada a lo que se va a analizar.');
       if (archivos.some((f, i) => !pcEtiquetasElegidas[i])) return err('Elige el tipo de cada archivo (conciliación, estado de cuenta, etc.).');
       if (!document.getElementById('pc-confirma').checked) return err('Marca la confirmación de que la documentación es completa y adecuada.');
       if (confirmado !== true) { pcResumenAntesDeEnviar(archivos); return; }
-      const fila = { cliente_id: v('pc-cliente'), anio: Number(v('pc-anio')), visita: v('pc-visita') || 'final', sumaria: v('pc-sumaria'), hoja: v('pc-sumaria') === 'AA' ? v('pc-hoja') : null, carpeta: null, nota: v('pc-nota') || null, doc_confirmada_por: nombreUsuarioActivo(), doc_confirmada_at: new Date().toISOString(), solicitado_por: nombreUsuarioActivo(), solicitado_email: usuarioActivo.email || null };
+      const fila = { cliente_id: v('pc-cliente'), anio: Number(v('pc-anio')), visita: v('pc-visita') || 'final', sumaria: v('pc-sumaria'), hoja: PC_HOJAS_SUM[v('pc-sumaria')] ? v('pc-hoja') : null, carpeta: null, nota: v('pc-nota') || null, doc_confirmada_por: nombreUsuarioActivo(), doc_confirmada_at: new Date().toISOString(), solicitado_por: nombreUsuarioActivo(), solicitado_email: usuarioActivo.email || null };
       const { data: ins, error } = await supabaseClient.from('pedidos_claude').insert([fila]).select('id').single();
       if (error) return err('No se pudo enviar: ' + (error.message || error));
       msg.textContent = 'Subiendo ' + archivos.length + ' archivo(s)…'; msg.className = 'text-[11px] min-h-[1rem] text-slate-500';
@@ -4477,24 +4477,34 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       'AA:bancos': ['Conciliación bancaria', 'Estado de cuenta', 'Confirmación bancaria', 'Firmas autorizadas', 'Otro'],
       'AA:caja': ['Acta de arqueo de caja', 'Detalle de fondos y caja chica', 'Documento de soporte', 'Otro'],
       'AA:equivalentes': ['Certificado o póliza de inversión', 'Estado de cuenta', 'Confirmación de la institución', 'Detalle de equivalentes de efectivo', 'Otro'],
+      'AF:venta': ['Mayor contable de las cuentas de inventario', 'Balance de comprobación', 'Kardex o auxiliar de inventario', 'Otro'],
       AOO: ['Contrato', 'Adenda o renovación', 'Evaluación NIIF 16', 'Factura o soporte de pagos', 'Otro'],
       PCC: ['Contrato', 'Adenda o renovación', 'Evaluación NIIF 16', 'Factura o soporte de pagos', 'Otro'],
       PLL: ['Contrato', 'Adenda o renovación', 'Evaluación NIIF 16', 'Factura o soporte de pagos', 'Otro'],
       AB: ['Certificado o póliza de inversión', 'Estado de cuenta', 'Confirmación bancaria', 'Detalle o anexo de inversiones', 'Otro'],
       AS: ['Certificado o póliza de inversión', 'Estado de cuenta', 'Confirmación bancaria', 'Detalle o anexo de inversiones', 'Otro']
     };
-    const PC_HOJAS = { caja: 'Caja', bancos: 'Bancos', equivalentes: 'Equivalentes de efectivo' };
+    const PC_HOJAS = { caja: 'Caja', bancos: 'Bancos', equivalentes: 'Equivalentes de efectivo', venta: 'Inventario para la venta' };
+    const PC_HOJAS_SUM = { AA: [['caja', 'Caja'], ['bancos', 'Bancos'], ['equivalentes', 'Equivalentes de efectivo']], AF: [['venta', 'Inventario para la venta']] };
     function pcNombreHoja(h) { return PC_HOJAS[h] || h || ''; }
     const PC_TODO = 'Todo en un archivo (todos los documentos juntos)';
     function pcEtiquetas(sumaria, hoja) {
-      const l = PC_ETIQ[sumaria === 'AA' ? 'AA:' + (hoja || '') : sumaria] || ['Documento de soporte', 'Otro'];
+      const l = PC_ETIQ[(sumaria === 'AA' || sumaria === 'AF') ? sumaria + ':' + (hoja || '') : sumaria] || ['Documento de soporte', 'Otro'];
       const i = l.indexOf('Otro');
       return i < 0 ? l.concat([PC_TODO]) : l.slice(0, i).concat([PC_TODO], l.slice(i));
     }
     function pcCambioCuenta() {
-      const caja = document.getElementById('pc-hoja-caja'), esAA = valorAnalisis('pc-sumaria') === 'AA';
+      const caja = document.getElementById('pc-hoja-caja'), sum = valorAnalisis('pc-sumaria'), esAA = !!PC_HOJAS_SUM[sum];
       if (caja) caja.classList.toggle('hidden', !esAA);
-      if (!esAA) { const h = document.getElementById('pc-hoja'); if (h) h.value = ''; }
+      const h = document.getElementById('pc-hoja');
+      if (h) {
+        if (esAA) {
+          const previo = h.value;
+          h.innerHTML = '<option value="">-- Elige la hoja --</option>' + PC_HOJAS_SUM[sum].map(([k, n]) => '<option value="' + k + '">' + n + '</option>').join('');
+          if (PC_HOJAS_SUM[sum].some(x => x[0] === previo)) h.value = previo; else if (PC_HOJAS_SUM[sum].length === 1) h.value = PC_HOJAS_SUM[sum][0][0];
+          const lb = document.getElementById('pc-hoja-lbl'); if (lb) lb.textContent = 'Hoja de la cuenta ' + sum;
+        } else h.value = '';
+      }
       pcArchivosElegidos();
     }
     let pcEtiquetasElegidas = [];
@@ -4738,7 +4748,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       m.className = 'fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 p-4';
       m.innerHTML = '<div class="bg-white rounded-xl shadow-xl max-w-xl w-full max-h-[88vh] flex flex-col"><div class="px-5 py-3 border-b font-bold text-slate-800">Revisa tu pedido antes de enviarlo</div><div class="p-5 overflow-y-auto text-sm">' +
         fila('Cliente', escapeHtml(nomCli)) + fila('Año y visita', v('pc-anio') + ' · ' + ((v('pc-visita') || 'final') === 'preliminar' ? 'Visita preliminar' : 'Visita final')) +
-        fila('Cuenta', escapeHtml((cta ? cta.cuenta : v('pc-sumaria')) + ' (' + v('pc-sumaria') + ')' + (v('pc-hoja') && v('pc-sumaria') === 'AA' ? ' · Hoja ' + pcNombreHoja(v('pc-hoja')) : ''))) + fila('Archivos (' + archivos.length + ')', lista) + fila('Nota', escapeHtml(v('pc-nota') || '—')) +
+        fila('Cuenta', escapeHtml((cta ? cta.cuenta : v('pc-sumaria')) + ' (' + v('pc-sumaria') + ')' + (v('pc-hoja') && PC_HOJAS_SUM[v('pc-sumaria')] ? ' · Hoja ' + pcNombreHoja(v('pc-hoja')) : ''))) + fila('Archivos (' + archivos.length + ')', lista) + fila('Nota', escapeHtml(v('pc-nota') || '—')) +
         '<div class="text-[11px] text-slate-500 mt-3">¿El cliente, la cuenta y los documentos son los correctos? Si algo está mal, corrige antes de enviar.</div></div>' +
         '<div class="px-5 py-3 border-t flex justify-end gap-2"><button type="button" class="px-3 py-1.5 text-xs rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-100" onclick="this.closest(\'.fixed\').remove()">Corregir</button>' +
         '<button type="button" class="px-3 py-1.5 text-xs rounded-lg bg-slate-200 text-slate-900 hover:bg-slate-300 font-semibold" onclick="this.closest(\'.fixed\').remove(); solicitarPedidoClaude(true)">Sí, enviar</button></div></div>';
@@ -17096,13 +17106,69 @@ ${cont.innerHTML}
         otras.classList.toggle('hidden', imp);
         if (!imp) {
           if (ivE.hoja === 'venta') otras.innerHTML = '<div class="flex flex-wrap gap-1 p-1.5 bg-white border border-slate-200 rounded-2xl">' + IV_VENTA_BOTONES.map(([k, n]) => '<button type="button" onclick="ivIrBoton(\'' + k + '\')" class="px-3 py-1.5 text-xs transition rounded-lg ' + (ivE.btn === k ? 'bg-slate-200 text-slate-900 font-semibold' : 'text-slate-600 hover:bg-slate-100') + '">' + n + '</button>').join('') + '</div>' +
-            '<div class="border border-dashed border-slate-300 rounded-xl p-8 mt-3 text-center text-sm text-slate-500"><div class="font-bold text-slate-700 mb-1">' + escapeHtml((IV_VENTA_BOTONES.find(x => x[0] === ivE.btn) || [])[1] || '') + '</div>Esta herramienta está en desarrollo. La iremos construyendo en los siguientes pasos.</div>';
+            (ivE.btn === 'mov' ? '<div id="mv-cont" class="mt-3"></div>' : '<div class="border border-dashed border-slate-300 rounded-xl p-8 mt-3 text-center text-sm text-slate-500"><div class="font-bold text-slate-700 mb-1">' + escapeHtml((IV_VENTA_BOTONES.find(x => x[0] === ivE.btn) || [])[1] || '') + '</div>Esta herramienta está en desarrollo. La iremos construyendo en los siguientes pasos.</div>');
           else otras.innerHTML = '<div class="border border-dashed border-slate-300 rounded-xl p-8 text-center text-sm text-slate-500"><div class="font-bold text-slate-700 mb-1">' + escapeHtml(nom) + '</div>Esta hoja está en desarrollo.</div>';
         }
       }
       if (imp) { if (av && esp) { const hay = !!$im('im-cliente').value; av.classList.toggle('hidden', hay); esp.classList.toggle('hidden', !hay); } }
       else { if (av) av.classList.add('hidden'); if (esp) esp.classList.add('hidden'); }
+      if (!imp && ivE.hoja === 'venta' && ivE.btn === 'mov') { const hayCambio = mvE.cliente !== $im('im-cliente').value || mvE.anio !== $im('im-anio').value || mvE.visita !== $im('im-visita').value; if (hayCambio || !mvE.cargado) mvCargar(); else mvPintar(); }
     }
+
+    // ===== AF Inventarios › Inventario para la venta › i) Movimiento del inventario =====
+    const MV_COLS = [['saldo_inicial', 'Saldo inicial'], ['compras', 'Compras - importaciones'], ['salidas', 'Salidas - ventas'], ['ajustes', 'Ajustes'], ['reclasificaciones', 'Reclasificaciones'], ['otros', 'Otros'], ['saldo_final', 'Saldo final']];
+    const mvE = { cargaId: 0, cliente: '', anio: '', visita: '', cuentas: [], act: null, cargado: false, tmp: null };
+    const mvN = v => { const x = parsearNumeroAnexo(v); return x === null || !Number.isFinite(x) ? 0 : x; };
+    function mvDif(c) { return r2f(mvN(c.saldo_inicial) + mvN(c.compras) + mvN(c.salidas) + mvN(c.ajustes) + mvN(c.reclasificaciones) + mvN(c.otros) - mvN(c.saldo_final)); }
+    async function mvCargar() {
+      const cli = $im('im-cliente').value, anio = $im('im-anio').value, vis = $im('im-visita').value;
+      Object.assign(mvE, { cliente: cli, anio, visita: vis, cuentas: [], act: null, cargado: false });
+      if (!cli) { mvPintar(); return; }
+      const id = ++mvE.cargaId;
+      const { data, error } = await supabaseClient.from('inventario_movimiento').select('*').eq('cliente_id', cli).eq('anio', Number(anio)).eq('visita', vis).eq('hoja', 'venta').maybeSingle();
+      if (id !== mvE.cargaId) return;
+      if (data) { mvE.cuentas = Array.isArray(data.cuentas) ? data.cuentas : []; mvE.act = { por: data.actualizado_por, en: data.updated_at }; }
+      mvE.cargado = true; mvE.error = error ? (error.message || String(error)) : '';
+      mvPintar();
+    }
+    function mvPintar() {
+      if (typeof ivE === 'undefined' || ivE.hoja !== 'venta' || ivE.btn !== 'mov') return;
+      const c = document.getElementById('mv-cont'); if (!c) return;
+      if (!mvE.cliente) { c.innerHTML = '<p class="text-xs text-slate-500 border border-dashed border-slate-300 rounded-xl p-4">Selecciona el cliente para comenzar.</p>'; return; }
+      if (!mvE.cargado) { c.innerHTML = '<p class="text-xs text-slate-500 p-4">Cargando…</p>'; return; }
+      if (mvE.error) { c.innerHTML = '<p class="text-xs text-red-600 font-bold p-4">No se pudo cargar: ' + escapeHtml(/does not exist|schema cache/i.test(mvE.error) ? 'falta la tabla inventario_movimiento en Supabase.' : mvE.error) + '</p>'; return; }
+      if (!mvE.cuentas.length) { c.innerHTML = '<div class="border border-slate-200 rounded-xl">' + pcHtmlAviso('AF', mvE.cliente, mvE.anio, mvE.visita, 'venta') + '<div class="px-4 pb-4 text-center"><button type="button" onclick="mvAgregar()" class="px-3 py-1.5 text-xs rounded-lg bg-slate-100 text-slate-800 hover:bg-slate-200 font-medium">Agregar cuenta manualmente</button></div></div>'; return; }
+      const TH = 'px-2 py-2 text-[11px] font-bold text-slate-700 bg-slate-100 border-b border-slate-300', IN = 'w-full p-1 border border-slate-300 rounded text-[11px] text-right outline-none focus:ring-2 focus:ring-indigo-500 bg-white';
+      const tot = {}; MV_COLS.forEach(([k]) => { tot[k] = r2f(mvE.cuentas.reduce((a, x) => a + mvN(x[k]), 0)); });
+      const dTot = r2f(mvE.cuentas.reduce((a, x) => a + mvDif(x), 0));
+      let h = '<div class="flex flex-wrap items-center gap-2 mb-2">' + (mvE.act && mvE.act.por === 'Claude' ? '<span class="pill-origen rev">Procesado por Claude, sujeto a modificaciones en caso de existir</span>' : (mvE.act && mvE.act.por ? '<span class="text-[11px] text-slate-500">Actualizado por ' + escapeHtml(mvE.act.por) + '</span>' : '')) + '<span id="mv-msg" class="text-[11px] text-slate-500"></span></div>';
+      h += '<div class="overflow-x-auto border border-slate-200 rounded-xl"><table class="w-full text-[11px] leading-tight border-collapse min-w-[1000px]"><thead><tr><th class="' + TH + ' text-left">Cuenta</th>' + MV_COLS.map(([k, n]) => '<th class="' + TH + ' text-right">' + n + '</th>').join('') + '<th class="' + TH + ' text-right" title="Saldo inicial + movimientos − saldo final. Debe ser cero">Diferencia</th><th class="' + TH + '"></th></tr></thead><tbody>';
+      mvE.cuentas.forEach((x, i) => {
+        const d = mvDif(x);
+        h += '<tr class="border-b border-slate-100 align-top"><td class="px-2 py-1"><input type="text" value="' + escapeHtml((x.codigo ? x.codigo + ' ' : '') + (x.cuenta || '')) + '" onchange="mvTexto(' + i + ', this.value)" class="w-full p-1 border border-slate-300 rounded text-[11px] outline-none bg-white">' + (x.nota ? '<div class="text-[10px] text-slate-500 mt-0.5 leading-snug">' + escapeHtml(x.nota) + '</div>' : '') + '</td>' +
+          MV_COLS.map(([k]) => '<td class="px-1 py-1"><input type="text" inputmode="decimal" value="' + escapeHtml(x[k] === undefined || x[k] === null || x[k] === '' ? '' : formatoNumeroAnexo(mvN(x[k]))) + '" onchange="mvNum(' + i + ', \'' + k + '\', this)" class="' + IN + '"></td>').join('') +
+          '<td class="px-2 py-1 text-right font-bold ' + (Math.abs(d) > 1 ? 'text-red-600' : 'text-emerald-700') + '">' + (d === 0 ? '✓' : formatoNumeroAnexo(d)) + '</td><td class="px-1 py-1 text-center"><button type="button" onclick="mvQuitar(' + i + ')" class="text-[11px] font-bold text-rose-600 hover:underline">Quitar</button></td></tr>';
+      });
+      h += '<tr class="bg-slate-50 font-bold"><td class="px-2 py-1.5">Total</td>' + MV_COLS.map(([k]) => '<td class="px-2 py-1.5 text-right">' + formatoNumeroAnexo(tot[k]) + '</td>').join('') + '<td class="px-2 py-1.5 text-right ' + (Math.abs(dTot) > 1 ? 'text-red-600' : 'text-emerald-700') + '">' + (dTot === 0 ? '✓' : formatoNumeroAnexo(dTot)) + '</td><td></td></tr></tbody></table></div>';
+      h += '<div class="mt-2 flex flex-wrap items-center gap-3"><button type="button" onclick="mvAgregar()" class="px-2.5 py-1 bg-white text-slate-700 hover:bg-slate-50 border border-slate-400 rounded text-[11px] font-bold transition">+ Agregar cuenta</button><span class="text-[11px] text-slate-500">Aumentos con signo positivo y disminuciones (salidas, bajas) con signo negativo. La diferencia debe ser cero.</span></div>';
+      c.innerHTML = h;
+    }
+    function mvGuardar() {
+      clearTimeout(mvE.tmp);
+      const snap = { cliente_id: mvE.cliente, anio: Number(mvE.anio), visita: mvE.visita, hoja: 'venta', cuentas: mvE.cuentas, corte: (($im('im-fecha') || {}).value) || null };
+      const m = document.getElementById('mv-msg'); if (m) m.textContent = 'Guardando…';
+      mvE.tmp = setTimeout(async () => {
+        const quien = nombreUsuarioActivo() || null;
+        const { error } = await supabaseClient.from('inventario_movimiento').upsert({ ...snap, actualizado_por: quien, updated_at: new Date().toISOString() }, { onConflict: 'cliente_id,anio,visita,hoja' });
+        const m2 = document.getElementById('mv-msg');
+        if (error) { if (m2) { m2.textContent = 'No se guardó: ' + (error.message || error); m2.className = 'text-[11px] text-red-600 font-bold'; } return; }
+        mvE.act = { por: quien, en: new Date().toISOString() }; if (m2) m2.textContent = 'Guardado ✓';
+      }, 700);
+    }
+    function mvNum(i, k, el) { const x = mvE.cuentas[i]; if (!x) return; const n = parsearNumeroAnexo(el.value); x[k] = n === null ? '' : n; mvGuardar(); mvPintar(); }
+    function mvTexto(i, v) { const x = mvE.cuentas[i]; if (!x) return; x.cuenta = v; x.codigo = ''; mvGuardar(); }
+    function mvAgregar() { mvE.cuentas.push({ id: 'p-' + Date.now().toString(36), codigo: '', cuenta: '', saldo_inicial: '', compras: '', salidas: '', ajustes: '', reclasificaciones: '', otros: '', saldo_final: '', nota: '' }); mvGuardar(); mvPintar(); }
+    function mvQuitar(i) { if (!window.confirm('¿Quitar esta cuenta del movimiento?')) return; mvE.cuentas.splice(i, 1); mvGuardar(); mvPintar(); }
     function ivIrHoja(h) { ivE.hoja = h; ivPintarHojas(); }
     function ivIrBoton(b) { ivE.btn = b; ivPintarHojas(); }
     async function abrirImport() {
