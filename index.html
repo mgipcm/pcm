@@ -17162,12 +17162,12 @@ ${cont.innerHTML}
 
     // ===== AF Inventarios › Inventario para la venta › i) Movimiento del inventario =====
     const MV_COLS = [['saldo_inicial', 'Saldo inicial'], ['compras', 'Compras - importaciones'], ['salidas', 'Salidas - ventas'], ['ajustes', 'Ajustes'], ['reclasificaciones', 'Reclasificaciones'], ['otros', 'Otros'], ['saldo_final', 'Saldo final']];
-    const mvE = { cargaId: 0, cliente: '', anio: '', visita: '', cuentas: [], act: null, cargado: false, tmp: null };
+    const mvE = { cargaId: 0, cliente: '', anio: '', visita: '', cuentas: [], act: null, cargado: false, tmp: null, ver: null };
     const mvN = v => { const x = parsearNumeroAnexo(v); return x === null || !Number.isFinite(x) ? 0 : x; };
     function mvDif(c) { return r2f(mvN(c.saldo_inicial) + mvN(c.compras) + mvN(c.salidas) + mvN(c.ajustes) + mvN(c.reclasificaciones) + mvN(c.otros) - mvN(c.saldo_final)); }
     async function mvCargar() {
       const cli = $im('im-cliente').value, anio = $im('im-anio').value, vis = $im('im-visita').value;
-      Object.assign(mvE, { cliente: cli, anio, visita: vis, cuentas: [], act: null, cargado: false });
+      Object.assign(mvE, { cliente: cli, anio, visita: vis, cuentas: [], act: null, cargado: false, ver: null });
       if (!cli) { mvPintar(); return; }
       const id = ++mvE.cargaId;
       const { data, error } = await supabaseClient.from('inventario_movimiento').select('*').eq('cliente_id', cli).eq('anio', Number(anio)).eq('visita', vis).eq('hoja', 'venta').maybeSingle();
@@ -17191,12 +17191,27 @@ ${cont.innerHTML}
       mvE.cuentas.forEach((x, i) => {
         const d = mvDif(x);
         h += '<tr class="border-b border-slate-100 align-top"><td class="px-2 py-1"><input type="text" value="' + escapeHtml((x.codigo ? x.codigo + ' ' : '') + (x.cuenta || '')) + '" onchange="mvTexto(' + i + ', this.value)" class="w-full p-1 border border-slate-300 rounded text-[11px] outline-none bg-white">' + (x.nota ? '<div class="text-[10px] text-slate-500 mt-0.5 leading-snug">' + escapeHtml(x.nota) + '</div>' : '') + '</td>' +
-          MV_COLS.map(([k]) => '<td class="px-1 py-1"><input type="text" inputmode="decimal" value="' + escapeHtml(x[k] === undefined || x[k] === null || x[k] === '' ? '' : formatoNumeroAnexo(mvN(x[k]))) + '" onchange="mvNum(' + i + ', \'' + k + '\', this)" class="' + IN + '"></td>').join('') +
+          MV_COLS.map(([k]) => { const nP = mvPartidas(x, k).length; const abierto = mvE.ver && mvE.ver.i === i && mvE.ver.k === k; return '<td class="px-1 py-1"><input type="text" inputmode="decimal" value="' + escapeHtml(x[k] === undefined || x[k] === null || x[k] === '' ? '' : formatoNumeroAnexo(mvN(x[k]))) + '" onchange="mvNum(' + i + ', \'' + k + '\', this)" class="' + IN + '">' + (nP ? '<button type="button" onclick="mvVer(' + i + ', \'' + k + '\')" class="block w-full text-right text-[10px] font-bold ' + (abierto ? 'text-indigo-800' : 'text-indigo-600') + ' hover:underline mt-0.5" title="Ver las partidas del mayor que forman este valor">' + (abierto ? '▴ ' : '▾ ') + nP + (nP === 1 ? ' partida' : ' partidas') + '</button>' : '') + '</td>'; }).join('') +
           '<td class="px-2 py-1 text-right font-bold ' + (Math.abs(d) > 1 ? 'text-red-600' : 'text-emerald-700') + '">' + (d === 0 ? '✓' : formatoNumeroAnexo(d)) + '</td><td class="px-1 py-1 text-center"><button type="button" onclick="mvQuitar(' + i + ')" class="text-[11px] font-bold text-rose-600 hover:underline">Quitar</button></td></tr>';
+        if (mvE.ver && mvE.ver.i === i) h += mvHtmlPartidas(x, mvE.ver.k);
       });
       h += '<tr class="bg-slate-50 font-bold"><td class="px-2 py-1.5">Total</td>' + MV_COLS.map(([k]) => '<td class="px-2 py-1.5 text-right">' + formatoNumeroAnexo(tot[k]) + '</td>').join('') + '<td class="px-2 py-1.5 text-right ' + (Math.abs(dTot) > 1 ? 'text-red-600' : 'text-emerald-700') + '">' + (dTot === 0 ? '✓' : formatoNumeroAnexo(dTot)) + '</td><td></td></tr></tbody></table></div>';
       h += '<div class="mt-2 flex flex-wrap items-center gap-3"><button type="button" onclick="mvAgregar()" class="px-2.5 py-1 bg-white text-slate-700 hover:bg-slate-50 border border-slate-400 rounded text-[11px] font-bold transition">+ Agregar cuenta</button><span class="text-[11px] text-slate-500">Aumentos con signo positivo y disminuciones (salidas, bajas) con signo negativo. La diferencia debe ser cero.</span></div>';
       c.innerHTML = h;
+    }
+    function mvPartidas(x, k) { return Array.isArray(x && x.partidas) ? x.partidas.filter(p => p && p.col === k) : []; }
+    function mvVer(i, k) { mvE.ver = (mvE.ver && mvE.ver.i === i && mvE.ver.k === k) ? null : { i, k }; mvPintar(); }
+    function mvFechaCorta(f) { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(f || '')); return m ? m[3] + '/' + m[2] + '/' + m[1] : escapeHtml(f || ''); }
+    function mvHtmlPartidas(x, k) {
+      const ps = mvPartidas(x, k), nom = (MV_COLS.find(c => c[0] === k) || [k, k])[1];
+      const sum = r2f(ps.reduce((a, p) => a + mvN(p.valor), 0)), celda = mvN(x[k]), dif = r2f(sum - celda);
+      const resumen = ps.length && ps.every(p => /asientos/.test(p.ref || ''));
+      let t = '<tr class="bg-indigo-50/60"><td colspan="' + (MV_COLS.length + 3) + '" class="px-3 py-2"><div class="flex flex-wrap items-center gap-3 mb-1"><span class="text-[11px] font-bold text-indigo-900">' + escapeHtml(nom) + ' · ' + escapeHtml((x.codigo ? x.codigo + ' ' : '') + (x.cuenta || '')) + ' — ' + ps.length + (ps.length === 1 ? ' partida' : ' partidas') + (resumen ? ' (resumen por mes)' : ' del mayor contable') + '</span><button type="button" onclick="mvVer(' + mvE.ver.i + ', \'' + k + '\')" class="text-[11px] font-bold text-slate-600 hover:underline">Cerrar</button></div>';
+      t += '<div class="max-h-80 overflow-auto border border-slate-200 rounded-lg bg-white"><table class="w-full text-[11px] leading-tight border-collapse"><thead><tr class="bg-slate-100 text-slate-700"><th class="px-2 py-1 text-left font-bold">Fecha</th><th class="px-2 py-1 text-left font-bold">' + (resumen ? 'Asientos' : 'Comprobante') + '</th><th class="px-2 py-1 text-left font-bold">Descripción</th><th class="px-2 py-1 text-right font-bold">Valor</th></tr></thead><tbody>';
+      ps.forEach(p => { const v = mvN(p.valor); t += '<tr class="border-t border-slate-100 align-top"><td class="px-2 py-1 whitespace-nowrap">' + (resumen ? escapeHtml(String(p.fecha || '').slice(0, 7)) : mvFechaCorta(p.fecha)) + '</td><td class="px-2 py-1 whitespace-nowrap">' + escapeHtml(p.ref || '') + '</td><td class="px-2 py-1">' + escapeHtml(p.desc || '') + '</td><td class="px-2 py-1 text-right whitespace-nowrap ' + (v < 0 ? 'text-rose-700' : '') + '">' + formatoNumeroAnexo(v) + '</td></tr>'; });
+      t += '<tr class="border-t-2 border-slate-300 bg-slate-50 font-bold"><td class="px-2 py-1" colspan="3">Total de las partidas</td><td class="px-2 py-1 text-right">' + formatoNumeroAnexo(sum) + '</td></tr></tbody></table></div>';
+      t += '<div class="text-[11px] mt-1 ' + (Math.abs(dif) > 1 ? 'text-red-600 font-bold' : 'text-emerald-700') + '">' + (Math.abs(dif) > 1 ? 'Las partidas suman ' + formatoNumeroAnexo(sum) + ' y la celda dice ' + formatoNumeroAnexo(celda) + ' (diferencia ' + formatoNumeroAnexo(dif) + ').' : '✓ Las partidas suman lo mismo que la celda.') + '</div></td></tr>';
+      return t;
     }
     function mvGuardar() {
       clearTimeout(mvE.tmp);
