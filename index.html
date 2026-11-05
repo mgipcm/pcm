@@ -3507,7 +3507,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       analisisEstado.cuenta = (cuenta && def.cuentas.some(c => c.clave === cuenta)) ? cuenta : (def.cuentas[0] ? def.cuentas[0].clave : '');
       const nombre = analisisEstado.cuenta ? nombreCuentaAnalisis() : '';
       analisisEstado.titulo = (analisisEstado.cuenta === 'equivalentes') ? '2. Equivalentes de efectivo' : (nombre ? '2. ' + nombre : '2. Auditoría/Análisis Claves: ' + def.titulo);
-      document.getElementById('an-titulo').textContent = analisisEstado.titulo + ' – ' + etiquetaVisita();
+      document.getElementById('an-titulo').textContent = analisisEstado.titulo;
       poblarClientesAnalisis();
       poblarAniosAnalisis();
       poblarAuditoresAnalisis();
@@ -3702,7 +3702,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       const aviso = document.getElementById('an-aviso');
       const visita = visitaAnalisis();
       const tit = document.getElementById('an-titulo');
-      if (tit && analisisEstado.titulo) tit.textContent = analisisEstado.titulo + ' – ' + etiquetaVisita(visita);
+      if (tit && analisisEstado.titulo) tit.textContent = analisisEstado.titulo;
 
       if (!cuenta) {
         aviso.textContent = 'Selecciona una cuenta en el menú de la izquierda.';
