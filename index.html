@@ -17166,7 +17166,7 @@ ${cont.innerHTML}
 
     // ===== AF Inventarios: hojas (Inventario para la venta, Materia prima, Producción en proceso, Importaciones) =====
     const IV_HOJAS = [['venta', 'Inventario para la venta'], ['materia', 'Materia prima'], ['proceso', 'Producción en proceso'], ['import', 'Importaciones']];
-    const IV_VENTA_BOTONES = [['mov', 'i) Movimiento del inventario'], ['impcompras', 'ii) Importaciones vs compras - importaciones'], ['salidas', 'iii) Salidas vs costo de ventas'], ['kcompras', 'iv) Kardex vs Compras'], ['ksalidas', 'v) Kardex vs Salidas']];
+    const IV_VENTA_BOTONES = [['mov', 'i) Movimiento del inventario'], ['impcompras', 'ii) Compras/Liquidaciones de importación vs Entradas (mayor contable)'], ['salidas', 'iii) Costo de ventas vs Salidas (mayor contable)'], ['kmov', 'iv) Movimiento de kárdex (ingresos y egresos)'], ['kcompras', 'v) Kárdex (entradas) vs Compras/Liquidaciones de importación'], ['ksalidas', 'vi) Kárdex (salidas) vs Costo de ventas']];
     const ivE = { hoja: 'venta', btn: 'mov' };
     function ivPintarHojas() {
       const btn = (on, clic, n, extra) => '<button type="button" onclick="' + clic + '" style="padding:8px 18px;font-size:13px;cursor:pointer;background:' + (on ? '#e5e5e1' : 'transparent') + ';color:' + (on ? '#0f172a' : '#64748b') + ';font-weight:' + (on ? '700' : '500') + ';border:0;border-bottom:3px solid ' + (on ? '#1e293b' : 'transparent') + ';margin-bottom:-1px;border-radius:6px 6px 0 0">' + n + (extra || '') + '</button>';
