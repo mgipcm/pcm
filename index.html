@@ -1150,7 +1150,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
         </div>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label class="block text-xs font-semibold text-slate-600 mb-1">Documentación para el análisis (uno o varios archivos, máx. 50 MB cada uno)</label>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">Documentación para el análisis (uno o varios archivos, máx. 200 MB cada uno)</label>
             <input type="file" id="pc-archivos" multiple onchange="pcAgregarSeleccion(this)" class="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs sm:text-sm outline-none">
             <div id="pc-checklist" class="mt-2 text-[11px] text-slate-600"></div>
             <div id="pc-lista-arch" class="mt-2 space-y-1"></div>
@@ -4430,7 +4430,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       if (PC_HOJAS_SUM[v('pc-sumaria')] && !v('pc-hoja')) return err('Elige la hoja de la cuenta ' + v('pc-sumaria') + '.');
       const archivos = [...pcArchivosSel];
       if (!archivos.length) return err('Sube al menos un archivo con la documentación.');
-      const grande = archivos.find(f => f.size > 52428800); if (grande) return err('El archivo "' + grande.name + '" supera los 50 MB. Sube una versión resumida o filtrada a lo que se va a analizar.');
+      const grande = archivos.find(f => f.size > 209715200); if (grande) return err('El archivo "' + grande.name + '" supera los 200 MB. Sube una versión resumida o filtrada a lo que se va a analizar.');
       if (archivos.some((f, i) => !pcEtiquetasElegidas[i])) return err('Elige el tipo de cada archivo (conciliación, estado de cuenta, etc.).');
       if (!document.getElementById('pc-confirma').checked) return err('Marca la confirmación de que la documentación es completa y adecuada.');
       if (confirmado !== true) { pcResumenAntesDeEnviar(archivos); return; }
@@ -4477,7 +4477,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       'AA:bancos': ['Conciliación bancaria', 'Estado de cuenta', 'Confirmación bancaria', 'Firmas autorizadas', 'Otro'],
       'AA:caja': ['Acta de arqueo de caja', 'Detalle de fondos y caja chica', 'Documento de soporte', 'Otro'],
       'AA:equivalentes': ['Certificado o póliza de inversión', 'Estado de cuenta', 'Confirmación de la institución', 'Detalle de equivalentes de efectivo', 'Otro'],
-      'AF:venta': ['Mayor contable de las cuentas de inventario', 'Balance de comprobación', 'Kardex o auxiliar de inventario', 'Otro'],
+      'AF:venta': ['Mayor contable completo', 'Mayor contable de inventarios', 'Balance de comprobación', 'Otro'],
       AOO: ['Contrato', 'Adenda o renovación', 'Evaluación NIIF 16', 'Factura o soporte de pagos', 'Otro'],
       PCC: ['Contrato', 'Adenda o renovación', 'Evaluación NIIF 16', 'Factura o soporte de pagos', 'Otro'],
       PLL: ['Contrato', 'Adenda o renovación', 'Evaluación NIIF 16', 'Factura o soporte de pagos', 'Otro'],
@@ -4520,7 +4520,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       pcArchivosElegidos();
     }
     function pcEtiquetaSugerida(nombre, et) {
-      const reglas = [[/concilia/i, 'Conciliación bancaria'], [/estado.?de.?cuenta|extracto/i, 'Estado de cuenta'], [/confirma/i, 'Confirmación bancaria'], [/firma/i, 'Firmas autorizadas'], [/adenda|renov/i, 'Adenda o renovación'], [/contrato/i, 'Contrato'], [/niif|evaluaci/i, 'Evaluación NIIF 16'], [/factura|pago/i, 'Factura o soporte de pagos'], [/certificado|p[oó]liza|dep[oó]sito|dpf/i, 'Certificado o póliza de inversión'], [/anexo|detalle/i, 'Detalle o anexo de inversiones']];
+      const reglas = [[/inventar/i, 'Mayor contable de inventarios'], [/mayor/i, 'Mayor contable completo'], [/concilia/i, 'Conciliación bancaria'], [/estado.?de.?cuenta|extracto/i, 'Estado de cuenta'], [/confirma/i, 'Confirmación bancaria'], [/firma/i, 'Firmas autorizadas'], [/adenda|renov/i, 'Adenda o renovación'], [/contrato/i, 'Contrato'], [/niif|evaluaci/i, 'Evaluación NIIF 16'], [/factura|pago/i, 'Factura o soporte de pagos'], [/certificado|p[oó]liza|dep[oó]sito|dpf/i, 'Certificado o póliza de inversión'], [/anexo|detalle/i, 'Detalle o anexo de inversiones']];
       const r = reglas.find(x => x[0].test(nombre) && et.includes(x[1])); return r ? r[1] : '';
     }
     function pcArchivosElegidos() {
@@ -4543,7 +4543,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       const et = sel.value, inp = document.createElement('input'); inp.type = 'file'; inp.multiple = true;
       inp.onchange = async () => {
         const fs = [...inp.files], p = pedidosClaude.find(x => x.id === id); if (!fs.length || !p) return;
-        const grande = fs.find(f => f.size > 52428800); if (grande) { alert('El archivo "' + grande.name + '" supera los 50 MB. Sube una versión resumida o filtrada.'); return; }
+        const grande = fs.find(f => f.size > 209715200); if (grande) { alert('El archivo "' + grande.name + '" supera los 200 MB. Sube una versión resumida o filtrada.'); return; }
         msg.textContent = 'Subiendo ' + fs.length + ' archivo(s)…'; msg.className = 'text-[11px] min-h-[1rem] text-slate-500';
         const falla = [];
         for (const f of fs) {
