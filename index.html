@@ -17193,7 +17193,7 @@ ${cont.innerHTML}
     }
 
     // ===== AF Inventarios › Inventario para la venta › i) Movimiento del inventario =====
-    const MV_COLS = [['saldo_inicial', 'Saldo inicial'], ['compras', 'Compras - importaciones'], ['salidas', 'Salidas - ventas'], ['ajustes', 'Ajustes'], ['reclasificaciones', 'Reclasificaciones'], ['otros', 'Otros'], ['saldo_final', 'Saldo final']];
+    const MV_COLS = [['saldo_inicial', 'Saldo inicial'], ['compras', 'Compras/Importaciones (entradas)'], ['salidas', 'Ventas (salidas)'], ['ajustes', 'Ajustes'], ['reclasificaciones', 'Reclasificaciones'], ['otros', 'Otros'], ['saldo_final', 'Saldo final']];
     const MV_MOV = ['compras', 'salidas', 'ajustes', 'reclasificaciones', 'otros'];
     const mvE = { cargaId: 0, cliente: '', anio: '', visita: '', cuentas: [], act: null, cargado: false, tmp: null, ver: null };
     const mvN = v => { const x = parsearNumeroAnexo(v); return x === null || !Number.isFinite(x) ? 0 : x; };
