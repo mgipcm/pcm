@@ -10827,21 +10827,30 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
         const cierre = {}, dcierre = {}; let cc = 0, dd = 0;
         anios.forEach(y => { cc += fl[y].orig + fl[y].rem + fl[y].red; dd += fl[y].dep; cierre[y] = cc; dcierre[y] = dd; });
         const cum = (o, y) => (y < y0 ? 0 : o[Math.min(y, y1)]);
-        return { c: x.c, fl, fc, cierre, dcierre, ck, dk, ini: cum(cierre, Y - 1), dini: cum(dcierre, Y - 1) };
+        const mk = {}, ccost = {}, cdep = {}, cneto = {}; let kf = 1e12, kl = -1, c2 = 0, d2 = 0;
+        x.r.meses.forEach(m => { const k = m.y * 12 + m.m - 1; kf = Math.min(kf, k); kl = Math.max(kl, k); const e = mk[k] = mk[k] || { orig: 0, rem: 0, red: 0, dep: 0, neto: 0 }; e.orig += m.alta + m.traidoA + m.aj; e.rem += m.remA; e.red += m.redA; e.dep += m.dep; e.neto = m.neto; });
+        for (let k = kf; k <= kl; k++) { const e = mk[k] || { orig: 0, rem: 0, red: 0, dep: 0, neto: 0 }; c2 += e.orig + e.rem + e.red; d2 += e.dep; ccost[k] = c2; cdep[k] = d2; cneto[k] = e.neto; }
+        const at = (o, k) => (k < kf ? 0 : (k > kl ? (o === cneto ? 0 : o[kl]) : o[k]));
+        return { c: x.c, fl, fc, cierre, dcierre, ck, dk, ini: cum(cierre, Y - 1), dini: cum(dcierre, Y - 1), mk, ccost, cdep, cneto, at };
       });
       const suma = f => det.reduce((s, d) => s + f(d), 0);
       const cols = anios.map(y => ({ etq: 'Cierre ' + y, y, ini: suma(d => (y > y0 ? d.cierre[y - 1] : 0)), orig: suma(d => d.fl[y].orig), rem: suma(d => d.fl[y].rem), red: suma(d => d.fl[y].red), cierre: suma(d => d.cierre[y]), dini: suma(d => (y > y0 ? d.dcierre[y - 1] : 0)), dep: suma(d => d.fl[y].dep), dcierre: suma(d => d.dcierre[y]), por: d => ({ cierre: d.cierre[y], dcierre: d.dcierre[y] }) }));
       cols.push({ etq: 'Al ' + arrConcFechaTxt(corte), y: null, ini: suma(d => d.ini), orig: suma(d => d.fc.orig), rem: suma(d => d.fc.rem), red: suma(d => d.fc.red), cierre: suma(d => d.ck), dini: suma(d => d.dini), dep: suma(d => d.fc.dep), dcierre: suma(d => d.dk), por: d => ({ cierre: d.ck, dcierre: d.dk }) });
-      return { cols, det };
+      const MESES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+      const mesCol = (yy, mm) => { const k = yy * 12 + mm - 1; return { etq: MESES[mm - 1] + ' ' + yy, y: null, mes: true, ini: suma(d => d.at(d.ccost, k - 1)), orig: suma(d => (d.mk[k] ? d.mk[k].orig : 0)), rem: suma(d => (d.mk[k] ? d.mk[k].rem : 0)), red: suma(d => (d.mk[k] ? d.mk[k].red : 0)), cierre: suma(d => d.at(d.ccost, k)), dini: suma(d => d.at(d.cdep, k - 1)), dep: suma(d => (d.mk[k] ? d.mk[k].dep : 0)), dcierre: suma(d => d.at(d.cdep, k)), netoRef: suma(d => d.at(d.cneto, k)), por: d => ({ cierre: d.at(d.ccost, k), dcierre: d.at(d.cdep, k) }) }; };
+      return { cols, det, mesCol, anios };
     }
+    function arrCostoAnio(y) { const s = arrEstado.cdAnios || (arrEstado.cdAnios = new Set()); if (s.has(y)) s.delete(y); else s.add(y); arrConcRender(); }
+    function arrCostoTodos(abrir) { const R = arrCostoCalc(arrConcCorte()); arrEstado.cdAnios = new Set(abrir && R ? R.anios : []); arrConcRender(); }
     function arrHtmlCosto() {
       const corte = arrConcCorte(), R = arrCostoCalc(corte);
       if (!R) return '<p class="p-6 text-xs text-slate-400 text-center">Agrega contratos con canon, fechas y tasa para ver el costo y la depreciación acumulada.</p>';
-      const ab = arrEstado.cdAbiertos || (arrEstado.cdAbiertos = new Set()), C = R.cols;
+      const ab = arrEstado.cdAbiertos || (arrEstado.cdAbiertos = new Set()), an = arrEstado.cdAnios || (arrEstado.cdAnios = new Set());
+      const C = []; R.cols.forEach(c => { C.push(c); if (c.y !== null && an.has(c.y)) for (let m = 1; m <= 12; m++) C.push(R.mesCol(c.y, m)); });
       const th = (t, cls = '') => `<th class="px-2 py-1 border-b border-slate-200 whitespace-nowrap ${cls}">${escapeHtml(t)}</th>`;
-      let h = `<div class="flex flex-wrap items-center gap-2 px-2 py-2 border-b border-slate-200 text-[11px]"><span class="font-semibold text-slate-600">Mes de consulta</span><input type="month" value="${corte}" onchange="arrConcCorteEditar(this.value)" class="w-36 h-6 px-1.5 text-[11px] border border-slate-300 rounded"><span class="text-slate-500">La última columna llega hasta el último día de ese mes</span></div>`;
-      h += `<table class="w-full text-[11px] leading-tight border-collapse"><thead class="bg-slate-50 text-slate-600"><tr>${th('Concepto', 'text-left')}${C.map((c, i) => th(c.etq, 'text-right' + (i === C.length - 1 ? ' bg-indigo-50' : ''))).join('')}</tr></thead><tbody>`;
-      const cel = (v, i, cls = '') => `<td class="px-2 py-0.5 text-right whitespace-nowrap ${cls} ${i === C.length - 1 ? 'bg-indigo-50' : ''}">${arrFmt(v)}</td>`;
+      let h = `<div class="flex flex-wrap items-center gap-2 px-2 py-2 border-b border-slate-200 text-[11px]"><span class="font-semibold text-slate-600">Mes de consulta</span><input type="month" value="${corte}" onchange="arrConcCorteEditar(this.value)" class="w-36 h-6 px-1.5 text-[11px] border border-slate-300 rounded"><span class="text-slate-500">La última columna llega hasta el último día de ese mes</span><span class="text-slate-500">· Haz clic en un año (▸) para ver sus 12 meses</span><button type="button" onclick="arrCostoTodos(true)" class="px-2 py-0.5 rounded-lg bg-slate-200 text-slate-900 font-semibold hover:bg-slate-300">Ver todos los meses</button><button type="button" onclick="arrCostoTodos(false)" class="px-2 py-0.5 rounded-lg text-slate-600 hover:bg-slate-100 font-medium">Solo años</button></div>`;
+      h += `<div class="overflow-x-auto"><table class="w-full text-[11px] leading-tight border-collapse"><thead class="bg-slate-50 text-slate-600"><tr>${th('Concepto', 'text-left')}${C.map((c, i) => c.mes ? th(c.etq, 'text-right bg-slate-100 font-normal') : (c.y !== null ? `<th class="px-2 py-1 border-b border-slate-200 whitespace-nowrap text-right"><button type="button" onclick="arrCostoAnio(${c.y})" class="font-bold text-indigo-700">${an.has(c.y) ? '▾' : '▸'} ${escapeHtml(c.etq)}</button></th>` : th(c.etq, 'text-right bg-indigo-50'))).join('')}</tr></thead><tbody>`;
+      const cel = (v, i, cls = '') => `<td class="px-2 py-0.5 text-right whitespace-nowrap ${cls} ${i === C.length - 1 ? 'bg-indigo-50' : (C[i].mes ? 'bg-slate-50' : '')}">${arrFmt(v)}</td>`;
       const titulo = t => `<tr class="bg-slate-100"><td colspan="${C.length + 1}" class="px-2 py-1 font-bold text-slate-700">${t}</td></tr>`;
       const fila = (t, f, cls = '', opcional = false) => (opcional && C.every(c => Math.abs(f(c)) < 0.005)) ? '' : `<tr class="border-b border-slate-100"><td class="px-2 py-0.5 ${cls}">${t}</td>${C.map((c, i) => cel(f(c), i, cls)).join('')}</tr>`;
       const total = (k, t, f, sub) => {
@@ -10864,8 +10873,8 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       h += total('neto', 'Costo − depreciación acumulada', c => c.cierre - c.dcierre, (d, c) => c.por(d).cierre - c.por(d).dcierre);
       // verificación contra la amortización mensual
       const K = arrConsolidado(), U = arrConcCalc(corte).tot.uso;
-      h += `<tr><td class="px-2 py-0.5 text-slate-600">Diferencia contra el derecho de uso neto de la amortización mensual</td>${C.map((c, i) => { const ref = c.y === null ? U : (K.f[c.y] ? K.f[c.y].neto : 0), d = r2f(c.cierre - c.dcierre - ref); return `<td class="px-2 py-0.5 text-right whitespace-nowrap ${i === C.length - 1 ? 'bg-indigo-50' : ''}">${Math.abs(d) < 0.5 ? '<span class="font-bold text-emerald-700">Cuadra</span>' : `<span class="font-bold text-red-600">${formatoNumeroAnexo(d)}</span>`}</td>`; }).join('')}</tr>`;
-      return h + '</tbody></table>';
+      h += `<tr><td class="px-2 py-0.5 text-slate-600">Diferencia contra el derecho de uso neto de la amortización mensual</td>${C.map((c, i) => { const ref = c.mes ? c.netoRef : (c.y === null ? U : (K.f[c.y] ? K.f[c.y].neto : 0)), d = r2f(c.cierre - c.dcierre - ref); return `<td class="px-2 py-0.5 text-right whitespace-nowrap ${i === C.length - 1 ? 'bg-indigo-50' : ''}">${Math.abs(d) < 0.5 ? '<span class="font-bold text-emerald-700">Cuadra</span>' : `<span class="font-bold text-red-600">${formatoNumeroAnexo(d)}</span>`}</td>`; }).join('')}</tr>`;
+      return h + '</tbody></table></div>';
     }
     function arrCostoToggle(k) { const s = arrEstado.cdAbiertos || (arrEstado.cdAbiertos = new Set()); if (s.has(k)) s.delete(k); else s.add(k); arrConcRender(); }
     function arrTotalesContratos() {
@@ -11577,6 +11586,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       const CD = arrCostoCalc(corteX);
       if (CD) {
         const C = CD.cols, UX = arrConcCalc(corteX).tot.uso, fil = (t, f, tipo) => { const x = [t, ...C.map(c => r2f(f(c)))]; if (tipo) x.tipo = tipo; return x; };
+        const fil2 = (t, f, tipo) => { const x = [t, ...CD.anios.flatMap(y => Array.from({ length: 12 }, (_, i) => r2f(f(CD.mesCol(y, i + 1)))))]; if (tipo) x.tipo = tipo; return x; };
         const sec = t => { const x = [t]; x.tipo = 'h'; return x; };
         const cdAoa = [['Concepto', ...C.map(c => c.etq)], sec('Costo del activo'), fil('Saldo inicial del costo', c => c.ini), fil('(+) Costo original: valor actual inicial, saldo traído y costos iniciales', c => c.orig)];
         if (C.some(c => Math.abs(c.rem) >= 0.005)) cdAoa.push(fil('(+/−) Actualizaciones por remedición del pasivo', c => c.rem));
@@ -11590,6 +11600,12 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
           cdAoa.push(sec(t)); CD.det.forEach(d => cdAoa.push([arrNombre(d.c), ...C.map(c => r2f(f(d, c)))]));
         });
         add('Costo y depreciación acumulada', cdAoa, [{ wch: 62 }], { info: [['Mes de consulta', fechaCorteX]] });
+        const CM = []; CD.anios.forEach(y => { for (let m = 1; m <= 12; m++) CM.push(CD.mesCol(y, m)); });
+        const mAoa = [['Concepto', ...CM.map(c => c.etq)], sec('Costo del activo'), fil2('Saldo inicial del costo', c => c.ini), fil2('(+) Costo original: valor actual inicial, saldo traído y costos iniciales', c => c.orig), fil2('(+/−) Actualizaciones por remedición del pasivo', c => c.rem), fil2('(−) Bajas por reducción de alcance', c => c.red), fil2('Costo al cierre', c => c.cierre, 't'),
+          sec('Depreciación acumulada'), fil2('Saldo inicial de la depreciación acumulada', c => c.dini), fil2('(+) Depreciación del mes', c => c.dep), fil2('Depreciación acumulada al cierre', c => c.dcierre, 't'), sec('Derecho de uso neto'), fil2('Costo − depreciación acumulada', c => c.cierre - c.dcierre, 't'), fil2('Diferencia contra el derecho de uso neto de la amortización mensual', c => c.cierre - c.dcierre - c.netoRef)];
+        mAoa.push([], ['Detalle por contrato', ...CM.map(c => c.etq)]);
+        [['Costo al cierre', (d, c) => c.por(d).cierre], ['Depreciación acumulada al cierre', (d, c) => c.por(d).dcierre], ['Derecho de uso neto', (d, c) => c.por(d).cierre - c.por(d).dcierre]].forEach(([t, f]) => { mAoa.push(sec(t)); CD.det.forEach(d => mAoa.push([arrNombre(d.c), ...CM.map(c => r2f(f(d, c)))])); });
+        add('Costo y deprec. por mes', mAoa, [{ wch: 62 }], { info: [['Mes de consulta', fechaCorteX]] });
       }
       // Conciliación con el balance
       if (arrEstado.contratos.length) {
