@@ -17398,7 +17398,13 @@ ${cont.innerHTML}
         <button type="button" onclick="pcIrAPedido('AF', impEstado.cliente, impEstado.anio, impEstado.visita, 'import')" class="${impBtnP}" title="Claude lee los PDF y deja la tabla armada aquí">Pedir a Claude que lea las liquidaciones (PDF)</button>
         <label class="${impBtn} cursor-pointer">Subir Excel de liquidación<input type="file" accept=".xlsx,.xls" multiple class="hidden" onchange="impSubirExcel(this)"></label>
         ${L.length ? `<button type="button" onclick="impRegenerarNombres()" class="${impBtn}" title="Vuelve a armar el código y los nombres de cada importación a partir del nombre del archivo y del proveedor">Regenerar nombres</button>` : ''}<span class="text-[11px] text-slate-500">Si el cliente entrega el Excel original de la liquidación, es la forma más exacta.</span></div>`;
-      const proc = '<div id="im-proc" class="px-3 py-2 space-y-1"></div>';
+      const Mx = impEstado.mayor, Cx = impEstado.cruce;
+      const unico = `<div class="m-2 p-3 bg-white border border-slate-200 rounded-xl space-y-2 text-xs text-slate-700"><div class="text-[13px] font-semibold text-slate-800">Documentos del cliente: todo se carga aquí</div>
+        <div class="flex flex-wrap items-center gap-2"><span class="font-semibold">1. Liquidaciones:</span><span class="text-slate-600">${L.length ? L.length + ' cargadas' : 'aún no hay'}</span><span class="text-slate-400">(usa los botones de arriba: Pedir a Claude para PDF, o subir Excel)</span></div>
+        <div class="flex flex-wrap items-center gap-2"><span class="font-semibold">2. Mayor contable:</span><label class="${impBtn} cursor-pointer">Elegir archivo del mayor (CSV o Excel)<input type="file" accept=".csv,.txt,.xlsx,.xls" class="hidden" onchange="impElegirMayor(this)"></label><span class="text-slate-600">${Mx ? 'Cargado: ' + impE(Mx.nombre) : 'aún no hay'}</span></div>
+        <div class="flex flex-wrap items-center gap-2"><span class="font-semibold">3. Análisis:</span><button type="button" id="im-cruzar" onclick="impTodo()" class="${impBtnP}" ${Mx && L.length ? '' : 'disabled'} title="Lee el mayor, cruza con las liquidaciones y arma el cruce, el diario, las entradas y los hallazgos">Cruzar con el mayor y armar el papel de trabajo</button><button type="button" onclick="impDescargar()" class="${impBtn}" ${Cx ? '' : 'disabled'}>Descargar papel de trabajo (Excel)</button><span id="im-prog" class="text-slate-500"></span></div>
+        ${Cx ? '<p class="text-slate-500">Cruce hecho. Revisa los resultados en las hojas 2 a 5; si cambias una liquidación o sus nombres, vuelve a presionar el botón.</p>' : ''}</div>`;
+      const proc = unico + '<div id="im-proc" class="px-3 py-2 space-y-1"></div>';
       if (!L.length) return barra + proc + '<div class="border-t border-slate-100">' + pcHtmlAviso('AF', impEstado.cliente, impEstado.anio, impEstado.visita, 'import') + '</div>';
       const th = (t, c) => `<th class="px-2 py-1 border-b border-slate-200 whitespace-nowrap ${c || 'text-right'}">${t}</th>`;
       let h = barra + proc + `<div class="overflow-x-auto"><table class="w-full text-[11px] leading-tight border-collapse"><thead class="bg-slate-50 text-slate-600"><tr>${th('', 'w-6')}${th('Importación', 'text-left')}${th('Proveedor', 'text-left')}${th('Fecha', 'text-left')}${th('DAU', 'text-left')}${th('Ítems')}${th('FOB')}${th('Flete')}${th('Seguro')}${th('CIF')}${th('Arancel')}${th('FODINFA')}${th('IVA')}${th('Costo total producto')}${th('Costos indirectos')}${th('Valor en aduana DAI')}${th('Dif. CIF − DAI')}${th('Controles', 'text-center')}${th('', 'w-6')}</tr></thead><tbody>`;
@@ -17584,13 +17590,20 @@ ${(im.aprendidos || []).length ? `<p class="text-xs text-slate-600 bg-slate-50 b
     async function impCruzar() {
       const M = impEstado.mayor; if (!M) return;
       if (M.mapa.cod < 0 || M.mapa.debe < 0 || M.mapa.haber < 0) { alert('Falta indicar las columnas de código de cuenta, debe y haber.'); impEstado.verMapa = true; impRender(); return; }
-      const b = $im('im-cruzar'), pr = $im('im-prog'); b.disabled = true;
+      const b = $im('im-cruzar') || { disabled: false }, pr = $im('im-prog') || { textContent: '' }; b.disabled = true;
       try {
         const cruce = await impLeerMayor(M, impEstado.imports, (paso, p, n) => { pr.textContent = `Paso ${paso}: leyendo el mayor ${Math.round((p || 0) * 100)}%${n ? ' (' + Number(n).toLocaleString('en-US') + ' líneas)' : ''}…`; });
         impEstado.cruce = cruce; impEstado.aliasCambio = false; impGuardar('liquidaciones'); impSugerirRoles(); impReclasificar();
         impGuardar('cruce'); impGuardar('config'); impRender();
         const e = $im('im-prog'); if (e) e.textContent = `Listo: ${cruce.lineas.length} líneas y ${cruce.asientos.length} asientos de importaciones.${cruce.aprendio ? ' Se aprendieron nombres nuevos del mayor (ábrelos en la hoja 1).' : ''}${cruce.aviso ? ' ' + cruce.aviso : ''}`;
       } catch (e) { pr.textContent = ''; alert(e.message || e); b.disabled = false; }
+    }
+
+    async function impTodo() {
+      if (!impEstado.imports.length) { alert('Primero carga las liquidaciones.'); return; }
+      if (!impEstado.mayor) { alert('Primero elige el archivo del mayor contable.'); return; }
+      await impCruzar();
+      if (impEstado.cruce) { try { await impCargarMov(); } catch (e) {} impRender(); }
     }
 
     // ---------- 3. Diario contable ----------
