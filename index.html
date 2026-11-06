@@ -1095,7 +1095,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
           <label class="block text-xs font-semibold text-slate-600 mb-1">Buscar</label>
           <input type="text" id="pg-buscar" oninput="pintarProgramas()" placeholder="Palabra del procedimiento" class="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs sm:text-sm outline-none">
         </div>
-        <div class="flex items-end gap-2"><select id="pg-hoja" class="p-2 bg-white border border-slate-300 rounded-lg text-xs outline-none" title="Solo para la cuenta AA"><option value="">Hoja (solo AA)</option><option value="caja">Caja</option><option value="bancos">Bancos</option><option value="equivalentes">Equivalentes de efectivo</option></select><button type="button" onclick="agregarProcedimientoPlantilla()" class="px-3 py-2 rounded-lg text-xs transition bg-slate-100 text-slate-800 hover:bg-slate-200 font-medium">+ Agregar procedimiento</button></div>
+        <div class="flex items-end gap-2"><select id="pg-hoja" class="p-2 bg-white border border-slate-300 rounded-lg text-xs outline-none" title="Solo para la cuenta AA"><option value="">Hoja (solo AA)</option><option value="caja">Caja</option><option value="bancos">Bancos</option><option value="equivalentes">Equivalentes de efectivo</option><option value="venta">Inventario para la venta</option><option value="import">Importaciones (liquidaciones)</option></select><button type="button" onclick="agregarProcedimientoPlantilla()" class="px-3 py-2 rounded-lg text-xs transition bg-slate-100 text-slate-800 hover:bg-slate-200 font-medium">+ Agregar procedimiento</button></div>
       </div>
       <p id="pg-conteo" class="text-xs text-slate-500 min-h-[1rem]"></p>
       <div class="overflow-x-auto border border-slate-200 rounded-xl shadow-sm bg-white">
@@ -1491,7 +1491,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
               <input type="file" id="an-doc-archivos" multiple class="hidden" accept=".pdf,.png,.jpg,.jpeg,.webp,.gif" onchange="agregarArchivosDocAnexo(this.files)">
               <ul id="an-doc-lista" class="space-y-1"></ul>
               <div class="flex flex-wrap items-center gap-3">
-                <button type="button" id="an-doc-btn" onclick="extraerAnexoDesdeDocumentos()" class="px-4 py-2 rounded-lg text-xs transition disabled:opacity-60 disabled:cursor-not-allowed bg-slate-100 text-slate-800 hover:bg-slate-200 font-medium">Leer documentos y proponer inversiones</button>
+                <button type="button" id="an-doc-btn" onclick="navegarMenu('pedidos-claude')" class="px-4 py-2 rounded-lg text-xs transition bg-slate-100 text-slate-800 hover:bg-slate-200 font-medium">Pedir a Claude que lea los documentos (Pedidos Claude)</button>
                 <p id="an-doc-estado" class="text-xs text-slate-500 min-h-[1rem]"></p>
               </div>
               <div id="an-doc-revision" class="hidden space-y-2"></div>
@@ -1662,7 +1662,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
             <textarea id="an-criterio" data-min="140" rows="7" oninput="autoajustarTextarea(this)" placeholder="Describe el trabajo realizado, los hallazgos, los ajustes propuestos y el fundamento de tu conclusión..."
                       class="ta-respuesta w-full p-2.5 border border-slate-300 rounded-lg text-xs outline-none focus:ring-2 focus:ring-indigo-500 bg-white leading-relaxed text-slate-800 resize-none overflow-hidden" style="min-height:140px"></textarea>
             <div class="flex flex-wrap items-center gap-2 mt-2">
-              <button type="button" id="an-btn-mejorar" onclick="mejorarRedaccionCriterio()" class="px-3 py-1.5 rounded-lg text-[11px] transition disabled:opacity-60 disabled:cursor-not-allowed bg-slate-100 text-slate-800 hover:bg-slate-200 font-medium">Mejorar redacción con Claude</button>
+              <button type="button" id="an-btn-mejorar" onclick="mejorarRedaccionCriterio()" class="hidden px-3 py-1.5 rounded-lg text-[11px] transition disabled:opacity-60 disabled:cursor-not-allowed bg-slate-100 text-slate-800 hover:bg-slate-200 font-medium">Mejorar redacción con Claude</button>
               <span id="an-mejorar-estado" class="text-[11px] text-slate-500"></span>
             </div>
             <div id="an-mejorar-panel" class="hidden mt-2 border border-indigo-300 bg-indigo-50/40 rounded-lg p-3 space-y-2">
@@ -1752,8 +1752,8 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
                           class="w-full p-2.5 border border-slate-300 rounded-lg text-xs outline-none focus:ring-2 focus:ring-indigo-500 bg-white leading-relaxed text-slate-800 resize-none"></textarea>
               </div>
 
-              <button id="an-btn-analizar" onclick="generarAnalisisCuenta()" class="w-full py-2.5 rounded-lg text-xs transition disabled:opacity-60 disabled:cursor-not-allowed bg-slate-200 text-slate-900 hover:bg-slate-300 font-semibold">
-                Analizar con Claude
+              <button id="an-btn-analizar" type="button" onclick="navegarMenu('pedidos-claude')" class="w-full py-2.5 rounded-lg text-xs transition bg-slate-200 text-slate-900 hover:bg-slate-300 font-semibold">
+                Pedir el análisis a Claude (Pedidos Claude)
               </button>
               <p id="an-estado" class="text-xs text-slate-500 min-h-[1rem]"></p>
               <p class="text-[11px] text-slate-400 leading-relaxed">Los archivos se envían a Claude (Anthropic) solo para generar el análisis. Confirma que la política de confidencialidad con tu cliente lo permite.</p>
@@ -2172,6 +2172,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
           <button type="button" id="im-tab-cruce" onclick="impTab('cruce')" class="px-3 py-1.5 text-xs transition rounded-lg">2. Cruce con mayor</button>
           <button type="button" id="im-tab-diario" onclick="impTab('diario')" class="px-3 py-1.5 text-xs transition rounded-lg">3. Diario contable</button>
           <button type="button" id="im-tab-hall" onclick="impTab('hall')" class="px-3 py-1.5 text-xs transition rounded-lg">4. Hallazgos</button>
+          <button type="button" id="im-tab-ent" onclick="impTab('ent')" class="px-3 py-1.5 text-xs transition rounded-lg">5. Entradas del mayor vs liquidaciones</button>
           <button type="button" id="im-descargar" onclick="impDescargar()" class="hidden ml-auto px-3 py-1.5 rounded-lg text-xs bg-slate-100 text-slate-800 hover:bg-slate-200 font-medium transition">Descargar todo (Excel)</button>
         </div>
         <div id="im-panel" class="border border-slate-200 rounded-xl overflow-auto max-h-[78vh]"></div>
@@ -4450,14 +4451,14 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       if (!v('pc-anio')) return err('Elige el año a evaluar.');
       if (!v('pc-sumaria')) return err('Elige la cuenta (sumaria).');
       if (PC_HOJAS_SUM[v('pc-sumaria')] && !v('pc-hoja')) return err('Elige la hoja de la cuenta ' + v('pc-sumaria') + '.');
-      if (v('pc-sumaria') === 'AF' && !v('pc-ctas-inv').trim()) return err('Indica los códigos de las cuentas del inventario para la venta.');
+      if (v('pc-sumaria') === 'AF' && v('pc-hoja') === 'venta' && !v('pc-ctas-inv').trim()) return err('Indica los códigos de las cuentas del inventario para la venta.');
       const archivos = [...pcArchivosSel];
       if (!archivos.length) return err('Sube al menos un archivo con la documentación.');
       const grande = archivos.find(f => f.size > 209715200); if (grande) return err('El archivo "' + grande.name + '" supera los 200 MB. Sube una versión resumida o filtrada a lo que se va a analizar.');
       if (archivos.some((f, i) => !pcEtiquetasElegidas[i])) return err('Elige el tipo de cada archivo (conciliación, estado de cuenta, etc.).');
       if (!document.getElementById('pc-confirma').checked) return err('Marca la confirmación de que la documentación es completa y adecuada.');
       if (confirmado !== true) { pcResumenAntesDeEnviar(archivos); return; }
-      const fila = { cliente_id: v('pc-cliente'), anio: Number(v('pc-anio')), visita: v('pc-visita') || 'final', sumaria: v('pc-sumaria'), hoja: PC_HOJAS_SUM[v('pc-sumaria')] ? v('pc-hoja') : null, carpeta: null, nota: ((v('pc-sumaria') === 'AF' && v('pc-ctas-inv').trim() ? 'CUENTAS DE INVENTARIO PARA LA VENTA (elegidas por el auditor): ' + v('pc-ctas-inv').trim() + '. ' : '') + (v('pc-nota') || '')).trim() || null, doc_confirmada_por: nombreUsuarioActivo(), doc_confirmada_at: new Date().toISOString(), solicitado_por: nombreUsuarioActivo(), solicitado_email: usuarioActivo.email || null };
+      const fila = { cliente_id: v('pc-cliente'), anio: Number(v('pc-anio')), visita: v('pc-visita') || 'final', sumaria: v('pc-sumaria'), hoja: PC_HOJAS_SUM[v('pc-sumaria')] ? v('pc-hoja') : null, carpeta: null, nota: ((v('pc-sumaria') === 'AF' && v('pc-hoja') === 'venta' && v('pc-ctas-inv').trim() ? 'CUENTAS DE INVENTARIO PARA LA VENTA (elegidas por el auditor): ' + v('pc-ctas-inv').trim() + '. ' : '') + (v('pc-nota') || '')).trim() || null, doc_confirmada_por: nombreUsuarioActivo(), doc_confirmada_at: new Date().toISOString(), solicitado_por: nombreUsuarioActivo(), solicitado_email: usuarioActivo.email || null };
       const { data: ins, error } = await supabaseClient.from('pedidos_claude').insert([fila]).select('id').single();
       if (error) return err('No se pudo enviar: ' + (error.message || error));
       msg.textContent = 'Subiendo ' + archivos.length + ' archivo(s)…'; msg.className = 'text-[11px] min-h-[1rem] text-slate-500';
@@ -4501,14 +4502,15 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       'AA:caja': ['Acta de arqueo de caja', 'Detalle de fondos y caja chica', 'Documento de soporte', 'Otro'],
       'AA:equivalentes': ['Certificado o póliza de inversión', 'Estado de cuenta', 'Confirmación de la institución', 'Detalle de equivalentes de efectivo', 'Otro'],
       'AF:venta': ['Mayor contable completo', 'Mayor contable de inventarios', 'Balance de comprobación', 'Otro'],
+      'AF:import': ['Liquidación de importación (PDF)', 'Liquidación de importación (Excel)', 'Declaración aduanera (DAI / DAU)', 'Factura del proveedor', 'Mayor contable completo', 'Otro'],
       AOO: ['Contrato', 'Adenda o renovación', 'Evaluación NIIF 16', 'Factura o soporte de pagos', 'Otro'],
       PCC: ['Contrato', 'Adenda o renovación', 'Evaluación NIIF 16', 'Factura o soporte de pagos', 'Otro'],
       PLL: ['Contrato', 'Adenda o renovación', 'Evaluación NIIF 16', 'Factura o soporte de pagos', 'Otro'],
       AB: ['Certificado o póliza de inversión', 'Estado de cuenta', 'Confirmación bancaria', 'Detalle o anexo de inversiones', 'Otro'],
       AS: ['Certificado o póliza de inversión', 'Estado de cuenta', 'Confirmación bancaria', 'Detalle o anexo de inversiones', 'Otro']
     };
-    const PC_HOJAS = { caja: 'Caja', bancos: 'Bancos', equivalentes: 'Equivalentes de efectivo', venta: 'Inventario para la venta' };
-    const PC_HOJAS_SUM = { AA: [['caja', 'Caja'], ['bancos', 'Bancos'], ['equivalentes', 'Equivalentes de efectivo']], AF: [['venta', 'Inventario para la venta']] };
+    const PC_HOJAS = { caja: 'Caja', bancos: 'Bancos', equivalentes: 'Equivalentes de efectivo', venta: 'Inventario para la venta', import: 'Importaciones (liquidaciones)' };
+    const PC_HOJAS_SUM = { AA: [['caja', 'Caja'], ['bancos', 'Bancos'], ['equivalentes', 'Equivalentes de efectivo']], AF: [['venta', 'Inventario para la venta'], ['import', 'Importaciones (liquidaciones)']] };
     function pcNombreHoja(h) { return PC_HOJAS[h] || h || ''; }
     const PC_TODO = 'Todo en un archivo (todos los documentos juntos)';
     function pcEtiquetas(sumaria, hoja) {
@@ -4519,7 +4521,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
     function pcCambioCuenta() {
       const caja = document.getElementById('pc-hoja-caja'), sum = valorAnalisis('pc-sumaria'), esAA = !!PC_HOJAS_SUM[sum];
       if (caja) caja.classList.toggle('hidden', !esAA);
-      const cc = document.getElementById('pc-ctas-caja'); if (cc) cc.classList.toggle('hidden', sum !== 'AF');
+      const cc = document.getElementById('pc-ctas-caja'); if (cc) cc.classList.toggle('hidden', !(sum === 'AF' && valorAnalisis('pc-hoja') === 'venta'));
       const h = document.getElementById('pc-hoja');
       if (h) {
         if (esAA) {
@@ -4548,6 +4550,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       const r = reglas.find(x => x[0].test(nombre) && et.includes(x[1])); return r ? r[1] : '';
     }
     function pcArchivosElegidos() {
+      { const cc2 = document.getElementById('pc-ctas-caja'); if (cc2) cc2.classList.toggle('hidden', !(valorAnalisis('pc-sumaria') === 'AF' && valorAnalisis('pc-hoja') === 'venta')); }
       const fs = pcArchivosSel, et = pcEtiquetas(valorAnalisis('pc-sumaria'), valorAnalisis('pc-hoja')), prev = pcEtiquetasElegidas;
       pcEtiquetasElegidas = fs.map((f, i) => (et.includes(prev[i]) ? prev[i] : pcEtiquetaSugerida(f.name, et)));
       const lista = document.getElementById('pc-lista-arch');
@@ -5147,7 +5150,9 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       if (r) r.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
 
+    const SIN_API = 'Esta función ya no usa la conexión directa con Claude. Pídele el trabajo a Claude desde Pedidos Claude.';
     async function generarAnalisisCuenta() {
+      alert(SIN_API); return;
       const cliente = valorAnalisis('an-cliente');
       const anio = valorAnalisis('an-anio');
       const cuenta = analisisEstado.cuenta;
@@ -5359,6 +5364,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
     }
 
     async function mejorarRedaccionCriterio() {
+      alert(SIN_API); return;
       const cliente = valorAnalisis('an-cliente');
       const anio = valorAnalisis('an-anio');
       const cuenta = analisisEstado.cuenta;
@@ -5922,6 +5928,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
     }
 
     async function extraerAnexoDesdeDocumentos() {
+      alert(SIN_API); return;
       const cliente = valorAnalisis('an-cliente'), anio = valorAnalisis('an-anio');
       const estado = document.getElementById('an-doc-estado');
       const boton = document.getElementById('an-doc-btn');
@@ -14599,7 +14606,7 @@ ${cont.innerHTML}
       return '<div class="space-y-3 not-italic" style="text-align:left"><p class="text-[11px] text-slate-500">Conclusión del auditor responsable. El análisis de Claude es solo un apoyo y no reemplaza este criterio. Lo que marques aquí aparece en el resumen de To/Do, Quick Lett y Opinión del menú.</p>' +
         '<div><label class="block text-xs font-bold text-slate-600 mb-1">Conclusión (marca una o varias)</label><div class="border border-slate-300 rounded-lg bg-white p-1.5 space-y-0.5 shadow-xs">' + lista + '</div></div>' +
         '<div><label class="block text-xs font-bold text-slate-600 mb-1">Criterio y fundamento</label><textarea id="cb-crit" rows="7" oninput="cbCritEscribe(this)" placeholder="Describe el trabajo realizado, los hallazgos, los ajustes propuestos y el fundamento de tu conclusión..." class="w-full p-2.5 border border-slate-300 rounded-lg text-xs outline-none focus:ring-2 focus:ring-indigo-500 bg-white leading-relaxed text-slate-800" style="min-height:140px;background:#fff">' + escapeHtml(D.criterio) + '</textarea>' +
-        '<div class="flex flex-wrap items-center gap-2 mt-2"><button type="button" id="cb-btn-mejorar" onclick="cbRedMejorar()" class="' + BTN + '">Mejorar redacción con Claude</button><span id="cb-red-msg" class="text-[11px] text-slate-500">' + escapeHtml(D.msg || '') + '</span></div>' + prop +
+        '<div class="flex flex-wrap items-center gap-2 mt-2"><button type="button" id="cb-btn-mejorar" onclick="cbRedMejorar()" class="hidden ' + BTN + '">Mejorar redacción con Claude</button><span id="cb-red-msg" class="text-[11px] text-slate-500">' + escapeHtml(D.msg || '') + '</span></div>' + prop +
         (D.original !== null ? '<div class="mt-2"><button type="button" onclick="cbRedVolver()" class="' + BTN2 + '">Volver a mi texto original</button><span class="text-[11px] text-slate-500 ml-1">Recuerda pulsar "Guardar criterio final" para conservar el cambio.</span></div>' : '') + '</div>' +
         '<div class="space-y-2"><label class="block text-xs font-bold text-slate-600">Asiento de ajuste propuesto (Debe / Haber)</label><div class="border border-slate-300 rounded-lg bg-white overflow-x-auto"><table class="w-full text-xs border-collapse min-w-[520px]"><thead><tr class="bg-slate-50 text-slate-600 text-left"><th class="p-2 border-b border-slate-200">Cuenta contable</th><th class="p-2 border-b border-slate-200 text-right w-[22%]">Debe</th><th class="p-2 border-b border-slate-200 text-right w-[22%]">Haber</th><th class="p-2 border-b border-slate-200 w-[10%]"></th></tr></thead><tbody>' + filas + '</tbody><tfoot id="cb-as-tot"></tfoot></table></div>' +
         '<div class="flex flex-wrap items-center justify-between gap-2"><button type="button" onclick="cbAsAgregar()" class="px-2.5 py-1 bg-white text-slate-700 hover:bg-slate-50 border border-slate-400 rounded text-[11px] font-bold transition">+ Agregar línea</button><p id="cb-as-cuadre" class="text-[11px] font-bold"></p></div>' +
@@ -14660,6 +14667,7 @@ ${cont.innerHTML}
       D.criterio = t; D.original = null; D.prop = null; D.msg = ''; cbRenderConScroll();
     }
     async function cbRedMejorar() {
+      alert(SIN_API); return;
       const D = cbDr(), texto = ($cb('cb-crit') ? $cb('cb-crit').value : D.criterio).trim(); D.criterio = texto;
       if (!cbE.cliente || !cbE.anio) { alert('Primero selecciona el cliente y el año.'); return; }
       if (!texto) { alert('Primero escribe el criterio y fundamento; luego Claude mejora la redacción.'); return; }
@@ -16803,6 +16811,7 @@ ${cont.innerHTML}
     function impBase64(buf) { return new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res(String(fr.result).split(',')[1] || ''); fr.onerror = () => rej(fr.error); fr.readAsDataURL(new Blob([buf], { type: 'application/pdf' })); }); }
 
     async function impLlamar(body, intentos) {
+      throw new Error(SIN_API);
       let ult = null;
       for (let i = 0; i < (intentos || 2); i++) {
         try {
@@ -17176,19 +17185,24 @@ ${cont.innerHTML}
       const t = $im('im-titulo'), st = $im('im-subtitulo'), nom = (IV_HOJAS.find(x => x[0] === ivE.hoja) || [])[1] || '';
       if (t) t.textContent = '2. Inventarios – ' + nom;
       if (st) st.textContent = ivE.hoja === 'import' ? 'Pasa las liquidaciones de importación (PDF o Excel) a una tabla con controles automáticos y las cruza con el mayor contable del cliente: asientos, fechas, conceptos y hallazgos'
-        : ivE.hoja === 'venta' ? 'Inventario para la venta: movimiento del inventario y cruces con importaciones, compras, salidas y costo de ventas'
+        : ivE.hoja === 'venta' ? (ivE.btn === 'impcompras' ? 'Compras/Liquidaciones de importación contra las entradas del mayor contable: sube liquidaciones (PDF, ZIP, Excel) y el mayor; la pestaña 5 las cruza con el Movimiento del inventario' : 'Inventario para la venta: movimiento del inventario y cruces con importaciones, compras, salidas y costo de ventas')
         : ivE.hoja === 'materia' ? 'Materia prima (hoja en desarrollo)' : 'Producción en proceso (hoja en desarrollo)';
-      const otras = $im('im-otras'), esp = $im('im-espacio'), av = $im('im-aviso'), imp = ivE.hoja === 'import';
+      const otras = $im('im-otras'), esp = $im('im-espacio'), av = $im('im-aviso'), imp = ivE.hoja === 'import', emb = ivE.hoja === 'venta' && ivE.btn === 'impcompras';
       if (otras) {
         otras.classList.toggle('hidden', imp);
         if (!imp) {
           if (ivE.hoja === 'venta') otras.innerHTML = '<div class="flex flex-wrap gap-1 p-1.5 bg-white border border-slate-200 rounded-2xl">' + IV_VENTA_BOTONES.map(([k, n]) => '<button type="button" onclick="ivIrBoton(\'' + k + '\')" class="px-3 py-1.5 text-xs transition rounded-lg ' + (ivE.btn === k ? 'bg-slate-200 text-slate-900 font-semibold' : 'text-slate-600 hover:bg-slate-100') + '">' + n + '</button>').join('') + '</div>' +
-            (ivE.btn === 'mov' ? '<div id="mv-cont" class="mt-3"></div>' : '<div class="border border-dashed border-slate-300 rounded-xl p-8 mt-3 text-center text-sm text-slate-500"><div class="font-bold text-slate-700 mb-1">' + escapeHtml((IV_VENTA_BOTONES.find(x => x[0] === ivE.btn) || [])[1] || '') + '</div>Esta herramienta está en desarrollo. La iremos construyendo en los siguientes pasos.</div>');
+            (ivE.btn === 'mov' ? '<div id="mv-cont" class="mt-3"></div>' : emb ? '<div class="mt-2 text-[11px] text-slate-500">Sube las liquidaciones de importación (PDF, ZIP o Excel) en la pestaña 1 y el mayor contable en la pestaña 2; la pestaña 5 las cruza con las entradas del Movimiento del inventario.</div>' : '<div class="border border-dashed border-slate-300 rounded-xl p-8 mt-3 text-center text-sm text-slate-500"><div class="font-bold text-slate-700 mb-1">' + escapeHtml((IV_VENTA_BOTONES.find(x => x[0] === ivE.btn) || [])[1] || '') + '</div>Esta herramienta está en desarrollo. La iremos construyendo en los siguientes pasos.</div>');
           else otras.innerHTML = '<div class="border border-dashed border-slate-300 rounded-xl p-8 text-center text-sm text-slate-500"><div class="font-bold text-slate-700 mb-1">' + escapeHtml(nom) + '</div>Esta hoja está en desarrollo.</div>';
         }
       }
-      if (imp) { if (av && esp) { const hay = !!$im('im-cliente').value; av.classList.toggle('hidden', hay); esp.classList.toggle('hidden', !hay); } }
-      else { if (av) av.classList.add('hidden'); if (esp) esp.classList.add('hidden'); }
+      if (imp || emb) { if (av && esp) { const hay = !!$im('im-cliente').value; av.classList.toggle('hidden', hay); esp.classList.toggle('hidden', !hay); } }
+      if (emb) {
+        const cli = $im('im-cliente').value, an = $im('im-anio').value, vi = $im('im-visita').value;
+        if (cli && !impEstado.cargando && (!impEstado.cargado || impEstado.cliente !== cli || impEstado.anio !== an || impEstado.visita !== vi)) impCargar();
+        else if (cli && impEstado.cargado) { if (impEstado.tab === 'ent' || true) impRender(); }
+      }
+      else if (!emb) { if (av) av.classList.add('hidden'); if (esp) esp.classList.add('hidden'); }
       if (!imp && ivE.hoja === 'venta' && ivE.btn === 'mov') { const hayCambio = mvE.cliente !== $im('im-cliente').value || mvE.anio !== $im('im-anio').value || mvE.visita !== $im('im-visita').value; if (hayCambio || !mvE.cargado) mvCargar(); else mvPintar(); }
     }
 
@@ -17309,7 +17323,7 @@ ${cont.innerHTML}
     }
     async function impCargar() {
       const cli = $im('im-cliente').value, anio = $im('im-anio').value, vis = $im('im-visita').value;
-      Object.assign(impEstado, { cliente: cli, anio, visita: vis, imports: [], cruce: null, cl: null, abierta: null, mayor: null, proc: [], aliasCambio: false, cfg: { roles: {}, tol: 1, corte: '', kw: {}, resp: '' }, hall: { notas: {}, manuales: [] }, tmp: {} });
+      Object.assign(impEstado, { cliente: cli, anio, visita: vis, cargado: false, cargando: !!cli, mov: null, imports: [], cruce: null, cl: null, abierta: null, mayor: null, proc: [], aliasCambio: false, cfg: { roles: {}, tol: 1, corte: '', kw: {}, resp: '' }, hall: { notas: {}, manuales: [] }, tmp: {} });
       const aviso = $im('im-aviso'), esp = $im('im-espacio');
       if (!cli) { aviso.classList.remove('hidden'); esp.classList.add('hidden'); $im('im-descargar').classList.add('hidden'); impSyncCabecera(); ivPintarHojas(); return; }
       aviso.classList.add('hidden'); esp.classList.remove('hidden'); $im('im-descargar').classList.remove('hidden');
@@ -17326,6 +17340,7 @@ ${cont.innerHTML}
         impEstado.act = { por: data.actualizado_por, en: data.updated_at };
       } else impEstado.act = null;
       if (!impEstado.cfg.corte) impEstado.cfg.corte = (vis === 'final' ? anio + '-12-31' : anio + '-09-30');
+      impEstado.cargando = false; impEstado.cargado = true;
       impReclasificar(); impSyncCabecera(); impRender(); ivPintarHojas();
     }
     function impSyncCabecera() {
@@ -17349,12 +17364,12 @@ ${cont.innerHTML}
         if (error) impMsg('No se guardó: ' + (error.message || error), 'text-red-600 font-bold'); else { impMsg('Guardado ✓'); impEstado.act = { por: fila.actualizado_por, en: fila.updated_at }; impSyncCabecera(); }
       }, 700);
     }
-    const IMP_TABS = [['liq', '1. Liquidaciones'], ['cruce', '2. Cruce con mayor'], ['diario', '3. Diario contable'], ['hall', '4. Hallazgos']];
+    const IMP_TABS = [['liq', '1. Liquidaciones'], ['cruce', '2. Cruce con mayor'], ['diario', '3. Diario contable'], ['hall', '4. Hallazgos'], ['ent', '5. Entradas del mayor vs liquidaciones']];
     function impTab(t) { impEstado.tab = t; impRender(); }
     function impRender() {
       IMP_TABS.forEach(([t]) => { const b = $im('im-tab-' + t); if (b) b.className = 'px-3 py-1.5 text-xs transition rounded-lg ' + (impEstado.tab === t ? 'bg-slate-200 text-slate-900 font-semibold' : 'text-slate-600 hover:bg-slate-100 font-medium'); });
       const p = $im('im-panel'); if (!p) return;
-      p.innerHTML = impEstado.tab === 'liq' ? impHtmlLiq() : impEstado.tab === 'cruce' ? impHtmlCruce() : impEstado.tab === 'diario' ? impHtmlDiario() : impHtmlHall();
+      p.innerHTML = impEstado.tab === 'liq' ? impHtmlLiq() : impEstado.tab === 'cruce' ? impHtmlCruce() : impEstado.tab === 'diario' ? impHtmlDiario() : impEstado.tab === 'ent' ? impHtmlEntradas() : impHtmlHall();
       if (impEstado.tab === 'liq') { impPintarProc(); }
       impFlechas();
     }
@@ -17380,11 +17395,11 @@ ${cont.innerHTML}
     function impHtmlLiq() {
       const L = impEstado.imports;
       const barra = `<div class="flex flex-wrap items-center gap-2 px-2 py-2 border-b border-slate-200">
-        <label class="${impBtnP} cursor-pointer">Subir liquidaciones (PDF o ZIP)<input type="file" accept=".pdf,.zip" multiple class="hidden" onchange="impSubirPdf(this)"></label>
+        <button type="button" onclick="pcIrAPedido('AF', impEstado.cliente, impEstado.anio, impEstado.visita, 'import')" class="${impBtnP}" title="Claude lee los PDF y deja la tabla armada aquí">Pedir a Claude que lea las liquidaciones (PDF)</button>
         <label class="${impBtn} cursor-pointer">Subir Excel de liquidación<input type="file" accept=".xlsx,.xls" multiple class="hidden" onchange="impSubirExcel(this)"></label>
         ${L.length ? `<button type="button" onclick="impRegenerarNombres()" class="${impBtn}" title="Vuelve a armar el código y los nombres de cada importación a partir del nombre del archivo y del proveedor">Regenerar nombres</button>` : ''}<span class="text-[11px] text-slate-500">Si el cliente entrega el Excel original de la liquidación, es la forma más exacta.</span></div>`;
       const proc = '<div id="im-proc" class="px-3 py-2 space-y-1"></div>';
-      if (!L.length) return barra + proc + '<p class="p-6 text-xs text-slate-400 text-center">Todavía no hay liquidaciones. Sube los PDF de las importaciones (uno por importación, o un ZIP con todos) o el Excel de la liquidación.</p>';
+      if (!L.length) return barra + proc + '<div class="border-t border-slate-100">' + pcHtmlAviso('AF', impEstado.cliente, impEstado.anio, impEstado.visita, 'import') + '</div>';
       const th = (t, c) => `<th class="px-2 py-1 border-b border-slate-200 whitespace-nowrap ${c || 'text-right'}">${t}</th>`;
       let h = barra + proc + `<div class="overflow-x-auto"><table class="w-full text-[11px] leading-tight border-collapse"><thead class="bg-slate-50 text-slate-600"><tr>${th('', 'w-6')}${th('Importación', 'text-left')}${th('Proveedor', 'text-left')}${th('Fecha', 'text-left')}${th('DAU', 'text-left')}${th('Ítems')}${th('FOB')}${th('Flete')}${th('Seguro')}${th('CIF')}${th('Arancel')}${th('FODINFA')}${th('IVA')}${th('Costo total producto')}${th('Costos indirectos')}${th('Valor en aduana DAI')}${th('Dif. CIF − DAI')}${th('Controles', 'text-center')}${th('', 'w-6')}</tr></thead><tbody>`;
       const tot = { fob: 0, flete: 0, seguro: 0, cif: 0, arancel: 0, fodinfa: 0, iva: 0, costo: 0, ind: 0, n: 0 };
@@ -17604,7 +17619,7 @@ ${(im.aprendidos || []).length ? `<p class="text-xs text-slate-600 bg-slate-50 b
     function impHtmlHall() {
       if (!impEstado.cl) return '<p class="p-6 text-xs text-slate-400 text-center">Los hallazgos se arman al cruzar con el mayor (hoja 2).</p>';
       const H = impListaHall(), sevCls = { alta: 'text-red-600', media: 'text-slate-800', info: 'text-slate-500' }, sevTxt = { alta: 'Alta', media: 'Media', info: 'Informativo' };
-      let h = `<div class="p-3 space-y-3 text-xs text-slate-700"><div class="flex flex-wrap items-center gap-2"><button type="button" id="im-redactar" onclick="impRedactar()" class="${impBtnP}">Redactar con Claude</button><button type="button" onclick="impNuevoHall()" class="${impBtn}">+ Añadir hallazgo propio</button><span class="text-slate-500">Los hallazgos salen de reglas programadas con las cifras del cruce. Claude solo ayuda a redactarlos (condición, criterio y recomendación); puedes editar el texto.</span></div>`;
+      let h = `<div class="p-3 space-y-3 text-xs text-slate-700"><div class="flex flex-wrap items-center gap-2"><button type="button" id="im-redactar" onclick="impRedactar()" class="hidden ${impBtnP}">Redactar con Claude</button><button type="button" onclick="impNuevoHall()" class="${impBtn}">+ Añadir hallazgo propio</button><span class="text-slate-500">Los hallazgos salen de reglas programadas con las cifras del cruce. Puedes editar el texto de cada uno.</span></div>`;
       if (!H.length) h += '<p class="text-slate-500">No se detectaron hallazgos con las reglas actuales.</p>';
       H.forEach(x => {
         h += `<div class="p-4 bg-white border border-slate-200 rounded-xl space-y-2"><div class="flex flex-wrap items-baseline gap-2"><span class="font-semibold ${sevCls[x.sev] || ''}">${sevTxt[x.sev] || ''}</span><span class="text-[13px] font-semibold text-slate-800">${impE(x.titulo)}</span>${x.monto ? `<span class="text-slate-500">· ${impF(x.monto)}</span>` : ''}${x.manual ? `<button type="button" onclick="impQuitarHall('${impE(x.id)}')" class="ml-auto text-red-500 font-bold" title="Quitar">✕</button>` : ''}</div>
@@ -17617,6 +17632,7 @@ ${(im.aprendidos || []).length ? `<p class="text-xs text-slate-600 bg-slate-50 b
     function impNuevoHall() { const t = prompt('Título del hallazgo:'); if (!t) return; impEstado.hall.manuales.push({ id: 'm_' + Date.now(), sev: 'media', titulo: t.trim(), detalle: '', monto: null, refs: [] }); impGuardar('hallazgos'); impRender(); }
     function impQuitarHall(id) { impEstado.hall.manuales = impEstado.hall.manuales.filter(x => x.id !== id); delete impEstado.hall.notas[id]; impGuardar('hallazgos'); impRender(); }
     async function impRedactar() {
+      alert(SIN_API); return;
       const H = impListaHall(); if (!H.length) return;
       const b = $im('im-redactar'); b.disabled = true; b.textContent = 'Claude está redactando…';
       try {
@@ -17627,6 +17643,81 @@ ${(im.aprendidos || []).length ? `<p class="text-xs text-slate-600 bg-slate-50 b
     }
 
     // ---------- Excel ----------
+    // ===== Pestaña 5: entradas del mayor (columna "Compras/Importaciones (entradas)" del Movimiento del inventario) contra las liquidaciones =====
+    async function impCargarMov() {
+      const cli = impEstado.cliente, anio = impEstado.anio, vis = impEstado.visita, llave = cli + '|' + anio + '|' + vis;
+      if (!cli || (impEstado.mov && impEstado.mov.llave === llave)) return;
+      impEstado.mov = { llave, cargando: true, cuentas: [], hay: false };
+      const { data, error } = await supabaseClient.from('inventario_movimiento').select('cuentas, updated_at, actualizado_por').eq('cliente_id', cli).eq('anio', Number(anio)).eq('visita', vis).eq('hoja', 'venta').maybeSingle();
+      if (!impEstado.mov || impEstado.mov.llave !== llave) return;
+      impEstado.mov = { llave, cargando: false, cuentas: (!error && data && Array.isArray(data.cuentas)) ? data.cuentas : [], hay: !!(data && !error), error: error ? (error.message || String(error)) : '', act: data ? { por: data.actualizado_por, en: data.updated_at } : null };
+      if (impEstado.tab === 'ent') impRender();
+    }
+    function impTipoEntrada(desc) {
+      const d = String(desc || '');
+      if (/dev\.? en ventas|devoluci/i.test(d)) return 'Devolución en ventas';
+      if (/transferencia entre bodegas/i.test(d)) return 'Transferencia entre bodegas';
+      if (/import/i.test(d)) return 'Importación sin liquidación identificada';
+      if (/\bOC\b|orden de compra|compra|guandy|proveedor/i.test(d)) return 'Compra local / producción';
+      if (/reversi|ord\.? ?prod/i.test(d)) return 'Orden de producción';
+      return 'Otras entradas';
+    }
+    function impEntradasCalc() {
+      const M = impEstado.mov; if (!M || M.cargando) return null;
+      const L = impEstado.imports, comp = impCompilarAlias(L), tol = Number(impEstado.cfg.tol) >= 0 ? Number(impEstado.cfg.tol) : 1;
+      const filas = [];
+      (M.cuentas || []).forEach(c => (Array.isArray(c.partidas) ? c.partidas : []).forEach(p => {
+        if (!p || p.col !== 'compras') return;
+        const ids = comp ? impBuscarIds(comp, p.desc).filter(id => L.some(im => im.id === id)) : [];
+        filas.push({ cta: (c.codigo ? c.codigo + ' ' : '') + (c.cuenta || ''), cod: c.codigo || '', fecha: p.fecha || '', ref: p.ref || '', desc: p.desc || '', valor: impR2(Number(p.valor) || 0), ids, tipo: ids.length === 1 ? 'Importación' : ids.length > 1 ? 'Varias importaciones' : impTipoEntrada(p.desc), antes: p.antes || '' });
+      }));
+      const porImp = L.map(im => {
+        const mias = filas.filter(f => f.ids.length === 1 && f.ids[0] === im.id), comp2 = filas.filter(f => f.ids.length > 1 && f.ids.includes(im.id));
+        const liq = impR2(impValoresLiq(im).costo || 0), may = impR2(mias.reduce((t, f) => t + f.valor, 0)), dif = impR2(liq - may), cmp = impR2(comp2.reduce((t, f) => t + f.valor, 0));
+        let est = 'Cuadra'; if (Math.abs(dif) > tol) est = !mias.length && !comp2.length ? 'Sin entrada en el mayor' : 'Revisar';
+        if (!liq && !may) est = 'N/A';
+        const corte = impEstado.cfg.corte, nota = [];
+        if (est !== 'Cuadra' && est !== 'N/A') { if (!mias.length && im.fecha && corte && im.fecha > corte) nota.push('La importación es posterior al corte.'); if (cmp) nota.push('Hay entradas que nombran varias importaciones (' + formatoNumeroAnexo(cmp) + '), no se asignan.'); if (mias.length && dif > 0) nota.push('El mayor registra menos que la liquidación.'); if (mias.length && dif < 0) nota.push('El mayor registra más que la liquidación.'); }
+        return { id: im.id, proveedor: im.proveedor || '', fecha: im.fecha || '', liq, may, dif, cmp, n: mias.length, est, nota: nota.join(' ') };
+      });
+      const tot = impR2(filas.reduce((t, f) => t + f.valor, 0));
+      const tipos = {}; filas.forEach(f => { const t = tipos[f.tipo] = tipos[f.tipo] || { n: 0, v: 0 }; t.n++; t.v = impR2(t.v + f.valor); });
+      return { filas, porImp, tot, tipos, tol };
+    }
+    function impHtmlEntradas() {
+      const M = impEstado.mov, CELL = 'px-2 py-1';
+      if (!impEstado.cliente) return '<p class="p-4 text-xs text-slate-500">Selecciona el cliente.</p>';
+      if (!M || (M.llave !== impEstado.cliente + '|' + impEstado.anio + '|' + impEstado.visita)) { setTimeout(impCargarMov, 0); return '<p class="p-4 text-xs text-slate-500">Cargando las entradas del mayor…</p>'; }
+      if (M.cargando) return '<p class="p-4 text-xs text-slate-500">Cargando las entradas del mayor…</p>';
+      if (M.error) return '<p class="p-4 text-xs text-red-600 font-bold">No se pudo cargar el movimiento: ' + impE(M.error) + '</p>';
+      const R = impEntradasCalc();
+      if (!R || !R.filas.length) return '<div class="p-4 text-xs text-slate-600 space-y-1"><p class="font-bold text-slate-800">Todavía no hay entradas del mayor para cruzar.</p><p>Las entradas salen del botón <b>i) Movimiento del inventario</b> (columna Compras/Importaciones (entradas)). Pide ese movimiento a Claude con el mayor contable y las cuentas de inventario, y vuelve aquí.</p></div>';
+      const filtro = impEstado.entF || '__todos__';
+      const th = 'px-2 py-1.5 text-[11px] font-bold text-slate-700 bg-slate-100 border-b border-slate-300';
+      const pill = e => '<span class="' + (e === 'Cuadra' ? 'text-emerald-700' : e === 'N/A' ? 'text-slate-500' : 'text-red-600') + ' font-bold">' + impE(e) + '</span>';
+      let h = '<div class="p-3 space-y-4 text-xs text-slate-700">';
+      h += '<p class="text-[11px] text-slate-500">Las entradas son las partidas de la columna <b>Compras/Importaciones (entradas)</b> del Movimiento del inventario (' + (M.cuentas || []).length + ' cuentas, incluidas las reclasificaciones que se hayan hecho allí). Cada entrada se liga a una liquidación por el código que aparece en su descripción (los alias se corrigen en la pestaña 1). La comparación usa el <b>costo total del producto</b> de cada liquidación.</p>';
+      if (!L_hay()) h += '<p class="text-[11px] text-amber-700 font-bold">Aún no hay liquidaciones cargadas: sube los PDF o Excel en la pestaña 1 para poder cruzarlas.</p>';
+      // Resumen por liquidación
+      if (R.porImp.length) {
+        h += '<div><div class="font-bold text-slate-800 mb-1">A. Cada liquidación contra sus entradas en el mayor</div><div class="overflow-x-auto border border-slate-200 rounded-lg"><table class="w-full text-[11px] border-collapse min-w-[860px]"><thead><tr><th class="' + th + ' text-left">Importación</th><th class="' + th + ' text-left">Proveedor</th><th class="' + th + ' text-left">Fecha</th><th class="' + th + ' text-right">Costo según liquidación</th><th class="' + th + ' text-right">Entradas en el mayor</th><th class="' + th + ' text-right">Diferencia</th><th class="' + th + ' text-right"># asientos</th><th class="' + th + ' text-left">Resultado</th><th class="' + th + ' text-left">Comentario</th></tr></thead><tbody>';
+        R.porImp.forEach(x => { h += '<tr class="border-t border-slate-100 align-top"><td class="' + CELL + ' font-semibold">' + impE(x.id) + '</td><td class="' + CELL + '">' + impE(x.proveedor) + '</td><td class="' + CELL + ' whitespace-nowrap">' + impE(x.fecha) + '</td><td class="' + CELL + ' text-right">' + impF(x.liq) + '</td><td class="' + CELL + ' text-right">' + impF(x.may) + '</td><td class="' + CELL + ' text-right ' + (Math.abs(x.dif) > R.tol ? 'text-red-600 font-bold' : '') + '">' + impF(x.dif) + '</td><td class="' + CELL + ' text-right">' + x.n + '</td><td class="' + CELL + '">' + pill(x.est) + '</td><td class="' + CELL + '">' + impE(x.nota) + '</td></tr>'; });
+        const sl = impR2(R.porImp.reduce((t, x) => t + x.liq, 0)), sm = impR2(R.porImp.reduce((t, x) => t + x.may, 0));
+        h += '<tr class="border-t-2 border-slate-300 bg-slate-50 font-bold"><td class="' + CELL + '" colspan="3">Total</td><td class="' + CELL + ' text-right">' + impF(sl) + '</td><td class="' + CELL + ' text-right">' + impF(sm) + '</td><td class="' + CELL + ' text-right">' + impF(impR2(sl - sm)) + '</td><td colspan="3"></td></tr></tbody></table></div></div>';
+      }
+      // Composición de las entradas
+      const ordenTipos = Object.keys(R.tipos).sort((a, b) => R.tipos[b].v - R.tipos[a].v);
+      h += '<div><div class="font-bold text-slate-800 mb-1">B. De qué están hechas las entradas del mayor</div><div class="overflow-x-auto border border-slate-200 rounded-lg"><table class="w-full text-[11px] border-collapse min-w-[520px]"><thead><tr><th class="' + th + ' text-left">Tipo de entrada</th><th class="' + th + ' text-right"># asientos</th><th class="' + th + ' text-right">Valor</th><th class="' + th + ' text-right">% del total</th></tr></thead><tbody>' +
+        ordenTipos.map(t => '<tr class="border-t border-slate-100"><td class="' + CELL + '">' + impE(t) + '</td><td class="' + CELL + ' text-right">' + R.tipos[t].n + '</td><td class="' + CELL + ' text-right">' + impF(R.tipos[t].v) + '</td><td class="' + CELL + ' text-right">' + (R.tot ? (R.tipos[t].v / R.tot * 100).toFixed(1) + ' %' : '') + '</td></tr>').join('') +
+        '<tr class="border-t-2 border-slate-300 bg-slate-50 font-bold"><td class="' + CELL + '">Total entradas del mayor</td><td class="' + CELL + ' text-right">' + R.filas.length + '</td><td class="' + CELL + ' text-right">' + impF(R.tot) + '</td><td></td></tr></tbody></table></div></div>';
+      // Detalle
+      const lista = filtro === '__todos__' ? R.filas : R.filas.filter(f => f.tipo === filtro || (filtro === '__imp__' && f.ids.length));
+      h += '<div><div class="flex flex-wrap items-center gap-2 mb-1"><span class="font-bold text-slate-800">C. Detalle de las entradas (' + lista.length + ')</span><select onchange="impEstado.entF = this.value; impRender()" class="' + impIn + '"><option value="__todos__">Todas</option>' + Object.keys(R.tipos).map(t => '<option value="' + impE(t) + '"' + (filtro === t ? ' selected' : '') + '>' + impE(t) + '</option>').join('') + '</select></div>' +
+        '<div class="max-h-96 overflow-auto border border-slate-200 rounded-lg"><table class="w-full text-[11px] border-collapse min-w-[900px]"><thead><tr class="sticky top-0"><th class="' + th + ' text-left">Cuenta</th><th class="' + th + ' text-left">Fecha</th><th class="' + th + ' text-left">Comprobante</th><th class="' + th + ' text-left">Descripción</th><th class="' + th + ' text-right">Valor</th><th class="' + th + ' text-left">Liquidación / tipo</th></tr></thead><tbody>' +
+        lista.map(f => '<tr class="border-t border-slate-100 align-top"><td class="' + CELL + ' whitespace-nowrap">' + impE(f.cta) + '</td><td class="' + CELL + ' whitespace-nowrap">' + mvFechaCorta(f.fecha) + '</td><td class="' + CELL + ' whitespace-nowrap">' + impE(f.ref) + '</td><td class="' + CELL + '">' + impE(f.desc) + '</td><td class="' + CELL + ' text-right whitespace-nowrap">' + impF(f.valor) + '</td><td class="' + CELL + '">' + (f.ids.length ? '<b>' + impE(f.ids.join(', ')) + '</b>' : impE(f.tipo)) + (f.antes ? ' <span class="text-[10px] text-amber-700">(reclasificada)</span>' : '') + '</td></tr>').join('') + '</tbody></table></div></div></div>';
+      return h;
+    }
+    const L_hay = () => (impEstado.imports || []).length > 0;
     async function impDescargar() {
       if (!window.ExcelJS) { alert('No se pudo cargar el generador de Excel. Revisa tu conexión a internet.'); return; }
       const L = impEstado.imports; if (!L.length) { alert('Primero carga las liquidaciones.'); return; }
@@ -17656,6 +17747,15 @@ ${(im.aprendidos || []).length ? `<p class="text-xs text-slate-600 bg-slate-50 b
         C.asientos.forEach(a => { const ids = [...new Set(C.lineas.filter(l => l.k === a.k).flatMap(l => l.ids || []))].join(', '); a.l.forEach(l => dd.push([a.tk + ' ' + a.num, a.d, ids, l[0], l[1], l[4], l[2], l[3]])); });
         add('Diario contable', dd, [{ wch: 16 }, { wch: 12 }, { wch: 16 }, { wch: 14 }, { wch: 34 }, { wch: 70 }, { wch: 14 }, { wch: 14 }], { titulo: 'Diario contable de los asientos de importaciones', info, fecha: [1] });
       }
+      try {
+        const RE = impEntradasCalc();
+        if (RE && RE.filas.length) {
+          add('Entradas vs liquidaciones', [['Importación', 'Proveedor', 'Fecha', 'Costo según liquidación', 'Entradas en el mayor', 'Diferencia', '# asientos', 'Resultado', 'Comentario'], ...RE.porImp.map(x => [x.id, x.proveedor, x.fecha, x.liq, x.may, x.dif, x.n, x.est, x.nota])],
+            [{ wch: 14 }, { wch: 30 }, { wch: 12 }, { wch: 18 }, { wch: 18 }, { wch: 14 }, { wch: 10 }, { wch: 22 }, { wch: 60 }], { titulo: 'Liquidaciones contra entradas del mayor', info, fecha: [2], ent: [6], totales: [3, 4, 5] });
+          add('Entradas del mayor (detalle)', [['Cuenta', 'Fecha', 'Comprobante', 'Descripción', 'Valor', 'Liquidación', 'Tipo'], ...RE.filas.map(f => [f.cta, f.fecha, f.ref, f.desc, f.valor, f.ids.join(', '), f.tipo])],
+            [{ wch: 28 }, { wch: 12 }, { wch: 18 }, { wch: 80 }, { wch: 16 }, { wch: 18 }, { wch: 34 }], { titulo: 'Entradas del mayor contable (movimiento del inventario)', info, fecha: [1], totales: [4] });
+        }
+      } catch (e) { console.error('Hoja de entradas:', e); }
       try { await arrXlsxConFormato(hojas, cli, `Importaciones_${(cli || 'cliente').replace(/[^A-Za-z0-9]+/g, '_').slice(0, 30)}_${impEstado.anio}.xlsx`); } catch (e) { alert('No se pudo armar el Excel: ' + (e.message || e)); }
     }
 
