@@ -16533,7 +16533,7 @@ ${cont.innerHTML}
     ];
     const IMP_ROLES = [
       ['inventario', 'Inventarios (costo de la importación)'], ['iva', 'IVA pagado en compras'], ['anticipo', 'Anticipo de importaciones'], ['proveedores', 'Proveedores'],
-      ['isd', 'Gasto ISD'], ['agente', 'Gasto agente aduanero'], ['manejo', 'Gasto manejo de contenedor'], ['seguro', 'Gasto seguros'], ['flete_int', 'Gasto transporte de importación'],
+      ['isd', 'ISD (costo de la importación o su provisión)'], ['agente', 'Gasto agente aduanero'], ['manejo', 'Gasto manejo de contenedor'], ['seguro', 'Gasto seguros'], ['flete_int', 'Gasto transporte de importación'],
       ['logistico', 'Gasto custodia / logístico'], ['gasto_fin', 'Gasto financiero de la importación']
     ];
     // Palabras que ayudan a reconocer, en el detalle de un pago por anticipo, de qué concepto es
@@ -17364,12 +17364,12 @@ ${cont.innerHTML}
         if (error) impMsg('No se guardó: ' + (error.message || error), 'text-red-600 font-bold'); else { impMsg('Guardado ✓'); impEstado.act = { por: fila.actualizado_por, en: fila.updated_at }; impSyncCabecera(); }
       }, 700);
     }
-    const IMP_TABS = [['liq', '1. Liquidaciones'], ['cruce', '2. Cruce con mayor'], ['diario', '3. Diario contable'], ['hall', '4. Hallazgos'], ['ent', '5. Entradas del mayor vs liquidaciones']];
+    const IMP_TABS = [['liq', '1. Liquidaciones'], ['cruce', '2. Cruce con mayor'], ['diario', '3. Diario contable'], ['hall', '4. Hallazgos'], ['ent', '5. Entradas del mayor vs liquidaciones'], ['res', '6. Resumen contable']];
     function impTab(t) { impEstado.tab = t; impRender(); }
     function impRender() {
       IMP_TABS.forEach(([t]) => { const b = $im('im-tab-' + t); if (b) b.className = 'px-3 py-1.5 text-xs transition rounded-lg ' + (impEstado.tab === t ? 'bg-slate-200 text-slate-900 font-semibold' : 'text-slate-600 hover:bg-slate-100 font-medium'); });
       const p = $im('im-panel'); if (!p) return;
-      p.innerHTML = impEstado.tab === 'liq' ? impHtmlLiq() : impEstado.tab === 'cruce' ? impHtmlCruce() : impEstado.tab === 'diario' ? impHtmlDiario() : impEstado.tab === 'ent' ? impHtmlEntradas() : impHtmlHall();
+      p.innerHTML = impEstado.tab === 'liq' ? impHtmlLiq() : impEstado.tab === 'cruce' ? impHtmlCruce() : impEstado.tab === 'diario' ? impHtmlDiario() : impEstado.tab === 'ent' ? impHtmlEntradas() : impEstado.tab === 'res' ? impHtmlResumen() : impHtmlHall();
       if (impEstado.tab === 'liq') { impPintarProc(); }
       impFlechas();
     }
@@ -17398,6 +17398,7 @@ ${cont.innerHTML}
       const barra = `<div class="m-2 p-3 bg-white border border-slate-200 rounded-xl space-y-2 text-xs text-slate-700"><div class="text-[13px] font-semibold text-slate-800">Importaciones: todo se pide a Claude</div>
         <p class="text-slate-600">Sube en un mismo pedido las liquidaciones de importación (PDF o Excel), las declaraciones aduaneras y el mayor contable. Claude lee todo, cruza con el mayor y llena las hojas 2 a 5.</p>
         <div class="flex flex-wrap items-center gap-2"><button type="button" onclick="pcIrAPedido('AF', impEstado.cliente, impEstado.anio, impEstado.visita, 'import')" class="${impBtnP}">Pedir a Claude (liquidaciones + mayor contable)</button>
+        <button type="button" onclick="impTab('res')" class="${impBtn}" ${L.length ? '' : 'disabled'} title="Cruza las liquidaciones, las entradas del mayor y los gastos que no se capitalizaron">Resumen contable</button>
         <button type="button" onclick="impDescargar()" class="${impBtn}" ${L.length ? '' : 'disabled'}>Descargar papel de trabajo (Excel)</button>
         ${L.length ? `<button type="button" onclick="impRegenerarNombres()" class="${impBtn}" title="Vuelve a armar el código y los nombres de cada importación a partir del nombre del archivo y del proveedor">Regenerar nombres</button>` : ''}</div>
         <p class="text-slate-500">${L.length ? L.length + ' importaciones cargadas por Claude' : 'Aún no hay liquidaciones'} · ${Cx ? 'cruce con el mayor hecho' : 'cruce con el mayor pendiente'}. Cuando el pedido pase a "hecho", presiona F5.</p></div>`;
@@ -17421,7 +17422,8 @@ ${cont.innerHTML}
       const i = impEstado.imports.indexOf(im), ctrl = impControles(im), campo = (t, k, ancho, tipo) => `<label class="flex flex-col gap-1 text-xs text-slate-600"><span>${t}</span><input type="${tipo || 'text'}" value="${impE(im[k] || '')}" onchange="impEditarCampo(${i}, '${k}', this.value)" class="${ancho || 'w-40'} ${impIn}"></label>`;
       const alias = (im.aliases && im.aliases.length ? im.aliases : impAliasPorDefecto(im)).join(', ');
       let h = `<div class="space-y-3 text-xs text-slate-700">
-        <div class="p-3 bg-white border border-slate-200 rounded-xl"><div class="text-[13px] font-semibold text-slate-800 mb-2">Datos de la importación</div><div class="flex flex-wrap items-end gap-3">${campo('Código de la importación', 'id', 'w-32')}${campo('Proveedor', 'proveedor', 'w-64')}${campo('Fecha', 'fecha', 'w-40', 'date')}${campo('N° DAU', 'dau', 'w-48')}
+        <div class="p-3 bg-white border border-slate-200 rounded-xl"><div class="text-[13px] font-semibold text-slate-800 mb-2">Datos de la importación</div><div class="flex flex-wrap items-end gap-3">${campo('Código de la importación', 'id', 'w-32')}${campo('Proveedor', 'proveedor', 'w-64')}${campo('Fecha', 'fecha', 'w-40', 'date')}${campo('N° DAU', 'dau', 'w-48')}${campo('Incoterm', 'incoterm', 'w-24')}${campo('Moneda', 'moneda', 'w-20')}${campo('Tipo de cambio', 'tipo_cambio', 'w-24')}${campo('Fecha de nacionalización', 'fecha_nacionalizacion', 'w-40', 'date')}${campo('Ingreso a bodega', 'fecha_ingreso', 'w-40', 'date')}
+          <label class="flex flex-col gap-1 text-xs text-slate-600"><span>ISD</span><select onchange="impEditarCampo(${i}, 'isd_estado', this.value)" class="w-44 ${impIn}">${[['', 'Sin indicar'], ['pagado', 'Pagado'], ['provisionado', 'Provisionado (proveedor sin pagar)'], ['credito', 'Crédito tributario (no es costo)'], ['no_aplica', 'No aplica']].map(([a, b]) => `<option value="${a}"${(im.isd_estado || '') === a ? ' selected' : ''}>${b}</option>`).join('')}</select></label>
           <label class="flex flex-col gap-1 text-xs text-slate-600"><span>Valor en aduana (DAI)</span><input type="text" inputmode="decimal" value="${impE(impF((im.dai || {}).valor_aduana))}" onchange="impEditarDai(${i}, 'valor_aduana', this.value)" class="w-36 ${impIn} text-right"></label></div>
           <label class="flex flex-col gap-1 text-xs text-slate-600 mt-2"><span>Nombres con los que aparece esta importación en el mayor (separados por coma): código, nombre del proveedor con número, N° de factura. Si el cliente usa otro número (por ejemplo BELLOTA 13 y BE13), agrégalo aquí</span><input type="text" value="${impE(alias)}" onchange="impEditarAlias(${i}, this.value)" class="w-full ${impIn}"></label></div>
 ${(im.aprendidos || []).length ? `<p class="text-xs text-slate-600 bg-slate-50 border border-slate-200 rounded-xl p-3"><b>Nombres aprendidos del mayor:</b> ${impE(im.aprendidos.join(', '))}. Se encontraron en los asientos de esta importación; si alguno no corresponde, quítalo con "Regenerar nombres".</p>` : ''}
@@ -17649,7 +17651,7 @@ ${(im.aprendidos || []).length ? `<p class="text-xs text-slate-600 bg-slate-50 b
       const { data, error } = await supabaseClient.from('inventario_movimiento').select('cuentas, updated_at, actualizado_por').eq('cliente_id', cli).eq('anio', Number(anio)).eq('visita', vis).eq('hoja', 'venta').maybeSingle();
       if (!impEstado.mov || impEstado.mov.llave !== llave) return;
       impEstado.mov = { llave, cargando: false, cuentas: (!error && data && Array.isArray(data.cuentas)) ? data.cuentas : [], hay: !!(data && !error), error: error ? (error.message || String(error)) : '', act: data ? { por: data.actualizado_por, en: data.updated_at } : null };
-      if (impEstado.tab === 'ent') impRender();
+      if (impEstado.tab === 'ent' || impEstado.tab === 'res') impRender();
     }
     function impTipoEntrada(desc) {
       const d = String(desc || '');
@@ -17681,6 +17683,68 @@ ${(im.aprendidos || []).length ? `<p class="text-xs text-slate-600 bg-slate-50 b
       const tot = impR2(filas.reduce((t, f) => t + f.valor, 0));
       const tipos = {}; filas.forEach(f => { const t = tipos[f.tipo] = tipos[f.tipo] || { n: 0, v: 0 }; t.n++; t.v = impR2(t.v + f.valor); });
       return { filas, porImp, tot, tipos, tol };
+    }
+
+    // ---------- 6. Resumen contable: liquidaciones vs entradas del mayor vs gastos no capitalizados ----------
+    const IMP_CAP = ['isd', 'agente', 'manejo', 'seguro', 'flete_int', 'logistico'];
+    const IMP_GAS_ROLES = [...IMP_CAP, 'gasto_fin'];
+    function impTipoCuenta(cod) { const d = String(cod).charAt(0); return d === '1' ? 'activo' : d === '2' ? 'pasivo' : d === '3' ? 'patrimonio' : 'resultados'; }
+    function impResumenCalc() {
+      const cl = impEstado.cl, C = impEstado.cruce; if (!cl || !C) return null;
+      const cfg = impEstado.cfg, L = impEstado.imports, tol = Number(cfg.tol) >= 0 ? Number(cfg.tol) : 1, corte = cfg.corte || '';
+      const roles = {}; IMP_ROLES.forEach(([k]) => { roles[k] = impListaCtas((cfg.roles || {})[k]); });
+      const ids = new Set(L.map(x => x.id)), g = (id, k) => cl.filas.find(x => x.id === id && x.k === k) || {};
+      const R = impEntradasCalc(), entMap = R ? Object.fromEntries(R.porImp.map(x => [x.id, x])) : null;
+      const porImp = {}; L.forEach(im => { porImp[im.id] = { cap: 0, fin: 0, prov: 0 }; });
+      const ctas = {}; let compartido = 0, posterior = 0;
+      (C.lineas || []).forEach(l => {
+        const rol = IMP_GAS_ROLES.find(r => roles[r].length && impCtaEn(l.cod, roles[r])); if (!rol) return;
+        const net = (Number(l.deb) || 0) - (Number(l.hab) || 0), tipo = impTipoCuenta(l.cod), mis = (l.ids || []).filter(i => ids.has(i));
+        if (!mis.length) return;
+        if (tipo === 'activo' || tipo === 'patrimonio') return;
+        if (corte && l.d && l.d > corte) { if (tipo === 'resultados') posterior += net; return; }
+        if (tipo === 'pasivo') { if (rol === 'isd' && mis.length === 1) porImp[mis[0]].prov += -net; return; }
+        if (mis.length > 1) { compartido += net; return; }
+        const id = mis[0], x = ctas[l.cod] = ctas[l.cod] || { cod: l.cod, nombre: (C.cuentas || {})[l.cod] || '', rol, total: 0, imps: {}, asientos: new Set() };
+        x.total += net; x.imps[id] = (x.imps[id] || 0) + net; if (l.k) x.asientos.add(l.k);
+        if (rol === 'gasto_fin') porImp[id].fin += net; else porImp[id].cap += net;
+      });
+      const filas = L.map(im => {
+        const co = g(im.id, 'costo'), P = porImp[im.id], costoLiq = impR2(co.liq || 0), capLiq = impR2(IMP_CAP.reduce((t, k) => t + (g(im.id, k).liq || 0), 0)), finLiq = impR2(g(im.id, 'gasto_fin').liq || 0);
+        const ent = entMap && entMap[im.id] ? entMap[im.id].may : null, inv = impR2(ent !== null ? ent : (co.total || 0));
+        const baseLiq = impR2(costoLiq + capLiq), cap = impR2(P.cap), ajust = impR2(inv + cap), dif = impR2(baseLiq - ajust);
+        return { id: im.id, proveedor: im.proveedor || '', costoLiq, capLiq, baseLiq, finLiq, ent, cruceInv: impR2(co.total || 0), inv, cap, fin: impR2(P.fin), prov: impR2(P.prov), ajust, dif, est: !baseLiq && !inv && !cap ? 'N/A' : (Math.abs(dif) <= tol ? 'Cuadra' : 'Revisar') };
+      });
+      const cuentas = Object.values(ctas).sort((a, b) => b.total - a.total);
+      return { filas, cuentas, compartido: impR2(compartido), posterior: impR2(posterior), tol, hayEnt: !!R, cuentaInv: (roles.inventario || [])[0] || '' };
+    }
+    function impHtmlResumen() {
+      if (!impEstado.cliente) return '<p class="p-4 text-xs text-slate-500">Selecciona el cliente.</p>';
+      if (!impEstado.cl) return '<p class="p-6 text-xs text-slate-400 text-center">Este resumen aparece cuando Claude termine el pedido con el mayor contable (hoja 1).</p>';
+      const M = impEstado.mov; if (!M || M.llave !== impEstado.cliente + '|' + impEstado.anio + '|' + impEstado.visita) setTimeout(impCargarMov, 0);
+      const Z = impResumenCalc(); if (!Z) return '<p class="p-6 text-xs text-slate-400 text-center">Aún no hay cruce con el mayor.</p>';
+      const th = 'px-2 py-1.5 text-[11px] font-bold text-slate-700 bg-slate-100 border-b border-slate-300 whitespace-nowrap', td = 'px-2 py-1 text-right', F = impF;
+      const pill = e => '<span class="' + (e === 'Cuadra' ? 'text-emerald-700' : e === 'N/A' ? 'text-slate-500' : 'text-red-600') + ' font-bold">' + e + '</span>';
+      const sum = k => impR2(Z.filas.reduce((t, x) => t + (x[k] || 0), 0));
+      let h = '<div class="p-3 space-y-4 text-xs text-slate-700">';
+      h += '<p class="text-[11px] text-slate-500">Cruza tres fuentes: lo que dicen las <b>liquidaciones</b>, lo que entró al inventario según el <b>Movimiento del mayor</b> (columna Compras/Importaciones) y los <b>gastos de importación registrados en resultados</b>. El costo capitalizable de la liquidación es el costo del producto más ISD, agente, contenedor, seguro, transporte y logístico; el gasto financiero no se capitaliza. Criterio de ayuda para el auditor: la decisión final es suya.' + (Z.hayEnt ? '' : ' <b class="text-amber-700">Aún no hay Movimiento del inventario cargado: se usa lo registrado en el cruce con el mayor.</b>') + '</p>';
+      h += '<div><div class="font-bold text-slate-800 mb-1">A. Por importación</div><div class="overflow-x-auto border border-slate-200 rounded-lg"><table class="w-full text-[11px] border-collapse min-w-[1100px]"><thead><tr><th class="' + th + ' text-left">Importación</th><th class="' + th + ' text-left">Proveedor</th><th class="' + th + ' text-right">Costo producto (liquidación)</th><th class="' + th + ' text-right">Gastos capitalizables (liquidación)</th><th class="' + th + ' text-right">Costo capitalizable total</th><th class="' + th + ' text-right">Entradas al inventario (mayor)</th><th class="' + th + ' text-right">Gastos capitalizables en resultados</th><th class="' + th + ' text-right">Inventario + gastos en resultados</th><th class="' + th + ' text-right">Diferencia</th><th class="' + th + ' text-right">ISD provisionado (pasivo)</th><th class="' + th + ' text-right">Gasto financiero (no capitaliza)</th><th class="' + th + ' text-left">Estado</th></tr></thead><tbody>';
+      Z.filas.forEach(x => { h += '<tr class="border-t border-slate-100"><td class="px-2 py-1 font-semibold">' + impE(x.id) + '</td><td class="px-2 py-1">' + impE(x.proveedor) + '</td><td class="' + td + '">' + F(x.costoLiq) + '</td><td class="' + td + '">' + F(x.capLiq) + '</td><td class="' + td + ' font-semibold">' + F(x.baseLiq) + '</td><td class="' + td + '">' + F(x.inv) + '</td><td class="' + td + (x.cap ? ' text-red-600 font-semibold' : '') + '">' + F(x.cap) + '</td><td class="' + td + '">' + F(x.ajust) + '</td><td class="' + td + (Math.abs(x.dif) > Z.tol ? ' text-red-600 font-semibold' : '') + '">' + F(x.dif) + '</td><td class="' + td + '">' + F(x.prov) + '</td><td class="' + td + '">' + F(x.fin) + '</td><td class="px-2 py-1">' + pill(x.est) + '</td></tr>'; });
+      h += '</tbody><tfoot class="bg-slate-50 font-semibold"><tr><td class="px-2 py-1 text-left" colspan="2">Total</td>' + ['costoLiq', 'capLiq', 'baseLiq', 'inv', 'cap', 'ajust', 'dif', 'prov', 'fin'].map(k => '<td class="' + td + '">' + F(sum(k)) + '</td>').join('') + '<td></td></tr></tfoot></table></div></div>';
+      h += '<p class="text-[11px] text-slate-500">Lectura: si la diferencia es cero, lo registrado en inventario más lo llevado a gasto explica la liquidación completa. Cuando hay valor en "Gastos capitalizables en resultados", esos gastos debieron sumarse al inventario (NIC 2.10 y 2.11).</p>';
+      if (Z.compartido || Z.posterior) h += '<p class="text-[11px] text-amber-700">' + (Z.compartido ? 'Gastos de pagos conjuntos de varias importaciones, no asignados: ' + F(Z.compartido) + '. ' : '') + (Z.posterior ? 'Gastos registrados después del corte (no incluidos arriba): ' + F(Z.posterior) + '.' : '') + '</p>';
+      h += '<div><div class="font-bold text-slate-800 mb-1">B. Gastos de importación registrados en resultados, por cuenta</div>';
+      if (!Z.cuentas.length) h += '<p class="text-[11px] text-slate-500">No se identificaron gastos de importación en cuentas de resultados.</p>';
+      else { h += '<div class="overflow-x-auto border border-slate-200 rounded-lg"><table class="w-full text-[11px] border-collapse"><thead><tr><th class="' + th + ' text-left">Cuenta</th><th class="' + th + ' text-left">Concepto</th><th class="' + th + ' text-left">¿Se capitaliza?</th><th class="' + th + ' text-right">Importe</th><th class="' + th + ' text-right">Asientos</th><th class="' + th + ' text-left">Importaciones</th></tr></thead><tbody>';
+        Z.cuentas.forEach(c => { const cap = c.rol !== 'gasto_fin'; h += '<tr class="border-t border-slate-100"><td class="px-2 py-1">' + impE(c.cod + ' ' + c.nombre) + '</td><td class="px-2 py-1">' + impE((IMP_ROLES.find(r => r[0] === c.rol) || [0, c.rol])[1]) + '</td><td class="px-2 py-1 ' + (cap ? 'text-red-600 font-semibold' : 'text-slate-600') + '">' + (cap ? 'Sí (a inventario)' : 'No (gasto financiero)') + '</td><td class="' + td + '">' + F(impR2(c.total)) + '</td><td class="' + td + '">' + c.asientos.size + '</td><td class="px-2 py-1">' + impE(Object.keys(c.imps).join(', ')) + '</td></tr>'; });
+        h += '</tbody></table></div>'; }
+      h += '</div>';
+      const aRecl = Z.cuentas.filter(c => c.rol !== 'gasto_fin' && Math.abs(c.total) > 0.005);
+      h += '<div><div class="font-bold text-slate-800 mb-1">C. Reclasificación propuesta (a criterio del auditor)</div>';
+      if (!aRecl.length) h += '<p class="text-[11px] text-slate-500">No hay gastos capitalizables registrados en resultados.</p>';
+      else { const tot = impR2(aRecl.reduce((t, c) => t + c.total, 0)); h += '<div class="overflow-x-auto border border-slate-200 rounded-lg"><table class="w-full text-[11px] border-collapse"><thead><tr><th class="' + th + ' text-left">Cuenta</th><th class="' + th + ' text-right">Debe</th><th class="' + th + ' text-right">Haber</th></tr></thead><tbody><tr class="border-t border-slate-100"><td class="px-2 py-1">' + impE((Z.cuentaInv ? Z.cuentaInv + ' ' + ((impEstado.cruce.cuentas || {})[Z.cuentaInv] || '') : 'Inventarios (cuenta de inventario de importaciones)')) + '</td><td class="' + td + '">' + F(tot) + '</td><td class="' + td + '"></td></tr>' + aRecl.map(c => '<tr class="border-t border-slate-100"><td class="px-2 py-1 pl-6">' + impE(c.cod + ' ' + c.nombre) + '</td><td class="' + td + '"></td><td class="' + td + '">' + F(impR2(c.total)) + '</td></tr>').join('') + '</tbody></table></div><p class="text-[11px] text-slate-500 mt-1">Antes de proponerlo al cliente confirma que cada gasto corresponde a la importación indicada, que no se haya capitalizado ya dentro de las entradas, y el efecto en el costo de ventas si parte del inventario ya se vendió.</p>'; }
+      h += '</div></div>';
+      return h;
     }
     function impHtmlEntradas() {
       const M = impEstado.mov, CELL = 'px-2 py-1';
@@ -17726,6 +17790,9 @@ ${(im.aprendidos || []).length ? `<p class="text-xs text-slate-600 bg-slate-50 b
         ...L.map(im => { const v = impValoresLiq(im), it = im.items || [], S = k => it.length ? impSum(it, k) : 0, D = im.dai || {}, cif = it.length ? S('cif') : (impN(D.valor_aduana) || 0), va = impN(D.valor_aduana); return [im.id, im.proveedor, im.fecha, im.dau, it.length, S('fob_total') || impN(D.fob) || 0, S('flete') || impN(D.flete) || 0, S('seguro') || impN(D.seguro) || 0, cif, v.tributos ? impR2(S('arancel') || impN(D.arancel) || 0) : 0, S('fodinfa') || impN(D.fodinfa) || 0, v.iva, v.costo, impR2(IMP_CONCEPTOS.filter(c => c.gasto).reduce((t, c) => t + (v[c.k] || 0), 0)), va === null ? '' : va, va === null ? '' : impR2(cif - va), impEstadoImp(im) === 'ok' ? 'Cuadra' : 'Revisar']; })],
         [{ wch: 14 }, { wch: 30 }, { wch: 12 }, { wch: 20 }, { wch: 8 }], { titulo: 'Liquidaciones de importación', info, fecha: [2], ent: [4], totales: [4, 5, 6, 7, 8, 9, 10, 11, 12, 13] });
       const det = [['Importación', ...IMP_COLS.map(c => c[1])]]; L.forEach(im => (im.items || []).forEach(x => det.push([im.id, ...IMP_COLS.map(c => c[2] === 't' ? (x[c[0]] || '') : (x[c[0]] === null || x[c[0]] === undefined ? '' : x[c[0]]))])));
+      add('Condiciones', [['Importación', 'Incoterm', 'Moneda', 'Tipo de cambio', 'Fecha de la liquidación', 'Fecha de nacionalización', 'Ingreso a bodega', 'Estado del ISD', 'Nota del ISD'],
+        ...L.map(im => [im.id, im.incoterm || '', im.moneda || '', im.tipo_cambio || '', im.fecha || '', im.fecha_nacionalizacion || '', im.fecha_ingreso || '', { pagado: 'Pagado', provisionado: 'Provisionado', credito: 'Crédito tributario', no_aplica: 'No aplica' }[im.isd_estado] || 'Sin indicar', im.isd_nota || ''])],
+        [{ wch: 14 }, { wch: 10 }, { wch: 9 }, { wch: 14 }, { wch: 16 }, { wch: 18 }, { wch: 16 }, { wch: 16 }, { wch: 60 }], { titulo: 'Condiciones de cada importación (corte y ISD)', info, notas: ['El incoterm define cuándo se transfiere el control y qué gastos corresponden al cliente. Las fechas de nacionalización e ingreso a bodega sirven para revisar el corte. El ISD se trata como costo de la importación salvo que sea crédito tributario; si está provisionado, el proveedor aún no se ha pagado.'] });
       add('Detalle consolidado', det, [{ wch: 12 }, { wch: 8 }, { wch: 12 }, { wch: 16 }, { wch: 14 }, { wch: 44 }, { wch: 18 }], { titulo: 'Detalle consolidado de ítems', info });
       const ci = [['Importación', 'Concepto', 'Clasificación', 'Valor']]; L.forEach(im => (im.indirectos || []).forEach(x => ci.push([im.id, x.concepto, IMP_CLAVE_TXT[x.clave] || x.clave, x.valor])));
       add('Costos indirectos', ci, [{ wch: 14 }, { wch: 46 }, { wch: 24 }, { wch: 16 }], { titulo: 'Costos indirectos de las liquidaciones', info });
@@ -17738,6 +17805,14 @@ ${(im.aprendidos || []).length ? `<p class="text-xs text-slate-600 bg-slate-50 b
         add('Resumen del cruce', [['Importación', 'Costo liquidación', 'Costo mayor', 'Diferencia', 'IVA liquidación', 'IVA mayor', 'Diferencia', 'Gastos indirectos liquidación', 'Gastos indirectos mayor', 'Diferencia', 'Conceptos que cuadran', 'Conceptos por revisar'],
           ...L.map(im => { const co = g(im.id, 'costo'), iv = g(im.id, 'iva'), gs = f.filter(x => x.id === im.id && IMP_CONCEPTOS.find(k => k.k === x.k).gasto), g1 = impR2(gs.reduce((t, x) => t + x.liq, 0)), g2 = impR2(gs.reduce((t, x) => t + x.total, 0)); return [im.id, co.liq || 0, co.mayor || 0, impR2((co.liq || 0) - (co.mayor || 0)), iv.liq || 0, iv.mayor || 0, impR2((iv.liq || 0) - (iv.mayor || 0)), g1, g2, impR2(g1 - g2), f.filter(x => x.id === im.id && x.estado === 'Cuadra').length, f.filter(x => x.id === im.id && (x.estado === 'Revisar' || x.estado === 'Sin registro')).length]; })],
           [{ wch: 14 }], { titulo: 'Cruce de importaciones contra el mayor', info: [...info, ['Mayor leído', C.archivo]], ent: [10, 11], totales: [1, 2, 3, 4, 5, 6, 7, 8, 9], notas: nota });
+        const Z = impResumenCalc();
+        if (Z) {
+          const rA = [['Importación', 'Proveedor', 'Costo producto (liquidación)', 'Gastos capitalizables (liquidación)', 'Costo capitalizable total', 'Entradas al inventario (mayor)', 'Gastos capitalizables en resultados', 'Inventario + gastos en resultados', 'Diferencia', 'ISD provisionado (pasivo)', 'Gasto financiero (no capitaliza)', 'Estado'], ...Z.filas.map(x => [x.id, x.proveedor, x.costoLiq, x.capLiq, x.baseLiq, x.inv, x.cap, x.ajust, x.dif, x.prov, x.fin, x.est])];
+          rA.push([], ['B. Gastos de importación registrados en resultados, por cuenta'], ['Cuenta', 'Nombre', 'Concepto', '¿Se capitaliza?', 'Importe', 'Asientos', 'Importaciones'], ...Z.cuentas.map(c => [c.cod, c.nombre, (IMP_ROLES.find(r => r[0] === c.rol) || [0, c.rol])[1], c.rol === 'gasto_fin' ? 'No' : 'Sí', impR2(c.total), c.asientos.size, Object.keys(c.imps).join(', ')]));
+          const aR = Z.cuentas.filter(c => c.rol !== 'gasto_fin' && Math.abs(c.total) > 0.005);
+          if (aR.length) rA.push([], ['C. Reclasificación propuesta (a criterio del auditor)'], ['Cuenta', 'Nombre', 'Debe', 'Haber'], [Z.cuentaInv, 'Inventarios', impR2(aR.reduce((t, c) => t + c.total, 0)), ''], ...aR.map(c => [c.cod, c.nombre, '', impR2(c.total)]));
+          add('Resumen contable', rA, [{ wch: 16 }, { wch: 30 }, { wch: 18 }, { wch: 18 }, { wch: 18 }, { wch: 18 }, { wch: 18 }, { wch: 18 }, { wch: 14 }, { wch: 16 }, { wch: 16 }, { wch: 10 }], { titulo: 'Resumen contable: liquidaciones, entradas del mayor y gastos no capitalizados', info: [...info, ['Mayor leído', C.archivo]], notas: ['Costo capitalizable = costo del producto + ISD, agente, contenedor, seguro, transporte y logístico de la liquidación. El gasto financiero no se capitaliza. La reclasificación es una propuesta para el criterio del auditor.'] });
+        }
         const hs = impListaHall(); add('Hallazgos', [['Importancia', 'Hallazgo', 'Monto', 'Importaciones', 'Detalle', 'Redacción'], ...hs.map(x => [{ alta: 'Alta', media: 'Media', info: 'Informativo' }[x.sev] || '', x.titulo, x.monto || '', (x.refs || []).join(', '), x.detalle, impEstado.hall.notas[x.id] || ''])], [{ wch: 14 }, { wch: 50 }, { wch: 14 }, { wch: 24 }, { wch: 70 }, { wch: 70 }], { titulo: 'Hallazgos de auditoría: importaciones', info });
         add('Cruce por concepto', [['Importación', 'Concepto', 'Liquidación', 'Mayor', 'Vía anticipo', 'Total mayor', 'Diferencia', 'Estado', 'Comentario', 'Cuentas', 'Asientos', 'Fechas'], ...f.filter(x => x.estado !== 'N/A' || x.liq).map(x => [x.id, x.concepto, x.liq, x.mayor, x.via, x.total, x.dif, x.estado === 'Cuadra' ? 'Cuadra' : 'Revisar', x.comentario, x.cuentas, x.asientos, x.fechas])], [{ wch: 14 }, { wch: 40 }, { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 12 }, { wch: 70 }, { wch: 24 }, { wch: 40 }, { wch: 24 }], { titulo: 'Cruce por concepto', info });
         add('Líneas del mayor', [['Importación(es)', 'Asiento', 'Fecha', 'Cuenta', 'Nombre de la cuenta', 'Detalle', 'Debe', 'Haber', 'Compartida', 'Cómo se identificó'], ...C.lineas.map(l => [(l.ids || []).join(', '), (l.tk || '') + ' ' + (l.num || ''), l.d, l.cod, (C.cuentas || {})[l.cod] || '', l.det, l.deb, l.hab, (l.ids || []).length > 1 ? 'Sí' : '', l.cr === 'monto' ? 'Por el monto de la liquidación' : 'Por nombre o factura'])], [{ wch: 16 }, { wch: 16 }, { wch: 12 }, { wch: 14 }, { wch: 34 }, { wch: 70 }, { wch: 14 }, { wch: 14 }, { wch: 11 }, { wch: 28 }], { titulo: 'Líneas del mayor que nombran una importación', info, fecha: [2] });
