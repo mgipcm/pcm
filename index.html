@@ -10643,14 +10643,8 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
     }
     function arrHtmlContratos() {
       const L = arrEstado.contratos;
-      const Cx = impEstado.cruce;
-      const barra = `<div class="m-2 p-3 bg-white border border-slate-200 rounded-xl space-y-2 text-xs text-slate-700"><div class="text-[13px] font-semibold text-slate-800">Importaciones: todo se pide a Claude</div>
-        <p class="text-slate-600">Sube en un mismo pedido las liquidaciones de importación (PDF o Excel), las declaraciones aduaneras y el mayor contable. Claude lee todo, cruza con el mayor y llena las hojas 2 a 5.</p>
-        <div class="flex flex-wrap items-center gap-2"><button type="button" onclick="pcIrAPedido('AF', impEstado.cliente, impEstado.anio, impEstado.visita, 'import')" class="${impBtnP}">Pedir a Claude (liquidaciones + mayor contable)</button>
-        <button type="button" onclick="impDescargar()" class="${impBtn}" ${L.length ? '' : 'disabled'}>Descargar papel de trabajo (Excel)</button>
-        ${L.length ? `<button type="button" onclick="impRegenerarNombres()" class="${impBtn}" title="Vuelve a armar el código y los nombres de cada importación a partir del nombre del archivo y del proveedor">Regenerar nombres</button>` : ''}</div>
-        <p class="text-slate-500">${L.length ? L.length + ' importaciones cargadas por Claude' : 'Aún no hay liquidaciones'} · ${Cx ? 'cruce con el mayor hecho' : 'cruce con el mayor pendiente'}. Cuando el pedido pase a "hecho", presiona F5.</p></div>`;
-      const proc = '<div id="im-proc" class="px-3 py-2 space-y-1"></div>';
+      const barra = `<div class="flex flex-wrap items-center gap-2 px-2 py-2 border-b border-slate-200"><button type="button" onclick="arrAnadir()" class="px-2.5 py-1 rounded-lg text-[11px] transition bg-slate-200 text-slate-900 hover:bg-slate-300 font-semibold">+ Añadir contrato</button><label class="px-2.5 py-1 rounded-lg text-[11px] transition cursor-pointer bg-slate-100 text-slate-800 hover:bg-slate-200 font-medium">Cargar desde Excel<input type="file" accept=".xlsx,.xls,.csv" class="hidden" onchange="arrImportar(this)"></label><button type="button" onclick="arrPlantilla()" class="px-2.5 py-1 rounded-lg text-[11px] transition bg-slate-100 text-slate-800 hover:bg-slate-200 font-medium">Plantilla de Excel</button><span class="ml-auto flex items-center gap-2 text-[11px] text-slate-600"><label for="ar-metodo" class="font-semibold">Tasa mensual:</label><select id="ar-metodo" onchange="arrCambiarMetodoTasa(this.value)" class="h-7 px-2 text-[11px] border border-slate-300 rounded-lg bg-white outline-none focus:ring-2 focus:ring-indigo-500"><option value="nominal"${arrMetodoTasa() === 'nominal' ? ' selected' : ''}>Tasa anual ÷ 12 (nominal)</option><option value="efectiva"${arrMetodoTasa() === 'efectiva' ? ' selected' : ''}>Equivalente mensual (efectiva anual)</option></select><button type="button" onclick="arrToggleInfoTasa()" class="px-2.5 py-1 rounded-lg text-[11px] transition bg-slate-100 text-slate-800 hover:bg-slate-200 font-medium">${arrEstado.verInfoTasa ? 'Ocultar explicación' : '¿Cuál elegir?'}</button></span></div>`;
+      const infoTasa = arrEstado.verInfoTasa ? arrHtmlInfoTasa() : '';
       if (!L.length) return barra + infoTasa + '<p class="p-6 text-xs text-slate-400 text-center">Todavía no hay contratos. Usa "+ Añadir contrato" o "Cargar desde Excel".</p>';
       const th = (t, cls = '') => `<th class="px-2 py-1 border-b border-slate-200 text-left whitespace-nowrap ${cls}">${t}</th>`;
       const num = v => v === '' || v === null || v === undefined ? '' : formatoNumeroAnexo(v);
@@ -17400,17 +17394,14 @@ ${cont.innerHTML}
     function impEstadoImp(im) { const c = impControles(im); return c.some(x => x.est === 'rev') ? 'rev' : 'ok'; }
     function impHtmlLiq() {
       const L = impEstado.imports;
-      const barra = `<div class="flex flex-wrap items-center gap-2 px-2 py-2 border-b border-slate-200">
-        <button type="button" onclick="pcIrAPedido('AF', impEstado.cliente, impEstado.anio, impEstado.visita, 'import')" class="${impBtnP}" title="Claude lee los PDF y deja la tabla armada aquí">Pedir a Claude que lea las liquidaciones (PDF)</button>
-        <label class="${impBtn} cursor-pointer">Subir Excel de liquidación<input type="file" accept=".xlsx,.xls" multiple class="hidden" onchange="impSubirExcel(this)"></label>
-        ${L.length ? `<button type="button" onclick="impRegenerarNombres()" class="${impBtn}" title="Vuelve a armar el código y los nombres de cada importación a partir del nombre del archivo y del proveedor">Regenerar nombres</button>` : ''}<span class="text-[11px] text-slate-500">Si el cliente entrega el Excel original de la liquidación, es la forma más exacta.</span></div>`;
-      const Mx = impEstado.mayor, Cx = impEstado.cruce;
-      const unico = `<div class="m-2 p-3 bg-white border border-slate-200 rounded-xl space-y-2 text-xs text-slate-700"><div class="text-[13px] font-semibold text-slate-800">Documentos del cliente: todo se carga aquí</div>
-        <div class="flex flex-wrap items-center gap-2"><span class="font-semibold">1. Liquidaciones:</span><span class="text-slate-600">${L.length ? L.length + ' cargadas' : 'aún no hay'}</span><span class="text-slate-400">(usa los botones de arriba: Pedir a Claude para PDF, o subir Excel)</span></div>
-        <div class="flex flex-wrap items-center gap-2"><span class="font-semibold">2. Mayor contable:</span><label class="${impBtn} cursor-pointer">Elegir archivo del mayor (CSV o Excel)<input type="file" accept=".csv,.txt,.xlsx,.xls" class="hidden" onchange="impElegirMayor(this)"></label><span class="text-slate-600">${Mx ? 'Cargado: ' + impE(Mx.nombre) : 'aún no hay'}</span></div>
-        <div class="flex flex-wrap items-center gap-2"><span class="font-semibold">3. Análisis:</span><button type="button" id="im-cruzar" onclick="impTodo()" class="${impBtnP}" ${Mx && L.length ? '' : 'disabled'} title="Lee el mayor, cruza con las liquidaciones y arma el cruce, el diario, las entradas y los hallazgos">Cruzar con el mayor y armar el papel de trabajo</button><button type="button" onclick="impDescargar()" class="${impBtn}" ${Cx ? '' : 'disabled'}>Descargar papel de trabajo (Excel)</button><span id="im-prog" class="text-slate-500"></span></div>
-        ${Cx ? '<p class="text-slate-500">Cruce hecho. Revisa los resultados en las hojas 2 a 5; si cambias una liquidación o sus nombres, vuelve a presionar el botón.</p>' : ''}</div>`;
-      const proc = unico + '<div id="im-proc" class="px-3 py-2 space-y-1"></div>';
+      const Cx = impEstado.cruce;
+      const barra = `<div class="m-2 p-3 bg-white border border-slate-200 rounded-xl space-y-2 text-xs text-slate-700"><div class="text-[13px] font-semibold text-slate-800">Importaciones: todo se pide a Claude</div>
+        <p class="text-slate-600">Sube en un mismo pedido las liquidaciones de importación (PDF o Excel), las declaraciones aduaneras y el mayor contable. Claude lee todo, cruza con el mayor y llena las hojas 2 a 5.</p>
+        <div class="flex flex-wrap items-center gap-2"><button type="button" onclick="pcIrAPedido('AF', impEstado.cliente, impEstado.anio, impEstado.visita, 'import')" class="${impBtnP}">Pedir a Claude (liquidaciones + mayor contable)</button>
+        <button type="button" onclick="impDescargar()" class="${impBtn}" ${L.length ? '' : 'disabled'}>Descargar papel de trabajo (Excel)</button>
+        ${L.length ? `<button type="button" onclick="impRegenerarNombres()" class="${impBtn}" title="Vuelve a armar el código y los nombres de cada importación a partir del nombre del archivo y del proveedor">Regenerar nombres</button>` : ''}</div>
+        <p class="text-slate-500">${L.length ? L.length + ' importaciones cargadas por Claude' : 'Aún no hay liquidaciones'} · ${Cx ? 'cruce con el mayor hecho' : 'cruce con el mayor pendiente'}. Cuando el pedido pase a "hecho", presiona F5.</p></div>`;
+      const proc = '<div id="im-proc" class="px-3 py-2 space-y-1"></div>';
       if (!L.length) return barra + proc + '<div class="border-t border-slate-100">' + pcHtmlAviso('AF', impEstado.cliente, impEstado.anio, impEstado.visita, 'import') + '</div>';
       const th = (t, c) => `<th class="px-2 py-1 border-b border-slate-200 whitespace-nowrap ${c || 'text-right'}">${t}</th>`;
       let h = barra + proc + `<div class="overflow-x-auto"><table class="w-full text-[11px] leading-tight border-collapse"><thead class="bg-slate-50 text-slate-600"><tr>${th('', 'w-6')}${th('Importación', 'text-left')}${th('Proveedor', 'text-left')}${th('Fecha', 'text-left')}${th('DAU', 'text-left')}${th('Ítems')}${th('FOB')}${th('Flete')}${th('Seguro')}${th('CIF')}${th('Arancel')}${th('FODINFA')}${th('IVA')}${th('Costo total producto')}${th('Costos indirectos')}${th('Valor en aduana DAI')}${th('Dif. CIF − DAI')}${th('Controles', 'text-center')}${th('', 'w-6')}</tr></thead><tbody>`;
@@ -17591,20 +17582,13 @@ ${(im.aprendidos || []).length ? `<p class="text-xs text-slate-600 bg-slate-50 b
     async function impCruzar() {
       const M = impEstado.mayor; if (!M) return;
       if (M.mapa.cod < 0 || M.mapa.debe < 0 || M.mapa.haber < 0) { alert('Falta indicar las columnas de código de cuenta, debe y haber.'); impEstado.verMapa = true; impRender(); return; }
-      const b = $im('im-cruzar') || { disabled: false }, pr = $im('im-prog') || { textContent: '' }; b.disabled = true;
+      const b = $im('im-cruzar'), pr = $im('im-prog'); b.disabled = true;
       try {
         const cruce = await impLeerMayor(M, impEstado.imports, (paso, p, n) => { pr.textContent = `Paso ${paso}: leyendo el mayor ${Math.round((p || 0) * 100)}%${n ? ' (' + Number(n).toLocaleString('en-US') + ' líneas)' : ''}…`; });
         impEstado.cruce = cruce; impEstado.aliasCambio = false; impGuardar('liquidaciones'); impSugerirRoles(); impReclasificar();
         impGuardar('cruce'); impGuardar('config'); impRender();
         const e = $im('im-prog'); if (e) e.textContent = `Listo: ${cruce.lineas.length} líneas y ${cruce.asientos.length} asientos de importaciones.${cruce.aprendio ? ' Se aprendieron nombres nuevos del mayor (ábrelos en la hoja 1).' : ''}${cruce.aviso ? ' ' + cruce.aviso : ''}`;
       } catch (e) { pr.textContent = ''; alert(e.message || e); b.disabled = false; }
-    }
-
-    async function impTodo() {
-      if (!impEstado.imports.length) { alert('Primero carga las liquidaciones.'); return; }
-      if (!impEstado.mayor) { alert('Primero elige el archivo del mayor contable.'); return; }
-      await impCruzar();
-      if (impEstado.cruce) { try { await impCargarMov(); } catch (e) {} impRender(); }
     }
 
     // ---------- 3. Diario contable ----------
