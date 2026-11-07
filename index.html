@@ -10991,20 +10991,40 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
     }
 
     // ----- Tablas por año -----
+    function arrValorMes(r, y, mm, medida, c) {
+      const k = y * 12 + mm - 1, e = (r.meses || []).find(z => z.y === y && z.m === mm), tasa = arrEstado.tasaImp;
+      if (medida === 'dep') return e ? e.dep : 0;
+      if (medida === 'interes') return e ? e.interes : 0;
+      if (medida === 'pagos') return e ? e.pago : 0;
+      if (medida === 'rem') return e ? e.rem : 0;
+      if (medida === 'gastoAct') return e ? (e.pago - e.interes) * tasa : 0;
+      if (medida === 'ingPas') return e ? (e.dep - e.aj) * tasa : 0;
+      if (medida === 'neto') return e ? e.neto : 0;
+      const pas = e ? e.saldo : 0;
+      if (medida === 'pasivo') return pas;
+      const largo = (c && pas) ? arrLargoVigente(c, r, k) : 0;
+      return medida === 'largo' ? largo : pas - largo;
+    }
+    function arrAnualAnio(y) { const s = arrEstado.anAnios || (arrEstado.anAnios = new Set()); if (s.has(y)) s.delete(y); else s.add(y); arrRender(); }
+    function arrAnualTodos(abrir) { const K = arrConsolidado(); arrEstado.anAnios = new Set(abrir ? K.anios : []); arrRender(); }
     function arrHtmlAnual() {
       const K = arrConsolidado(); if (!K.anios.length) return '<p class="p-6 text-xs text-slate-400 text-center">Agrega contratos con canon, fechas y tasa para ver las tablas.</p>';
-      const m = arrEstado.medida, esFlujo = ARR_FLUJOS.includes(m);
+      const m = arrEstado.medida, esFlujo = ARR_FLUJOS.includes(m), an = arrEstado.anAnios || (arrEstado.anAnios = new Set());
       const botones = ARR_MEDIDAS.map(([k, t]) => `<button type="button" onclick="arrMedida('${k}')" class="px-2.5 py-1 rounded-lg text-[11px] transition ${k === m ? 'bg-slate-200 text-slate-900 font-semibold' : 'text-slate-600 hover:bg-slate-100 font-medium'}">${t}</button>`).join(' ');
       const th = (t, cls = '') => `<th class="px-2 py-1 border-b border-slate-200 text-right whitespace-nowrap ${cls}">${t}</th>`;
-      let html = `<div class="p-2 flex flex-wrap gap-1.5 border-b border-slate-200 sticky left-0">${botones}</div><table class="w-full text-[11px] leading-tight border-collapse"><thead class="bg-slate-50 text-slate-600 sticky top-0 z-10"><tr><th class="px-2 py-1 border-b border-slate-200 text-left sticky left-0 z-20 bg-slate-50 min-w-[260px]">Contrato</th>${th((m === 'neto' || m === 'dep' || m === 'ingPas') ? 'Activo a depreciar al inicio' : 'Pasivo al inicio (valor actual)')}${K.anios.map(y => th(esFlujo ? 'Año ' + y : 'Al 31 de dic. ' + y)).join('')}${esFlujo ? th('Total') : ''}</tr></thead><tbody>`;
-      const tot = {}; let totVa = 0;
+      const cols = []; K.anios.forEach(y => { if (an.has(y)) for (let mm = 1; mm <= 12; mm++) cols.push({ t: 'm', y, mm }); cols.push({ t: 'y', y }); });
+      const thCol = c => c.t === 'm' ? th(ARR_MESES[c.mm - 1] + '-' + String(c.y).slice(2), 'bg-slate-50 font-normal') : `<th class="px-2 py-1 border-b border-slate-200 text-right whitespace-nowrap bg-slate-200 cursor-pointer select-none text-[10px] align-middle" onclick="arrAnualAnio(${c.y})" title="Clic para ${an.has(c.y) ? 'ocultar' : 'ver'} los meses de ${c.y}"><span class="flecha-caja flecha-mini ${an.has(c.y) ? 'abierta' : ''}">${an.has(c.y) ? '▾' : '▸'}</span>${esFlujo ? 'Año ' + c.y : 'Al 31 de dic. ' + c.y}</th>`;
+      const val = (x, c) => c.t === 'm' ? arrValorMes(x.r, c.y, c.mm, m, x.c) : arrValorAnio(x.r, c.y, m, x.c);
+      let html = `<div class="p-2 flex flex-wrap gap-1.5 border-b border-slate-200 sticky left-0">${botones}</div><div class="p-2 flex flex-wrap items-center gap-2 border-b border-slate-200 sticky left-0"><button type="button" onclick="arrAnualTodos(true)" class="px-2.5 py-1 rounded-lg text-[11px] bg-slate-100 text-slate-800 hover:bg-slate-200 font-medium">Ver todos los meses</button><button type="button" onclick="arrAnualTodos(false)" class="px-2.5 py-1 rounded-lg text-[11px] bg-slate-100 text-slate-800 hover:bg-slate-200 font-medium">Solo totales por año</button><span class="text-[11px] text-slate-500">Toca la flecha de cada año para ver u ocultar sus meses.</span></div><div class="overflow-x-auto"><table class="w-auto min-w-full text-[11px] leading-tight border-collapse"><thead class="bg-slate-50 text-slate-600 sticky top-0 z-10"><tr><th class="px-2 py-1 border-b border-slate-200 text-left sticky left-0 z-20 bg-slate-50 min-w-[260px]">Contrato</th>${th((m === 'neto' || m === 'dep' || m === 'ingPas') ? 'Activo a depreciar al inicio' : 'Pasivo al inicio (valor actual)')}${cols.map(thCol).join('')}${esFlujo ? th('Total') : ''}</tr></thead><tbody>`;
+      const tot = cols.map(() => 0); let totVa = 0, totAll = 0;
       K.calc.forEach(x => {
         let suma = 0; const v0 = (m === 'neto' || m === 'dep' || m === 'ingPas') ? x.r.activoIni : x.r.va; totVa += v0;
         html += `<tr class="border-b border-slate-100 hover:bg-slate-50"><td class="px-2 py-0.5 sticky left-0 bg-white whitespace-nowrap">${escapeHtml(arrNombre(x.c))}</td><td class="px-2 text-right">${arrFmt(v0)}</td>`;
-        K.anios.forEach(y => { const v = arrValorAnio(x.r, y, m, x.c); suma += v; tot[y] = (tot[y] || 0) + v; html += `<td class="px-2 text-right whitespace-nowrap">${arrFmt(v)}</td>`; });
+        cols.forEach((c, i) => { const v = val(x, c); if (c.t === 'y') suma += v; tot[i] += v; html += `<td class="px-2 text-right whitespace-nowrap ${c.t === 'm' ? 'bg-slate-50' : ''}">${arrFmt(v)}</td>`; });
+        totAll += suma;
         html += (esFlujo ? `<td class="px-2 text-right font-semibold">${arrFmt(suma)}</td>` : '') + '</tr>';
       });
-      html += `</tbody><tfoot class="bg-slate-100 font-bold text-slate-800 sticky bottom-0"><tr><td class="px-2 py-1 sticky left-0 bg-slate-100">Total</td><td class="px-2 text-right">${arrFmt(totVa)}</td>${K.anios.map(y => `<td class="px-2 text-right whitespace-nowrap">${arrFmt(tot[y] || 0)}</td>`).join('')}${esFlujo ? `<td class="px-2 text-right">${arrFmt(K.anios.reduce((s, y) => s + (tot[y] || 0), 0))}</td>` : ''}</tr></tfoot></table>`;
+      html += `</tbody><tfoot class="bg-slate-100 font-bold text-slate-800 sticky bottom-0"><tr><td class="px-2 py-1 sticky left-0 bg-slate-100">Total</td><td class="px-2 text-right">${arrFmt(totVa)}</td>${cols.map((c, i) => `<td class="px-2 text-right whitespace-nowrap">${arrFmt(tot[i])}</td>`).join('')}${esFlujo ? `<td class="px-2 text-right">${arrFmt(totAll)}</td>` : ''}</tr></tfoot></table></div>`;
       return html;
     }
     function arrMedida(k) { arrEstado.medida = k; arrRender(); }
