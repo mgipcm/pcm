@@ -16701,18 +16701,24 @@ ${cont.innerHTML}
       { k: 'tributos', t: 'Tributos SENAE (arancel y FODINFA)', rol: null, soloAnticipo: true },
       { k: 'flete_ext', t: 'Flete internacional', rol: null, soloAnticipo: true },
       { k: 'isd', t: 'ISD', rol: 'isd', gasto: true },
-      { k: 'agente', t: 'Agente aduanero', rol: 'agente', gasto: true },
-      { k: 'manejo', t: 'Manejo de contenedor (naviera, THC, portuarios)', rol: 'manejo', gasto: true },
-      { k: 'seguro', t: 'Seguro (póliza)', rol: 'seguro', gasto: true },
-      { k: 'flete_int', t: 'Transporte o flete interno', rol: 'flete_int', gasto: true },
-      { k: 'logistico', t: 'Gasto logístico (candado, turno, custodia)', rol: 'logistico', gasto: true },
-      { k: 'gasto_fin', t: 'Gasto financiero', rol: 'gasto_fin', gasto: true }
+      { k: 'agente', t: 'Agente aduanero', rol: null, gasto: true },
+      { k: 'manejo', t: 'Manejo de contenedor (naviera, THC, portuarios)', rol: null, gasto: true },
+      { k: 'seguro', t: 'Seguro (póliza)', rol: null, gasto: true },
+      { k: 'flete_int', t: 'Transporte o flete interno', rol: null, gasto: true },
+      { k: 'logistico', t: 'Gasto logístico (candado, turno, custodia)', rol: null, gasto: true },
+      { k: 'gasto_fin', t: 'Gasto financiero', rol: null, gasto: true },
+      { k: 'gastos', t: 'Costos de importación registrados en gastos', rol: 'gastos' }
     ];
     const IMP_ROLES = [
       ['inventario', 'Inventarios (costo de la importación)'], ['iva', 'IVA pagado en compras'], ['anticipo', 'Anticipo de importaciones'], ['proveedores', 'Proveedores'],
-      ['isd', 'ISD (costo de la importación o su provisión)'], ['agente', 'Gasto agente aduanero'], ['manejo', 'Gasto manejo de contenedor'], ['seguro', 'Gasto seguros'], ['flete_int', 'Gasto transporte de importación'],
-      ['logistico', 'Gasto custodia / logístico'], ['gasto_fin', 'Gasto financiero de la importación']
+      ['isd', 'ISD (costo de la importación o su provisión)'], ['gastos', 'Costos de importación registrados en gastos (cuentas de resultados: agente, contenedor, seguro, transporte, logística, financiero)']
     ];
+    // Los roles guardados antes con cuentas separadas (agente, manejo, seguro, transporte, logístico, financiero) se suman al rol único "gastos"
+    function impRolesDe(cfg) {
+      const r = {}; IMP_ROLES.forEach(([k]) => { r[k] = impListaCtas(((cfg || {}).roles || {})[k]).slice(); });
+      ['agente', 'manejo', 'seguro', 'flete_int', 'logistico', 'gasto_fin'].forEach(k => impListaCtas(((cfg || {}).roles || {})[k]).forEach(c => { if (!r.gastos.includes(c)) r.gastos.push(c); }));
+      return r;
+    }
     // Palabras que ayudan a reconocer, en el detalle de un pago por anticipo, de qué concepto es
     const IMP_KW_DEF = {
       isd: 'ISD|SALIDA DE DIVISAS', agente: 'AGENTE|ADUANER', manejo: 'NAVIERA|THC|PORTUARI|CONTENEDOR|MANEJO|BODEGAJE|GASTOS LOCALES|GASTOS IMPORTACION|ALMACENAJE',
@@ -16721,7 +16727,7 @@ ${cont.innerHTML}
     // Sugerencia de cuentas por rol según el nombre de la cuenta
     const IMP_SUG = {
       inventario: /INVENTARIO|MERCADERIA/, iva: /IVA.*(COMPRA|PAGAD)|CREDITO TRIBUT/, anticipo: /ANTICIPO.*IMPORT|IMPORT.*ANTICIPO/, proveedores: /PROVEEDOR/,
-      isd: /\bISD\b|SALIDA.*DIVISA/, agente: /AGENTE|ADUANER/, manejo: /CONTENEDOR|NAVIER|MANEJO|PORTUAR/, seguro: /SEGURO/, flete_int: /TRANSPORTE|FLETE/, logistico: /CUSTODIA|LOGISTIC/, gasto_fin: /FINANCIER|INTERES|COMISION BANC/
+      isd: /\bISD\b|SALIDA.*DIVISA/, gastos: /AGENTE|ADUANER|CONTENEDOR|NAVIER|MANEJO|PORTUAR|SEGURO|TRANSPORTE|FLETE|CUSTODIA|LOGISTIC|FINANCIER|INTERES|COMISION BANC/
     };
 
     const impN = v => {
@@ -16859,7 +16865,7 @@ ${cont.innerHTML}
 
     // Cruce: reparte las líneas del mayor por importación y concepto y las compara con la liquidación
     function impClasificar(cruce, imports, cfg) {
-      const roles = {}; IMP_ROLES.forEach(([k]) => { roles[k] = impListaCtas((cfg.roles || {})[k]); });
+      const roles = impRolesDe(cfg);
       const kw = {}; Object.keys(IMP_KW_DEF).forEach(k => { const t = ((cfg.kw || {})[k] || IMP_KW_DEF[k]); try { kw[k] = new RegExp(t, 'i'); } catch (e) { kw[k] = new RegExp(IMP_KW_DEF[k], 'i'); } });
       const tol = Number(cfg.tol) >= 0 ? Number(cfg.tol) : 1, corte = cfg.corte || '';
       const R = {}, compartidas = [], posteriores = [];
@@ -16899,7 +16905,7 @@ ${cont.innerHTML}
       imports.forEach(im => {
         const liq = impValoresLiq(im);
         IMP_CONCEPTOS.forEach(k => {
-          const x = R[im.id].c[k.k]; x.liq = impR2((k.k === 'costo' ? liq.total : liq[k.k]) || 0); x.mayor = impR2(x.mayor); x.via = impR2(x.via); x.viaHab = impR2(x.viaHab); x.comp = impR2(x.comp); x.post = impR2(x.post);
+          const x = R[im.id].c[k.k]; x.liq = impR2((k.k === 'costo' ? liq.total : k.k === 'gastos' ? 0 : liq[k.k]) || 0); x.mayor = impR2(x.mayor); x.via = impR2(x.via); x.viaHab = impR2(x.viaHab); x.comp = impR2(x.comp); x.post = impR2(x.post);
           const total = k.soloAnticipo ? x.via : impR2(x.mayor + x.via + x.comp), base = total, dif = impR2(x.liq - base);
           let est = 'N/A';
           const solo = k.k !== 'costo' && k.k !== 'iva';
@@ -16935,7 +16941,7 @@ ${cont.innerHTML}
         const comp = IMP_CONCEPTOS.filter(k => k.gasto).map(k => { const y = filas.find(x => x.id === im.id && x.k === k.k) || {}; return { t: k.t.replace(/ \(.*\)/, ''), liq: y.liq || 0, may: y.mayor || 0 }; }).filter(c => c.liq > 0.005);
         let mejor = null;
         for (let m = 1; m < (1 << comp.length); m++) { const sel = comp.filter((c, i) => m & (1 << i)), sum = sel.reduce((t, c) => t + c.liq, 0); if (Math.abs(sum - dif) <= tol && (!mejor || sel.length < mejor.length)) mejor = sel; }
-        if (mejor) { const sum = impR2(mejor.reduce((t, c) => t + c.liq, 0)), reg = impR2(mejor.reduce((t, c) => t + c.may, 0)); out.push(`La diferencia (${fm(dif)}) coincide con: ${mejor.map(c => c.t).join(' + ')} (${fm(sum)}). ` + (reg > tol ? `En el mayor esos gastos aparecen en cuentas de resultados por ${fm(reg)}, no en inventario.` : 'No se encontraron registrados en el mayor.')); }
+        if (mejor) { const sum = impR2(mejor.reduce((t, c) => t + c.liq, 0)), regG = (filas.find(x => x.id === im.id && x.k === 'gastos') || {}).mayor || 0, reg = impR2(Math.max(mejor.reduce((t, c) => t + c.may, 0), regG)); out.push(`La diferencia (${fm(dif)}) coincide con: ${mejor.map(c => c.t).join(' + ')} (${fm(sum)}). ` + (reg > tol ? `En el mayor esos gastos aparecen en cuentas de resultados por ${fm(reg)}, no en inventario.` : 'No se encontraron registrados en el mayor.')); }
       }
       if (kk === 'costo') { const aj = impValoresLiq(im).ajusteHoja || 0; if (aj > tol && Math.abs(aj - ad) <= Math.max(tol, 0.5)) out.push(`La diferencia (${fm(dif)}) coincide con el importe sin detalle que la hoja de liquidación reparte en el costo (línea de ajuste de ${fm(aj)}); no se encontró registrado en el mayor.`); }
       if (ad > tol) {
@@ -16951,7 +16957,7 @@ ${cont.innerHTML}
     }
     // Amplía las líneas del mayor: por número de diario, por valor y por reversiones del mismo valor
     function impAmpliarLineas(cruce, imports, cfg) {
-      const roles = {}; IMP_ROLES.forEach(([k]) => { roles[k] = impListaCtas((cfg.roles || {})[k]); });
+      const roles = impRolesDe(cfg);
       const todas = [].concat(...Object.values(roles)), enRol = c => todas.length > 0 && impCtaEn(c, todas), tol = Number(cfg.tol) >= 0 ? Number(cfg.tol) : 1;
       const base = (cruce.lineas || []).map(l => ({ ...l, met: l.met || (l.cr === 'monto' ? 'valor' : 'nombre') }));
       const key = (k, cod, d, h) => k + '|' + cod + '|' + impR2(d) + '|' + impR2(h), have = new Set(base.map(l => key(l.k, l.cod, Number(l.deb) || 0, Number(l.hab) || 0)));
@@ -16976,7 +16982,7 @@ ${cont.innerHTML}
     // Hallazgos que se detectan solos, con reglas (la redacción final la puede pulir Claude)
     function impHallazgos(imports, cl, cruce, cfg) {
       const H = [], f = cl.filas, fm = v => (Math.round(v * 100) / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-      const gast = IMP_CONCEPTOS.filter(k => k.gasto).map(k => k.k);
+      const gast = IMP_CONCEPTOS.filter(k => k.gasto || k.k === 'gastos').map(k => k.k);
       const porImp = id => f.filter(x => x.id === id);
       // 1. Gastos de importación llevados al gasto
       const gastoReg = f.filter(x => gast.includes(x.k)).reduce((t, x) => t + x.mayor - x.comp, 0);
@@ -17940,13 +17946,13 @@ ${(im.aprendidos || []).length ? `<p class="text-xs text-slate-600 bg-slate-50 b
     }
 
     // ---------- 5. Resumen contable: liquidaciones vs entradas del mayor vs gastos no capitalizados ----------
-    const IMP_CAP = ['isd', 'agente', 'manejo', 'seguro', 'flete_int', 'logistico'];
-    const IMP_GAS_ROLES = [...IMP_CAP, 'gasto_fin'];
+    const IMP_CAP = ['isd', 'gastos'];
+    const IMP_GAS_ROLES = ['isd', 'gastos'];
     function impTipoCuenta(cod) { const d = String(cod).charAt(0); return d === '1' ? 'activo' : d === '2' ? 'pasivo' : d === '3' ? 'patrimonio' : 'resultados'; }
     function impResumenCalc() {
       const cl = impEstado.cl, C = impEstado.cruce; if (!cl || !C) return null;
       const cfg = impEstado.cfg, L = impEstado.imports, tol = Number(cfg.tol) >= 0 ? Number(cfg.tol) : 1, corte = cfg.corte || '';
-      const roles = {}; IMP_ROLES.forEach(([k]) => { roles[k] = impListaCtas((cfg.roles || {})[k]); });
+      const roles = impRolesDe(cfg);
       const ids = new Set(L.map(x => x.id)), finSi = new Set(L.filter(x => x.fin_cap === 'si').map(x => x.id)), g = (id, k) => cl.filas.find(x => x.id === id && x.k === k) || {};
       const R = impEntradasCalc(), entMap = R ? Object.fromEntries(R.porImp.map(x => [x.id, x])) : null;
       const porImp = {}; L.forEach(im => { porImp[im.id] = { cap: 0, fin: 0, prov: 0 }; });
@@ -17959,9 +17965,11 @@ ${(im.aprendidos || []).length ? `<p class="text-xs text-slate-600 bg-slate-50 b
         if (corte && l.d && l.d > corte) { if (tipo === 'resultados') posterior += net; return; }
         if (tipo === 'pasivo') { if (rol === 'isd' && mis.length === 1) porImp[mis[0]].prov += -net; return; }
         if (mis.length > 1) { compartido += net; return; }
-        const id = mis[0], x = ctas[l.cod] = ctas[l.cod] || { cod: l.cod, nombre: (C.cuentas || {})[l.cod] || '', rol, total: 0, cap: 0, imps: {}, asientos: new Set() };
+        const esFin = rol === 'gastos' && /FINANC|INTERES|COMISION BANC/.test(impNorm(l.det || ''));
+        const id = mis[0], x = ctas[l.cod] = ctas[l.cod] || { cod: l.cod, nombre: (C.cuentas || {})[l.cod] || '', rol, total: 0, cap: 0, imps: {}, asientos: new Set(), fin: false };
+        if (esFin) x.fin = true;
         x.total += net; x.imps[id] = (x.imps[id] || 0) + net; if (l.k) x.asientos.add(l.k);
-        if (rol === 'gasto_fin' && !finSi.has(id)) porImp[id].fin += net; else { porImp[id].cap += net; x.cap += net; }
+        if (esFin && !finSi.has(id)) porImp[id].fin += net; else { porImp[id].cap += net; x.cap += net; }
       });
       const filas = L.map(im => {
         const co = g(im.id, 'costo'), P = porImp[im.id], costoLiq = impR2(co.liq || 0), finLiq = impR2(g(im.id, 'gasto_fin').liq || 0), capLiq = 0;
@@ -17990,7 +17998,7 @@ ${(im.aprendidos || []).length ? `<p class="text-xs text-slate-600 bg-slate-50 b
       h += '<div><div class="font-bold text-slate-800 mb-1">B. Gastos de importación registrados en resultados, por cuenta</div>';
       if (!Z.cuentas.length) h += '<p class="text-[11px] text-slate-500">No se identificaron gastos de importación en cuentas de resultados.</p>';
       else { h += '<div class="overflow-x-auto border border-slate-200 rounded-lg"><table class="w-full text-[11px] border-collapse"><thead><tr><th class="' + th + ' text-left">Cuenta</th><th class="' + th + ' text-left">Concepto</th><th class="' + th + ' text-left">¿Se capitaliza?</th><th class="' + th + ' text-right">Importe</th><th class="' + th + ' text-right">Asientos</th><th class="' + th + ' text-left">Importaciones</th></tr></thead><tbody>';
-        Z.cuentas.forEach(c => { const cap = Math.abs(c.cap) > 0.005, parc = cap && Math.abs(c.cap - c.total) > 0.005; h += '<tr class="border-t border-slate-100"><td class="px-2 py-1">' + impE(c.cod + ' ' + c.nombre) + '</td><td class="px-2 py-1">' + impE((IMP_ROLES.find(r => r[0] === c.rol) || [0, c.rol])[1]) + '</td><td class="px-2 py-1 ' + (cap ? 'text-red-600 font-semibold' : 'text-slate-600') + '">' + (parc ? 'En parte (' + F(impR2(c.cap)) + ')' : cap ? 'Sí (a inventario)' : (c.rol === 'gasto_fin' ? 'No (gasto financiero)' : 'No')) + '</td><td class="' + td + '">' + F(impR2(c.total)) + '</td><td class="' + td + '">' + c.asientos.size + '</td><td class="px-2 py-1">' + impE(Object.keys(c.imps).join(', ')) + '</td></tr>'; });
+        Z.cuentas.forEach(c => { const cap = Math.abs(c.cap) > 0.005, parc = cap && Math.abs(c.cap - c.total) > 0.005; h += '<tr class="border-t border-slate-100"><td class="px-2 py-1">' + impE(c.cod + ' ' + c.nombre) + '</td><td class="px-2 py-1">' + impE((IMP_ROLES.find(r => r[0] === c.rol) || [0, c.rol])[1]) + '</td><td class="px-2 py-1 ' + (cap ? 'text-red-600 font-semibold' : 'text-slate-600') + '">' + (parc ? 'En parte (' + F(impR2(c.cap)) + ')' : cap ? 'Sí (a inventario)' : (c.fin ? 'No (gasto financiero)' : 'No')) + '</td><td class="' + td + '">' + F(impR2(c.total)) + '</td><td class="' + td + '">' + c.asientos.size + '</td><td class="px-2 py-1">' + impE(Object.keys(c.imps).join(', ')) + '</td></tr>'; });
         h += '</tbody></table></div>'; }
       h += '</div>';
       const aRecl = Z.cuentas.filter(c => Math.abs(c.cap) > 0.005);
