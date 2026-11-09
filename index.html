@@ -16616,7 +16616,12 @@ ${cont.innerHTML}
       v.flete_int = pick(I('flete_int'), S('flete_interno'));
       v.logistico = pick(I('logistico'), S('logistico'));
       v.gasto_fin = pick(I('gasto_fin'), S('gasto_financiero'));
-      v.total = impR2((v.costo || 0) + ['isd', 'agente', 'manejo', 'seguro', 'flete_int', 'logistico', 'gasto_fin'].reduce((t, k) => t + (v[k] || 0), 0));
+      // El costo total de cada ítem de la hoja suele YA incluir los gastos de importación repartidos; si es así, no se vuelven a sumar
+      const gastosSum = impR2(['isd', 'agente', 'manejo', 'seguro', 'flete_int', 'logistico', 'gasto_fin'].reduce((t, k) => t + (v[k] || 0), 0));
+      const baseDirecta = tiene ? impR2(S('cif') + S('arancel') + S('fodinfa')) : 0;
+      v.incluyeGastos = !!(tiene && gastosSum > 0.005 && (v.costo - baseDirecta) >= 0.5 * gastosSum);
+      v.total = v.incluyeGastos ? impR2(v.costo || 0) : impR2((v.costo || 0) + gastosSum);
+      v.ajusteHoja = impR2((I('') || 0) || S('otros_ajustes'));
       return v;
     }
 
@@ -16800,6 +16805,7 @@ ${cont.innerHTML}
         for (let m = 1; m < (1 << comp.length); m++) { const sel = comp.filter((c, i) => m & (1 << i)), sum = sel.reduce((t, c) => t + c.liq, 0); if (Math.abs(sum - dif) <= tol && (!mejor || sel.length < mejor.length)) mejor = sel; }
         if (mejor) { const sum = impR2(mejor.reduce((t, c) => t + c.liq, 0)), reg = impR2(mejor.reduce((t, c) => t + c.may, 0)); out.push(`La diferencia (${fm(dif)}) coincide con: ${mejor.map(c => c.t).join(' + ')} (${fm(sum)}). ` + (reg > tol ? `En el mayor esos gastos aparecen en cuentas de resultados por ${fm(reg)}, no en inventario.` : 'No se encontraron registrados en el mayor.')); }
       }
+      if (kk === 'costo') { const aj = impValoresLiq(im).ajusteHoja || 0; if (aj > tol && Math.abs(aj - ad) <= Math.max(tol, 0.5)) out.push(`La diferencia (${fm(dif)}) coincide con el importe sin detalle que la hoja de liquidación reparte en el costo (línea de ajuste de ${fm(aj)}); no se encontró registrado en el mayor.`); }
       if (ad > tol) {
         const sim = []; const vistos = new Set();
         LN.forEach(l => { const m = Math.max(Number(l.deb) || 0, Number(l.hab) || 0); if (Math.abs(m - ad) <= tol) { const k2 = l.k + '|' + l.cod; if (!vistos.has(k2)) { vistos.add(k2); sim.push(l); } } });
