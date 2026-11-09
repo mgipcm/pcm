@@ -15582,7 +15582,8 @@ ${cont.innerHTML}
           m: mapa, P, n: 0, apertura: 0, sinDoc: 0, sinFecha: 0, debe: 0, haber: 0, minDia: Infinity, maxDia: -Infinity,
           asientos: new Map(), tipos: new Map(), benford: new Map(), ctas: new Map(), users: new Map(), series: new Map(),
           topAt: new TopK(3000), topRed: new TopK(3000), redCnt: new Map(), kw: new TopK(3000), kwCnt: new Map(),
-          chLin: new Map(), chLinN: 0, benCta: new Map(), seen: new Map(), dups: new Map(), chSeen: new Map(), chHits: new Map()
+          chLin: new Map(), chLinN: 0, benCta: new Map(), seen: new Map(), dups: new Map(), chSeen: new Map(), chHits: new Map(),
+          topSig: new TopK(4000), _ld: NaN, _lm: 0
         };
       }
 
@@ -15606,7 +15607,11 @@ ${cont.innerHTML}
         const con = c1 && c2 ? c1 + ' / ' + c2 : (c1 || c2);
 
         A.n++; A.debe += debe; A.haber += haber; ct.deb += debe; ct.hab += haber; ct.n++;
-        if (d !== d) A.sinFecha++; else { if (d < A.minDia) A.minDia = d; if (d > A.maxDia) A.maxDia = d; }
+        if (d !== d) A.sinFecha++; else {
+          if (d < A.minDia) A.minDia = d; if (d > A.maxDia) A.maxDia = d;
+          if (d !== A._ld) { const fx = new Date(d * 864e5); A._ld = d; A._lm = fx.getUTCFullYear() * 100 + fx.getUTCMonth() + 1; }
+          if (!ct.mes) ct.mes = new Map(); let ms = ct.mes.get(A._lm); if (!ms) { ms = [0, 0]; ct.mes.set(A._lm, ms); } ms[0] += debe; ms[1] += haber;
+        }
 
         let tp = A.tipos.get(tk); if (!tp) { tp = { lineas: 0, asientos: 0, deb: 0 }; A.tipos.set(tk, tp); }
         tp.lineas++; tp.deb += debe;
@@ -15639,6 +15644,9 @@ ${cont.innerHTML}
 
         const monto = debe > haber ? debe : haber;
         const mk = () => ({ cod, cu: ct.nom, d, doc: numRaw, tk, con, deb: debe, hab: haber, u: usuario });
+        if (A.topSig.ok(monto)) { const it = mk(); it.k = monto; A.topSig.push(it); }
+        if (!ct.top) ct.top = [];
+        if (ct.top.length < 8 || monto > ct.top[ct.top.length - 1].k) { const it = mk(); it.k = monto; let i = ct.top.length; while (i > 0 && ct.top[i - 1].k < monto) i--; ct.top.splice(i, 0, it); if (ct.top.length > 8) ct.top.pop(); }
         if (debe > 0 && A.topAt.ok(debe)) { const it = mk(); it.k = debe; A.topAt.push(it); }
         if (monto >= P.red && Math.abs(monto / P.red - Math.round(monto / P.red)) < 1e-9) {
           A.redCnt.set(tk, (A.redCnt.get(tk) || 0) + 1);
@@ -16048,6 +16056,7 @@ ${cont.innerHTML}
       MYS.A.tipos.forEach((v, tk) => { const g = MYS.guardados[tk]; if (g ? g.manual : MYM.adivinaManual(tk)) MYS.manuales.add(tk); });
     }
     async function mayorCambioCliente() {
+      MYSG.periodos = null;
       await mayorCargarTipos();
       if (MYS.A) { mayorAplicarGuardados(); mayorCalcular(); mayorPintar(); }
     }
@@ -16192,7 +16201,7 @@ ${cont.innerHTML}
     async function mayorAnalizar() {
       if (MYS.ocupado || !MYS.fuente) return;
       const m = mayorLeerMapa(); if (m.cod < 0 || m.debe < 0 || m.haber < 0) return;
-      MYS.ocupado = true; MYS.mapa = m;
+      MYS.ocupado = true; MYS.mapa = m; MYSG.periodos = null; MYSG.abierta = null;
       MYS.lineasAs = new Map(); MYS.tksEsc = new Set(); MYS.movCuentas = new Map(); if (MYS.cons) { MYS.cons.cod = ''; MYS.cons.error = ''; }
       const P = mayorParams();
       const btn = myEl('my-btn-analizar'); btn.disabled = true; btn.classList.add('opacity-50');
@@ -16273,7 +16282,7 @@ ${cont.innerHTML}
       }
     function mayorPintarTabs() {
       const R = MYS.res;
-      const tabs = [['resumen', 'Resumen'], ['consulta', 'Consulta por cuenta']].concat(R.tests.filter(t => !t.oculto).map(t => [t.id, t.titulo]));
+      const tabs = [['resumen', 'Resumen'], ['consulta', 'Consulta por cuenta'], ['signif', 'Movimientos significativos y variaciones']].concat(R.tests.filter(t => !t.oculto).map(t => [t.id, t.titulo]));
       myEl('my-tabs').innerHTML = tabs.map(([id, nom]) => {
         const t = R.tests.find(x => x.id === id);
         return `<button onclick="mayorTab('${id}')" class="px-3 py-1.5 text-xs rounded-lg transition ${MYS.tab === id ? 'bg-slate-200 text-slate-900 font-semibold' : 'text-slate-600 hover:bg-slate-100 font-medium'} flex items-center gap-1.5">${t ? myPunto(t.nivel) : ''}${escapeHtml(nom)}</button>`;
@@ -16478,6 +16487,7 @@ ${cont.innerHTML}
         p.innerHTML = h; return;
       }
       if (MYS.tab === 'consulta') { mayorPanelConsulta(); return; }
+      if (MYS.tab === 'signif') { mayorPanelSignif(); return; }
       let t = R.tests.find(x => x.id === MYS.tab); if (!t) return;
       const tConcBase = t;
       if (t.id === 'conc_man' && MYS.concVista === 'lista') t = Object.assign({}, t.lista, { id: 'conc_man', titulo: t.titulo, que: t.que });
@@ -16510,6 +16520,136 @@ ${cont.innerHTML}
       p.innerHTML = h;
     }
 
+
+    // ---------- Movimientos significativos y variaciones (con las sumarias del cliente) ----------
+    const MYSG = { periodos: null, cargando: false, error: '', cid: '', act: '', ant: '', balAct: null, balAnt: null, sumNom: null, pct: 10, abierta: null, fSum: '__todas__', calc: null };
+    const mayorSgNorm = c => String(c == null ? '' : c).replace(/[^0-9a-zA-Z]/g, '').toUpperCase();
+    const mayorSgEtq = p => p.anio + ' · ' + (p.visita === 'final' ? 'final' : 'preliminar') + (p.corte ? ' (corte ' + String(p.corte).split('-').reverse().join('/') + ')' : '');
+    async function mayorSgCargar(forzar) {
+      const cid = mayorClienteId();
+      if (!cid) { MYSG.error = 'Elige el cliente en el paso 1 para traer sus sumarias y balances.'; MYSG.periodos = null; return; }
+      if (MYSG.cargando) return;
+      if (!forzar && MYSG.cid === cid && MYSG.periodos) return;
+      MYSG.cargando = true; MYSG.error = ''; MYSG.cid = cid; mayorPanel();
+      try {
+        const per = new Map();
+        for (let d = 0; ; d += 1000) {
+          const { data, error } = await supabaseClient.from('balance_comprobacion').select('anio, visita, fecha_corte').eq('cliente_id', cid).order('id').range(d, d + 999);
+          if (error) throw error;
+          (data || []).forEach(r => { const k = r.anio + '|' + r.visita; if (!per.has(k)) per.set(k, { k, anio: r.anio, visita: r.visita, corte: r.fecha_corte || '' }); });
+          if (!data || data.length < 1000) break;
+        }
+        MYSG.periodos = [...per.values()].sort((a, b) => b.anio - a.anio || (a.corte < b.corte ? 1 : -1));
+        if (!MYSG.sumNom) {
+          const { data } = await supabaseClient.from('cuentas_sumarias').select('sumaria, cuenta').limit(3000);
+          MYSG.sumNom = {}; (data || []).forEach(r => { if (r.sumaria && !MYSG.sumNom[r.sumaria]) MYSG.sumNom[r.sumaria] = r.cuenta || ''; });
+        }
+        // período por defecto: el del año del mayor y el cierre más cercano al último día; el anterior es el cierre del año previo
+        const A = MYS.A, yr = A && isFinite(A.maxDia) ? new Date(A.maxDia * 864e5).getUTCFullYear() : (MYSG.periodos[0] || {}).anio;
+        const dd = p => p.corte ? Math.abs(Date.parse(p.corte) / 864e5 - (A && isFinite(A.maxDia) ? A.maxDia : 0)) : 1e9;
+        const cand = MYSG.periodos.filter(p => p.anio === yr).sort((a, b) => dd(a) - dd(b))[0] || MYSG.periodos[0];
+        MYSG.act = cand ? cand.k : '';
+        const prev = cand ? (MYSG.periodos.filter(p => p.anio === cand.anio - 1).sort((a, b) => (b.visita === 'final') - (a.visita === 'final') || (a.corte < b.corte ? 1 : -1))[0]) : null;
+        MYSG.ant = prev ? prev.k : '';
+        await mayorSgBalances();
+      } catch (e) { MYSG.error = 'No se pudieron traer las sumarias: ' + (e.message || e); }
+      MYSG.cargando = false; mayorPanel();
+    }
+    async function mayorSgBalances() {
+      const leer = async k => { if (!k) return null; const [a, v] = k.split('|'); const r = await traerBalanceCompleto(MYSG.cid, a, v, 'codigo, cuenta, saldo, sumaria'); return r || []; };
+      MYSG.balAct = await leer(MYSG.act); MYSG.balAnt = await leer(MYSG.ant);
+    }
+    async function mayorSgPeriodo(tipo, v) { MYSG[tipo] = v; MYSG.cargando = true; mayorPanel(); try { await mayorSgBalances(); } catch (e) { MYSG.error = 'No se pudo leer el balance: ' + (e.message || e); } MYSG.cargando = false; mayorPanel(); }
+    function mayorSgCalc() {
+      const A = MYS.A, P = mayorParams(), mat = P.mat, tol = Math.max(1, P.tol || 1), umb = (Number(MYSG.pct) || 0) / 100;
+      const hay = !!(MYSG.balAct && MYSG.balAct.length);
+      const mapBal = arr => { const m = new Map(); (arr || []).forEach(r => { const k = mayorSgNorm(r.codigo); if (!k) return; const x = m.get(k) || { cod: r.codigo, nom: r.cuenta || '', saldo: 0, sumaria: r.sumaria || '' }; x.saldo += Number(r.saldo) || 0; if (!x.sumaria && r.sumaria) x.sumaria = r.sumaria; m.set(k, x); }); return m; };
+      const bAct = mapBal(MYSG.balAct), bAnt = mapBal(MYSG.balAnt);
+      const may = new Map(); A.ctas.forEach((c, cod) => { const k = mayorSgNorm(cod); if (!k) return; const x = may.get(k); if (x) { x.deb += c.deb; x.hab += c.hab; x.top = (x.top || []).concat(c.top || []).sort((a, b) => b.k - a.k).slice(0, 8); } else may.set(k, { cod, nom: c.nom, deb: c.deb, hab: c.hab, n: c.n, mes: c.mes, top: c.top || [] }); });
+      const claves = new Set([...bAct.keys(), ...bAnt.keys(), ...may.keys()]);
+      const cuentas = [];
+      claves.forEach(k => {
+        const a = bAct.get(k), b = bAnt.get(k), m = may.get(k);
+        const sum = (a && a.sumaria) || (b && b.sumaria) || '';
+        const sA = a ? a.saldo : 0, sB = b ? b.saldo : 0, vr = sA - sB, mov = m ? m.deb - m.hab : 0;
+        let cuad = '';
+        if (hay && m && (a || b)) { const d1 = Math.abs(vr - mov), d2 = Math.abs(vr + mov); cuad = Math.min(d1, d2) <= tol ? 'Cuadra' : 'Dif. ' + myMoney(d1 <= d2 ? vr - mov : vr + mov); }
+        cuentas.push({ k, cod: (a || b || m).cod, nom: (a && a.nom) || (b && b.nom) || (m && m.nom) || '', sum: sum || (hay ? '(sin sumaria)' : ''), sA, sB, vr, pct: sB ? vr / Math.abs(sB) : null, deb: m ? m.deb : 0, hab: m ? m.hab : 0, mov, cuad, top: m ? m.top : [], mes: m ? m.mes : null, enMay: !!m });
+      });
+      const sums = new Map();
+      cuentas.forEach(c => { let s = sums.get(c.sum); if (!s) { s = { sum: c.sum, sA: 0, sB: 0, mov: 0, deb: 0, hab: 0, ctas: [] }; sums.set(c.sum, s); } s.sA += c.sA; s.sB += c.sB; s.mov += c.mov; s.deb += c.deb; s.hab += c.hab; s.ctas.push(c); });
+      const sumarias = [...sums.values()].map(s => { s.vr = s.sA - s.sB; s.pct = s.sB ? s.vr / Math.abs(s.sB) : null; s.signif = hay && Math.abs(s.vr) >= mat && (s.pct === null || Math.abs(s.pct) >= umb); s.nom = (MYSG.sumNom || {})[s.sum] || ''; s.ctas.sort((x, y) => Math.abs(y.vr) - Math.abs(x.vr) || Math.abs(y.mov) - Math.abs(x.mov)); return s; })
+        .sort((x, y) => Math.abs(y.vr) - Math.abs(x.vr) || Math.abs(y.mov) - Math.abs(x.mov));
+      cuentas.forEach(c => { c.signif = hay ? (Math.abs(c.vr) >= mat && (c.pct === null || Math.abs(c.pct) >= umb)) : Math.abs(c.mov) >= mat; });
+      const sumDe = new Map(); cuentas.forEach(c => sumDe.set(c.k, c.sum));
+      const movs = A.topSig.lista().filter(x => x.k >= mat);
+      let mi = Infinity, ma = -Infinity; may.forEach(m => { if (m.mes) m.mes.forEach((v, k) => { if (k < mi) mi = k; if (k > ma) ma = k; }); });
+      const meses = []; if (isFinite(mi)) { for (let k = mi; k <= ma; k = (k % 100 === 12) ? k + 89 : k + 1) meses.push(k); }
+      const mensual = [...may.values()].filter(m => m.mes).map(m => { let tot = 0; m.mes.forEach(v => { tot += v[0] + v[1]; }); return { cod: m.cod, nom: m.nom, mes: m.mes, tot, sum: sumDe.get(mayorSgNorm(m.cod)) || '' }; }).sort((a, b) => b.tot - a.tot).slice(0, 30);
+      return MYSG.calc = { hay, mat, umb, cuentas, sumarias, movs, meses, mensual, sumDe };
+    }
+    function mayorSgAbrir(s) { MYSG.abierta = MYSG.abierta === s ? null : s; mayorPanel(); }
+    function mayorPanelSignif() {
+      const p = myEl('my-panel');
+      if (!MYS.A) { p.innerHTML = ''; return; }
+      if (MYSG.cid !== mayorClienteId() || !MYSG.periodos) { if (!MYSG.cargando) setTimeout(() => mayorSgCargar(true), 0); }
+      const Pm = mayorParams(), F = v => myMoney(v), CELL = 'px-2 py-1', thh = 'px-2 py-1.5 text-[11px] font-bold text-slate-700 bg-slate-100 border-b border-slate-300 whitespace-nowrap';
+      const rojo = v => Math.abs(v) > 0.004 ? '' : 'text-slate-400';
+      const R = mayorSgCalc();
+      const opts = (sel) => (MYSG.periodos || []).map(x => `<option value="${escapeHtml(x.k)}"${x.k === sel ? ' selected' : ''}>${escapeHtml(mayorSgEtq(x))}</option>`).join('');
+      let h = '<div class="space-y-4 text-xs text-slate-700">';
+      h += `<div class="max-w-3xl"><h3 class="text-sm font-bold text-slate-800">Movimientos significativos y variaciones <span class="text-[10px] font-bold text-slate-500 bg-slate-100 rounded px-2 py-0.5">NIA 315.14, 330, 520</span></h3><p class="text-[11px] text-slate-500 leading-relaxed mt-1">Cruza el mayor con las sumarias del cliente para ver qué se movió. Se compara el balance del período contra el del año anterior por sumaria y por cuenta, y se explican las variaciones con el movimiento del mayor y sus partidas más grandes. Es significativa la variación que supera la materialidad por cuenta (${F(Pm.mat)}, la del paso 2) y el porcentaje mínimo indicado abajo. Es una ayuda para elegir qué revisar; el juicio es del auditor.</p></div>`;
+      if (MYSG.cargando) h += '<p class="text-xs text-slate-500">Cargando sumarias y balances del cliente…</p>';
+      if (MYSG.error) h += `<p class="text-xs text-red-600 font-bold">${escapeHtml(MYSG.error)}</p>`;
+      if (MYSG.periodos) {
+        h += `<div class="flex flex-wrap items-end gap-3 text-[11px]"><label class="space-y-1"><span class="font-bold text-slate-600 block">Balance del período</span><select onchange="mayorSgPeriodo('act', this.value)" class="border rounded-lg px-2 py-1.5 text-xs">${opts(MYSG.act)}</select></label>
+          <label class="space-y-1"><span class="font-bold text-slate-600 block">Comparar contra</span><select onchange="mayorSgPeriodo('ant', this.value)" class="border rounded-lg px-2 py-1.5 text-xs"><option value="">(sin comparar)</option>${opts(MYSG.ant)}</select></label>
+          <label class="space-y-1"><span class="font-bold text-slate-600 block">Variación mínima (%)</span><input type="number" min="0" value="${MYSG.pct}" onchange="MYSG.pct = this.value; mayorPanel()" class="w-24 border rounded-lg px-2 py-1.5 text-xs"></label></div>`;
+        if (!R.hay) h += '<p class="text-[11px] text-amber-700 font-bold">No hay balance de comprobación cargado para ese período del cliente (sumarias). Se muestran solo los movimientos del mayor; carga el balance en la herramienta de sumarias para ver las variaciones.</p>';
+      }
+      const nSig = R.sumarias.filter(x => x.signif).length;
+      h += `<div class="grid grid-cols-2 md:grid-cols-4 gap-3">${[['Sumarias con variación significativa', myInt(nSig)], ['Cuentas con variación significativa', myInt(R.cuentas.filter(c => c.signif).length)], ['Partidas del mayor ≥ materialidad', myInt(R.movs.length)], ['Materialidad por cuenta', F(Pm.mat)]].map(([l, v]) => `<div class="bg-white p-3 rounded-xl border border-slate-200"><span class="block text-[10px] font-bold text-slate-400">${l}</span><span class="text-sm font-bold text-slate-800">${v}</span></div>`).join('')}</div>`;
+      if (R.hay) {
+        h += `<div><div class="font-bold text-slate-800 mb-1">A. Variación por sumaria <span class="font-normal text-slate-500">(haz clic en una sumaria para ver sus cuentas y las partidas que la explican)</span></div><div class="overflow-x-auto border border-slate-200 rounded-lg bg-white"><table class="w-full text-[11px] border-collapse min-w-[900px]"><thead><tr><th class="${thh} text-left">Sumaria</th><th class="${thh} text-right">Saldo anterior</th><th class="${thh} text-right">Saldo del período</th><th class="${thh} text-right">Variación</th><th class="${thh} text-right">%</th><th class="${thh} text-right">Movimiento del mayor (débitos − créditos)</th><th class="${thh} text-left">Resultado</th></tr></thead><tbody>`;
+        R.sumarias.forEach(sm => {
+          const ab = MYSG.abierta === sm.sum;
+          h += `<tr class="border-t border-slate-100 cursor-pointer hover:bg-slate-50 ${sm.signif ? 'bg-amber-50/60' : ''}" onclick="mayorSgAbrir(decodeURIComponent('${encodeURIComponent(sm.sum)}'))"><td class="${CELL} font-semibold"><span class="inline-block w-4">${ab ? '▾' : '▸'}</span>${escapeHtml(sm.nom || sm.sum || '(sin sumaria)')}</td><td class="${CELL} text-right">${F(sm.sB)}</td><td class="${CELL} text-right">${F(sm.sA)}</td><td class="${CELL} text-right font-semibold ${sm.signif ? 'text-red-600' : ''}">${F(sm.vr)}</td><td class="${CELL} text-right">${sm.pct === null ? 'nuevo' : (sm.pct * 100).toFixed(1) + ' %'}</td><td class="${CELL} text-right">${F(sm.mov)}</td><td class="${CELL} font-bold ${sm.signif ? 'text-red-600' : 'text-slate-500'}">${sm.signif ? 'Significativa' : 'Menor'}</td></tr>`;
+          if (ab) {
+            h += `<tr><td colspan="7" class="px-3 py-2 bg-slate-50"><table class="w-full text-[11px] border-collapse"><thead><tr><th class="${thh} text-left">Cuenta</th><th class="${thh} text-right">Saldo anterior</th><th class="${thh} text-right">Saldo del período</th><th class="${thh} text-right">Variación</th><th class="${thh} text-right">%</th><th class="${thh} text-right">Débitos</th><th class="${thh} text-right">Créditos</th><th class="${thh} text-left">Variación vs mayor</th></tr></thead><tbody>`;
+            sm.ctas.filter(c => Math.abs(c.vr) > 0.004 || Math.abs(c.mov) > 0.004).slice(0, 60).forEach(c => {
+              h += `<tr class="border-t border-slate-200 align-top ${c.signif ? 'bg-amber-50/70' : ''}"><td class="${CELL}"><span class="font-mono">${escapeHtml(c.cod)}</span> ${escapeHtml(c.nom)}</td><td class="${CELL} text-right">${F(c.sB)}</td><td class="${CELL} text-right">${F(c.sA)}</td><td class="${CELL} text-right font-semibold ${c.signif ? 'text-red-600' : ''}">${F(c.vr)}</td><td class="${CELL} text-right">${c.pct === null ? (c.sA ? 'nuevo' : '') : (c.pct * 100).toFixed(1) + ' %'}</td><td class="${CELL} text-right">${F(c.deb)}</td><td class="${CELL} text-right">${F(c.hab)}</td><td class="${CELL} ${c.cuad === 'Cuadra' ? 'text-emerald-700' : 'text-red-600 font-semibold'}">${escapeHtml(c.cuad)}</td></tr>`;
+              if (c.signif || Math.abs(c.mov) >= R.mat) { const tp = (c.top || []).filter((x, i) => x.k >= R.mat / 2 || i < 3).slice(0, 4); if (tp.length) h += `<tr><td colspan="8" class="px-3 pb-2 text-[10.5px] text-slate-600"><b>Partidas más grandes:</b> ` + tp.map(x => `<span class="inline-block mr-3 cursor-pointer underline decoration-dotted" onclick="mayorVerAsiento(decodeURIComponent('${encodeURIComponent(x.tk)}'), decodeURIComponent('${encodeURIComponent(x.doc)}'))">${MYM.fmtDia(x.d)} · ${escapeHtml(x.tk + ' ' + x.doc)} · ${F(x.deb > x.hab ? x.deb : -x.hab)} · ${escapeHtml((x.con || '').slice(0, 70))}</span>`).join('') + '</td></tr>'; }
+            });
+            h += '</tbody></table></td></tr>';
+          }
+        });
+        h += `</tbody></table></div><p class="text-[10px] text-slate-400 mt-1">"Variación vs mayor" compara la variación del balance con el movimiento del mayor de la cuenta (débitos − créditos); si dice Cuadra, el movimiento explica toda la variación. Si el mayor llega a una fecha distinta del balance, o el balance trae otra presentación de signos, aparecerá una diferencia para revisar.</p></div>`;
+      }
+      const sumsLista = [...new Set(R.movs.map(x => R.sumDe.get(mayorSgNorm(x.cod)) || '(sin sumaria)'))].sort();
+      let lista = R.movs; if (MYSG.fSum !== '__todas__') lista = lista.filter(x => (R.sumDe.get(mayorSgNorm(x.cod)) || '(sin sumaria)') === MYSG.fSum);
+      h += `<div><div class="flex flex-wrap items-center gap-2 mb-1"><span class="font-bold text-slate-800">${R.hay ? 'B' : 'A'}. Partidas del período iguales o mayores a la materialidad (${lista.length})</span><select onchange="MYSG.fSum = this.value; mayorPanel()" class="border rounded-lg px-2 py-1 text-xs"><option value="__todas__">Todas las sumarias</option>${sumsLista.map(x => `<option value="${escapeHtml(x)}"${MYSG.fSum === x ? ' selected' : ''}>${escapeHtml((MYSG.sumNom || {})[x] || x)}</option>`).join('')}</select></div>`;
+      if (!lista.length) h += '<div class="p-4 text-center text-slate-400 text-xs border border-dashed rounded-xl">No hay partidas que lleguen a la materialidad. Baja la materialidad del paso 2 para ver más.</div>';
+      else h += `<div class="max-h-96 overflow-auto border border-slate-200 rounded-lg bg-white"><table class="w-full text-[11px] border-collapse min-w-[900px]"><thead><tr class="sticky top-0"><th class="${thh} text-left">Fecha</th><th class="${thh} text-left">Sumaria</th><th class="${thh} text-left">Cuenta</th><th class="${thh} text-left">Asiento</th><th class="${thh} text-left">Detalle</th><th class="${thh} text-right">Débito</th><th class="${thh} text-right">Crédito</th><th class="${thh} text-left">Usuario</th></tr></thead><tbody>${lista.slice(0, 400).map(x => `<tr class="border-t border-slate-100 align-top cursor-pointer hover:bg-slate-50" onclick="mayorVerAsiento(decodeURIComponent('${encodeURIComponent(x.tk)}'), decodeURIComponent('${encodeURIComponent(x.doc)}'))"><td class="${CELL} whitespace-nowrap">${MYM.fmtDia(x.d)}</td><td class="${CELL}">${escapeHtml(R.sumDe.get(mayorSgNorm(x.cod)) || '')}</td><td class="${CELL}"><span class="font-mono">${escapeHtml(x.cod)}</span> ${escapeHtml(x.cu)}</td><td class="${CELL} whitespace-nowrap">${escapeHtml(x.tk + ' ' + x.doc)}</td><td class="${CELL}">${escapeHtml((x.con || '').slice(0, 160))}</td><td class="${CELL} text-right">${x.deb ? F(x.deb) : ''}</td><td class="${CELL} text-right">${x.hab ? F(x.hab) : ''}</td><td class="${CELL}">${escapeHtml(x.u || '')}</td></tr>`).join('')}</tbody></table></div><p class="text-[10px] text-slate-400">Se muestran hasta 400 partidas, de mayor a menor; el Excel trae todas las guardadas. Haz clic en una fila para ver el asiento completo.</p>`;
+      h += '</div>';
+      if (R.meses.length) {
+        const nomMes = k => ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'][(k % 100) - 1] + ' ' + String(Math.floor(k / 100)).slice(2);
+        h += `<div><div class="font-bold text-slate-800 mb-1">${R.hay ? 'C' : 'B'}. Movimiento neto por mes de las 30 cuentas más movidas <span class="font-normal text-slate-500">(débitos − créditos; en rojo los meses que llegan a la materialidad y duplican el promedio de la cuenta)</span></div><div class="overflow-x-auto border border-slate-200 rounded-lg bg-white"><table class="w-full text-[11px] border-collapse"><thead><tr><th class="${thh} text-left">Cuenta</th>${R.meses.map(k => `<th class="${thh} text-right">${nomMes(k)}</th>`).join('')}<th class="${thh} text-right">Total</th></tr></thead><tbody>${R.mensual.map(m => {
+          const vals = R.meses.map(k => { const v = m.mes.get(k); return v ? v[0] - v[1] : 0; }); const prom = vals.reduce((t, v) => t + Math.abs(v), 0) / Math.max(1, vals.length);
+          return `<tr class="border-t border-slate-100"><td class="${CELL} whitespace-nowrap"><span class="font-mono">${escapeHtml(m.cod)}</span> ${escapeHtml(m.nom.slice(0, 34))}</td>${vals.map(v => `<td class="${CELL} text-right ${Math.abs(v) >= R.mat && Math.abs(v) >= 2 * prom ? 'text-red-600 font-bold bg-red-50' : rojo(v)}">${v ? myInt(v) : ''}</td>`).join('')}<td class="${CELL} text-right font-semibold">${myInt(vals.reduce((t, v) => t + v, 0))}</td></tr>`;
+        }).join('')}</tbody></table></div></div>`;
+      }
+      p.innerHTML = h + '</div>';
+    }
+    function mayorSgHojas(wb) {
+      if (!MYS.A) return; const R = mayorSgCalc(), Fd = d => MYM.fmtDia(d);
+      if (R.hay) {
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([['Sumaria', 'Nombre', 'Saldo anterior', 'Saldo del período', 'Variación', '% variación', 'Movimiento del mayor', 'Resultado'], ...R.sumarias.map(s => [s.sum, s.nom, s.sB, s.sA, s.vr, s.pct === null ? 'nuevo' : s.pct, s.mov, s.signif ? 'Significativa' : 'Menor'])]), 'Variación por sumaria');
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([['Sumaria', 'Cuenta', 'Nombre', 'Saldo anterior', 'Saldo del período', 'Variación', '% variación', 'Débitos del mayor', 'Créditos del mayor', 'Variación vs mayor', 'Significativa'], ...R.cuentas.filter(c => Math.abs(c.vr) > 0.004 || Math.abs(c.mov) > 0.004).sort((a, b) => Math.abs(b.vr) - Math.abs(a.vr)).map(c => [c.sum, c.cod, c.nom, c.sB, c.sA, c.vr, c.pct === null ? '' : c.pct, c.deb, c.hab, c.cuad, c.signif ? 'Sí' : 'No'])]), 'Variación por cuenta');
+      }
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([['Fecha', 'Sumaria', 'Cuenta', 'Nombre', 'Tipo', 'Número', 'Detalle', 'Débito', 'Crédito', 'Usuario'], ...R.movs.map(x => [Fd(x.d), R.sumDe.get(mayorSgNorm(x.cod)) || '', x.cod, x.cu, x.tk, x.doc, x.con || '', x.deb, x.hab, x.u || ''])]), 'Partidas significativas');
+      if (R.meses.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([['Cuenta', 'Nombre', ...R.meses.map(k => k), 'Total'], ...R.mensual.map(m => { const v = R.meses.map(k => { const z = m.mes.get(k); return z ? z[0] - z[1] : 0; }); return [m.cod, m.nom, ...v, v.reduce((t, x) => t + x, 0)]; })]), 'Movimiento mensual');
+    }
+
     function mayorExportar() {
       if (!MYS.res) return;
       const R = MYS.res, wb = XLSX.utils.book_new(), K = R.kpis;
@@ -16531,6 +16671,7 @@ ${cont.innerHTML}
         }
         XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(aoa), t.titulo.replace(/[\[\]\*\?\/\\:]/g, '').slice(0, 31));
       });
+      try { mayorSgHojas(wb); } catch (e) { console.error(e); }
       XLSX.writeFile(wb, 'Analisis_mayor_' + (mayorClienteNombre() ? mayorClienteNombre().split(' (')[0].replace(/[^\w\-]+/g, '_') + '_' : '') + MYS.fuente.nombre.replace(/\.[^.]+$/, '').replace(/[^\w\-]+/g, '_') + '.xlsx');
     }
 
