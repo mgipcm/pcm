@@ -138,7 +138,8 @@
       #pc-archivos::file-selector-button { margin-right: 10px; padding: 3px 10px; border: 1px solid #767676; border-radius: 8px; background: #efefef; color: #000; font-size: inherit; font-family: inherit; cursor: pointer; }
     #pc-archivos::file-selector-button:hover { background: #e5e5e5; }
     #pc-archivos { background: #efefef !important; }
-</style>
+    .dif-tip { cursor: help; border-bottom: 1px dotted #dc2626; }
+  </style>
 
   <style id="estilo-sobrio">
     .ayuda{position:relative}
@@ -2171,8 +2172,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
           <button type="button" id="im-tab-liq" onclick="impTab('liq')" class="px-3 py-1.5 text-xs transition rounded-lg">1. Liquidaciones</button>
           <button type="button" id="im-tab-cruce" onclick="impTab('cruce')" class="px-3 py-1.5 text-xs transition rounded-lg">2. Cruce con mayor</button>
           <button type="button" id="im-tab-diario" onclick="impTab('diario')" class="px-3 py-1.5 text-xs transition rounded-lg">3. Diario contable</button>
-          <button type="button" id="im-tab-hall" onclick="impTab('hall')" class="px-3 py-1.5 text-xs transition rounded-lg">4. Hallazgos</button>
-          <button type="button" id="im-tab-ent" onclick="impTab('ent')" class="px-3 py-1.5 text-xs transition rounded-lg">5. Entradas del mayor vs liquidaciones</button>
+          <button type="button" id="im-tab-ent" onclick="impTab('ent')" class="px-3 py-1.5 text-xs transition rounded-lg">4. Entradas del mayor vs liquidaciones</button>
           <button type="button" id="im-descargar" onclick="impDescargar()" class="hidden ml-auto px-3 py-1.5 rounded-lg text-xs bg-slate-100 text-slate-800 hover:bg-slate-200 font-medium transition">Descargar todo (Excel)</button>
         </div>
         <div id="im-panel" class="border border-slate-200 rounded-xl overflow-auto max-h-[78vh]"></div>
@@ -17271,14 +17271,14 @@ ${cont.innerHTML}
       const t = $im('im-titulo'), st = $im('im-subtitulo'), nom = (IV_HOJAS.find(x => x[0] === ivE.hoja) || [])[1] || '';
       if (t) t.textContent = '2. Inventarios – ' + nom;
       if (st) st.textContent = ivE.hoja === 'import' ? 'Pasa las liquidaciones de importación (PDF o Excel) a una tabla con controles automáticos y las cruza con el mayor contable del cliente: asientos, fechas, conceptos y hallazgos'
-        : ivE.hoja === 'venta' ? (ivE.btn === 'impcompras' ? 'Compras/Liquidaciones de importación contra las entradas del mayor contable: sube liquidaciones (PDF, ZIP, Excel) y el mayor; la pestaña 5 las cruza con el Movimiento del inventario' : 'Inventario para la venta: movimiento del inventario y cruces con importaciones, compras, salidas y costo de ventas')
+        : ivE.hoja === 'venta' ? (ivE.btn === 'impcompras' ? 'Compras/Liquidaciones de importación contra las entradas del mayor contable: sube liquidaciones (PDF, ZIP, Excel) y el mayor; la pestaña 4 las cruza con el Movimiento del inventario' : 'Inventario para la venta: movimiento del inventario y cruces con importaciones, compras, salidas y costo de ventas')
         : ivE.hoja === 'materia' ? 'Materia prima (hoja en desarrollo)' : 'Producción en proceso (hoja en desarrollo)';
       const otras = $im('im-otras'), esp = $im('im-espacio'), av = $im('im-aviso'), imp = ivE.hoja === 'import', emb = ivE.hoja === 'venta' && ivE.btn === 'impcompras';
       if (otras) {
         otras.classList.toggle('hidden', imp);
         if (!imp) {
           if (ivE.hoja === 'venta') otras.innerHTML = '<div class="flex flex-wrap gap-1 p-1.5 bg-white border border-slate-200 rounded-2xl">' + IV_VENTA_BOTONES.map(([k, n]) => '<button type="button" onclick="ivIrBoton(\'' + k + '\')" class="px-3 py-1.5 text-xs transition rounded-lg ' + (ivE.btn === k ? 'bg-slate-200 text-slate-900 font-semibold' : 'text-slate-600 hover:bg-slate-100') + '">' + n + '</button>').join('') + '</div>' +
-            (ivE.btn === 'mov' ? '<div id="mv-cont" class="mt-3"></div>' : emb ? '<div class="mt-2 text-[11px] text-slate-500">Pide a Claude, en un solo pedido, la lectura de las liquidaciones y el cruce con el mayor contable; la pestaña 5 las cruza con las entradas del Movimiento del inventario.</div>' : '<div class="border border-dashed border-slate-300 rounded-xl p-8 mt-3 text-center text-sm text-slate-500"><div class="font-bold text-slate-700 mb-1">' + escapeHtml((IV_VENTA_BOTONES.find(x => x[0] === ivE.btn) || [])[1] || '') + '</div>Esta herramienta está en desarrollo. La iremos construyendo en los siguientes pasos.</div>');
+            (ivE.btn === 'mov' ? '<div id="mv-cont" class="mt-3"></div>' : emb ? '<div class="mt-2 text-[11px] text-slate-500">Pide a Claude, en un solo pedido, la lectura de las liquidaciones y el cruce con el mayor contable; la pestaña 4 las cruza con las entradas del Movimiento del inventario.</div>' : '<div class="border border-dashed border-slate-300 rounded-xl p-8 mt-3 text-center text-sm text-slate-500"><div class="font-bold text-slate-700 mb-1">' + escapeHtml((IV_VENTA_BOTONES.find(x => x[0] === ivE.btn) || [])[1] || '') + '</div>Esta herramienta está en desarrollo. La iremos construyendo en los siguientes pasos.</div>');
           else otras.innerHTML = '<div class="border border-dashed border-slate-300 rounded-xl p-8 text-center text-sm text-slate-500"><div class="font-bold text-slate-700 mb-1">' + escapeHtml(nom) + '</div>Esta hoja está en desarrollo.</div>';
         }
       }
@@ -17450,12 +17450,12 @@ ${cont.innerHTML}
         if (error) impMsg('No se guardó: ' + (error.message || error), 'text-red-600 font-bold'); else { impMsg('Guardado ✓'); impEstado.act = { por: fila.actualizado_por, en: fila.updated_at }; impSyncCabecera(); }
       }, 700);
     }
-    const IMP_TABS = [['liq', '1. Liquidaciones'], ['cruce', '2. Cruce con mayor'], ['diario', '3. Diario contable'], ['hall', '4. Hallazgos'], ['ent', '5. Entradas del mayor vs liquidaciones'], ['res', '6. Resumen contable']];
+    const IMP_TABS = [['liq', '1. Liquidaciones'], ['cruce', '2. Cruce con mayor'], ['diario', '3. Diario contable'], ['ent', '4. Entradas del mayor vs liquidaciones'], ['res', '5. Resumen contable']];
     function impTab(t) { impEstado.tab = t; impRender(); }
     function impRender() {
       IMP_TABS.forEach(([t]) => { const b = $im('im-tab-' + t); if (b) b.className = 'px-3 py-1.5 text-xs transition rounded-lg ' + (impEstado.tab === t ? 'bg-slate-200 text-slate-900 font-semibold' : 'text-slate-600 hover:bg-slate-100 font-medium'); });
       const p = $im('im-panel'); if (!p) return;
-      p.innerHTML = impEstado.tab === 'liq' ? impHtmlLiq() : impEstado.tab === 'cruce' ? impHtmlCruce() : impEstado.tab === 'diario' ? impHtmlDiario() : impEstado.tab === 'ent' ? impHtmlEntradas() : impEstado.tab === 'res' ? impHtmlResumen() : impHtmlHall();
+      p.innerHTML = impEstado.tab === 'liq' ? impHtmlLiq() : impEstado.tab === 'cruce' ? impHtmlCruce() : impEstado.tab === 'diario' ? impHtmlDiario() : impEstado.tab === 'ent' ? impHtmlEntradas() : impEstado.tab === 'res' ? impHtmlResumen() : impHtmlLiq();
       if (impEstado.tab === 'liq') { impPintarProc(); }
       impFlechas();
     }
@@ -17649,10 +17649,8 @@ ${(im.aprendidos || []).length ? `<p class="text-xs text-slate-600 bg-slate-50 b
       imports.forEach(im => {
         const co = g(im.id, 'costo'), iv = g(im.id, 'iva');
         T.c1 += co.liq || 0; T.c2 += co.total || 0; T.i1 += iv.liq || 0; T.i2 += iv.total || 0;
-        const dc = x => `<td class="px-2 text-right ${Math.abs(x) > cl.tol ? 'text-red-600 font-semibold' : ''}">${impF(x)}</td>`;
-        h += `<tr class="border-b border-slate-100"><td class="px-2 py-1 text-left font-semibold">${impE(im.id)}</td><td class="px-2 text-right">${impF(co.liq)}</td><td class="px-2 text-right">${impF(co.total)}</td>${dc(impR2((co.liq || 0) - (co.total || 0)))}${est(co.estado || 'N/A')}<td class="px-2 text-right">${impF(iv.liq)}</td><td class="px-2 text-right">${impF(iv.total)}</td>${dc(impR2((iv.liq || 0) - (iv.total || 0)))}${est(iv.estado || 'N/A')}</tr>`;
-        const ex = [co.explicacion ? 'Costo: ' + co.explicacion : '', iv.explicacion ? 'IVA: ' + iv.explicacion : ''].filter(Boolean).join(' ');
-        if (ex) h += `<tr class="border-b border-slate-100"><td></td><td colspan="8" class="px-2 pb-1.5 text-[11px] text-slate-600"><b>A qué se debe la diferencia:</b> ${impE(ex)}</td></tr>`;
+        const dc = (x, tip) => Math.abs(x) > cl.tol && tip ? `<td class="px-2 text-right text-red-600 font-semibold"><span class="dif-tip" data-tip="${impE(tip)}" onmouseenter="impTipMostrar(this)" onmouseleave="impTipOcultar()">${impF(x)}</span></td>` : `<td class="px-2 text-right ${Math.abs(x) > cl.tol ? 'text-red-600 font-semibold' : ''}">${impF(x)}</td>`;
+        h += `<tr class="border-b border-slate-100"><td class="px-2 py-1 text-left font-semibold">${impE(im.id)}</td><td class="px-2 text-right">${impF(co.liq)}</td><td class="px-2 text-right">${impF(co.total)}</td>${dc(impR2((co.liq || 0) - (co.total || 0)), co.explicacion ? 'Costo: ' + co.explicacion : '')}${est(co.estado || 'N/A')}<td class="px-2 text-right">${impF(iv.liq)}</td><td class="px-2 text-right">${impF(iv.total)}</td>${dc(impR2((iv.liq || 0) - (iv.total || 0)), iv.explicacion ? 'IVA: ' + iv.explicacion : '')}${est(iv.estado || 'N/A')}</tr>`;
       });
       h += `</tbody><tfoot class="bg-slate-50 font-semibold"><tr><td class="px-2 py-1 text-left">Total</td><td class="px-2 text-right">${impF(T.c1)}</td><td class="px-2 text-right">${impF(T.c2)}</td><td class="px-2 text-right">${impF(impR2(T.c1 - T.c2))}</td><td></td><td class="px-2 text-right">${impF(T.i1)}</td><td class="px-2 text-right">${impF(T.i2)}</td><td class="px-2 text-right">${impF(impR2(T.i1 - T.i2))}</td><td></td></tr></tfoot></table></div></div>`;
       const sel = (k, opts, v) => `<select onchange="impFiltro('${k}', this.value)" class="${impIn}">${opts.map(([a, b]) => `<option value="${impE(a)}"${v === a ? ' selected' : ''}>${impE(b)}</option>`).join('')}</select>`;
@@ -17746,6 +17744,17 @@ ${(im.aprendidos || []).length ? `<p class="text-xs text-slate-600 bg-slate-50 b
       impEstado.mov = { llave, cargando: false, cuentas: (!error && data && Array.isArray(data.cuentas)) ? data.cuentas : [], hay: !!(data && !error), error: error ? (error.message || String(error)) : '', act: data ? { por: data.actualizado_por, en: data.updated_at } : null };
       if (impEstado.tab === 'ent' || impEstado.tab === 'res') impRender();
     }
+    // Recuadro flotante con la explicación de la diferencia (aparece al pasar el cursor)
+    function impTipMostrar(el) {
+      let b = document.getElementById('imp-tip-box');
+      if (!b) { b = document.createElement('div'); b.id = 'imp-tip-box'; b.style.cssText = 'position:fixed;z-index:99999;max-width:380px;padding:10px 14px;border-radius:14px;background:#1e293b;color:#f8fafc;font-size:12px;line-height:1.45;box-shadow:0 8px 24px rgba(15,23,42,.35);pointer-events:none;display:none'; document.body.appendChild(b); }
+      b.textContent = el.getAttribute('data-tip') || ''; b.style.display = 'block';
+      const r = el.getBoundingClientRect(), w = b.offsetWidth, h = b.offsetHeight;
+      let x = r.left + r.width / 2 - w / 2; x = Math.max(8, Math.min(x, window.innerWidth - w - 8));
+      let y = r.top - h - 10; if (y < 8) y = r.bottom + 10;
+      b.style.left = x + 'px'; b.style.top = y + 'px';
+    }
+    function impTipOcultar() { const b = document.getElementById('imp-tip-box'); if (b) b.style.display = 'none'; }
     function impTipoEntrada(desc) {
       const d = String(desc || '');
       if (/dev\.? en ventas|devoluci/i.test(d)) return 'Devolución en ventas';
@@ -17778,7 +17787,7 @@ ${(im.aprendidos || []).length ? `<p class="text-xs text-slate-600 bg-slate-50 b
       return { filas, porImp, tot, tipos, tol };
     }
 
-    // ---------- 6. Resumen contable: liquidaciones vs entradas del mayor vs gastos no capitalizados ----------
+    // ---------- 5. Resumen contable: liquidaciones vs entradas del mayor vs gastos no capitalizados ----------
     const IMP_CAP = ['isd', 'agente', 'manejo', 'seguro', 'flete_int', 'logistico'];
     const IMP_GAS_ROLES = [...IMP_CAP, 'gasto_fin'];
     function impTipoCuenta(cod) { const d = String(cod).charAt(0); return d === '1' ? 'activo' : d === '2' ? 'pasivo' : d === '3' ? 'patrimonio' : 'resultados'; }
@@ -17851,23 +17860,23 @@ ${(im.aprendidos || []).length ? `<p class="text-xs text-slate-600 bg-slate-50 b
       const th = 'px-2 py-1.5 text-[11px] font-bold text-slate-700 bg-slate-100 border-b border-slate-300';
       const pill = e => '<span class="' + (e === 'Cuadra' ? 'text-emerald-700' : e === 'N/A' ? 'text-slate-500' : 'text-red-600') + ' font-bold">' + impE(e) + '</span>';
       let h = '<div class="p-3 space-y-4 text-xs text-slate-700">';
-      h += '<p class="text-[11px] text-slate-500">Las entradas son las partidas de la columna <b>Compras/Importaciones (entradas)</b> del Movimiento del inventario (' + (M.cuentas || []).length + ' cuentas, incluidas las reclasificaciones que se hayan hecho allí). Cada entrada se liga a una liquidación por el código que aparece en su descripción (los alias se corrigen en la pestaña 1). La comparación usa el <b>costo total del producto</b> de cada liquidación.</p>';
+      h += '<p class="text-[11px] text-slate-500">Las entradas son las partidas de la columna <b>Compras/Importaciones (entradas)</b> del Movimiento del inventario (' + (M.cuentas || []).length + ' cuentas, incluidas las reclasificaciones que se hayan hecho allí). Cada entrada se liga a una liquidación por el código que aparece en su descripción (los alias se corrigen en la pestaña 1). Esta pestaña solo dice <b>si cada liquidación tiene entrada y qué entradas no tienen liquidación</b>; el costo total y el IVA se comparan en la pestaña 2.</p>';
       if (!L_hay()) h += '<p class="text-[11px] text-amber-700 font-bold">Aún no hay liquidaciones cargadas: sube los PDF o Excel en la pestaña 1 para poder cruzarlas.</p>';
-      // Resumen por liquidación
+      // Presencia de cada liquidación en las entradas (el costo y el IVA se cruzan en la pestaña 2)
       if (R.porImp.length) {
-        h += '<div><div class="font-bold text-slate-800 mb-1">A. Cada liquidación contra sus entradas en el mayor</div><div class="overflow-x-auto border border-slate-200 rounded-lg"><table class="w-full text-[11px] border-collapse min-w-[860px]"><thead><tr><th class="' + th + ' text-left">Importación</th><th class="' + th + ' text-left">Proveedor</th><th class="' + th + ' text-left">Fecha</th><th class="' + th + ' text-right">Costo según liquidación</th><th class="' + th + ' text-right">Entradas en el mayor</th><th class="' + th + ' text-right">Diferencia</th><th class="' + th + ' text-right"># asientos</th><th class="' + th + ' text-left">Resultado</th><th class="' + th + ' text-left">Comentario</th></tr></thead><tbody>';
-        R.porImp.forEach(x => { h += '<tr class="border-t border-slate-100 align-top"><td class="' + CELL + ' font-semibold">' + impE(x.id) + '</td><td class="' + CELL + '">' + impE(x.proveedor) + '</td><td class="' + CELL + ' whitespace-nowrap">' + impE(x.fecha) + '</td><td class="' + CELL + ' text-right">' + impF(x.liq) + '</td><td class="' + CELL + ' text-right">' + impF(x.may) + '</td><td class="' + CELL + ' text-right ' + (Math.abs(x.dif) > R.tol ? 'text-red-600 font-bold' : '') + '">' + impF(x.dif) + '</td><td class="' + CELL + ' text-right">' + x.n + '</td><td class="' + CELL + '">' + pill(x.est) + '</td><td class="' + CELL + '">' + impE(x.nota) + '</td></tr>'; });
-        const sl = impR2(R.porImp.reduce((t, x) => t + x.liq, 0)), sm = impR2(R.porImp.reduce((t, x) => t + x.may, 0));
-        h += '<tr class="border-t-2 border-slate-300 bg-slate-50 font-bold"><td class="' + CELL + '" colspan="3">Total</td><td class="' + CELL + ' text-right">' + impF(sl) + '</td><td class="' + CELL + ' text-right">' + impF(sm) + '</td><td class="' + CELL + ' text-right">' + impF(impR2(sl - sm)) + '</td><td colspan="3"></td></tr></tbody></table></div></div>';
+        const corte = impEstado.cfg.corte;
+        const est = x => x.n > 0 ? ['Tiene entrada', 'text-emerald-700'] : x.cmp ? ['Solo en entradas de varias importaciones', 'text-amber-700'] : (x.fecha && corte && x.fecha > corte) ? ['Posterior al corte', 'text-slate-500'] : ['Sin entrada en el mayor', 'text-red-600'];
+        h += '<div><div class="font-bold text-slate-800 mb-1">A. Liquidaciones y sus entradas de inventario</div><div class="overflow-x-auto border border-slate-200 rounded-lg"><table class="w-full text-[11px] border-collapse min-w-[640px]"><thead><tr><th class="' + th + ' text-left">Importación</th><th class="' + th + ' text-left">Proveedor</th><th class="' + th + ' text-left">Fecha</th><th class="' + th + ' text-right"># entradas</th><th class="' + th + ' text-left">Resultado</th></tr></thead><tbody>' +
+          R.porImp.map(x => { const e = est(x); return '<tr class="border-t border-slate-100"><td class="' + CELL + ' font-semibold">' + impE(x.id) + '</td><td class="' + CELL + '">' + impE(x.proveedor) + '</td><td class="' + CELL + ' whitespace-nowrap">' + impE(x.fecha) + '</td><td class="' + CELL + ' text-right">' + x.n + '</td><td class="' + CELL + ' font-bold ' + e[1] + '">' + e[0] + '</td></tr>'; }).join('') + '</tbody></table></div></div>';
       }
       // Composición de las entradas
       const ordenTipos = Object.keys(R.tipos).sort((a, b) => R.tipos[b].v - R.tipos[a].v);
-      h += '<div><div class="font-bold text-slate-800 mb-1">B. De qué están hechas las entradas del mayor</div><div class="overflow-x-auto border border-slate-200 rounded-lg"><table class="w-full text-[11px] border-collapse min-w-[520px]"><thead><tr><th class="' + th + ' text-left">Tipo de entrada</th><th class="' + th + ' text-right"># asientos</th><th class="' + th + ' text-right">Valor</th><th class="' + th + ' text-right">% del total</th></tr></thead><tbody>' +
+      h += '<div><div class="font-bold text-slate-800 mb-1">B. De qué están hechas las entradas del mayor (las que no son importaciones no tienen liquidación)</div><div class="overflow-x-auto border border-slate-200 rounded-lg"><table class="w-full text-[11px] border-collapse min-w-[520px]"><thead><tr><th class="' + th + ' text-left">Tipo de entrada</th><th class="' + th + ' text-right"># asientos</th><th class="' + th + ' text-right">Valor</th><th class="' + th + ' text-right">% del total</th></tr></thead><tbody>' +
         ordenTipos.map(t => '<tr class="border-t border-slate-100"><td class="' + CELL + '">' + impE(t) + '</td><td class="' + CELL + ' text-right">' + R.tipos[t].n + '</td><td class="' + CELL + ' text-right">' + impF(R.tipos[t].v) + '</td><td class="' + CELL + ' text-right">' + (R.tot ? (R.tipos[t].v / R.tot * 100).toFixed(1) + ' %' : '') + '</td></tr>').join('') +
         '<tr class="border-t-2 border-slate-300 bg-slate-50 font-bold"><td class="' + CELL + '">Total entradas del mayor</td><td class="' + CELL + ' text-right">' + R.filas.length + '</td><td class="' + CELL + ' text-right">' + impF(R.tot) + '</td><td></td></tr></tbody></table></div></div>';
       // Detalle
-      const lista = filtro === '__todos__' ? R.filas : R.filas.filter(f => f.tipo === filtro || (filtro === '__imp__' && f.ids.length));
-      h += '<div><div class="flex flex-wrap items-center gap-2 mb-1"><span class="font-bold text-slate-800">C. Detalle de las entradas (' + lista.length + ')</span><select onchange="impEstado.entF = this.value; impRender()" class="' + impIn + '"><option value="__todos__">Todas</option>' + Object.keys(R.tipos).map(t => '<option value="' + impE(t) + '"' + (filtro === t ? ' selected' : '') + '>' + impE(t) + '</option>').join('') + '</select></div>' +
+      const lista = filtro === '__todos__' ? R.filas : filtro === '__sin__' ? R.filas.filter(f => !f.ids.length) : R.filas.filter(f => f.tipo === filtro || (filtro === '__imp__' && f.ids.length));
+      h += '<div><div class="flex flex-wrap items-center gap-2 mb-1"><span class="font-bold text-slate-800">C. Detalle de las entradas (' + lista.length + ')</span><select onchange="impEstado.entF = this.value; impRender()" class="' + impIn + '"><option value="__todos__">Todas</option><option value="__sin__"' + (filtro === '__sin__' ? ' selected' : '') + '>Sin liquidación</option>' + Object.keys(R.tipos).map(t => '<option value="' + impE(t) + '"' + (filtro === t ? ' selected' : '') + '>' + impE(t) + '</option>').join('') + '</select></div>' +
         '<div class="max-h-96 overflow-auto border border-slate-200 rounded-lg"><table class="w-full text-[11px] border-collapse min-w-[900px]"><thead><tr class="sticky top-0"><th class="' + th + ' text-left">Cuenta</th><th class="' + th + ' text-left">Fecha</th><th class="' + th + ' text-left">Comprobante</th><th class="' + th + ' text-left">Descripción</th><th class="' + th + ' text-right">Valor</th><th class="' + th + ' text-left">Liquidación / tipo</th></tr></thead><tbody>' +
         lista.map(f => '<tr class="border-t border-slate-100 align-top"><td class="' + CELL + ' whitespace-nowrap">' + impE(f.cta) + '</td><td class="' + CELL + ' whitespace-nowrap">' + mvFechaCorta(f.fecha) + '</td><td class="' + CELL + ' whitespace-nowrap">' + impE(f.ref) + '</td><td class="' + CELL + '">' + impE(f.desc) + '</td><td class="' + CELL + ' text-right whitespace-nowrap">' + impF(f.valor) + '</td><td class="' + CELL + '">' + (f.ids.length ? '<b>' + impE(f.ids.join(', ')) + '</b>' : impE(f.tipo)) + (f.antes ? ' <span class="text-[10px] text-amber-700">(reclasificada)</span>' : '') + '</td></tr>').join('') + '</tbody></table></div></div></div>';
       return h;
@@ -17914,8 +17923,8 @@ ${(im.aprendidos || []).length ? `<p class="text-xs text-slate-600 bg-slate-50 b
       try {
         const RE = impEntradasCalc();
         if (RE && RE.filas.length) {
-          add('Entradas vs liquidaciones', [['Importación', 'Proveedor', 'Fecha', 'Costo según liquidación', 'Entradas en el mayor', 'Diferencia', '# asientos', 'Resultado', 'Comentario'], ...RE.porImp.map(x => [x.id, x.proveedor, x.fecha, x.liq, x.may, x.dif, x.n, x.est, x.nota])],
-            [{ wch: 14 }, { wch: 30 }, { wch: 12 }, { wch: 18 }, { wch: 18 }, { wch: 14 }, { wch: 10 }, { wch: 22 }, { wch: 60 }], { titulo: 'Liquidaciones contra entradas del mayor', info, fecha: [2], ent: [6], totales: [3, 4, 5] });
+          add('Entradas vs liquidaciones', [['Importación', 'Proveedor', 'Fecha', '# entradas', 'Resultado'], ...RE.porImp.map(x => [x.id, x.proveedor, x.fecha, x.n, x.n > 0 ? 'Tiene entrada' : x.cmp ? 'Solo en entradas de varias importaciones' : (x.fecha && impEstado.cfg.corte && x.fecha > impEstado.cfg.corte) ? 'Posterior al corte' : 'Sin entrada en el mayor'])],
+            [{ wch: 14 }, { wch: 30 }, { wch: 12 }, { wch: 12 }, { wch: 38 }], { titulo: 'Liquidaciones y sus entradas de inventario (el costo y el IVA se cruzan en la hoja Resumen del cruce)', info, fecha: [2], ent: [3] });
           add('Entradas del mayor (detalle)', [['Cuenta', 'Fecha', 'Comprobante', 'Descripción', 'Valor', 'Liquidación', 'Tipo'], ...RE.filas.map(f => [f.cta, f.fecha, f.ref, f.desc, f.valor, f.ids.join(', '), f.tipo])],
             [{ wch: 28 }, { wch: 12 }, { wch: 18 }, { wch: 80 }, { wch: 16 }, { wch: 18 }, { wch: 34 }], { titulo: 'Entradas del mayor contable (movimiento del inventario)', info, fecha: [1], totales: [4] });
         }
