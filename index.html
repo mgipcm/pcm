@@ -17629,7 +17629,7 @@ ${cont.innerHTML}
       const L = impEstado.imports;
       const Cx = impEstado.cruce;
       const barra = `<div class="m-2 p-3 bg-white border border-slate-200 rounded-xl space-y-2 text-xs text-slate-700"><div class="text-[13px] font-semibold text-slate-800">Importaciones: todo se pide a Claude</div>
-        <p class="text-slate-600">Sube en un mismo pedido las liquidaciones de importación (PDF o Excel), las declaraciones aduaneras y el mayor contable. Claude lee todo, cruza con el mayor y llena las hojas 2 a 5.</p>
+        <p class="text-slate-600">Sube en un mismo pedido las liquidaciones de importación (PDF o Excel), las declaraciones aduaneras y el mayor contable. Claude lee todo, cruza con el mayor y llena las hojas.</p>
         <div class="flex flex-wrap items-center gap-2"><button type="button" onclick="pcIrAPedido('AF', impEstado.cliente, impEstado.anio, impEstado.visita, 'import')" class="${impBtnP}">Pedir a Claude (liquidaciones + mayor contable)</button>
         <p class="text-slate-500">${L.length ? L.length + ' importaciones cargadas por Claude' : 'Aún no hay liquidaciones'} · ${Cx ? 'cruce con el mayor hecho' : 'cruce con el mayor pendiente'}. Cuando el pedido pase a "hecho", presiona F5.</p></div>`;
       const proc = '<div id="im-proc" class="px-3 py-2 space-y-1"></div>';
