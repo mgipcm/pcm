@@ -11641,9 +11641,19 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
         [{ wch: 52 }], { sinCongelar: true, titulo: 'Arrendamientos NIIF 16', info: [['Impuesto diferido', arrEstado.tasaImp, 'pct'], ['Contratos', K.calc.length], ['Conversión de la tasa anual a mensual', arrMetodoTasa() === 'efectiva' ? 'Equivalente mensual (1 + i)^(1/12) − 1' : 'Tasa anual ÷ 12'], ['Mes de consulta', arrConcFechaTxt(arrConcCorte())], ['Preparado por', nombreUsuarioActivo() || ''], ['Fecha de elaboración', new Date()]],
           notas: ['Cifras calculadas con los contratos cargados en la herramienta. Las demás hojas traen el detalle por contrato, por mes y por año.', 'Al terminar los contratos, los saldos (pasivo, derecho de uso e impuestos diferidos) quedan en cero. En la columna Total, depreciación + interés = pagos (más los costos iniciales, si los hay) y el ingreso / (gasto) por impuesto diferido suma cero.', 'Corto plazo: lo que se amortiza en los 12 meses siguientes al 31 de diciembre, con las condiciones vigentes a esa fecha.'] });
       // Contratos
-      add('Contratos', [['N°', 'Arrendador', 'Activo arrendado', 'Canon mensual', 'Desde', 'Hasta', 'Hasta proyectado', 'Tasa anual', 'Cuotas', 'Pago al inicio del mes', 'IVA no recuperable', 'Costos iniciales del activo', 'Valor actual', 'Activo a depreciar al inicio', 'Total pagos'],
-        ...K.calc.map((x, i) => [i + 1, x.c.arrendador, x.c.local, Number(x.c.canon) || 0, x.c.desde, x.c.hasta, x.c.hasta_proy, x.c.tasa, x.r.n, x.c.pago_inicio ? 'SI' : 'NO', Number(x.c.iva_no_rec) || 0, r2f((Number(x.c.anticipos) || 0) + (Number(x.c.costos_directos) || 0) + (Number(x.c.desmantelamiento) || 0) - (Number(x.c.incentivos) || 0)), r2f(x.r.va), r2f(x.r.activoIni), r2f(x.r.meses.reduce((s, m) => s + m.pago, 0))])],
-        [{ wch: 6 }, { wch: 30 }, { wch: 24 }, { wch: 14 }, { wch: 13 }, { wch: 13 }, { wch: 16 }, { wch: 12 }, { wch: 9 }, { wch: 14 }, { wch: 14 }, { wch: 16 }, { wch: 16 }, { wch: 18 }, { wch: 16 }], { fecha: [4, 5, 6], pct: [7, 10], ent: [0, 8], totales: [11, 12, 13, 14] });
+      add('Contratos', [['N°', 'Arrendador', 'Activo arrendado', 'Canon mensual (bruto, sin IVA)', 'Desde', 'Hasta', 'Hasta proyectado', 'Tasa anual', 'Cuotas', 'Pago al inicio del mes', 'IVA no recuperable', 'Costos iniciales del activo', 'Valor actual', 'Activo a depreciar al inicio', 'Total pagos', 'Alícuota u otros cargos fijos (mensual)', 'Pago mensual total'],
+        ...K.calc.map((x, i) => [i + 1, x.c.arrendador, x.c.local, Number(x.c.canon) || 0, x.c.desde, x.c.hasta, x.c.hasta_proy, x.c.tasa, x.r.n, x.c.pago_inicio ? 'SI' : 'NO', Number(x.c.iva_no_rec) || 0, r2f((Number(x.c.anticipos) || 0) + (Number(x.c.costos_directos) || 0) + (Number(x.c.desmantelamiento) || 0) - (Number(x.c.incentivos) || 0)), r2f(x.r.va), r2f(x.r.activoIni), r2f(x.r.meses.reduce((s, m) => s + m.pago, 0)), Number(x.c.cargos_fijos) || 0, arrPagoMensual(x.c)])],
+        [{ wch: 6 }, { wch: 30 }, { wch: 24 }, { wch: 14 }, { wch: 13 }, { wch: 13 }, { wch: 16 }, { wch: 12 }, { wch: 9 }, { wch: 14 }, { wch: 14 }, { wch: 16 }, { wch: 16 }, { wch: 18 }, { wch: 16 }, { wch: 18 }, { wch: 16 }], { fecha: [4, 5, 6], pct: [7, 10], ent: [0, 8], totales: [11, 12, 13, 14] });
+      // Modificaciones del contrato y aumentos pactados (todo lo que se registra en cada contrato)
+      {
+        const tT = { renov: 'Renovación, plazo o canon', indice: 'Ajuste por índice o IPC', reduccion: 'Reducción de alcance', termina: 'Terminación o cancelación del contrato' };
+        const mAoa = [['Contrato', 'Concepto', 'Mes del cambio', 'Se registra', 'Nuevo canon (bruto, sin IVA)', 'Nueva fecha final', 'Nueva tasa anual', 'Parte que termina %']];
+        arrEstado.contratos.forEach(c => {
+          (c.modificaciones || []).forEach(x => mAoa.push([arrNombre(c), tT[x.tipo || 'renov'] || 'Modificación', x.ym || '', x.cierre ? 'Al cierre de ese mes' : 'Al inicio de ese mes', x.canon === '' || x.canon === null || x.canon === undefined ? '' : Number(x.canon), x.hasta || '', x.tasa === '' || x.tasa === null || x.tasa === undefined ? '' : Number(x.tasa), x.tipo === 'termina' ? 100 : (x.reduccion === '' || x.reduccion === undefined || x.reduccion === null ? '' : Number(x.reduccion))]));
+          (c.cambios || []).forEach(x => mAoa.push([arrNombre(c), 'Aumento pactado desde el inicio', x.ym || '', '', x.canon === '' || x.canon === null || x.canon === undefined ? '' : Number(x.canon), '', '', '']));
+        });
+        if (mAoa.length > 1) add('Modificaciones y aumentos', mAoa, [{ wch: 40 }, { wch: 36 }, { wch: 14 }, { wch: 22 }, { wch: 18 }, { wch: 16 }, { wch: 14 }, { wch: 16 }], { pct: [6] });
+      }
       // Tablas por año (una hoja por medida)
       ARR_MEDIDAS.forEach(([k, t]) => {
         const esF = ARR_FLUJOS.includes(k); const tot = {};
@@ -11727,7 +11737,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
         add('Análisis de Claude', fc, [{ wch: 4 }, { wch: 125 }], { sinCongelar: true, titulo: 'Análisis de Claude', info: [['Año', ORIGEN.arrend.anio], ['Visita', ORIGEN.arrend.visita === 'preliminar' ? 'Preliminar' : 'Final'], ['Estado', textoOrigen(ORIGEN.arrend)]], notas: ['Preparado por Claude como apoyo. El Criterio final lo define el auditor.'] });
       }
       // Orden de las hojas: el mismo de las pestañas
-      const ORDEN = ['Resumen', 'Contratos', 'Mensual total', 'Mensual por contrato', 'Historial de cambios'], ORDEN_FIN = ['Costo y depreciación acumulada', 'Estados e imp diferidos', 'Conciliación con el balance', 'Cuadre general', 'Verificaciones', 'Revelaciones', 'Análisis de Claude', 'Programa de trabajo'];
+      const ORDEN = ['Resumen', 'Contratos', 'Modificaciones y aumentos', 'Mensual total', 'Mensual por contrato', 'Historial de cambios'], ORDEN_FIN = ['Costo y depreciación acumulada', 'Estados e imp diferidos', 'Conciliación con el balance', 'Cuadre general', 'Verificaciones', 'Revelaciones', 'Análisis de Claude', 'Programa de trabajo'];
       const rango = n => { const i = ORDEN.indexOf(n); if (i >= 0) return i; const j = ORDEN_FIN.indexOf(n); return j >= 0 ? 100 + j : 50; };
       hojas.forEach((h, i) => { h.__i = i; }); hojas.sort((a, b) => rango(a.nombre) - rango(b.nombre) || a.__i - b.__i);
       const nombreArchivo = `Arrendamientos_NIIF16_${String(cliSel).replace(/[^A-Za-z0-9]+/g, '_').slice(0, 40)}.xlsx`;
