@@ -436,9 +436,25 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       </div>
 
       <nav class="p-3 space-y-1">
-        <button onclick="navegarMenu('auditoria')" id="nav-auditoria" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold bg-indigo-600 text-white shadow-lg transition">
-          <span>1. Auditoría/Planificación</span>
-        </button>
+        <div class="space-y-1">
+          <button onclick="toggleSubmenuPlanificacion()" id="nav-planificacion" class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:bg-slate-800 hover:text-white transition">
+            <div class="flex items-center gap-3">
+              <span>1. Auditoría/Planificación</span>
+            </div>
+            <span id="icon-planificacion" class="inline-block text-[11px] leading-none transition-transform duration-200 rotate-180">▾</span>
+          </button>
+          <div id="submenu-planificacion" class="pl-2 space-y-0">
+            <button onclick="navegarMenu('auditoria')" id="nav-auditoria" class="w-full text-left px-3 py-1.5 rounded-lg text-xs font-bold bg-indigo-600 text-white shadow-md transition flex items-center gap-2">
+              <span style="white-space:nowrap">a) Cuestionarios de evaluación</span>
+            </button>
+            <button onclick="navegarMenu('visitas')" id="nav-visitas" class="w-full text-left px-2 py-1 rounded-lg text-xs font-medium text-slate-400 hover:bg-slate-800 hover:text-white transition flex items-center gap-2">
+              <span style="white-space:nowrap">b) Visitas (Calendario)</span>
+            </button>
+            <button onclick="navegarMenu('asignacion')" id="nav-asignacion" class="w-full text-left px-2 py-1 rounded-lg text-xs font-medium text-slate-400 hover:bg-slate-800 hover:text-white transition flex items-center gap-2">
+              <span style="white-space:nowrap">c) Asignación de cuentas</span>
+            </button>
+          </div>
+        </div>
 
         <div class="space-y-1">
           <button onclick="toggleSubmenuAnalisis()" id="nav-analisis" class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:bg-slate-800 hover:text-white transition">
@@ -451,18 +467,10 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
           <div id="submenu-analisis" class="hidden pl-0 space-y-1"></div>
         </div>
 
-        <button onclick="navegarMenu('visitas')" id="nav-visitas" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:bg-slate-800 hover:text-white transition">
-          <span>3. Visitas (Calendario)</span>
-        </button>
-
-        <button onclick="navegarMenu('asignacion')" id="nav-asignacion" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:bg-slate-800 hover:text-white transition">
-          <span>4. Asignación de Cuentas</span>
-        </button>
-
         <div class="space-y-1">
           <button onclick="toggleSubmenuHerramientas()" id="nav-herramientas" class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:bg-slate-800 hover:text-white transition">
             <div class="flex items-center gap-3">
-              <span>5. Herramientas de auditoría</span>
+              <span>3. Herramientas de auditoría</span>
             </div>
             <span id="icon-herramientas" class="inline-block text-[11px] leading-none transition-transform duration-200">▾</span>
           </button>
@@ -495,7 +503,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
         <div class="space-y-1 pt-2 mt-2 border-t border-slate-800">
           <button onclick="toggleSubmenuConfig()" id="nav-config" class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:bg-slate-800 hover:text-white transition">
             <div class="flex items-center gap-3">
-              <span>6. Configuración</span>
+              <span>4. Configuración</span>
             </div>
             <span id="icon-config-lock" class="text-[10px] font-semibold text-slate-500">Restringido</span>
             <span id="icon-config" class="inline-block text-[11px] leading-none transition-transform duration-200 hidden">▾</span>
@@ -2886,6 +2894,13 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       }
     }
 
+    function toggleSubmenuPlanificacion() {
+      const submenu = document.getElementById('submenu-planificacion');
+      const icon = document.getElementById('icon-planificacion');
+      if (submenu.classList.contains('hidden')) { submenu.classList.remove('hidden'); icon.classList.add('rotate-180'); }
+      else { submenu.classList.add('hidden'); icon.classList.remove('rotate-180'); }
+    }
+
     function toggleSubmenuHerramientas() {
       const submenu = document.getElementById('submenu-herramientas');
       const icon = document.getElementById('icon-herramientas');
@@ -3273,7 +3288,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       if (!['clientes', 'usuarios', 'cuentas', 'habilitar', 'historial', 'medidor', 'programas'].includes(seccion)) guardarVista({ seccion: seccion, sub: sub || null, cuenta: cuenta || null });
 
       const secciones = ['desarrollo', 'clientes', 'usuarios', 'cuentas', 'habilitar', 'historial', 'medidor', 'programas', 'sumarias', 'pendientes', 'claude-revisar', 'pedidos-claude', 'aprobaciones-claude', 'flujo', 'auditoria', 'analisis', 'visitas', 'asignacion', 'indices', 'mayor', 'contratos', 'arrend', 'import', 'concil', 'pce', 'reuniones', 'mas-herramientas'];
-      const grupoSubmenu = sec => ['indices', 'mayor', 'contratos', 'flujo', 'pce', 'reuniones', 'mas-herramientas'].includes(sec)
+      const grupoSubmenu = sec => ['auditoria', 'visitas', 'asignacion'].includes(sec) ? 'planificacion' : ['indices', 'mayor', 'contratos', 'flujo', 'pce', 'reuniones', 'mas-herramientas'].includes(sec)
         ? 'herramientas'
         : (['clientes', 'usuarios', 'cuentas', 'habilitar', 'historial', 'medidor', 'programas'].includes(sec) ? 'config' : (['sumarias', 'pendientes', 'claude-revisar', 'pedidos-claude', 'aprobaciones-claude'].includes(sec) ? 'analisis' : null));
       const esSubmenu = sec => grupoSubmenu(sec) !== null;
@@ -3352,6 +3367,9 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
           if (grupoSubmenu(seccion) === 'config') {
             document.getElementById('submenu-config').classList.remove('hidden');
             document.getElementById('icon-config').classList.add('rotate-180');
+          } else if (grupoSubmenu(seccion) === 'planificacion') {
+            document.getElementById('submenu-planificacion').classList.remove('hidden');
+            document.getElementById('icon-planificacion').classList.add('rotate-180');
           } else if (grupoSubmenu(seccion) === 'analisis') {
             document.getElementById('submenu-analisis').classList.remove('hidden');
             document.getElementById('icon-analisis').classList.add('rotate-180');
@@ -15007,7 +15025,7 @@ ${cont.innerHTML}
 
     // ================= HABILITAR HERRAMIENTAS (solo Socio) =================
     const HERRAMIENTAS_MENU = [
-      { clave: 'auditoria', nombre: '1. Auditoría/Planificación', btn: 'nav-auditoria' },
+      { clave: 'auditoria', nombre: '1a) Auditoría/Planificación › Cuestionarios de evaluación', btn: 'nav-auditoria' },
       { clave: 'analisis', nombre: '2. Auditoría/Análisis Claves', btn: 'nav-analisis' },
       { clave: 'sumarias', nombre: '     ↳ 2. Análisis Claves › Sumarias', btn: 'nav-sumarias', defecto: false },
       { clave: 'pendientes', nombre: '     ↳ 2. Análisis Claves › To/Do - Quick Lett - Opinión', btn: 'nav-pendientes', defecto: false },
@@ -15017,14 +15035,14 @@ ${cont.innerHTML}
       { clave: 'arrend', nombre: '     ↳ 2. Análisis Claves › Activos › Activos por derecho de uso y pasivos por arrendamiento', btn: 'nav-cuenta-extra-activos-arrend', defecto: false },
       { clave: 'import', nombre: '     ↳ 2. Análisis Claves › Activos › AF Inventarios (hojas Inventario para la venta, Materia prima, Producción en proceso e Importaciones)', btn: 'nav-cuenta-extra-activos-import', defecto: false },
       { clave: 'concil', nombre: '     ↳ 2. Análisis Claves › Activos › AA Efectivo y equivalentes de efectivo (hojas Bancos y Equivalentes)', btn: 'nav-cuenta-extra-activos-concil', defecto: false },
-      { clave: 'visitas', nombre: '3. Visitas (Calendario)', btn: 'nav-visitas' },
-      { clave: 'asignacion', nombre: '4. Asignación de Cuentas', btn: 'nav-asignacion' },
-      { clave: 'indices', nombre: '5a) Índices financieros', btn: 'nav-indices' },
-      { clave: 'mayor', nombre: '5b) Análisis de mayor contable', btn: 'nav-mayor' },
-      { clave: 'contratos', nombre: '5c) Resumen de contratos', btn: 'nav-contratos' },
-      { clave: 'flujo', nombre: '5d) Flujo de efectivo', btn: 'nav-flujo' },
-      { clave: 'pce', nombre: '5f) Matriz de transición - PCE', btn: 'nav-pce' },
-      { clave: 'reuniones', nombre: '5g) Resumen de reuniones', btn: 'nav-reuniones' }
+      { clave: 'visitas', nombre: '1b) Auditoría/Planificación › Visitas (Calendario)', btn: 'nav-visitas' },
+      { clave: 'asignacion', nombre: '1c) Auditoría/Planificación › Asignación de cuentas', btn: 'nav-asignacion' },
+      { clave: 'indices', nombre: '3a) Índices financieros', btn: 'nav-indices' },
+      { clave: 'mayor', nombre: '3b) Análisis de mayor contable', btn: 'nav-mayor' },
+      { clave: 'contratos', nombre: '3c) Resumen de contratos', btn: 'nav-contratos' },
+      { clave: 'flujo', nombre: '3d) Flujo de efectivo', btn: 'nav-flujo' },
+      { clave: 'pce', nombre: '3f) Matriz de transición - PCE', btn: 'nav-pce' },
+      { clave: 'reuniones', nombre: '3g) Resumen de reuniones', btn: 'nav-reuniones' }
     ];
     let estadoHerramientas = {}; // clave -> true/false (si no existe, está habilitada)
 
@@ -15133,8 +15151,8 @@ ${cont.innerHTML}
 
     // ===== Históricos de visitas: quién ingresa y qué hace (bitácora en Supabase) =====
     const NOMBRE_PANTALLA = {
-      auditoria: '1. Auditoría/Planificación', desarrollo: 'Pantalla principal', analisis: '2. Auditoría/Análisis Claves',
-      sumarias: 'Sumarias', pendientes: 'Pendientes', 'claude-revisar': 'Trabajo procesado por Claude', 'pedidos-claude': 'Pedidos a Claude', 'aprobaciones-claude': 'Aprobaciones de pedidos', visitas: '3. Visitas (Calendario)', asignacion: '4. Asignación de Cuentas',
+      auditoria: '1. Planificación: Cuestionarios de evaluación', desarrollo: 'Pantalla principal', analisis: '2. Auditoría/Análisis Claves',
+      sumarias: 'Sumarias', pendientes: 'Pendientes', 'claude-revisar': 'Trabajo procesado por Claude', 'pedidos-claude': 'Pedidos a Claude', 'aprobaciones-claude': 'Aprobaciones de pedidos', visitas: '1. Planificación: Visitas (Calendario)', asignacion: '1. Planificación: Asignación de cuentas',
       indices: 'Herramienta: Índices', mayor: 'Herramienta: Mayor', contratos: 'Herramienta: Resumen de contratos',
       flujo: 'Herramienta: Flujo de efectivo', arrend: 'Herramienta: Arrendamientos NIIF 16', pce: 'Herramienta: Matriz PCE',
       reuniones: 'Herramienta: Resumen de reuniones', clientes: 'Configuración: Clientes', usuarios: 'Configuración: Usuarios / Auditores',
