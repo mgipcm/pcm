@@ -16710,15 +16710,13 @@ ${cont.innerHTML}
       { k: 'gastos', t: 'Costos de importación registrados en gastos', rol: 'gastos' }
     ];
     const IMP_ROLES = [
-      ['inventario', 'Importaciones en tránsito (donde se acumula el costo de cada importación)'], ['inv_final', 'Inventario (cuentas donde entra la mercadería)'], ['iva', 'IVA pagado en compras'], ['anticipo', 'Anticipo de importaciones'], ['proveedores', 'Proveedores'],
+      ['inventario', 'Inventarios (costo de la importación)'], ['inv_final', 'Cuentas de inventario (detalle de las cuentas donde entra la mercadería)'], ['iva', 'IVA pagado en compras'], ['anticipo', 'Anticipo de importaciones'], ['proveedores', 'Proveedores'],
       ['isd', 'ISD (costo de la importación o su provisión)'], ['gastos', 'Costos de importación registrados en gastos (cuentas de resultados: agente, contenedor, seguro, transporte, logística, financiero)']
     ];
     // Los roles guardados antes con cuentas separadas (agente, manejo, seguro, transporte, logístico, financiero) se suman al rol único "gastos"
     function impRolesDe(cfg) {
       const r = {}; IMP_ROLES.forEach(([k]) => { r[k] = impListaCtas(((cfg || {}).roles || {})[k]).slice(); });
       ['agente', 'manejo', 'seguro', 'flete_int', 'logistico', 'gasto_fin'].forEach(k => impListaCtas(((cfg || {}).roles || {})[k]).forEach(c => { if (!r.gastos.includes(c)) r.gastos.push(c); }));
-      // una cuenta no puede estar a la vez en tránsito y en inventario: manda la de inventario
-      if (r.inv_final.length) r.inventario = r.inventario.filter(c => !r.inv_final.includes(c));
       return r;
     }
     // Palabras que ayudan a reconocer, en el detalle de un pago por anticipo, de qué concepto es
@@ -16728,7 +16726,7 @@ ${cont.innerHTML}
     };
     // Sugerencia de cuentas por rol según el nombre de la cuenta
     const IMP_SUG = {
-      inventario: /TRANSITO|IMPORTACION/, inv_final: /INVENTARIO|MERCADERIA/, iva: /IVA.*(COMPRA|PAGAD)|CREDITO TRIBUT/, anticipo: /ANTICIPO.*IMPORT|IMPORT.*ANTICIPO/, proveedores: /PROVEEDOR/,
+      inventario: /INVENTARIO|MERCADERIA/, inv_final: /^$/, iva: /IVA.*(COMPRA|PAGAD)|CREDITO TRIBUT/, anticipo: /ANTICIPO.*IMPORT|IMPORT.*ANTICIPO/, proveedores: /PROVEEDOR/,
       isd: /\bISD\b|SALIDA.*DIVISA/, gastos: /AGENTE|ADUANER|CONTENEDOR|NAVIER|MANEJO|PORTUAR|SEGURO|TRANSPORTE|FLETE|CUSTODIA|LOGISTIC|FINANCIER|INTERES|COMISION BANC/
     };
 
@@ -16877,10 +16875,8 @@ ${cont.innerHTML}
       });
       const conceptoPorRol = {}; IMP_CONCEPTOS.forEach(k => { if (k.rol) conceptoPorRol[k.rol] = k.k; });
       const LN = impAmpliarLineas(cruce, imports, cfg);
-      // asientos que pasan lo acumulado en tránsito al inventario: su crédito en tránsito no resta costo
-      const trasl = new Set(); if (roles.inv_final.length) (cruce.asientos || []).forEach(a => { if ((a.l || []).some(r => (Number(r[2]) || 0) > 0 && impCtaEn(r[0], roles.inv_final))) trasl.add(a.k); });
       LN.forEach(l => {
-        const net = (trasl.has(l.k) && roles.inventario.length && impCtaEn(l.cod, roles.inventario)) ? (Number(l.deb) || 0) : (Number(l.deb) || 0) - (Number(l.hab) || 0);
+        const net = (Number(l.deb) || 0) - (Number(l.hab) || 0);
         let rol = null;
         for (const [r] of IMP_ROLES) if (roles[r].length && impCtaEn(l.cod, roles[r])) { rol = r; break; }
         if (!rol) return;
