@@ -11340,8 +11340,6 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
     // Signos contables: activos y gastos en positivo; pasivos, depreciación acumulada e ingresos en negativo. Los valores del balance se guardan sin signo.
     const ARR_CONC_SIGNO = { pasivo: -1, corto: -1, largo: -1, costo: 1, depAc: -1, uso: 1, interes: 1, dep: 1, pagos: 1, impAct: 1, impPas: -1, gastoAct: 1, ingPas: -1 };
     const arrSg = k => (ARR_CONC_SIGNO[k] === undefined ? 1 : ARR_CONC_SIGNO[k]);
-    // Diferencia neta del balance = derecho de uso neto + pasivo + impuestos diferidos
-    const ARR_CONC_NETOS = [['Diferencia neta en el balance (activos − pasivos, con impuestos diferidos)', ['uso', 'pasivo', 'impAct', 'impPas']]];
     // Ajustes propuestos: se usan las cuentas sin repetir (pasivo corto y largo, costo y depreciación acumulada; si falta el detalle se usa el total o el neto).
     // Diferencia con signo (herramienta − balance): positiva = Debe, negativa = Haber.
     const ARR_CONC_AJUSTE = [['corto', 'Pasivo por arrendamiento: corto plazo'], ['largo', 'Pasivo por arrendamiento: largo plazo'], ['costo', 'Derecho de uso: costo'], ['depAc', 'Derecho de uso: depreciación acumulada'], ['impAct', 'Impuesto diferido activo'], ['impPas', 'Impuesto diferido pasivo'], ['interes', 'Gasto de interés'], ['dep', 'Gasto de depreciación'], ['gastoAct', 'Gasto por impuesto diferido (activo)'], ['ingPas', 'Ingreso por impuesto diferido (pasivo)']];
@@ -11358,23 +11356,19 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       else { add('costo', 'Derecho de uso: costo'); add('depAc', 'Derecho de uso: depreciación acumulada'); }
       ['impAct', 'impPas', 'interes', 'dep', 'gastoAct', 'ingPas'].forEach(k => add(k, (ARR_CONC_AJUSTE.find(x => x[0] === k) || [0, k])[1]));
       add('pagos', 'Pagos de arrendamientos (cuenta donde se registran los pagos)', -1); // los pagos bajan el pasivo: su contrapartida es esta cuenta, al Haber cuando la herramienta es mayor
+      const neto = r2f(lineas.reduce((a, l) => a + l.debe - l.haber, 0)); // suma de todas las diferencias (Debe − Haber): negativo = pérdida, positivo = ganancia
       const manuales = (ex.lineas || []).map((l, i) => ({ k: 'm' + i, t: l.t || '', debe: Number(l.debe) || 0, haber: Number(l.haber) || 0, manual: true, i }));
       const todas = [...lineas, ...manuales];
       const dif0 = r2f(todas.reduce((a, l) => a + l.debe - l.haber, 0));
       const cuadre = Math.abs(dif0) >= 0.5 ? { k: 'cuadre', t: ex.nombre || '', debe: dif0 < 0 ? -dif0 : 0, haber: dif0 > 0 ? dif0 : 0, cuadre: true, ganancia: dif0 > 0 } : null; // si sobra Debe, la línea va al Haber: ganancia
       if (cuadre) todas.push(cuadre);
       const debe = r2f(todas.reduce((a, l) => a + l.debe, 0)), haber = r2f(todas.reduce((a, l) => a + l.haber, 0));
-      return { lineas: todas, debe, haber, dif: r2f(debe - haber), cuadre, ganancia: cuadre ? cuadre.ganancia : null };
+      return { lineas: todas, debe, haber, neto, hayLineas: lineas.length > 0, dif: r2f(debe - haber), cuadre, ganancia: cuadre ? cuadre.ganancia : null };
     }
     function arrAjNombre(el) { arrAjEstado().nombre = String(el.value || '').trim(); arrGuardarVerif(); arrConcRender(); }
     function arrAjAgregar() { arrAjEstado().lineas.push({ t: '', debe: '', haber: '' }); arrGuardarVerif(); arrConcRender(); }
     function arrAjEditar(i, campo, el) { const l = arrAjEstado().lineas[i]; if (!l) return; if (campo === 't') l.t = String(el.value || '').trim(); else { const v = arrNum(el.value); l[campo] = v === null ? '' : Math.abs(v); } arrGuardarVerif(); arrConcRender(); }
     function arrAjQuitar(i) { arrAjEstado().lineas.splice(i, 1); arrGuardarVerif(); arrConcRender(); }
-    function arrConcNeto(C, cv, ks) {
-      let tot = 0, falta = false;
-      ks.forEach(k => { const b = cv[k]; if (b === undefined || b === null || b === '') { falta = true; return; } tot += arrSg(k) * (C.tot[k] - Math.abs(Number(b))); });
-      return falta ? null : r2f(tot);
-    }
     // Cortes guardados: verif.__concil.cortes = { 'AAAA-MM': { v: {valores del balance}, g: fecha de guardado } }
     function arrConcCortes() {
       const c = arrEstado.verif.__concil || (arrEstado.verif.__concil = {});
@@ -11448,11 +11442,8 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
         h += `<tr class="border-b border-slate-100"><td class="px-2 py-1 font-semibold text-slate-700"><button type="button" onclick="arrConcToggle('${k}')" class="text-indigo-700 font-bold mr-1">${abierto ? '▾' : '▸'}</button>${escapeHtml(t)}</td><td class="px-2 py-1 text-right font-semibold text-slate-800 whitespace-nowrap">${arrFmt(sg * C.tot[k])}</td><td class="px-2 py-1 text-right"><input type="text" inputmode="decimal" value="${hay ? formatoNumeroAnexo(sg * Math.abs(Number(b))) : ''}" placeholder="Valor del balance" onchange="arrConcEditar('${k}', this)" class="w-32 h-6 px-1.5 text-right text-[11px] border border-slate-300 rounded"></td><td class="px-2 py-1 text-right whitespace-nowrap">${dif}</td></tr>`;
         if (abierto) C.filas.forEach(f => { h += `<tr class="bg-slate-50 border-b border-slate-100"><td class="pl-9 pr-2 py-0.5 text-slate-600">${escapeHtml(arrNombre(f.c))}</td><td class="px-2 py-0.5 text-right text-slate-600 whitespace-nowrap">${arrFmt(sg * f[k])}</td><td></td><td></td></tr>`; });
       });
-      ARR_CONC_NETOS.forEach(([t, ks]) => {
-        const n = arrConcNeto(C, cv, ks);
-        h += `<tr class="border-t-2 border-slate-300 bg-slate-100"><td class="px-2 py-1 font-bold text-slate-800" colspan="3">${escapeHtml(t)}</td><td class="px-2 py-1 text-right whitespace-nowrap">${n === null ? '<span class="text-slate-400 text-[10px]">Completa los valores del balance</span>' : (Math.abs(n) < 0.5 ? '<span class="font-bold text-emerald-700">Cuadra</span>' : `<span class="font-bold text-red-600">${formatoNumeroAnexo(n)}</span>`)}</td></tr>`;
-      });
       const EX = arrAjEstado(), AJ = arrConcAjustes(C, cv, EX);
+      h += `<tr class="border-t-2 border-slate-300 bg-slate-100"><td class="px-2 py-1 font-bold text-slate-800" colspan="3">Diferencia neta de todas las diferencias <span class="font-normal text-slate-500">(negativo = pérdida, positivo = ganancia)</span></td><td class="px-2 py-1 text-right whitespace-nowrap">${!AJ.hayLineas ? '<span class="text-slate-400 text-[10px]">Completa los valores del balance</span>' : (Math.abs(AJ.neto) < 0.5 ? '<span class="font-bold text-emerald-700">Cuadra</span>' : `<span class="font-bold text-red-600">${formatoNumeroAnexo(AJ.neto)}</span>`)}</td></tr>`;
       h += '</tbody></table>';
       const inpA = 'h-6 px-1.5 text-[11px] border border-slate-300 rounded bg-white outline-none';
       h += `<div class="mt-4 px-3"><div class="text-[13px] font-semibold text-slate-800">Ajustes propuestos al ${escapeHtml(fecha)}</div><p class="text-[11px] text-slate-500 mb-2">Llevan los libros al valor de la herramienta: la diferencia de cada cuenta comparada arriba, positiva al Debe y negativa al Haber. Se arman solos con los valores del balance que escribas. La última línea cuadra el asiento (ganancia o pérdida): escribe su cuenta. También puedes agregar líneas.</p>`;
@@ -11716,8 +11707,8 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
         const CC = arrConcCalc(corteX), cv = arrConcValores(), guardado = !!arrConcCortes()[corteX];
         const conc = [['Concepto', 'Según la herramienta al ' + fechaCorteX, 'Según el balance al ' + fechaCorteX, 'Diferencia (herramienta − balance)']];
         ARR_CONC_FILAS.forEach(([k, t]) => { const b = cv[k], hay = b !== undefined && b !== null && b !== ''; conc.push([t, r2f(arrSg(k) * CC.tot[k]), hay ? r2f(arrSg(k) * Math.abs(Number(b))) : '', hay ? r2f(arrSg(k) * (CC.tot[k] - Math.abs(Number(b)))) : '']); });
-        ARR_CONC_NETOS.forEach(([t, ks]) => { const n = arrConcNeto(CC, cv, ks); conc.push([t, '', '', n === null ? '' : n]); });
         const AJX = arrConcAjustes(CC, cv, arrAjEstado());
+        conc.splice(conc.length, 0, ['Diferencia neta de todas las diferencias (negativo = pérdida, positivo = ganancia)', '', '', AJX.hayLineas ? AJX.neto : '']);
         conc.push([], ['Ajustes propuestos al ' + fechaCorteX, 'Debe', 'Haber']);
         if (AJX.lineas.length) { AJX.lineas.forEach(l => conc.push([l.t || (l.cuadre ? (l.ganancia ? 'Ganancia (cuenta por definir)' : 'Pérdida (cuenta por definir)') : ''), l.debe || '', l.haber || ''])); conc.push(['Total', AJX.debe, AJX.haber]); }
         else conc.push(['Sin ajustes']);
