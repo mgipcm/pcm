@@ -383,6 +383,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
 <body class="mgi-bg min-h-screen text-slate-800 font-sans flex relative">
 
   <!-- ==================== PANTALLA DE INGRESO ==================== -->
+  <div id="tablero-inicio" class="hidden fixed inset-0 overflow-y-auto" style="z-index:70;background:rgba(15,23,42,.55)"></div>
   <div id="puerta-acceso" class="fixed inset-0 flex items-center justify-center p-4 overflow-y-auto bg-white" style="background:#fff">
     <div class="w-full max-w-md my-auto">
       <div class="text-center mb-7">
@@ -437,6 +438,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
 
       <nav class="p-3 space-y-1">
         <div class="space-y-1">
+          <button onclick="tableroAbrir(true)" id="nav-tablero" class="w-full flex items-center px-3 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:bg-slate-800 hover:text-white transition"><span>Mi tablero</span></button>
           <button onclick="toggleSubmenuPlanificacion()" id="nav-planificacion" class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:bg-slate-800 hover:text-white transition">
             <div class="flex items-center gap-3">
               <span>1. Auditoría/Planificación</span>
@@ -2869,6 +2871,87 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       } catch (e) { console.warn('No se pudo restaurar la vista', e); }
     }
 
+    // ===== Tablero de inicio por usuario =====
+    let tableroDatos = null;
+    function tabPref(email) { try { return localStorage.getItem('pcm_tablero_off_' + email) !== '1'; } catch (e) { return true; } }
+    function tabGuardarPref(chk) { try { if (usuarioActivo && usuarioActivo.email) localStorage.setItem('pcm_tablero_off_' + String(usuarioActivo.email).toLowerCase(), chk.checked ? '0' : '1'); } catch (e) { /* sin guardar */ } }
+    function tabCerrar() { const el = document.getElementById('tablero-inicio'); if (el) el.classList.add('hidden'); }
+    function tabIr(sec) { tabCerrar(); navegarMenu(sec); }
+    async function tableroAbrir(forzar) {
+      const u = usuarioActivo; if (!u) return;
+      const email = String(u.email || u.correo || '').trim().toLowerCase();
+      if (!forzar && !tabPref(email)) return;
+      const el = document.getElementById('tablero-inicio'); if (!el) return;
+      el.classList.remove('hidden');
+      el.innerHTML = '<div class="min-h-full flex items-start justify-center p-4 sm:p-8"><div class="w-full max-w-5xl bg-white rounded-2xl shadow-2xl p-8 text-sm text-slate-500">Preparando tu tablero...</div></div>';
+      const cargo = String(u.cargo || ''), esJefe = ['socio', 'supervisor'].includes(cargo.trim().toLowerCase());
+      const q = async (tabla, f) => { try { const { data, error } = await f(supabaseClient.from(tabla)); return error ? [] : (data || []); } catch (e) { return []; } };
+      const [asig, vis, ped, cat, cli, equipo] = await Promise.all([
+        q('asignaciones_cuentas', t => t.select('*').eq('auditor', email)),
+        q('visitas', t => t.select('*').or(`auditor_asignado.eq.${email},usuario_asignado_email.eq.${email}`)),
+        q('pedidos_claude', t => t.select('id,estado,cliente_id,sumaria,solicitado_email,created_at,hecho_at,doc_confirmada_at').order('created_at', { ascending: false }).limit(300)),
+        q('cuentas_sumarias', t => t.select('sumaria,cuenta')),
+        q('clientes', t => t.select('cliente_id,nombre_corto,nombre_completo')),
+        esJefe ? q('asignaciones_cuentas', t => t.select('auditor,estado,cliente_id')) : Promise.resolve([])
+      ]);
+      tableroDatos = { u, email, cargo, esJefe, asig, vis, ped, cat, cli, equipo };
+      tabPintar();
+    }
+    function tabPintar() {
+      const D = tableroDatos, el = document.getElementById('tablero-inicio'); if (!D || !el) return;
+      const esc = escapeHtml, nomCli = id => { const c = D.cli.find(x => String(x.cliente_id) === String(id)); return c ? (c.nombre_corto || c.nombre_completo || id) : (id || 'Sin cliente'); };
+      const nomCta = sm => { const c = D.cat.find(x => x.sumaria === sm); return c ? c.cuenta : sm; };
+      const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+      const dia = s => { if (!s) return null; const m = String(s).match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])) : null; };
+      const fmt = d => d ? d.toLocaleDateString('es-EC', { day: 'numeric', month: 'short' }) : '';
+      const dif = d => Math.round((d - hoy) / 86400000);
+      const hora = new Date().getHours(), saludo = hora < 12 ? 'Buenos días' : (hora < 19 ? 'Buenas tardes' : 'Buenas noches');
+      const nombre = String(D.u.nombre || D.u.nombre_completo || D.email).split(' ')[0];
+      // Asignaciones
+      const n = e => D.asig.filter(a => a.estado === e).length, tot = D.asig.length, term = n('terminada'), proc = n('en_proceso'), pend = n('pendiente');
+      const pct = tot ? Math.round(term * 100 / tot) : 0;
+      // Visitas: en curso y próximas (21 días); vencidas sin cerrar
+      const vv = D.vis.map(v => { const d1 = dia(v.fecha_desde || v.fecha_planificada || v.fecha), d2 = dia(v.fecha_hasta || v.fecha_desde || v.fecha_planificada || v.fecha); return { ...v, d1, d2 }; }).filter(v => v.d1 && v.cliente_id);
+      const abiertas = v => String(v.estado || '').toLowerCase() !== 'completada' && String(v.estado || '').toLowerCase() !== 'terminada';
+      const enCurso = vv.filter(v => abiertas(v) && v.d1 <= hoy && v.d2 >= hoy).sort((a, b) => a.d2 - b.d2);
+      const proximas = vv.filter(v => abiertas(v) && v.d1 > hoy && dif(v.d1) <= 21).sort((a, b) => a.d1 - b.d1);
+      const vencidas = vv.filter(v => abiertas(v) && v.d2 < hoy).length;
+      // Clientes con cuentas
+      const porCli = new Map(); D.asig.forEach(a => { const k = a.cliente_id + '|' + a.anio + '|' + a.visita; if (!porCli.has(k)) porCli.set(k, { cid: a.cliente_id, anio: a.anio, visita: a.visita, t: 0, p: 0, e: 0, x: 0, pend: [] }); const o = porCli.get(k); o.t++; if (a.estado === 'terminada') o.x++; else if (a.estado === 'en_proceso') { o.e++; o.pend.push(a); } else { o.p++; o.pend.push(a); } });
+      const cursoCli = new Set(enCurso.map(v => String(v.cliente_id)));
+      const clientes = [...porCli.values()].filter(o => o.x < o.t).sort((a, b) => (cursoCli.has(String(b.cid)) - cursoCli.has(String(a.cid))) || (b.p + b.e) - (a.p + a.e));
+      // Pedidos a Claude
+      const mios = D.ped.filter(p => String(p.solicitado_email || '').toLowerCase() === D.email);
+      const porAutorizar = D.esJefe ? D.ped.filter(p => p.estado === 'solicitado').length : 0;
+      const listos = mios.filter(p => p.estado === 'hecho' && !p.doc_confirmada_at).length, enMarcha = mios.filter(p => p.estado === 'solicitado' || p.estado === 'autorizado').length;
+      // Alertas
+      const alertas = [];
+      if (enCurso.length) alertas.push(['bg-indigo-50 text-indigo-800 border-indigo-200', `${enCurso.length} visita${enCurso.length > 1 ? 's' : ''} en curso`]);
+      if (proc) alertas.push(['bg-amber-50 text-amber-800 border-amber-200', `${proc} cuenta${proc > 1 ? 's' : ''} en proceso`]);
+      if (porAutorizar) alertas.push(['bg-rose-50 text-rose-800 border-rose-200', `${porAutorizar} pedido${porAutorizar > 1 ? 's' : ''} a Claude por autorizar`]);
+      if (listos) alertas.push(['bg-emerald-50 text-emerald-800 border-emerald-200', `${listos} pedido${listos > 1 ? 's' : ''} listo${listos > 1 ? 's' : ''} para revisar`]);
+      if (vencidas) alertas.push(['bg-slate-100 text-slate-700 border-slate-200', `${vencidas} visita${vencidas > 1 ? 's' : ''} vencida${vencidas > 1 ? 's' : ''} sin cerrar`]);
+      const kpi = (t, v, c) => `<div class="rounded-xl border border-slate-200 p-3 bg-white"><div class="text-[11px] text-slate-500">${t}</div><div class="text-2xl font-bold ${c}">${v}</div></div>`;
+      const barra = (x, t, c) => `<div class="h-2 rounded-full bg-slate-100 overflow-hidden"><div class="h-full rounded-full ${c || 'bg-emerald-500'}" style="width:${t ? Math.round(x * 100 / t) : 0}%"></div></div>`;
+      const tarjVisita = (v, tipo) => { const d = tipo === 'curso' ? dif(v.d2) : dif(v.d1); const txt = tipo === 'curso' ? (d === 0 ? 'termina hoy' : (d === 1 ? 'termina mañana' : `termina en ${d} días`)) : (d === 1 ? 'empieza mañana' : `empieza en ${d} días`); const urgente = tipo === 'curso' && d <= 3; return `<div class="flex items-center justify-between gap-3 py-2 border-b border-slate-100 last:border-0"><div><div class="font-semibold text-slate-800">${esc(nomCli(v.cliente_id))}</div><div class="text-[11px] text-slate-500">${fmt(v.d1)} al ${fmt(v.d2)}</div></div><span class="text-[11px] px-2 py-0.5 rounded-full whitespace-nowrap ${tipo === 'curso' ? (urgente ? 'bg-rose-100 text-rose-700' : 'bg-indigo-100 text-indigo-700') : 'bg-slate-100 text-slate-600'}">${tipo === 'curso' ? 'En curso · ' : ''}${txt}</span></div>`; };
+      const filasCli = clientes.slice(0, 8).map(o => { const chips = o.pend.sort((a, b) => (a.estado === 'en_proceso' ? 0 : 1) - (b.estado === 'en_proceso' ? 0 : 1)).slice(0, 4).map(a => `<span class="px-1.5 py-0.5 rounded ${a.estado === 'en_proceso' ? 'bg-amber-50 text-amber-800' : 'bg-slate-100 text-slate-600'}">${esc(a.sumaria)}${nomCta(a.sumaria) !== a.sumaria ? ' · ' + esc(String(nomCta(a.sumaria)).replace(/^[A-Z0-9]+\s*-\s*/, '').slice(0, 26)) : ''}</span>`).join(' '); const mas = o.pend.length > 4 ? ` <span class="text-slate-400">+${o.pend.length - 4} más</span>` : ''; return `<tr class="border-b border-slate-100 align-top"><td class="py-2 pr-3"><div class="font-semibold text-slate-800">${esc(nomCli(o.cid))}${cursoCli.has(String(o.cid)) ? ' <span class="text-[10px] px-1.5 py-0.5 rounded-full bg-indigo-100 text-indigo-700 font-medium">visita en curso</span>' : ''}</div><div class="text-[11px] text-slate-500">${esc(o.anio)} · ${esc(o.visita)}</div></td><td class="py-2 pr-3 w-40"><div class="text-[11px] text-slate-600 mb-1">${o.x} de ${o.t} terminadas</div>${barra(o.x, o.t)}</td><td class="py-2 text-[11px] leading-relaxed">${chips}${mas}</td></tr>`; }).join('');
+      const equipoH = (() => { if (!D.esJefe) return ''; const m = new Map(); D.equipo.forEach(a => { const k = a.auditor || '(sin auditor)'; if (!m.has(k)) m.set(k, { t: 0, x: 0, e: 0 }); const o = m.get(k); o.t++; if (a.estado === 'terminada') o.x++; if (a.estado === 'en_proceso') o.e++; }); const lista = [...m.entries()].sort((a, b) => (b[1].t - b[1].x) - (a[1].t - a[1].x)); if (!lista.length) return ''; const nomU = em => { const t = (listaUsuariosCache || []).find(x => String(x.email || '').toLowerCase() === String(em).toLowerCase()); return t ? (t.nombre || em) : em; }; return `<div class="rounded-xl border border-slate-200 p-4"><div class="font-bold text-slate-800 mb-0.5">Avance del equipo</div><p class="text-[11px] text-slate-500 mb-3">Cuentas terminadas sobre las asignadas a cada persona (solo lo ven el Socio y los Supervisores).</p><div class="grid sm:grid-cols-2 gap-x-6 gap-y-3">${lista.map(([em, o]) => `<div><div class="flex justify-between text-[11px] text-slate-700 mb-1"><span class="font-medium">${esc(nomU(em))}</span><span>${o.x}/${o.t}${o.e ? ` · ${o.e} en proceso` : ''}</span></div>${barra(o.x, o.t, 'bg-indigo-500')}</div>`).join('')}</div></div>`; })();
+      const vacio = '<p class="text-[12px] text-slate-400 py-3">Nada por ahora.</p>';
+      el.innerHTML = `<div class="min-h-full flex items-start justify-center p-3 sm:p-8"><div class="w-full max-w-5xl bg-white rounded-2xl shadow-2xl overflow-hidden">
+        <div class="px-6 py-5 text-white" style="background-image:linear-gradient(90deg,#005cab,#00929f)"><div class="flex flex-wrap items-start justify-between gap-3"><div><div class="text-xl font-bold">${saludo}, ${esc(nombre)}</div><div class="text-[12px] opacity-90 mt-0.5">${esc(hoy.toLocaleDateString('es-EC', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }))} · ${esc(D.cargo || 'Usuario')}</div></div><button type="button" onclick="tabCerrar()" class="px-4 py-2 rounded-lg text-xs font-semibold bg-white text-slate-800 hover:bg-slate-100">Entrar a la aplicación</button></div>
+          <div class="flex flex-wrap gap-2 mt-4">${alertas.length ? alertas.map(([c, t]) => `<span class="text-[11px] px-2.5 py-1 rounded-full border ${c}">${esc(t)}</span>`).join('') : '<span class="text-[12px] opacity-90">Estás al día: no tienes pendientes por ahora.</span>'}</div></div>
+        <div class="p-5 space-y-5 max-h-[calc(100vh-9rem)] overflow-y-auto">
+          <div class="grid grid-cols-2 sm:grid-cols-5 gap-3">${kpi('Cuentas asignadas', tot, 'text-slate-800')}${kpi('Pendientes', pend, 'text-slate-700')}${kpi('En proceso', proc, 'text-amber-600')}${kpi('Terminadas', term, 'text-emerald-600')}<div class="rounded-xl border border-slate-200 p-3 bg-white flex items-center gap-3"><div class="relative w-12 h-12 rounded-full shrink-0" style="background:conic-gradient(#10b981 ${pct * 3.6}deg,#e2e8f0 0deg)"><div class="absolute inset-1.5 rounded-full bg-white flex items-center justify-center text-[11px] font-bold text-slate-700">${pct}%</div></div><div class="text-[11px] text-slate-500 leading-tight">Avance de tus cuentas</div></div></div>
+          <div class="grid md:grid-cols-2 gap-5">
+            <div class="rounded-xl border border-slate-200 p-4"><div class="font-bold text-slate-800 mb-1">Tus visitas</div>${enCurso.length || proximas.length ? enCurso.map(v => tarjVisita(v, 'curso')).join('') + proximas.slice(0, 5).map(v => tarjVisita(v, 'prox')).join('') : vacio}<button type="button" onclick="tabIr('visitas')" class="mt-2 text-[11px] text-indigo-700 hover:underline">Ir a Visitas (Calendario)</button></div>
+            <div class="rounded-xl border border-slate-200 p-4"><div class="font-bold text-slate-800 mb-1">Pedidos a Claude</div><div class="space-y-2 text-[12px] text-slate-700 py-1">${D.esJefe ? `<div class="flex justify-between"><span>Por autorizar (todos)</span><b class="${porAutorizar ? 'text-rose-600' : 'text-slate-500'}">${porAutorizar}</b></div>` : ''}<div class="flex justify-between"><span>Tus pedidos en proceso</span><b>${enMarcha}</b></div><div class="flex justify-between"><span>Listos para que los revises</span><b class="${listos ? 'text-emerald-600' : 'text-slate-500'}">${listos}</b></div></div><button type="button" onclick="tabIr('claude-revisar')" class="mt-2 text-[11px] text-indigo-700 hover:underline">Ir a revisar los resultados</button></div>
+          </div>
+          <div class="rounded-xl border border-slate-200 p-4"><div class="flex items-center justify-between mb-2"><div class="font-bold text-slate-800">Clientes con cuentas por concluir</div><button type="button" onclick="tabIr('asignacion')" class="text-[11px] text-indigo-700 hover:underline">Ir a Asignación de cuentas</button></div>${clientes.length ? `<table class="w-full text-xs"><tbody>${filasCli}</tbody></table>${clientes.length > 8 ? `<p class="text-[11px] text-slate-400 mt-2">Y ${clientes.length - 8} cliente${clientes.length - 8 > 1 ? 's' : ''} más.</p>` : ''}` : '<p class="text-[12px] text-slate-400 py-3">No tienes cuentas pendientes asignadas.</p>'}</div>
+          ${equipoH}
+          <label class="flex items-center gap-2 text-[11px] text-slate-500"><input type="checkbox" ${tabPref(D.email) ? 'checked' : ''} onchange="tabGuardarPref(this)"> Mostrar este tablero cada vez que ingrese</label>
+        </div></div></div>`;
+    }
+
     async function arrancarApp() {
       if (appArrancada) return;
       appArrancada = true;
@@ -2889,6 +2972,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       if (usuarioActivo) {
         ocultarPuerta();
         await arrancarApp();
+        tableroAbrir(false);
       } else {
         mostrarPuerta();
       }
@@ -3170,6 +3254,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
         ocultarPuerta();
         navegarMenu('auditoria');
         await arrancarApp();
+        tableroAbrir(false);
       } catch (ex) {
         console.error('Error al iniciar sesión:', ex);
         msg.textContent = 'No se pudo conectar con Supabase. Revisa tu internet e inténtalo de nuevo.';
