@@ -11730,7 +11730,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
           sec('Depreciación acumulada'), fil2('Saldo inicial de la depreciación acumulada', c => c.dini), fil2('(+) Depreciación del mes', c => c.dep), fil2('(−) Baja de la depreciación acumulada por reducción de alcance o terminación', c => c.redD), fil2('Depreciación acumulada al cierre', c => c.dcierre, 't'), sec('Derecho de uso neto'), fil2('Costo − depreciación acumulada', c => c.cierre - c.dcierre, 't'), fil2('Diferencia contra el derecho de uso neto de la amortización mensual', c => c.cierre - c.dcierre - c.netoRef)];
         mAoa.push([], ['Detalle por contrato', ...CM.map(c => c.etq)]);
         [['Costo al cierre', (d, c) => c.por(d).cierre], ['Depreciación acumulada al cierre', (d, c) => c.por(d).dcierre], ['Derecho de uso neto', (d, c) => c.por(d).cierre - c.por(d).dcierre]].forEach(([t, f]) => { mAoa.push(sec(t)); CD.det.forEach(d => mAoa.push([arrNombre(d.c), ...CM.map(c => r2f(f(d, c)))])); });
-        add('Costo y deprec. por mes', mAoa, [{ wch: 62 }], { info: [['Mes de consulta', fechaCorteX]] });
+        add('Costo y depreciación por mes', mAoa, [{ wch: 62 }], { info: [['Mes de consulta', fechaCorteX]] });
       }
       // Conciliación con el balance
       if (arrEstado.contratos.length) {
@@ -11757,7 +11757,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
         add('Análisis de Claude', fc, [{ wch: 4 }, { wch: 125 }], { sinCongelar: true, titulo: 'Análisis de Claude', info: [['Año', ORIGEN.arrend.anio], ['Visita', ORIGEN.arrend.visita === 'preliminar' ? 'Preliminar' : 'Final'], ['Estado', textoOrigen(ORIGEN.arrend)]], notas: ['Preparado por Claude como apoyo. El Criterio final lo define el auditor.'] });
       }
       // Orden de las hojas: el mismo de las pestañas
-      const ORDEN = ['Resumen', 'Contratos', 'Modificaciones y aumentos', 'Mensual total', 'Mensual por contrato', 'Historial de cambios'], ORDEN_FIN = ['Costo y depreciación acumulada', 'Estados e imp diferidos', 'Conciliación con el balance', 'Cuadre general', 'Verificaciones', 'Revelaciones', 'Análisis de Claude', 'Programa de trabajo'];
+      const ORDEN = ['Resumen', 'Contratos', 'Modificaciones y aumentos', 'Mensual total', 'Mensual por contrato', 'Historial de cambios'], ORDEN_FIN = ['Costo y depreciación acumulada', 'Costo y depreciación por mes', 'Estados e imp diferidos', 'Conciliación con el balance', 'Cuadre general', 'Verificaciones', 'Revelaciones', 'Análisis de Claude', 'Programa de trabajo'];
       const rango = n => { const i = ORDEN.indexOf(n); if (i >= 0) return i; const j = ORDEN_FIN.indexOf(n); return j >= 0 ? 100 + j : 50; };
       hojas.forEach((h, i) => { h.__i = i; }); hojas.sort((a, b) => rango(a.nombre) - rango(b.nombre) || a.__i - b.__i);
       const nombreArchivo = `Arrendamientos_NIIF16_${String(cliSel).replace(/[^A-Za-z0-9]+/g, '_').slice(0, 40)}.xlsx`;
