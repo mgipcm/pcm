@@ -16859,7 +16859,7 @@ ${cont.innerHTML}
       return [...ids];
     }
 
-    // Cuentas: "11301001, 651*" (el asterisco indica que empieza así)
+    // Cuentas: "códigos separados por coma; con asterisco al final incluye todas las que empiezan igual" (el asterisco indica que empieza así)
     function impListaCtas(txt) { return String(txt || '').split(/[,;\n\s]+/).map(s => s.trim()).filter(Boolean); }
     function impCtaEn(cod, lista) { cod = String(cod); return lista.some(p => p.endsWith('*') ? cod.startsWith(p.slice(0, -1)) : cod === p); }
 
