@@ -17778,7 +17778,7 @@ ${(im.aprendidos || []).length ? `<p class="text-xs text-slate-600 bg-slate-50 b
       let h = `<div class="p-3 space-y-3 text-xs text-slate-700">`;
       if (!C) h += pcHtmlAviso('AF', impEstado.cliente, impEstado.anio, impEstado.visita, 'import');
       h += `<div class="p-4 bg-white border border-slate-200 rounded-xl space-y-2"><div class="text-[13px] font-semibold text-slate-800">2. Cuentas del mayor que usa este cliente</div>
-        <p class="text-slate-500">Cada cliente codifica distinto. Escribe los códigos de cuenta de cada concepto (puedes usar un asterisco: 651* son todas las cuentas que empiezan con 651). Al terminar de leer el mayor, las cuentas se sugieren solas por su nombre.</p>
+        <p class="text-slate-500">Cada cliente codifica distinto. Escribe los códigos de cuenta de cada concepto (puedes usar un asterisco al final para incluir todas las cuentas que empiezan igual). Al terminar de leer el mayor, las cuentas se sugieren solas por su nombre.</p>
         <div class="grid grid-cols-1 md:grid-cols-3 gap-3">${nombres}</div>
         <div class="flex flex-wrap items-end gap-4 pt-1"><label class="flex flex-col gap-1 text-xs text-slate-600"><span>Diferencia que se acepta como "Cuadra"</span><input type="text" inputmode="decimal" value="${impE(cfg.tol)}" onchange="impEditarTol(this.value)" class="${impIn} w-28 text-right"></label>
         <label class="flex flex-col gap-1 text-xs text-slate-600"><span>Fecha de corte (lo registrado después no cuenta)</span><input type="date" value="${impE(cfg.corte)}" onchange="impCambiarFecha(this.value)" class="${impIn} w-40"></label></div></div>`;
