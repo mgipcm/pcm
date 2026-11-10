@@ -2171,7 +2171,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
         <div class="flex flex-wrap gap-1 p-1.5 bg-white border border-slate-200 rounded-2xl">
           <button type="button" id="im-tab-liq" onclick="impTab('liq')" class="px-3 py-1.5 text-xs transition rounded-lg">1. Liquidaciones</button>
           <button type="button" id="im-tab-cruce" onclick="impTab('cruce')" class="px-3 py-1.5 text-xs transition rounded-lg">2. Cruce con mayor</button>
-          <button type="button" id="im-tab-diario" onclick="impTab('diario')" class="px-3 py-1.5 text-xs transition rounded-lg">3. Diario contable</button>
+          <button type="button" id="im-tab-diario" onclick="impTab('diario')" class="px-3 py-1.5 text-xs transition rounded-lg">3. Diario contable de importaciones</button>
           <button type="button" id="im-tab-ent" onclick="impTab('ent')" class="px-3 py-1.5 text-xs transition rounded-lg">4. Entradas del mayor vs liquidaciones</button>
           <button type="button" id="im-descargar" onclick="impDescargar()" class="hidden ml-auto px-3 py-1.5 rounded-lg text-xs bg-slate-100 text-slate-800 hover:bg-slate-200 font-medium transition">Descargar todo (Excel)</button>
         </div>
@@ -17597,7 +17597,7 @@ ${cont.innerHTML}
         if (error) impMsg('No se guardó: ' + (error.message || error), 'text-red-600 font-bold'); else { impMsg('Guardado ✓'); impEstado.act = { por: fila.actualizado_por, en: fila.updated_at }; impSyncCabecera(); }
       }, 700);
     }
-    const IMP_TABS = [['liq', '1. Liquidaciones'], ['cruce', '2. Cruce con mayor'], ['diario', '3. Diario contable'], ['ent', '4. Entradas del mayor vs liquidaciones']];
+    const IMP_TABS = [['liq', '1. Liquidaciones'], ['cruce', '2. Cruce con mayor'], ['diario', '3. Diario contable de importaciones'], ['ent', '4. Entradas del mayor vs liquidaciones']];
     function impTab(t) { impEstado.tab = t; impRender(); }
     function impRender() {
       IMP_TABS.forEach(([t]) => { const b = $im('im-tab-' + t); if (b) b.className = 'px-3 py-1.5 text-xs transition rounded-lg ' + (impEstado.tab === t ? 'bg-slate-200 text-slate-900 font-semibold' : 'text-slate-600 hover:bg-slate-100 font-medium'); });
