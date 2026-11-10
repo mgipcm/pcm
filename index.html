@@ -11326,7 +11326,9 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       ['pasivo', 'Pasivo por arrendamiento total'],
       ['corto', 'Pasivo corto plazo'],
       ['largo', 'Pasivo largo plazo'],
-      ['uso', 'Derecho de uso neto'],
+      ['costo', 'Derecho de uso: costo'],
+      ['depAc', 'Derecho de uso: depreciación acumulada'],
+      ['uso', 'Derecho de uso neto (costo − depreciación acumulada)'],
       ['interes', 'Gasto de interés del año hasta el corte'],
       ['dep', 'Gasto de depreciación del año hasta el corte'],
       ['pagos', 'Pagos del año hasta el corte'],
@@ -11378,11 +11380,12 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
     function arrConcCalc(corte) {
       const Y = Number(corte.slice(0, 4)), M = Number(corte.slice(5, 7)), kc = Y * 12 + M - 1;
       const filas = arrEstado.contratos.map(c => {
-        const o = { c, pasivo: 0, corto: 0, largo: 0, uso: 0, interes: 0, dep: 0, pagos: 0, impAct: 0, impPas: 0, gastoAct: 0, ingPas: 0 }, ti = arrEstado.tasaImp, aj = { v: 0 };
+        const o = { c, pasivo: 0, corto: 0, largo: 0, costo: 0, depAc: 0, uso: 0, interes: 0, dep: 0, pagos: 0, impAct: 0, impPas: 0, gastoAct: 0, ingPas: 0 }, ti = arrEstado.tasaImp, aj = { v: 0 };
         const r = arrCalcular(c); if (!r.n) return o;
         const porK = new Map(); r.meses.forEach(m => porK.set(m.y * 12 + m.m - 1, m));
         const sal = k => (porK.get(k) ? porK.get(k).saldo : 0);
         o.pasivo = sal(kc); o.largo = arrLargoVigente(c, r, kc); o.corto = o.pasivo - o.largo; o.uso = porK.get(kc) ? porK.get(kc).neto : 0;
+        r.meses.forEach(m => { if (m.y * 12 + m.m - 1 <= kc) { o.costo += m.alta + m.traidoA + m.aj + m.remA + m.redC; o.depAc += m.dep + m.redD; } });
         r.meses.forEach(m => { if (m.y === Y && m.m <= M) { o.interes += m.interes; o.dep += m.dep; o.pagos += m.pago; aj.v += m.aj; } });
         o.impAct = o.pasivo * ti; o.impPas = o.uso * ti;
         o.gastoAct = (o.pagos - o.interes) * ti; // baja del impuesto diferido activo por lo que se paga del pasivo (sin altas ni remediciones)
@@ -11409,12 +11412,12 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       });
       return h + '</tbody></table>';
     }
-    // Saldos del balance traídos de la sumaria del cliente (derecho de uso, pasivo corto y largo). Los impuestos diferidos siempre son manuales.
-    function arrMapaSum() { const c = arrEstado.verif.__concil || (arrEstado.verif.__concil = {}); return c.mapa || (c.mapa = { uso: '', corto: '', largo: '' }); }
+    // Saldos del balance traídos de la sumaria del cliente (derecho de uso: costo, depreciación acumulada y neto; pasivo corto y largo). Los impuestos diferidos siempre son manuales.
+    function arrMapaSum() { const c = arrEstado.verif.__concil || (arrEstado.verif.__concil = {}); return c.mapa || (c.mapa = { uso: '', corto: '', largo: '', costo: '', depAc: '' }); }
     function arrHtmlSumariaConc() {
       if (arrEsLibre(arrEstado.cliente)) return '<p class="px-3 py-1.5 text-[11px] text-slate-500 border-b border-slate-200">Empresa que no es cliente: no hay sumarias. Escribe a mano los saldos del balance.</p>';
       const mp = arrMapaSum(), inp = (k, t) => `<label class="flex items-center gap-1"><span class="text-slate-600">${t}</span><input type="text" value="${escapeHtml(mp[k] || '')}" onchange="arrMapaEditar('${k}', this.value)" placeholder="ej. AI" class="w-24 h-6 px-1.5 uppercase text-[11px] border border-slate-300 rounded"></label>`;
-      return `<div class="flex flex-wrap items-center gap-3 px-3 py-1.5 border-b border-slate-200 text-[11px] bg-slate-50"><span class="font-semibold text-slate-600">Sumarias del cliente (códigos, separados por coma)</span>${inp('uso', 'Derecho de uso')}${inp('corto', 'Pasivo corto')}${inp('largo', 'Pasivo largo')}<button type="button" onclick="arrTraerSumaria(true)" class="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-800 hover:bg-slate-200 font-medium">Traer saldos de la sumaria</button><span id="ar-sum-msg" class="text-slate-500">${escapeHtml(arrEstado.sumMsg || '')}</span></div>`;
+      return `<div class="flex flex-wrap items-center gap-3 px-3 py-1.5 border-b border-slate-200 text-[11px] bg-slate-50"><span class="font-semibold text-slate-600">Sumarias del cliente (códigos, separados por coma)</span>${inp('costo', 'Derecho de uso (costo)')}${inp('depAc', 'Depreciación acumulada')}${inp('uso', 'Derecho de uso neto')}${inp('corto', 'Pasivo corto')}${inp('largo', 'Pasivo largo')}<button type="button" onclick="arrTraerSumaria(true)" class="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-800 hover:bg-slate-200 font-medium">Traer saldos de la sumaria</button><span id="ar-sum-msg" class="text-slate-500">${escapeHtml(arrEstado.sumMsg || '')}</span></div>`;
     }
     function arrAutoSum() {
       if (arrEsLibre(arrEstado.cliente) || !arrEstado.contratos.length) return;
@@ -11424,7 +11427,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
     function arrMapaEditar(k, v) { arrMapaSum()[k] = String(v || '').toUpperCase().replace(/\s+/g, ''); arrGuardarVerif(); }
     async function arrTraerSumaria(manual) {
       if (arrEsLibre(arrEstado.cliente)) return;
-      const mp = arrMapaSum(); if (!mp.uso && !mp.corto && !mp.largo) { if (manual) { arrEstado.sumMsg = 'Escribe primero el código de la sumaria de cada concepto.'; arrConcRender(); } return; }
+      const mp = arrMapaSum(); if (!mp.uso && !mp.corto && !mp.largo && !mp.costo && !mp.depAc) { if (manual) { arrEstado.sumMsg = 'Escribe primero el código de la sumaria de cada concepto.'; arrConcRender(); } return; }
       const ctx = arrEstado.cliente, corte = arrConcCorte(), anio = Number(corte.slice(0, 4));
       const { data, error } = await supabaseClient.from('balance_comprobacion').select('sumaria, saldo, visita, created_at').eq('cliente_id', ctx).eq('anio', anio).limit(20000);
       if (ctx !== arrEstado.cliente) return;
@@ -11435,8 +11438,9 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       const filas = data.filter(r => r.visita === vis);
       const suma = cods => { const set = new Set(String(cods || '').split(',').map(normSumaria).filter(Boolean)); if (!set.size) return null; const hallados = filas.filter(r => set.has(normSumaria(r.sumaria))); return hallados.length ? Math.abs(Math.round(hallados.reduce((a, r) => a + (Number(r.saldo) || 0), 0) * 100) / 100) : null; }; // sin cuentas en esa sumaria: no se toca la casilla
       const b = arrConcValores(), puesto = [], guardado = !!arrConcCortes()[corte];
-      [['uso', mp.uso], ['corto', mp.corto], ['largo', mp.largo]].forEach(([k, c]) => { const v = suma(c); if (v !== null && (manual || ((!guardado || b[k] === undefined || b[k] === null || b[k] === '') && !(arrEstado.concManual || {})[k]))) { b[k] = v; puesto.push(k); if (manual && arrEstado.concManual) delete arrEstado.concManual[k]; } });
+      [['uso', mp.uso], ['costo', mp.costo], ['depAc', mp.depAc], ['corto', mp.corto], ['largo', mp.largo]].forEach(([k, c]) => { const v = suma(c); if (v !== null && (manual || ((!guardado || b[k] === undefined || b[k] === null || b[k] === '') && !(arrEstado.concManual || {})[k]))) { b[k] = v; puesto.push(k); if (manual && arrEstado.concManual) delete arrEstado.concManual[k]; } });
       if (b.corto !== undefined && b.largo !== undefined && (puesto.includes('corto') || puesto.includes('largo'))) b.pasivo = Math.round((Number(b.corto) + Number(b.largo)) * 100) / 100;
+      if (!mp.uso && (puesto.includes('costo') || puesto.includes('depAc')) && b.costo !== undefined && b.depAc !== undefined) { b.uso = Math.round((Number(b.costo) - Number(b.depAc)) * 100) / 100; if (!puesto.includes('uso')) puesto.push('uso'); }
       if (puesto.length) arrGuardarBorrador();
       const sinDato = [['uso', 'derecho de uso'], ['corto', 'pasivo corto'], ['largo', 'pasivo largo']].filter(([k]) => mp[k] && suma(mp[k]) === null).map(x => x[1]);
       arrEstado.sumMsg = puesto.length ? `Saldos traídos de la sumaria ${anio} (${visita(vis)}). Revísalos y guarda el corte.${sinDato.length ? ' Sin saldo en la sumaria (se dejó como estaba): ' + sinDato.join(', ') + '.' : ''}` : 'Esos códigos no tienen saldo en la sumaria: se dejaron las casillas como estaban.';
