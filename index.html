@@ -10336,13 +10336,13 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
     function arrTasaMes(t) { t = Number(t) || 0; return arrMetodoTasa() === 'efectiva' ? (t > -1 ? Math.pow(1 + t, 1 / 12) - 1 : 0) : t / 12; }
     function arrCalcular(c) {
       const d = arrFechaISO(c.desde), n = arrNumeroCuotas(c);
-      const fi = 1 + (Number(c.iva_no_rec) || 0), canon = (Number(c.canon) || 0) * fi, tasa = Number(c.tasa) || 0;
+      const fi = 1 + (Number(c.iva_no_rec) || 0), al = Number(c.cargos_fijos) || 0, canon = (Number(c.canon) || 0) * fi + al, tasa = Number(c.tasa) || 0;
       if (!d || !n || !canon) return { n: 0, va: 0, tasa, meses: [], anios: {}, inicio: null, activoIni: 0 };
       const ant = !!c.pago_inicio, off = ant ? 0 : 1; // exponente del descuento: 1 = pago a fin de mes, 0 = pago al inicio
       const sy = +d.slice(0, 4), sm = +d.slice(5, 7), s = sy * 12 + (sm - 1);
       const ymIdx = ym => (ym && /^\d{4}-\d{1,2}/.test(ym)) ? +ym.slice(0, 4) * 12 + (+ym.slice(5, 7) - 1) : null;
-      const cambios = (Array.isArray(c.cambios) ? c.cambios : []).map(x => ({ k: ymIdx(x.ym), canon: (Number(x.canon) || 0) * fi })).filter(x => x.k !== null).sort((a, b) => a.k - b.k);
-      const mods = (Array.isArray(c.modificaciones) ? c.modificaciones : []).map(x => ({ k: ymIdx(x.ym), canon: (Number(x.canon) || 0) * fi, tasa: x.tasa === '' || x.tasa === null || x.tasa === undefined ? null : Number(x.tasa), hasta: x.hasta || '', tipo: x.tipo === 'termina' ? 'reduccion' : (x.tipo || 'renov'), red: x.tipo === 'termina' ? 1 : Math.min(Math.max(Number(x.reduccion) || 0, 0), 100) / 100, cierre: !!x.cierre })).filter(x => x.k !== null && (x.cierre ? x.k >= s : x.k > s)).sort((a, b) => a.k - b.k);
+      const cambios = (Array.isArray(c.cambios) ? c.cambios : []).map(x => ({ k: ymIdx(x.ym), canon: (Number(x.canon) || 0) * fi + al })).filter(x => x.k !== null).sort((a, b) => a.k - b.k);
+      const mods = (Array.isArray(c.modificaciones) ? c.modificaciones : []).map(x => ({ k: ymIdx(x.ym), canon: Number(x.canon) ? Number(x.canon) * fi + al : 0, tasa: x.tasa === '' || x.tasa === null || x.tasa === undefined ? null : Number(x.tasa), hasta: x.hasta || '', tipo: x.tipo === 'termina' ? 'reduccion' : (x.tipo || 'renov'), red: x.tipo === 'termina' ? 1 : Math.min(Math.max(Number(x.reduccion) || 0, 0), 100) / 100, cierre: !!x.cierre })).filter(x => x.k !== null && (x.cierre ? x.k >= s : x.k > s)).sort((a, b) => a.k - b.k);
       const pagoOrig = idx => { let p = canon; cambios.forEach(x => { if (idx >= x.k) p = x.canon; }); return p; };
       let r = arrTasaMes(tasa), va = 0;
       for (let k = 0; k < n; k++) { const p = pagoOrig(s + k); va += r ? p / Math.pow(1 + r, k + off) : p; }
@@ -10564,7 +10564,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       arrEstado.contratos = (rC.data || []).map(r => ({
         id: r.id, origen: r.origen || 'persona', estado_revision: r.estado_revision || null, revisado_por: r.revisado_por || null, revisado_at: r.revisado_at || null, orden: Number(r.orden) || 0, arrendador: r.arrendador || '', ruc: r.ruc || '', n_contrato: r.n_contrato || '', local: r.local || '', centro_costo: r.centro_costo || '',
         canon: r.canon === null ? '' : Number(r.canon), desde: r.desde || '', hasta: r.hasta || '', hasta_proy: r.hasta_proy || '', tasa: r.tasa === null ? '' : Number(r.tasa),
-        cuotas: r.cuotas === null || r.cuotas === undefined ? '' : Number(r.cuotas), activo_ini: r.activo_ini === null || r.activo_ini === undefined ? '' : Number(r.activo_ini), pasivo_ini: r.pasivo_ini === null || r.pasivo_ini === undefined ? '' : Number(r.pasivo_ini), cambios: Array.isArray(r.cambios) ? r.cambios : [], modificaciones: Array.isArray(r.modificaciones) ? r.modificaciones : [], pago_inicio: !!r.pago_inicio, iva_no_rec: arrNumOVacio(r.iva_no_rec), anticipos: arrNumOVacio(r.anticipos), costos_directos: arrNumOVacio(r.costos_directos), desmantelamiento: arrNumOVacio(r.desmantelamiento), incentivos: arrNumOVacio(r.incentivos), nuevo: false
+        cuotas: r.cuotas === null || r.cuotas === undefined ? '' : Number(r.cuotas), activo_ini: r.activo_ini === null || r.activo_ini === undefined ? '' : Number(r.activo_ini), pasivo_ini: r.pasivo_ini === null || r.pasivo_ini === undefined ? '' : Number(r.pasivo_ini), cambios: Array.isArray(r.cambios) ? r.cambios : [], modificaciones: Array.isArray(r.modificaciones) ? r.modificaciones : [], pago_inicio: !!r.pago_inicio, iva_no_rec: arrNumOVacio(r.iva_no_rec), cargos_fijos: arrNumOVacio(r.cargos_fijos), anticipos: arrNumOVacio(r.anticipos), costos_directos: arrNumOVacio(r.costos_directos), desmantelamiento: arrNumOVacio(r.desmantelamiento), incentivos: arrNumOVacio(r.incentivos), nuevo: false
       }));
       arrEstado.abiertos = new Set(); arrEstado.mesAbiertos = new Set();
       const rK = await supabaseClient.from('arrendamientos_config').select('*').eq('cliente_id', cliente).maybeSingle();
@@ -10696,7 +10696,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
             ${sec('2. Aumentos pactados desde el inicio', 'Calendario de aumentos ya firmado en el contrato original.', `${cam || '<p class="text-xs text-slate-400 mb-2">Ningún aumento pactado.</p>'}<button type="button" onclick="arrAnadirCambio(${i})" class="${btnAdd}">+ Añadir cambio</button>`)}
             ${sec('3. Costos iniciales del activo (opcionales)', '', `<div class="flex flex-wrap items-end gap-4">${cp('Anticipos o pagos hechos antes del inicio', ent('anticipos'))}${cp('Costos directos iniciales', ent('costos_directos'))}${cp('Desmantelamiento o restauración estimado', ent('desmantelamiento'))}${cp('Incentivos recibidos (restan)', ent('incentivos'))}</div>`)}
             ${sec('4. Saldos con los que inicia', 'Solo si viene de un contrato anterior; en cero el contrato empieza nuevo.', `<div class="flex flex-wrap items-end gap-4">${cp('Activo neto anterior', ent('activo_ini', 'w-40'))}${cp('Pasivo anterior', ent('pasivo_ini', 'w-40'))}<span id="ar-ini-${i}" class="text-xs text-slate-600 font-semibold pb-2"></span></div>`)}
-            ${sec('5. Condiciones de pago', 'El IVA se suma al canon solo si no se recupera: escribe la tarifa completa (15) si nada se recupera; si se recupera una parte, escribe solo la parte que no (ej. 7,5). Si el pago es al inicio, el primer pago ya está dentro del valor actual: no lo repitas en anticipos.', `<div class="flex flex-wrap items-end gap-5"><label class="inline-flex items-center gap-2 text-xs text-slate-700 cursor-pointer h-8"><input type="checkbox" ${c.pago_inicio ? 'checked' : ''} onchange="arrEditar(${i}, 'pago_inicio', this)"> Se paga al inicio de cada mes (si no, a fin de mes)</label>${cp('IVA que no es crédito tributario (% sobre el canon, ej. 15)', `<input type="text" inputmode="decimal" value="${ivaVal}" onchange="arrEditar(${i}, 'iva_no_rec', this)" class="w-24 ${IN} text-right">`)}</div>`)}
+            ${sec('5. Condiciones de pago', 'El IVA se suma al canon solo si no se recupera: escribe la tarifa completa (15) si nada se recupera; si se recupera una parte, escribe solo la parte que no (ej. 7,5). Canon: escribe el valor bruto de la factura, antes de retenciones (las retenciones son impuestos del arrendador que tú pagas al SRI). Alícuota u otros cargos fijos: úsalo solo si la empresa decidió no separar esos componentes del arrendamiento. Si el pago es al inicio, el primer pago ya está dentro del valor actual: no lo repitas en anticipos.', `<div class="flex flex-wrap items-end gap-5"><label class="inline-flex items-center gap-2 text-xs text-slate-700 cursor-pointer h-8"><input type="checkbox" ${c.pago_inicio ? 'checked' : ''} onchange="arrEditar(${i}, 'pago_inicio', this)"> Se paga al inicio de cada mes (si no, a fin de mes)</label>${cp('IVA que no es crédito tributario (% sobre el canon, ej. 15)', `<input type="text" inputmode="decimal" value="${ivaVal}" onchange="arrEditar(${i}, 'iva_no_rec', this)" class="w-24 ${IN} text-right">`)}${cp('Alícuota u otros cargos fijos del contrato (mensual; se suman al pago y no suben con los aumentos)', ent('cargos_fijos', 'w-40'))}</div>`)}
           </td></tr>`;
         }
       });
@@ -10905,13 +10905,13 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
     function arrAlternar(i) { const c = arrEstado.contratos[i]; if (!c) return; if (arrEstado.abiertos.has(c.id)) arrEstado.abiertos.delete(c.id); else arrEstado.abiertos.add(c.id); arrRender(); }
     function arrAnadir() {
       const L = arrEstado.contratos, ult = L[L.length - 1];
-      L.push({ id: arrIdNuevo(), orden: (ult ? ult.orden : 0) + 1, arrendador: ult ? ult.arrendador : '', ruc: '', n_contrato: '', local: '', centro_costo: '', canon: '', desde: '', hasta: '', hasta_proy: '', tasa: '', cuotas: '', activo_ini: '', pasivo_ini: '', pago_inicio: false, iva_no_rec: '', anticipos: '', costos_directos: '', desmantelamiento: '', incentivos: '', cambios: [], modificaciones: [], nuevo: true });
+      L.push({ id: arrIdNuevo(), orden: (ult ? ult.orden : 0) + 1, arrendador: ult ? ult.arrendador : '', ruc: '', n_contrato: '', local: '', centro_costo: '', canon: '', desde: '', hasta: '', hasta_proy: '', tasa: '', cuotas: '', activo_ini: '', pasivo_ini: '', pago_inicio: false, iva_no_rec: '', cargos_fijos: '', anticipos: '', costos_directos: '', desmantelamiento: '', incentivos: '', cambios: [], modificaciones: [], nuevo: true });
       arrEstado.tab = 'contratos'; arrRender();
       const p = document.getElementById('ar-panel'); p.scrollTop = p.scrollHeight;
     }
     function arrEditar(i, campo, el) {
       const c = arrEstado.contratos[i]; if (!c) return;
-      if (['canon', 'activo_ini', 'pasivo_ini', 'anticipos', 'costos_directos', 'desmantelamiento', 'incentivos'].includes(campo)) { const v = arrNum(el.value); c[campo] = v === null ? '' : v; el.value = v === null ? '' : formatoNumeroAnexo(v); }
+      if (['canon', 'cargos_fijos', 'activo_ini', 'pasivo_ini', 'anticipos', 'costos_directos', 'desmantelamiento', 'incentivos'].includes(campo)) { const v = arrNum(el.value); c[campo] = v === null ? '' : v; el.value = v === null ? '' : formatoNumeroAnexo(v); }
       else if (campo === 'tasa') { const v = arrNum(el.value); c.tasa = v === null ? '' : v / 100; }
       else if (campo === 'iva_no_rec') { const v = arrNum(el.value); c.iva_no_rec = v === null || v <= 0 ? '' : v / 100; el.value = c.iva_no_rec === '' ? '' : r2f(c.iva_no_rec * 100); }
       else if (campo === 'pago_inicio') c.pago_inicio = !!el.checked;
@@ -10950,12 +10950,12 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       else x[campo] = el.value;
       arrRefrescarFila(i); arrProgramarGuardado(i);
     }
-    const ARR_COLS_NUEVAS = ['modificaciones', 'activo_ini', 'pasivo_ini', 'pago_inicio', 'iva_no_rec', 'anticipos', 'costos_directos', 'desmantelamiento', 'incentivos'];
+    const ARR_COLS_NUEVAS = ['modificaciones', 'activo_ini', 'pasivo_ini', 'pago_inicio', 'iva_no_rec', 'cargos_fijos', 'anticipos', 'costos_directos', 'desmantelamiento', 'incentivos'];
     function arrFilaBD(c) {
       const nv = v => v === '' || v === null || v === undefined ? null : v;
       return {
         id: c.id, cliente_id: arrEstado.cliente, orden: c.orden, arrendador: c.arrendador || null, ruc: c.ruc || null, n_contrato: c.n_contrato || null, local: c.local || null, centro_costo: c.centro_costo || null,
-        activo_ini: nv(c.activo_ini), pasivo_ini: nv(c.pasivo_ini), pago_inicio: !!c.pago_inicio, iva_no_rec: nv(c.iva_no_rec), anticipos: nv(c.anticipos), costos_directos: nv(c.costos_directos), desmantelamiento: nv(c.desmantelamiento), incentivos: nv(c.incentivos),
+        activo_ini: nv(c.activo_ini), pasivo_ini: nv(c.pasivo_ini), pago_inicio: !!c.pago_inicio, iva_no_rec: nv(c.iva_no_rec), cargos_fijos: nv(c.cargos_fijos), anticipos: nv(c.anticipos), costos_directos: nv(c.costos_directos), desmantelamiento: nv(c.desmantelamiento), incentivos: nv(c.incentivos),
         canon: nv(c.canon), desde: c.desde || null, hasta: c.hasta || null, hasta_proy: c.hasta_proy || null, tasa: nv(c.tasa), cuotas: nv(c.cuotas),
         cambios: (c.cambios || []).filter(x => x.ym && x.canon !== '' && x.canon !== null),
         modificaciones: (c.modificaciones || []).filter(x => x.ym && ((x.canon !== '' && x.canon !== null && x.canon !== undefined) || x.hasta || (x.tasa !== '' && x.tasa !== null && x.tasa !== undefined) || (x.tipo === 'reduccion' && Number(x.reduccion) > 0) || x.tipo === 'termina')).map(x => ({ ...x, tipo: x.tipo || 'renov' })),
