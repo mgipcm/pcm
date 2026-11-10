@@ -10666,13 +10666,13 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       if (!L.length) return barra + infoTasa + '<p class="p-6 text-xs text-slate-400 text-center">Todavía no hay contratos. Usa "+ Añadir contrato" o "Cargar desde Excel".</p>';
       const th = (t, cls = '') => `<th class="px-2 py-1 border-b border-slate-200 text-left whitespace-nowrap ${cls}">${t}</th>`;
       const num = v => v === '' || v === null || v === undefined ? '' : formatoNumeroAnexo(v);
-      let html = barra + infoTasa + `<table class="w-full text-[11px] leading-tight border-collapse min-w-[1000px]"><thead class="bg-slate-50 text-slate-600 sticky top-0 z-10"><tr>${th('', 'w-6')}${th('N°')}${th('Arrendador')}${th('Activo arrendado')}${th('Canon mensual (bruto, sin IVA)', 'text-right')}${th('Pago mensual total', 'text-right')}${th('Desde')}${th('Hasta')}${th('Hasta proyectado')}${th('Tasa anual %', 'text-right')}${th('Cuotas', 'text-right')}${th('Valor actual inicial', 'text-right')}${th('Pasivo al ' + arrConcFechaTxt(arrConcCorte()), 'text-right')}${th('')}</tr></thead><tbody>`;
+      let html = barra + infoTasa + `<table class="w-full text-[11px] leading-tight border-collapse min-w-[1000px]"><thead class="bg-slate-50 text-slate-600 sticky top-0 z-10"><tr>${th('', 'w-6')}${th('N°')}${th('Arrendador')}${th('Activo arrendado')}${th('Canon mensual (bruto, sin IVA)', 'text-right')}${th('Pago mensual total', 'text-right')}${th('Desde')}${th('Hasta')}${th('Estado')}${th('Tasa anual %', 'text-right')}${th('Cuotas', 'text-right')}${th('Valor actual inicial', 'text-right')}${th('Pasivo al ' + arrConcFechaTxt(arrConcCorte()), 'text-right')}${th('')}</tr></thead><tbody>`;
       L.forEach((c, i) => {
         const ab = arrEstado.abiertos.has(c.id), r = arrCalcular(c);
         html += `<tr class="border-b border-slate-100 hover:bg-slate-50"><td class="px-1 text-center"><button type="button" onclick="arrAlternar(${i})" class="flecha-caja ${ab ? 'abierta' : ''}" title="Ver o editar saldos, costos iniciales, condiciones de pago, modificaciones y aumentos">${ab ? '▾' : '▸'}</button></td>
           <td class="px-1 text-slate-400">${i + 1}</td>
           ${arrCelda(i, 'arrendador', 'txt', 'w-44', c.arrendador)}${arrCelda(i, 'local', 'txt', 'w-36', c.local)}
-          ${arrCelda(i, 'canon', 'num', 'w-24', c.canon === '' ? '' : formatoNumeroAnexo(c.canon))}<td id="ar-pago-${i}" class="px-2 text-right whitespace-nowrap text-slate-700" title="Canon + IVA no recuperable + alícuota u otros cargos fijos (el pago de los primeros meses, antes de los aumentos)">${arrFmt(arrPagoMensual(c))}</td>${arrCelda(i, 'desde', 'date', 'w-32', c.desde)}${arrCelda(i, 'hasta', 'date', 'w-32', c.hasta)}${arrCelda(i, 'hasta_proy', 'date', 'w-32', c.hasta_proy)}
+          ${arrCelda(i, 'canon', 'num', 'w-24', c.canon === '' ? '' : formatoNumeroAnexo(c.canon))}<td id="ar-pago-${i}" class="px-2 text-right whitespace-nowrap text-slate-700" title="Canon + IVA no recuperable + alícuota u otros cargos fijos (el pago de los primeros meses, antes de los aumentos)">${arrFmt(arrPagoMensual(c))}</td>${arrCelda(i, 'desde', 'date', 'w-32', c.desde)}<td id="ar-fin-${i}" class="px-2 whitespace-nowrap text-slate-800" title="Fecha final que usa la herramienta: la terminación o la última renovación si las hay; si no, la proyectada o la del contrato. Se cambia en el detalle del contrato (flecha de la izquierda).">${arrFmtFecha(arrFinEfectivo(c).fin)}</td><td id="ar-est-${i}" class="px-2 whitespace-nowrap">${arrEstadoHtml(c)}</td>
           ${arrCelda(i, 'tasa', 'num', 'w-16', c.tasa === '' ? '' : r2f(c.tasa * 100))}
           <td class="px-1 py-px"><input type="text" inputmode="numeric" id="ar-cu-${i}" value="${c.cuotas === '' ? '' : c.cuotas}" placeholder="${r.n || ''}" onchange="arrEditar(${i}, 'cuotas', this)" class="w-14 h-6 px-1.5 py-0 text-right text-[11px] border border-slate-300 rounded focus:ring-2 focus:ring-indigo-500 outline-none"></td>
           <td id="ar-va-${i}" class="px-2 text-right whitespace-nowrap font-semibold text-slate-800">${arrFmt(r.va)}</td>
@@ -10692,6 +10692,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
           }).join('');
           const ivaVal = c.iva_no_rec === '' || c.iva_no_rec === null || c.iva_no_rec === undefined ? '' : r2f(c.iva_no_rec * 100);
           html += `<tr><td colspan="14" class="px-2 py-2 space-y-2 fila-desplegada">
+            ${sec('Fechas del contrato', 'La columna "Hasta" de la tabla muestra la fecha que usa la herramienta: la terminación o la última renovación, si las hay; si no, la proyectada o la del contrato.', `<div class="flex flex-wrap items-end gap-4">${cp('Hasta según el contrato', `<input type="date" value="${escapeHtml(c.hasta || '')}" onchange="arrEditar(${i}, 'hasta', this)" class="w-40 ${IN}">`)}${cp('Hasta proyectado (si se estima otro plazo)', `<input type="date" value="${escapeHtml(c.hasta_proy || '')}" onchange="arrEditar(${i}, 'hasta_proy', this)" class="w-40 ${IN}">`)}</div>`)}
             ${sec('1. Modificaciones del contrato', 'Se vuelve a calcular desde ese mes; lo anterior queda fijo y la diferencia se ajusta al activo. Renovación, plazo o canon: si dejas vacía la nueva fecha final o la nueva tasa, se mantienen las anteriores. Índice o IPC: siempre la misma tasa. Reducción de alcance: escribe el % del contrato que termina; si dejas vacío el nuevo canon, baja en la misma proporción. Terminación o cancelación: se da de baja todo el activo y todo el pasivo que quedan a esa fecha y la diferencia va a resultados; indica el mes en que termina el contrato.', `${mod || '<p class="text-xs text-slate-400 mb-2">Ninguna modificación.</p>'}<button type="button" onclick="arrAnadirMod(${i})" class="${btnAdd}">+ Añadir modificación</button>`)}
             ${sec('2. Aumentos pactados desde el inicio', 'Calendario de aumentos ya firmado en el contrato original.', `${cam || '<p class="text-xs text-slate-400 mb-2">Ningún aumento pactado.</p>'}<button type="button" onclick="arrAnadirCambio(${i})" class="${btnAdd}">+ Añadir cambio</button>`)}
             ${sec('3. Costos iniciales del activo (opcionales)', '', `<div class="flex flex-wrap items-end gap-4">${cp('Anticipos o pagos hechos antes del inicio', ent('anticipos'))}${cp('Costos directos iniciales', ent('costos_directos'))}${cp('Desmantelamiento o restauración estimado', ent('desmantelamiento'))}${cp('Incentivos recibidos (restan)', ent('incentivos'))}</div>`)}
@@ -10919,12 +10920,31 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       else c[campo] = el.value.trim ? (['desde', 'hasta', 'hasta_proy'].includes(campo) ? el.value : el.value.trim()) : el.value;
       arrRefrescarFila(i); arrProgramarGuardado(i);
     }
+    // Fecha final que aplica (la última modificación, la terminación o la del contrato / proyectada) y estado al mes de corte
+    function arrFinEfectivo(c) {
+      const mods = (Array.isArray(c.modificaciones) ? c.modificaciones : []).filter(x => x && x.ym).sort((a, b) => String(a.ym).localeCompare(String(b.ym)));
+      const ult = (y, m) => new Date(y, m, 0).getDate(), pad = n => String(n).padStart(2, '0');
+      let fin = c.hasta_proy || c.hasta || '';
+      mods.forEach(x => {
+        const y = Number(String(x.ym).slice(0, 4)), m = Number(String(x.ym).slice(5, 7));
+        if (x.tipo === 'termina' || (x.tipo === 'reduccion' && Number(x.reduccion) >= 100)) {
+          if (x.cierre === false) { const py = m === 1 ? y - 1 : y, pm = m === 1 ? 12 : m - 1; fin = `${py}-${pad(pm)}-${pad(ult(py, pm))}`; }
+          else fin = `${y}-${pad(m)}-${pad(ult(y, m))}`;
+        } else if ((x.tipo || 'renov') === 'renov' && x.hasta) fin = x.hasta;
+      });
+      const corte = arrConcCorte(), finCorte = `${corte.slice(0, 4)}-${corte.slice(5, 7)}-${pad(ult(Number(corte.slice(0, 4)), Number(corte.slice(5, 7))))}`;
+      return { fin, concluida: !!fin && fin <= finCorte };
+    }
+    function arrFmtFecha(f) { return f && /^\d{4}-\d{2}-\d{2}$/.test(f) ? `${f.slice(8, 10)}/${f.slice(5, 7)}/${f.slice(0, 4)}` : (f || ''); }
+    function arrEstadoHtml(c) { const e = arrFinEfectivo(c); return e.fin ? (e.concluida ? '<span class="text-slate-500">Concluida</span>' : '<span class="font-semibold text-emerald-700">Vigente</span>') : ''; }
     function arrPagoMensual(c) { const k = Number(c.canon) || 0; return k ? k * (1 + (Number(c.iva_no_rec) || 0)) + (Number(c.cargos_fijos) || 0) : 0; }
     function arrRefrescarFila(i) {
       const c = arrEstado.contratos[i], r = arrCalcular(c);
       const va = document.getElementById('ar-va-' + i); if (va) va.textContent = arrFmt(r.va);
       const sl = document.getElementById('ar-sal-' + i); if (sl) sl.textContent = arrFmt(arrPasivoAlCorte(r));
       const pg = document.getElementById('ar-pago-' + i); if (pg) pg.textContent = arrFmt(arrPagoMensual(c));
+      const fn = document.getElementById('ar-fin-' + i); if (fn) fn.textContent = arrFmtFecha(arrFinEfectivo(c).fin);
+      const es = document.getElementById('ar-est-' + i); if (es) es.innerHTML = arrEstadoHtml(c);
       const cu = document.getElementById('ar-cu-' + i); if (cu) cu.placeholder = r.n || '';
       const ini = document.getElementById('ar-ini-' + i);
       if (ini) {
@@ -11641,9 +11661,9 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
         [{ wch: 52 }], { sinCongelar: true, titulo: 'Arrendamientos NIIF 16', info: [['Impuesto diferido', arrEstado.tasaImp, 'pct'], ['Contratos', K.calc.length], ['Conversión de la tasa anual a mensual', arrMetodoTasa() === 'efectiva' ? 'Equivalente mensual (1 + i)^(1/12) − 1' : 'Tasa anual ÷ 12'], ['Mes de consulta', arrConcFechaTxt(arrConcCorte())], ['Preparado por', nombreUsuarioActivo() || ''], ['Fecha de elaboración', new Date()]],
           notas: ['Cifras calculadas con los contratos cargados en la herramienta. Las demás hojas traen el detalle por contrato, por mes y por año.', 'Al terminar los contratos, los saldos (pasivo, derecho de uso e impuestos diferidos) quedan en cero. En la columna Total, depreciación + interés = pagos (más los costos iniciales, si los hay) y el ingreso / (gasto) por impuesto diferido suma cero.', 'Corto plazo: lo que se amortiza en los 12 meses siguientes al 31 de diciembre, con las condiciones vigentes a esa fecha.'] });
       // Contratos
-      add('Contratos', [['N°', 'Arrendador', 'Activo arrendado', 'Canon mensual (bruto, sin IVA)', 'Desde', 'Hasta', 'Hasta proyectado', 'Tasa anual', 'Cuotas', 'Pago al inicio del mes', 'IVA no recuperable', 'Costos iniciales del activo', 'Valor actual', 'Activo a depreciar al inicio', 'Total pagos', 'Alícuota u otros cargos fijos (mensual)', 'Pago mensual total'],
-        ...K.calc.map((x, i) => [i + 1, x.c.arrendador, x.c.local, Number(x.c.canon) || 0, x.c.desde, x.c.hasta, x.c.hasta_proy, x.c.tasa, x.r.n, x.c.pago_inicio ? 'SI' : 'NO', Number(x.c.iva_no_rec) || 0, r2f((Number(x.c.anticipos) || 0) + (Number(x.c.costos_directos) || 0) + (Number(x.c.desmantelamiento) || 0) - (Number(x.c.incentivos) || 0)), r2f(x.r.va), r2f(x.r.activoIni), r2f(x.r.meses.reduce((s, m) => s + m.pago, 0)), Number(x.c.cargos_fijos) || 0, arrPagoMensual(x.c)])],
-        [{ wch: 6 }, { wch: 30 }, { wch: 24 }, { wch: 14 }, { wch: 13 }, { wch: 13 }, { wch: 16 }, { wch: 12 }, { wch: 9 }, { wch: 14 }, { wch: 14 }, { wch: 16 }, { wch: 16 }, { wch: 18 }, { wch: 16 }, { wch: 18 }, { wch: 16 }], { fecha: [4, 5, 6], pct: [7, 10], ent: [0, 8], totales: [11, 12, 13, 14] });
+      add('Contratos', [['N°', 'Arrendador', 'Activo arrendado', 'Canon mensual (bruto, sin IVA)', 'Desde', 'Hasta', 'Hasta proyectado', 'Tasa anual', 'Cuotas', 'Pago al inicio del mes', 'IVA no recuperable', 'Costos iniciales del activo', 'Valor actual', 'Activo a depreciar al inicio', 'Total pagos', 'Alícuota u otros cargos fijos (mensual)', 'Pago mensual total', 'Fecha final que aplica', 'Estado al corte'],
+        ...K.calc.map((x, i) => [i + 1, x.c.arrendador, x.c.local, Number(x.c.canon) || 0, x.c.desde, x.c.hasta, x.c.hasta_proy, x.c.tasa, x.r.n, x.c.pago_inicio ? 'SI' : 'NO', Number(x.c.iva_no_rec) || 0, r2f((Number(x.c.anticipos) || 0) + (Number(x.c.costos_directos) || 0) + (Number(x.c.desmantelamiento) || 0) - (Number(x.c.incentivos) || 0)), r2f(x.r.va), r2f(x.r.activoIni), r2f(x.r.meses.reduce((s, m) => s + m.pago, 0)), Number(x.c.cargos_fijos) || 0, arrPagoMensual(x.c), arrFinEfectivo(x.c).fin, arrFinEfectivo(x.c).fin ? (arrFinEfectivo(x.c).concluida ? 'Concluida' : 'Vigente') : ''])],
+        [{ wch: 6 }, { wch: 30 }, { wch: 24 }, { wch: 14 }, { wch: 13 }, { wch: 13 }, { wch: 16 }, { wch: 12 }, { wch: 9 }, { wch: 14 }, { wch: 14 }, { wch: 16 }, { wch: 16 }, { wch: 18 }, { wch: 16 }, { wch: 18 }, { wch: 16 }, { wch: 16 }, { wch: 14 }], { fecha: [4, 5, 6, 17], pct: [7, 10], ent: [0, 8], totales: [11, 12, 13, 14] });
       // Modificaciones del contrato y aumentos pactados (todo lo que se registra en cada contrato)
       {
         const tT = { renov: 'Renovación, plazo o canon', indice: 'Ajuste por índice o IPC', reduccion: 'Reducción de alcance', termina: 'Terminación o cancelación del contrato' };
