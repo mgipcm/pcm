@@ -16710,13 +16710,15 @@ ${cont.innerHTML}
       { k: 'gastos', t: 'Costos de importación registrados en gastos', rol: 'gastos' }
     ];
     const IMP_ROLES = [
-      ['inventario', 'Inventarios (costo de la importación)'], ['iva', 'IVA pagado en compras'], ['anticipo', 'Anticipo de importaciones'], ['proveedores', 'Proveedores'],
+      ['inventario', 'Importaciones en tránsito (donde se acumula el costo de cada importación)'], ['inv_final', 'Inventario (cuentas donde entra la mercadería)'], ['iva', 'IVA pagado en compras'], ['anticipo', 'Anticipo de importaciones'], ['proveedores', 'Proveedores'],
       ['isd', 'ISD (costo de la importación o su provisión)'], ['gastos', 'Costos de importación registrados en gastos (cuentas de resultados: agente, contenedor, seguro, transporte, logística, financiero)']
     ];
     // Los roles guardados antes con cuentas separadas (agente, manejo, seguro, transporte, logístico, financiero) se suman al rol único "gastos"
     function impRolesDe(cfg) {
       const r = {}; IMP_ROLES.forEach(([k]) => { r[k] = impListaCtas(((cfg || {}).roles || {})[k]).slice(); });
       ['agente', 'manejo', 'seguro', 'flete_int', 'logistico', 'gasto_fin'].forEach(k => impListaCtas(((cfg || {}).roles || {})[k]).forEach(c => { if (!r.gastos.includes(c)) r.gastos.push(c); }));
+      // una cuenta no puede estar a la vez en tránsito y en inventario: manda la de inventario
+      if (r.inv_final.length) r.inventario = r.inventario.filter(c => !r.inv_final.includes(c));
       return r;
     }
     // Palabras que ayudan a reconocer, en el detalle de un pago por anticipo, de qué concepto es
@@ -16726,7 +16728,7 @@ ${cont.innerHTML}
     };
     // Sugerencia de cuentas por rol según el nombre de la cuenta
     const IMP_SUG = {
-      inventario: /INVENTARIO|MERCADERIA/, iva: /IVA.*(COMPRA|PAGAD)|CREDITO TRIBUT/, anticipo: /ANTICIPO.*IMPORT|IMPORT.*ANTICIPO/, proveedores: /PROVEEDOR/,
+      inventario: /TRANSITO|IMPORTACION/, inv_final: /INVENTARIO|MERCADERIA/, iva: /IVA.*(COMPRA|PAGAD)|CREDITO TRIBUT/, anticipo: /ANTICIPO.*IMPORT|IMPORT.*ANTICIPO/, proveedores: /PROVEEDOR/,
       isd: /\bISD\b|SALIDA.*DIVISA/, gastos: /AGENTE|ADUANER|CONTENEDOR|NAVIER|MANEJO|PORTUAR|SEGURO|TRANSPORTE|FLETE|CUSTODIA|LOGISTIC|FINANCIER|INTERES|COMISION BANC/
     };
 
@@ -16875,8 +16877,10 @@ ${cont.innerHTML}
       });
       const conceptoPorRol = {}; IMP_CONCEPTOS.forEach(k => { if (k.rol) conceptoPorRol[k.rol] = k.k; });
       const LN = impAmpliarLineas(cruce, imports, cfg);
+      // asientos que pasan lo acumulado en tránsito al inventario: su crédito en tránsito no resta costo
+      const trasl = new Set(); if (roles.inv_final.length) (cruce.asientos || []).forEach(a => { if ((a.l || []).some(r => (Number(r[2]) || 0) > 0 && impCtaEn(r[0], roles.inv_final))) trasl.add(a.k); });
       LN.forEach(l => {
-        const net = (Number(l.deb) || 0) - (Number(l.hab) || 0);
+        const net = (trasl.has(l.k) && roles.inventario.length && impCtaEn(l.cod, roles.inventario)) ? (Number(l.deb) || 0) : (Number(l.deb) || 0) - (Number(l.hab) || 0);
         let rol = null;
         for (const [r] of IMP_ROLES) if (roles[r].length && impCtaEn(l.cod, roles[r])) { rol = r; break; }
         if (!rol) return;
@@ -16969,7 +16973,7 @@ ${cont.innerHTML}
       (cruce.asientos || []).forEach(a => (a.l || []).forEach(r => {
         const cod = r[0], deb = Number(r[2]) || 0, hab = Number(r[3]) || 0; if (!enRol(cod) || have.has(key(a.k, cod, deb, hab))) return;
         const nl = { k: a.k, tk: a.tk, num: a.num, cod, deb, hab, d: a.d, det: r[4] || '', ids: [], met: '' }, monto = Math.max(deb, hab);
-        const esIva = roles.iva.length && impCtaEn(cod, roles.iva), esInv = roles.inventario.length && impCtaEn(cod, roles.inventario);
+        const esIva = roles.iva.length && impCtaEn(cod, roles.iva), esInv = (roles.inventario.length && impCtaEn(cod, roles.inventario)) || (roles.inv_final.length && impCtaEn(cod, roles.inv_final));
         let ids = []; if (deb > 0 && esIva) ids = buscar(monto, ['iva']); else if (deb > 0 && esInv) ids = buscar(monto, ['total', 'costo']);
         if (ids.length === 1) { nl.ids = ids; nl.met = 'valor'; } else if (porAs[a.k] && porAs[a.k].size === 1) { nl.ids = [...porAs[a.k]]; nl.met = 'diario'; }
         nuevas.push(nl);
@@ -17768,7 +17772,7 @@ ${(im.aprendidos || []).length ? `<p class="text-xs text-slate-600 bg-slate-50 b
     // ---------- 2. Cruce con el mayor ----------
     function impSugerirRoles() {
       const c = impEstado.cruce; if (!c) return; const R = impEstado.cfg.roles;
-      IMP_ROLES.forEach(([k]) => { if (impListaCtas(R[k]).length) return; const ok1 = cod => { const d = String(cod).charAt(0); return ['inventario', 'iva', 'anticipo'].includes(k) ? d === '1' : (k === 'proveedores' ? d === '2' : !['1', '2', '3'].includes(d)); };
+      IMP_ROLES.forEach(([k]) => { if (impListaCtas(R[k]).length) return; const ok1 = cod => { const d = String(cod).charAt(0); return ['inventario', 'inv_final', 'iva', 'anticipo'].includes(k) ? d === '1' : (k === 'proveedores' ? d === '2' : !['1', '2', '3'].includes(d)); };
       const cods = Object.entries(c.cuentas || {}).filter(([cod, nom]) => ok1(cod) && IMP_SUG[k] && IMP_SUG[k].test(impNorm(nom))).map(([cod]) => cod); if (cods.length) R[k] = cods.slice(0, 6).join(', '); });
     }
     function impHtmlCruce() {
