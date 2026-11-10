@@ -10358,18 +10358,18 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       let endIdx = s + n, saldo = va, depM = neto / n, canonMod = null, tasaAct = tasa;
       const meses = [], anios = {};
       let prevSal = 0, prevNet = 0;
-      const A = y => anios[y] || (anios[y] = { dep: 0, interes: 0, pagos: 0, meses: 0, pasivo: 0, neto: 0, altas: 0, rem: 0, remA: 0, redP: 0, redA: 0, aj: 0, gan: 0, traidoA: 0, traidoP: 0 });
+      const A = y => anios[y] || (anios[y] = { dep: 0, interes: 0, pagos: 0, meses: 0, pasivo: 0, neto: 0, altas: 0, rem: 0, remA: 0, redP: 0, redA: 0, redC: 0, redD: 0, aj: 0, gan: 0, traidoA: 0, traidoP: 0 });
       // Aplica una modificación cuyo primer mes con condiciones nuevas es "ref". Si cierre = true, el mes indicado es el del cambio y se registra
       // su último día (después del pago, el interés y la depreciación de ese mes), como en el Excel; si no, se registra el primer día del mes indicado.
-      let rem = 0, remA = 0, redP = 0, redA = 0;
+      let rem = 0, remA = 0, redP = 0, redA = 0, redC = 0, redD = 0, depAc = 0; // redC / redD: baja del costo y de la depreciación acumulada (su diferencia es la baja neta del activo)
       const aplicar = (x, ref, cierre) => {
         if (x.tipo === 'reduccion' && x.red >= 1) { // termina todo el contrato: se da de baja todo el pasivo y todo el activo
-          redP -= saldo; redA -= neto; saldo = 0; neto = 0; depM = 0; endIdx = cierre ? ref : ref + 1; canonMod = 0; return;
+          redP -= saldo; redA -= neto; redC -= neto + depAc; redD -= depAc; depAc = 0; saldo = 0; neto = 0; depM = 0; endIdx = cierre ? ref : ref + 1; canonMod = 0; return;
         }
         const nuevoFin = x.hasta ? arrIdxFin(x.hasta) : endIdx, m = nuevoFin === null ? 0 : nuevoFin - ref;
         if (m <= 0) return;
         const p = x.tipo === 'reduccion' ? x.red : 0;
-        if (p > 0) { redP -= saldo * p; redA -= neto * p; saldo -= saldo * p; neto -= neto * p; } // baja proporcional (párr. 46a)
+        if (p > 0) { redC -= (neto + depAc) * p; redD -= depAc * p; depAc -= depAc * p; redP -= saldo * p; redA -= neto * p; saldo -= saldo * p; neto -= neto * p; } // baja proporcional (párr. 46a)
         const r2 = (x.tipo === 'indice' || x.tasa === null) ? r : arrTasaMes(x.tasa); // por índice se mantiene la tasa (párr. 42)
         const c2 = x.canon || (canonMod !== null ? canonMod : pagoOrig(ref)) * (1 - p);
         let L2 = 0; for (let j = 0; j < m; j++) L2 += r2 ? c2 / Math.pow(1 + r2, j + off) : c2;
@@ -10379,18 +10379,18 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       };
       for (let idx = s; idx < endIdx; idx++) {
         const prim = idx === s;
-        rem = (trae && prim) ? va - pIni : 0; remA = prim ? remA0 : 0; redP = 0; redA = 0;
+        rem = (trae && prim) ? va - pIni : 0; remA = prim ? remA0 : 0; redP = 0; redA = 0; redC = 0; redD = 0;
         mods.filter(x => x.k === idx && !x.cierre).forEach(x => aplicar(x, idx, false));
         const depMes = depM, tasaMes = tasaAct;
         const y = Math.floor(idx / 12), mm = idx % 12 + 1;
         const pago = canonMod !== null ? canonMod : pagoOrig(idx);
-        const interes = (saldo - (ant ? pago : 0)) * r; saldo = saldo + interes - pago; neto -= depMes;
+        const interes = (saldo - (ant ? pago : 0)) * r; saldo = saldo + interes - pago; neto -= depMes; depAc += depMes;
         mods.filter(x => x.k === idx && x.cierre).forEach(x => aplicar(x, idx + 1, true));
         const sal = Math.abs(saldo) < 1e-6 ? 0 : saldo, net = Math.abs(neto) < 1e-6 ? 0 : neto;
         const ajM = prim ? aj : 0, gan = (remA - rem) + (redA - redP);
-        meses.push({ y, m: mm, pago, interes, capital: pago - interes, saldo: sal, dep: depMes, neto: net, rem, remA, redP, redA, aj: ajM, gan, tasa: tasaMes, pasIni: prevSal, actIni: prevNet, alta: (prim && !trae) ? va : 0, traidoP: (prim && trae) ? pIni : 0, traidoA: (prim && trae) ? aIni : 0 });
+        meses.push({ y, m: mm, pago, interes, capital: pago - interes, saldo: sal, dep: depMes, neto: net, rem, remA, redP, redA, redC, redD, aj: ajM, gan, tasa: tasaMes, pasIni: prevSal, actIni: prevNet, alta: (prim && !trae) ? va : 0, traidoP: (prim && trae) ? pIni : 0, traidoA: (prim && trae) ? aIni : 0 });
         prevSal = sal; prevNet = net;
-        const a = A(y); a.dep += depMes; a.interes += interes; a.pagos += pago; a.meses += 1; a.pasivo = sal; a.neto = net; a.rem += rem; a.remA += remA; a.redP += redP; a.redA += redA; a.aj += ajM; a.gan += gan;
+        const a = A(y); a.dep += depMes; a.interes += interes; a.pagos += pago; a.meses += 1; a.pasivo = sal; a.neto = net; a.rem += rem; a.remA += remA; a.redP += redP; a.redA += redA; a.redC += redC; a.redD += redD; a.aj += ajM; a.gan += gan;
       }
       if (trae) { A(sy).traidoA = aIni; A(sy).traidoP = pIni; } else A(sy).altas = va;
       const ys = Object.keys(anios).map(Number).sort((a, b) => a - b);
@@ -10834,28 +10834,28 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       if (!lista.length) return null;
       let y0 = 1e9, y1 = 0; lista.forEach(x => { y0 = Math.min(y0, x.r.meses[0].y); y1 = Math.max(y1, x.r.meses[x.r.meses.length - 1].y); });
       const anios = []; for (let y = y0; y <= y1; y++) anios.push(y);
-      const z = () => ({ orig: 0, rem: 0, red: 0, dep: 0 });
+      const z = () => ({ orig: 0, rem: 0, red: 0, redD: 0, dep: 0 });
       const det = lista.map(x => {
         const fl = {}; anios.forEach(y => { fl[y] = z(); }); const fc = z(); let ck = 0, dk = 0;
         x.r.meses.forEach(m => {
-          const f = fl[m.y]; f.orig += m.alta + m.traidoA + m.aj; f.rem += m.remA; f.red += m.redA; f.dep += m.dep;
-          if (m.y === Y && m.m <= M) { fc.orig += m.alta + m.traidoA + m.aj; fc.rem += m.remA; fc.red += m.redA; fc.dep += m.dep; }
-          if (m.y * 12 + m.m - 1 <= kc) { ck += m.alta + m.traidoA + m.aj + m.remA + m.redA; dk += m.dep; }
+          const f = fl[m.y]; f.orig += m.alta + m.traidoA + m.aj; f.rem += m.remA; f.red += m.redC; f.redD += m.redD; f.dep += m.dep;
+          if (m.y === Y && m.m <= M) { fc.orig += m.alta + m.traidoA + m.aj; fc.rem += m.remA; fc.red += m.redC; fc.redD += m.redD; fc.dep += m.dep; }
+          if (m.y * 12 + m.m - 1 <= kc) { ck += m.alta + m.traidoA + m.aj + m.remA + m.redC; dk += m.dep + m.redD; }
         });
         const cierre = {}, dcierre = {}; let cc = 0, dd = 0;
-        anios.forEach(y => { cc += fl[y].orig + fl[y].rem + fl[y].red; dd += fl[y].dep; cierre[y] = cc; dcierre[y] = dd; });
+        anios.forEach(y => { cc += fl[y].orig + fl[y].rem + fl[y].red; dd += fl[y].dep + fl[y].redD; cierre[y] = cc; dcierre[y] = dd; });
         const cum = (o, y) => (y < y0 ? 0 : o[Math.min(y, y1)]);
         const mk = {}, ccost = {}, cdep = {}, cneto = {}; let kf = 1e12, kl = -1, c2 = 0, d2 = 0;
-        x.r.meses.forEach(m => { const k = m.y * 12 + m.m - 1; kf = Math.min(kf, k); kl = Math.max(kl, k); const e = mk[k] = mk[k] || { orig: 0, rem: 0, red: 0, dep: 0, neto: 0 }; e.orig += m.alta + m.traidoA + m.aj; e.rem += m.remA; e.red += m.redA; e.dep += m.dep; e.neto = m.neto; });
-        for (let k = kf; k <= kl; k++) { const e = mk[k] || { orig: 0, rem: 0, red: 0, dep: 0, neto: 0 }; c2 += e.orig + e.rem + e.red; d2 += e.dep; ccost[k] = c2; cdep[k] = d2; cneto[k] = e.neto; }
+        x.r.meses.forEach(m => { const k = m.y * 12 + m.m - 1; kf = Math.min(kf, k); kl = Math.max(kl, k); const e = mk[k] = mk[k] || { orig: 0, rem: 0, red: 0, redD: 0, dep: 0, neto: 0 }; e.orig += m.alta + m.traidoA + m.aj; e.rem += m.remA; e.red += m.redC; e.redD += m.redD; e.dep += m.dep; e.neto = m.neto; });
+        for (let k = kf; k <= kl; k++) { const e = mk[k] || { orig: 0, rem: 0, red: 0, redD: 0, dep: 0, neto: 0 }; c2 += e.orig + e.rem + e.red; d2 += e.dep + e.redD; ccost[k] = c2; cdep[k] = d2; cneto[k] = e.neto; }
         const at = (o, k) => (k < kf ? 0 : (k > kl ? (o === cneto ? 0 : o[kl]) : o[k]));
         return { c: x.c, fl, fc, cierre, dcierre, ck, dk, ini: cum(cierre, Y - 1), dini: cum(dcierre, Y - 1), mk, ccost, cdep, cneto, at };
       });
       const suma = f => det.reduce((s, d) => s + f(d), 0);
-      const cols = anios.map(y => ({ etq: 'Cierre ' + y, y, ini: suma(d => (y > y0 ? d.cierre[y - 1] : 0)), orig: suma(d => d.fl[y].orig), rem: suma(d => d.fl[y].rem), red: suma(d => d.fl[y].red), cierre: suma(d => d.cierre[y]), dini: suma(d => (y > y0 ? d.dcierre[y - 1] : 0)), dep: suma(d => d.fl[y].dep), dcierre: suma(d => d.dcierre[y]), por: d => ({ cierre: d.cierre[y], dcierre: d.dcierre[y] }) }));
-      cols.push({ etq: 'Al ' + arrConcFechaTxt(corte), y: null, ini: suma(d => d.ini), orig: suma(d => d.fc.orig), rem: suma(d => d.fc.rem), red: suma(d => d.fc.red), cierre: suma(d => d.ck), dini: suma(d => d.dini), dep: suma(d => d.fc.dep), dcierre: suma(d => d.dk), por: d => ({ cierre: d.ck, dcierre: d.dk }) });
+      const cols = anios.map(y => ({ etq: 'Cierre ' + y, y, ini: suma(d => (y > y0 ? d.cierre[y - 1] : 0)), orig: suma(d => d.fl[y].orig), rem: suma(d => d.fl[y].rem), red: suma(d => d.fl[y].red), redD: suma(d => d.fl[y].redD), cierre: suma(d => d.cierre[y]), dini: suma(d => (y > y0 ? d.dcierre[y - 1] : 0)), dep: suma(d => d.fl[y].dep), dcierre: suma(d => d.dcierre[y]), por: d => ({ cierre: d.cierre[y], dcierre: d.dcierre[y] }) }));
+      cols.push({ etq: 'Al ' + arrConcFechaTxt(corte), y: null, ini: suma(d => d.ini), orig: suma(d => d.fc.orig), rem: suma(d => d.fc.rem), red: suma(d => d.fc.red), redD: suma(d => d.fc.redD), cierre: suma(d => d.ck), dini: suma(d => d.dini), dep: suma(d => d.fc.dep), dcierre: suma(d => d.dk), por: d => ({ cierre: d.ck, dcierre: d.dk }) });
       const MESES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
-      const mesCol = (yy, mm) => { const k = yy * 12 + mm - 1; return { etq: MESES[mm - 1] + ' ' + yy, y: null, mes: true, ini: suma(d => d.at(d.ccost, k - 1)), orig: suma(d => (d.mk[k] ? d.mk[k].orig : 0)), rem: suma(d => (d.mk[k] ? d.mk[k].rem : 0)), red: suma(d => (d.mk[k] ? d.mk[k].red : 0)), cierre: suma(d => d.at(d.ccost, k)), dini: suma(d => d.at(d.cdep, k - 1)), dep: suma(d => (d.mk[k] ? d.mk[k].dep : 0)), dcierre: suma(d => d.at(d.cdep, k)), netoRef: suma(d => d.at(d.cneto, k)), por: d => ({ cierre: d.at(d.ccost, k), dcierre: d.at(d.cdep, k) }) }; };
+      const mesCol = (yy, mm) => { const k = yy * 12 + mm - 1; return { etq: MESES[mm - 1] + ' ' + yy, y: null, mes: true, ini: suma(d => d.at(d.ccost, k - 1)), orig: suma(d => (d.mk[k] ? d.mk[k].orig : 0)), rem: suma(d => (d.mk[k] ? d.mk[k].rem : 0)), red: suma(d => (d.mk[k] ? d.mk[k].red : 0)), redD: suma(d => (d.mk[k] ? d.mk[k].redD : 0)), cierre: suma(d => d.at(d.ccost, k)), dini: suma(d => d.at(d.cdep, k - 1)), dep: suma(d => (d.mk[k] ? d.mk[k].dep : 0)), dcierre: suma(d => d.at(d.cdep, k)), netoRef: suma(d => d.at(d.cneto, k)), por: d => ({ cierre: d.at(d.ccost, k), dcierre: d.at(d.cdep, k) }) }; };
       return { cols, det, mesCol, anios };
     }
     function arrCostoAnio(y) { const s = arrEstado.cdAnios || (arrEstado.cdAnios = new Set()); if (s.has(y)) s.delete(y); else s.add(y); arrConcRender(); }
@@ -10881,11 +10881,12 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       h += fila('Saldo inicial del costo', c => c.ini);
       h += fila('(+) Costo original: valor actual inicial, saldo traído y costos iniciales', c => c.orig);
       h += fila('(+/−) Actualizaciones por remedición del pasivo', c => c.rem, '', true);
-      h += fila('(−) Bajas por reducción de alcance', c => c.red, '', true);
+      h += fila('(−) Baja del costo por reducción de alcance o terminación', c => c.red, '', true);
       h += total('costo', 'Costo al cierre', c => c.cierre, (d, c) => c.por(d).cierre);
       h += titulo('Depreciación acumulada');
       h += fila('Saldo inicial de la depreciación acumulada', c => c.dini);
       h += fila('(+) Depreciación del período', c => c.dep);
+      h += fila('(−) Baja de la depreciación acumulada por reducción de alcance o terminación', c => c.redD, '', true);
       h += total('dep', 'Depreciación acumulada al cierre', c => c.dcierre, (d, c) => c.por(d).dcierre);
       h += titulo('Derecho de uso neto');
       h += total('neto', 'Costo − depreciación acumulada', c => c.cierre - c.dcierre, (d, c) => c.por(d).cierre - c.por(d).dcierre);
@@ -11628,8 +11629,8 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
         const sec = t => { const x = [t]; x.tipo = 'h'; return x; };
         const cdAoa = [['Concepto', ...C.map(c => c.etq)], sec('Costo del activo'), fil('Saldo inicial del costo', c => c.ini), fil('(+) Costo original: valor actual inicial, saldo traído y costos iniciales', c => c.orig)];
         if (C.some(c => Math.abs(c.rem) >= 0.005)) cdAoa.push(fil('(+/−) Actualizaciones por remedición del pasivo', c => c.rem));
-        if (C.some(c => Math.abs(c.red) >= 0.005)) cdAoa.push(fil('(−) Bajas por reducción de alcance', c => c.red));
-        cdAoa.push(fil('Costo al cierre', c => c.cierre, 't'), sec('Depreciación acumulada'), fil('Saldo inicial de la depreciación acumulada', c => c.dini), fil('(+) Depreciación del período', c => c.dep), fil('Depreciación acumulada al cierre', c => c.dcierre, 't'),
+        if (C.some(c => Math.abs(c.red) >= 0.005)) cdAoa.push(fil('(−) Baja del costo por reducción de alcance o terminación', c => c.red));
+        cdAoa.push(fil('Costo al cierre', c => c.cierre, 't'), sec('Depreciación acumulada'), fil('Saldo inicial de la depreciación acumulada', c => c.dini), fil('(+) Depreciación del período', c => c.dep), ...(C.some(c => Math.abs(c.redD) >= 0.005) ? [fil('(−) Baja de la depreciación acumulada por reducción de alcance o terminación', c => c.redD)] : []), fil('Depreciación acumulada al cierre', c => c.dcierre, 't'),
           sec('Derecho de uso neto'), fil('Costo − depreciación acumulada', c => c.cierre - c.dcierre, 't'),
           fil('Diferencia contra el derecho de uso neto de la amortización mensual', c => c.cierre - c.dcierre - (c.y === null ? UX : (K.f[c.y] ? K.f[c.y].neto : 0))));
         cdAoa.push([]);
@@ -11639,8 +11640,8 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
         });
         add('Costo y depreciación acumulada', cdAoa, [{ wch: 62 }], { info: [['Mes de consulta', fechaCorteX]] });
         const CM = []; CD.anios.forEach(y => { for (let m = 1; m <= 12; m++) CM.push(CD.mesCol(y, m)); });
-        const mAoa = [['Concepto', ...CM.map(c => c.etq)], sec('Costo del activo'), fil2('Saldo inicial del costo', c => c.ini), fil2('(+) Costo original: valor actual inicial, saldo traído y costos iniciales', c => c.orig), fil2('(+/−) Actualizaciones por remedición del pasivo', c => c.rem), fil2('(−) Bajas por reducción de alcance', c => c.red), fil2('Costo al cierre', c => c.cierre, 't'),
-          sec('Depreciación acumulada'), fil2('Saldo inicial de la depreciación acumulada', c => c.dini), fil2('(+) Depreciación del mes', c => c.dep), fil2('Depreciación acumulada al cierre', c => c.dcierre, 't'), sec('Derecho de uso neto'), fil2('Costo − depreciación acumulada', c => c.cierre - c.dcierre, 't'), fil2('Diferencia contra el derecho de uso neto de la amortización mensual', c => c.cierre - c.dcierre - c.netoRef)];
+        const mAoa = [['Concepto', ...CM.map(c => c.etq)], sec('Costo del activo'), fil2('Saldo inicial del costo', c => c.ini), fil2('(+) Costo original: valor actual inicial, saldo traído y costos iniciales', c => c.orig), fil2('(+/−) Actualizaciones por remedición del pasivo', c => c.rem), fil2('(−) Baja del costo por reducción de alcance o terminación', c => c.red), fil2('Costo al cierre', c => c.cierre, 't'),
+          sec('Depreciación acumulada'), fil2('Saldo inicial de la depreciación acumulada', c => c.dini), fil2('(+) Depreciación del mes', c => c.dep), fil2('(−) Baja de la depreciación acumulada por reducción de alcance o terminación', c => c.redD), fil2('Depreciación acumulada al cierre', c => c.dcierre, 't'), sec('Derecho de uso neto'), fil2('Costo − depreciación acumulada', c => c.cierre - c.dcierre, 't'), fil2('Diferencia contra el derecho de uso neto de la amortización mensual', c => c.cierre - c.dcierre - c.netoRef)];
         mAoa.push([], ['Detalle por contrato', ...CM.map(c => c.etq)]);
         [['Costo al cierre', (d, c) => c.por(d).cierre], ['Depreciación acumulada al cierre', (d, c) => c.por(d).dcierre], ['Derecho de uso neto', (d, c) => c.por(d).cierre - c.por(d).dcierre]].forEach(([t, f]) => { mAoa.push(sec(t)); CD.det.forEach(d => mAoa.push([arrNombre(d.c), ...CM.map(c => r2f(f(d, c)))])); });
         add('Costo y deprec. por mes', mAoa, [{ wch: 62 }], { info: [['Mes de consulta', fechaCorteX]] });
