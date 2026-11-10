@@ -11337,6 +11337,16 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       ['gastoAct', 'Gasto por impuesto diferido del activo, del año hasta el corte'],
       ['ingPas', 'Ingreso por impuesto diferido del pasivo, del año hasta el corte']
     ];
+    // Signos contables: activos y gastos en positivo; pasivos, depreciación acumulada e ingresos en negativo. Los valores del balance se guardan sin signo.
+    const ARR_CONC_SIGNO = { pasivo: -1, corto: -1, largo: -1, costo: 1, depAc: -1, uso: 1, interes: 1, dep: 1, pagos: 1, impAct: 1, impPas: -1, gastoAct: 1, ingPas: -1 };
+    const arrSg = k => (ARR_CONC_SIGNO[k] === undefined ? 1 : ARR_CONC_SIGNO[k]);
+    // Diferencias netas: balance = derecho de uso neto + pasivo + impuestos diferidos; resultados = interés + depreciación + gasto/ingreso por impuesto diferido
+    const ARR_CONC_NETOS = [['Diferencia neta en el balance (activos − pasivos, con impuestos diferidos)', ['uso', 'pasivo', 'impAct', 'impPas']], ['Diferencia neta en resultados (gastos − ingresos)', ['interes', 'dep', 'gastoAct', 'ingPas']]];
+    function arrConcNeto(C, cv, ks) {
+      let tot = 0, falta = false;
+      ks.forEach(k => { const b = cv[k]; if (b === undefined || b === null || b === '') { falta = true; return; } tot += arrSg(k) * (C.tot[k] - Math.abs(Number(b))); });
+      return falta ? null : r2f(tot);
+    }
     // Cortes guardados: verif.__concil.cortes = { 'AAAA-MM': { v: {valores del balance}, g: fecha de guardado } }
     function arrConcCortes() {
       const c = arrEstado.verif.__concil || (arrEstado.verif.__concil = {});
@@ -11405,12 +11415,16 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       h += arrHtmlSumariaConc();
       h += `<table class="w-full text-[11px] leading-tight border-collapse"><thead class="bg-slate-50 text-slate-600"><tr><th class="px-2 py-1 border-b border-slate-200 text-left">Concepto</th><th class="px-2 py-1 border-b border-slate-200 text-right">Según la herramienta</th><th class="px-2 py-1 border-b border-slate-200 text-right">Según el balance</th><th class="px-2 py-1 border-b border-slate-200 text-right">Diferencia (herramienta − balance)</th></tr></thead><tbody>`;
       ARR_CONC_FILAS.forEach(([k, t]) => {
-        const abierto = ab.has(k), b = cv[k], hay = b !== undefined && b !== null && b !== '', d = hay ? r2f(C.tot[k] - Number(b)) : null;
+        const abierto = ab.has(k), sg = arrSg(k), b = cv[k], hay = b !== undefined && b !== null && b !== '', d = hay ? r2f(sg * (C.tot[k] - Math.abs(Number(b)))) : null;
         const dif = !hay ? '' : (Math.abs(d) < 0.5 ? '<span class="font-bold text-emerald-700">Cuadra</span>' : `<span class="font-bold text-red-600">${formatoNumeroAnexo(d)}</span>`);
-        h += `<tr class="border-b border-slate-100"><td class="px-2 py-1 font-semibold text-slate-700"><button type="button" onclick="arrConcToggle('${k}')" class="text-indigo-700 font-bold mr-1">${abierto ? '▾' : '▸'}</button>${escapeHtml(t)}</td><td class="px-2 py-1 text-right font-semibold text-slate-800 whitespace-nowrap">${arrFmt(C.tot[k])}</td><td class="px-2 py-1 text-right"><input type="text" inputmode="decimal" value="${hay ? formatoNumeroAnexo(b) : ''}" placeholder="Valor del balance" onchange="arrConcEditar('${k}', this)" class="w-32 h-6 px-1.5 text-right text-[11px] border border-slate-300 rounded"></td><td class="px-2 py-1 text-right whitespace-nowrap">${dif}</td></tr>`;
-        if (abierto) C.filas.forEach(f => { h += `<tr class="bg-slate-50 border-b border-slate-100"><td class="pl-9 pr-2 py-0.5 text-slate-600">${escapeHtml(arrNombre(f.c))}</td><td class="px-2 py-0.5 text-right text-slate-600 whitespace-nowrap">${arrFmt(f[k])}</td><td></td><td></td></tr>`; });
+        h += `<tr class="border-b border-slate-100"><td class="px-2 py-1 font-semibold text-slate-700"><button type="button" onclick="arrConcToggle('${k}')" class="text-indigo-700 font-bold mr-1">${abierto ? '▾' : '▸'}</button>${escapeHtml(t)}</td><td class="px-2 py-1 text-right font-semibold text-slate-800 whitespace-nowrap">${arrFmt(sg * C.tot[k])}</td><td class="px-2 py-1 text-right"><input type="text" inputmode="decimal" value="${hay ? formatoNumeroAnexo(sg * Math.abs(Number(b))) : ''}" placeholder="Valor del balance" onchange="arrConcEditar('${k}', this)" class="w-32 h-6 px-1.5 text-right text-[11px] border border-slate-300 rounded"></td><td class="px-2 py-1 text-right whitespace-nowrap">${dif}</td></tr>`;
+        if (abierto) C.filas.forEach(f => { h += `<tr class="bg-slate-50 border-b border-slate-100"><td class="pl-9 pr-2 py-0.5 text-slate-600">${escapeHtml(arrNombre(f.c))}</td><td class="px-2 py-0.5 text-right text-slate-600 whitespace-nowrap">${arrFmt(sg * f[k])}</td><td></td><td></td></tr>`; });
       });
-      return h + '</tbody></table>';
+      ARR_CONC_NETOS.forEach(([t, ks]) => {
+        const n = arrConcNeto(C, cv, ks);
+        h += `<tr class="border-t-2 border-slate-300 bg-slate-100"><td class="px-2 py-1 font-bold text-slate-800" colspan="3">${escapeHtml(t)}</td><td class="px-2 py-1 text-right whitespace-nowrap">${n === null ? '<span class="text-slate-400 text-[10px]">Completa los valores del balance</span>' : (Math.abs(n) < 0.5 ? '<span class="font-bold text-emerald-700">Cuadra</span>' : `<span class="font-bold text-red-600">${formatoNumeroAnexo(n)}</span>`)}</td></tr>`;
+      });
+      return h + '</tbody></table>' + '<p class="px-3 py-2 text-[11px] text-slate-500">Signos: activos y gastos en positivo; pasivos, depreciación acumulada e ingresos en negativo. Al escribir el valor del balance puedes usar cualquier signo. Diferencia = herramienta − balance, con esos signos.</p>';
     }
     // Saldos del balance traídos de la sumaria del cliente (derecho de uso: costo, depreciación acumulada y neto; pasivo corto y largo). Los impuestos diferidos siempre son manuales.
     function arrMapaSum() { const c = arrEstado.verif.__concil || (arrEstado.verif.__concil = {}); return c.mapa || (c.mapa = { uso: '', corto: '', largo: '', costo: '', depAc: '' }); }
@@ -11453,7 +11467,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       arrEstado.concCorte = v; arrEstado.concBorrador = null; arrConcRender(); // si ya hay un corte guardado de ese mes, se cargan sus valores
     }
     function arrConcEditar(k, el) {
-      const b = arrConcValores(), n = arrNum(el.value); if (n === null) delete b[k]; else b[k] = n;
+      const b = arrConcValores(), n = arrNum(el.value); if (n === null) delete b[k]; else b[k] = Math.abs(n); // se guarda sin signo
       if (!arrEstado.concManual) arrEstado.concManual = {};
       if (n === null) delete arrEstado.concManual[k]; else arrEstado.concManual[k] = true; // lo escrito a mano no lo pisa la sumaria
       arrGuardarBorrador();
@@ -11656,10 +11670,11 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       if (arrEstado.contratos.length) {
         const CC = arrConcCalc(corteX), cv = arrConcValores(), guardado = !!arrConcCortes()[corteX];
         const conc = [['Concepto', 'Según la herramienta', 'Según el balance', 'Diferencia (herramienta − balance)']];
-        ARR_CONC_FILAS.forEach(([k, t]) => { const b = cv[k], hay = b !== undefined && b !== null && b !== ''; conc.push([t, r2f(CC.tot[k]), hay ? r2f(Number(b)) : '', hay ? r2f(CC.tot[k] - Number(b)) : '']); });
+        ARR_CONC_FILAS.forEach(([k, t]) => { const b = cv[k], hay = b !== undefined && b !== null && b !== ''; conc.push([t, r2f(arrSg(k) * CC.tot[k]), hay ? r2f(arrSg(k) * Math.abs(Number(b))) : '', hay ? r2f(arrSg(k) * (CC.tot[k] - Math.abs(Number(b)))) : '']); });
+        ARR_CONC_NETOS.forEach(([t, ks]) => { const n = arrConcNeto(CC, cv, ks); conc.push([t, '', '', n === null ? '' : n]); });
         conc.push([], ['Detalle por contrato', ...CC.filas.map(f => arrNombre(f.c))]);
-        ARR_CONC_FILAS.forEach(([k, t]) => conc.push([t, ...CC.filas.map(f => r2f(f[k]))]));
-        add('Conciliación con el balance', conc, [{ wch: 62 }], { info: [['Corte', fechaCorteX], ['Estado del corte', guardado ? 'Guardado' : 'Consulta sin guardar']], notas: ['Diferencia = según la herramienta − según el balance. Si no se registró el valor del balance, la diferencia queda vacía.'] });
+        ARR_CONC_FILAS.forEach(([k, t]) => conc.push([t, ...CC.filas.map(f => r2f(arrSg(k) * f[k]))]));
+        add('Conciliación con el balance', conc, [{ wch: 62 }], { info: [['Corte', fechaCorteX], ['Estado del corte', guardado ? 'Guardado' : 'Consulta sin guardar']], notas: ['Signos: activos y gastos en positivo; pasivos, depreciación acumulada e ingresos en negativo. Diferencia = según la herramienta − según el balance, con esos signos. Si no se registró el valor del balance, la diferencia queda vacía.'] });
       }
       if (ORIGEN.arrend && ARR_PLANTILLA === null) await arrCargarPlantilla();
       if (ORIGEN.arrend && ARR_PLANTILLA && ARR_PLANTILLA.length) {
