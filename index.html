@@ -18142,6 +18142,16 @@ ${cont.innerHTML}
 
     // ---------- 1. Liquidaciones ----------
     function impEstadoImp(im) { const c = impControles(im); return c.some(x => x.est === 'rev') ? 'rev' : 'ok'; }
+    // Avisos de posibles liquidaciones repetidas: misma declaración, misma factura o mismo valor
+    function impDuplicadasLiq() {
+      const L = impEstado.imports, out = [], norm = x => String(x == null ? '' : x).replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+      const agrupar = (clave, texto) => { const m = {}; L.forEach(im => { const ks = [].concat(clave(im)).filter(Boolean); new Set(ks).forEach(k => { (m[k] = m[k] || []).push(im.id); }); });
+        Object.keys(m).forEach(k => { const ids = [...new Set(m[k])]; if (ids.length > 1) out.push(texto(k, ids)); }); };
+      agrupar(im => norm(im.dau), (k, ids) => 'Las importaciones ' + ids.join(', ') + ' tienen el mismo número de declaración aduanera: pueden ser la misma liquidación leída dos veces.');
+      agrupar(im => (im.facturas || []).map(norm).filter(x => x.length >= 3), (k, ids) => 'Las importaciones ' + ids.join(', ') + ' repiten un número de factura del proveedor (' + k + '): revisa si es la misma importación.');
+      agrupar(im => { const t = impR2(impValoresLiq(im).total || 0); return t > 0 ? 'v' + t.toFixed(2) : ''; }, (k, ids) => 'Las importaciones ' + ids.join(', ') + ' tienen exactamente el mismo costo total (' + formatoNumeroAnexo(Number(k.slice(1))) + '): puede ser una liquidación repetida o dos importaciones parecidas.');
+      return out;
+    }
     function impHtmlLiq() {
       const L = impEstado.imports;
       const Cx = impEstado.cruce;
@@ -18150,6 +18160,7 @@ ${cont.innerHTML}
         <div class="flex flex-wrap items-center gap-2"><button type="button" onclick="pcIrAPedido('AF', impEstado.cliente, impEstado.anio, impEstado.visita, 'import')" class="${impBtnP}">Pedir a Claude (liquidaciones + mayor contable)</button>
         <p class="text-slate-500">${L.length ? L.length + ' importaciones cargadas por Claude' : 'Aún no hay liquidaciones'} · ${Cx ? 'cruce con el mayor hecho' : 'cruce con el mayor pendiente'}. Cuando el pedido pase a "hecho", presiona F5.</p></div>`;
       const proc = '<div id="im-proc" class="px-3 py-2 space-y-1"></div>';
+      let dupH = ''; try { const D = impDuplicadasLiq(); if (D.length) dupH = '<div class="m-2 p-3 bg-white border border-red-200 rounded-xl text-xs text-slate-700 space-y-1"><div class="text-[13px] font-semibold text-red-600">Posibles liquidaciones repetidas</div>' + D.map(x => '<p>' + impE(x) + '</p>').join('') + '</div>'; } catch (e) { }
       if (!L.length) return barra + proc + '<div class="border-t border-slate-100">' + pcHtmlAviso('AF', impEstado.cliente, impEstado.anio, impEstado.visita, 'import') + '</div>';
       const th = (t, c) => `<th class="px-2 py-1 border-b border-slate-200 whitespace-nowrap ${c || 'text-right'}">${t}</th>`;
       const G = impEstado.gr = impEstado.gr || {};
@@ -18163,7 +18174,7 @@ ${cont.innerHTML}
       GRP.forEach(g => { if (G[g.g]) g.sub.forEach(([k, t]) => { hd += `<th class="px-2 py-1 border-b border-slate-200 whitespace-nowrap text-right ${(k === 'isd' || k === 'gasto_fin') ? 'bg-violet-100 text-violet-900 font-semibold' : 'bg-sky-50 text-slate-500 font-normal'}" ${(k === 'isd' || k === 'gasto_fin') ? 'title="Se evalúa aparte: ver el comentario en el detalle de cada importación"' : ''}>${t}</th>`; }); hd += `<th class="px-2 py-1 border-b border-slate-200 whitespace-nowrap text-right">${tg(g)}${g.t}</th>`; });
       hd += th('Costo total de la liquidación') + `<th class="px-2 py-1 border-b border-slate-200 whitespace-nowrap text-right bg-amber-100 text-amber-900" title="El IVA no es costo: ver el comentario en el detalle de cada importación">IVA (no es costo)</th>` + `<th class="px-2 py-1 border-b border-slate-200 text-center whitespace-nowrap" title="Controles automáticos de la hoja de liquidación: ítems contra la fila de totales, CIF de cada ítem (FOB + flete + seguro), costo de cada ítem, numeración de ítems, celdas ilegibles y CIF contra el valor en aduana de la declaración. NO compara contra el mayor contable.">Controles ⓘ</th>` + th('', 'w-6');
       const nCols = 6 + GRP.reduce((t, g) => t + 1 + (G[g.g] ? g.sub.length : 0), 0) + 4;
-      let h = barra + proc + `<div class="overflow-x-auto"><table class="w-full text-[11px] leading-tight border-collapse"><thead class="bg-slate-50 text-slate-600"><tr>${hd}</tr></thead><tbody>`;
+      let h = barra + dupH + proc + `<div class="overflow-x-auto"><table class="w-full text-[11px] leading-tight border-collapse"><thead class="bg-slate-50 text-slate-600"><tr>${hd}</tr></thead><tbody>`;
       const tot = { fob: 0, flete: 0, seguro: 0, cif: 0, arancel: 0, fodinfa: 0, isd: 0, agente: 0, manejo: 0, seguro_l: 0, flete_int: 0, logistico: 0, gasto_fin: 0, otros: 0, ind: 0, otr: 0, iva: 0, costo: 0, n: 0 };
       const celdas = (r, bold) => GRP.map(g => (G[g.g] ? g.sub.map(([k]) => `<td class="px-2 text-right ${(k === 'isd' || k === 'gasto_fin') ? 'bg-violet-50 text-violet-900 font-medium' : 'bg-sky-50/60 text-slate-600'}">${impF(r[k])}</td>`).join('') : '') + `<td class="px-2 text-right ${bold ? '' : 'font-medium'}">${impF(r[g.tot])}</td>`).join('');
       L.forEach((im, i) => {
@@ -18556,12 +18567,12 @@ ${(im.aprendidos || []).length ? `<p class="text-xs text-slate-600 bg-slate-50 b
     function impTransitoCalc() {
       const C = impEstado.cruce; if (!C || !C.asientos) return null;
       const { tr, inv } = impCtasTransito(); if (!tr.length) return { sinCuenta: true, tr, inv };
-      const filas = [], dest = {}; let deb = 0, hab = 0, nTocan = 0;
+      const filas = [], dest = {}, mov = []; let deb = 0, hab = 0, nTocan = 0;
       C.asientos.forEach(a => {
         let d = 0, h = 0, iv = 0; const otras = {};
         a.l.forEach(l => {
           const cod = String(l[0]), dd = Number(l[2]) || 0, hh = Number(l[3]) || 0;
-          if (impCtaEn(cod, tr)) { d += dd; h += hh; }
+          if (impCtaEn(cod, tr)) { d += dd; h += hh; if (dd > 0.005 || hh > 0.005) mov.push({ lado: dd > 0.005 ? 'D' : 'H', v: impR2(dd > 0.005 ? dd : hh), d: a.d || '', ref: (a.tk || '') + ' ' + (a.num || '') }); }
           else if (impCtaEn(cod, inv)) iv += dd - hh;
           else if (dd - hh > 0.005) { const k = cod + '|' + (l[1] || ''); otras[k] = (otras[k] || 0) + dd - hh; }
         });
@@ -18582,7 +18593,10 @@ ${(im.aprendidos || []).length ? `<p class="text-xs text-slate-600 bg-slate-50 b
       });
       filas.sort((x, y) => (x.d || '').localeCompare(y.d || ''));
       const salidaTot = impR2(filas.reduce((t, f) => t + f.salida, 0)), entTot = impR2(filas.reduce((t, f) => t + f.ent, 0));
-      return { tr, inv, filas, dest: Object.values(dest).sort((x, y) => y.valor - x.valor), deb: impR2(deb), hab: impR2(hab), saldo: impR2(deb - hab), salidaTot, entTot, nTocan };
+      const dups = []; { const g = {}; mov.forEach(m => { const k = m.lado + '|' + m.v.toFixed(2); (g[k] = g[k] || []).push(m); });
+        Object.keys(g).forEach(k => { const x = g[k]; if (x.length < 2 || x[0].v < 1) return; const refs = [...new Set(x.map(m => m.ref + ' (' + m.d + ')'))]; if (refs.length < 2) return; const mismaFecha = new Set(x.map(m => m.d)).size < x.length; dups.push({ lado: x[0].lado === 'D' ? 'entrada a tránsito' : 'salida de tránsito', v: x[0].v, n: refs.length, refs, mismaFecha }); }); }
+      dups.sort((p, q) => (q.mismaFecha - p.mismaFecha) || (q.v - p.v));
+      return { dups, tr, inv, filas, dest: Object.values(dest).sort((x, y) => y.valor - x.valor), deb: impR2(deb), hab: impR2(hab), saldo: impR2(deb - hab), salidaTot, entTot, nTocan };
     }
     function impHtmlTransito() {
       const C = impEstado.cruce, cfg = impEstado.cfg;
@@ -18604,6 +18618,7 @@ ${(im.aprendidos || []).length ? `<p class="text-xs text-slate-600 bg-slate-50 b
         <tr class="border-b border-slate-100"><td class="px-2 py-1">Salidas de tránsito (haber)</td><td class="px-2 text-right">${impF(T.hab)}</td></tr>
         <tr class="border-b border-slate-100 font-semibold"><td class="px-2 py-1">Saldo en tránsito al corte</td><td class="px-2 text-right ${sCls}">${impF(T.saldo)}</td></tr></tbody></table></div>
         <p class="text-slate-500">${T.saldo > cfg.tol ? 'Saldo deudor: importaciones que siguen en tránsito o costos todavía no pasados al inventario. Revisa si siguen realmente en camino.' : T.saldo < -cfg.tol ? 'Saldo acreedor: se pasó al inventario más de lo acumulado en tránsito (por ejemplo valores que no se registraron antes en tránsito). Revisa el origen.' : 'La cuenta en tránsito queda en cero: todo lo acumulado salió.'}</p></div>`;
+      if (T.dups && T.dups.length) h += `<div class="p-4 bg-white border border-red-200 rounded-xl space-y-1"><div class="text-[13px] font-semibold text-red-600">Posibles registros repetidos en la cuenta de tránsito</div><p class="text-slate-500">Movimientos con exactamente el mismo valor y del mismo lado en comprobantes distintos. Pueden ser un doble registro o simplemente valores iguales: revísalos.</p>${T.dups.slice(0, 40).map(x => `<p>${x.mismaFecha ? '<b class="text-red-600">Mismo valor y misma fecha</b> · ' : ''}${impF(x.v)} (${x.lado}) en ${x.n} comprobantes: ${impE(x.refs.slice(0, 6).join('; '))}${x.refs.length > 6 ? '…' : ''}</p>`).join('')}${T.dups.length > 40 ? '<p class="text-slate-400">Y ' + (T.dups.length - 40) + ' más.</p>' : ''}</div>`;
       h += `<div class="p-4 bg-white border border-slate-200 rounded-xl space-y-2"><div class="text-[13px] font-semibold text-slate-800">B. Salidas de tránsito: ¿entraron al inventario?</div>
         <p class="text-slate-500">Por asiento: lo que se acreditó en tránsito contra lo que se debitó en inventario. Si no es igual, la diferencia se explica en el punto C.</p>
         <div class="overflow-auto max-h-[60vh] border border-slate-200 rounded-lg"><table class="w-full text-[11px] leading-tight border-collapse"><thead class="bg-slate-50 text-slate-600 sticky top-0"><tr>${th('Fecha', 'text-left')}${th('Comprobante', 'text-left')}${th('Detalle', 'text-left')}${th('Sale de tránsito')}${th('Entra al inventario')}${th('Diferencia')}${th('Fue a', 'text-left')}</tr></thead><tbody>`;
