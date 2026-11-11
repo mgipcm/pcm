@@ -17009,6 +17009,17 @@ ${cont.innerHTML}
       ['isd', 'ISD (costo de la importación o su provisión)'], ['gastos', 'Costos de importación registrados en gastos (cuentas de resultados: agente, contenedor, seguro, transporte, logística, financiero)']
     ];
     // Los roles guardados antes con cuentas separadas (agente, manejo, seguro, transporte, logístico, financiero) se suman al rol único "gastos"
+    // Aviso para que el auditor revise las cuentas que la app puso por su cuenta
+    function impAvisoCuentas(cfg) {
+      try {
+        const C = impEstado.cruce; if (!C) return '';
+        const nom = c => { let n = (C.cuentas || {})[c]; if (!n) (C.asientos || []).some(a => a.l.some(l => String(l[0]) === c && (n = l[1]))); return c + (n ? ' ' + String(n).trim() : ''); };
+        const prop = impListaCtas((cfg.roles || {}).inventario), auto = impFamiliaInv(cfg).filter(c => !impCtaEn(c, prop));
+        let h = '<div class="p-3 rounded-xl bg-amber-50 border border-amber-200 text-[11px] text-slate-700 space-y-1"><div class="font-semibold text-slate-800">Revisa las cuentas puestas por defecto</div><p>Las cuentas de esta pantalla se sugieren solas por su nombre y por su parecido con la cuenta de importaciones en tránsito. Confirma que están completas y que no sobra ninguna antes de dar por buenas las diferencias.</p>';
+        if (auto.length) h += '<p><b>Se sumaron solas como inventario</b> (empiezan igual que la cuenta en tránsito): ' + impE(auto.map(nom).join('; ')) + '. Si alguna no es de inventario, escribe aquí las cuentas que sí corresponden y esta suma se mantiene solo para las que empiezan igual.</p>';
+        return h + '</div>';
+      } catch (e) { return ''; }
+    }
     function impFamiliaInv(cfg) {
       const C = impEstado.cruce; if (!C || !cfg) return [];
       const llave = (cfg.transito || '') + '|' + (C.asientos || []).length + '|' + (C.fecha || '');
@@ -18337,6 +18348,7 @@ ${(im.aprendidos || []).length ? `<p class="text-xs text-slate-600 bg-slate-50 b
       if (!C) h += pcHtmlAviso('AF', impEstado.cliente, impEstado.anio, impEstado.visita, 'import');
       h += `<div class="p-4 bg-white border border-slate-200 rounded-xl space-y-2"><div class="text-[13px] font-semibold text-slate-800">A. Cuentas del mayor que usa este cliente</div>
         <p class="text-slate-500">Cada cliente codifica distinto. Escribe los códigos de cuenta de cada concepto (puedes usar un asterisco al final para incluir todas las cuentas que empiezan igual). Al terminar de leer el mayor, las cuentas se sugieren solas por su nombre.</p>
+        ${impAvisoCuentas(cfg)}
         <div class="grid grid-cols-1 md:grid-cols-3 gap-3">${nombres}</div>
         <div class="flex flex-wrap items-end gap-4 pt-1"><label class="flex flex-col gap-1 text-xs text-slate-600"><span>Diferencia que se acepta como "Cuadra"</span><input type="text" inputmode="decimal" value="${impE(cfg.tol)}" onchange="impEditarTol(this.value)" class="${impIn} w-28 text-right"></label>
         <label class="flex flex-col gap-1 text-xs text-slate-600"><span>Fecha de corte (lo registrado después no cuenta)</span><input type="date" value="${impE(cfg.corte)}" onchange="impCambiarFecha(this.value)" class="${impIn} w-40"></label></div></div>`;
@@ -18662,7 +18674,7 @@ ${(im.aprendidos || []).length ? `<p class="text-xs text-slate-600 bg-slate-50 b
       const nm = c => (C.cuentas && C.cuentas[c]) ? c + ' ' + C.cuentas[c] : c;
       const sCls = Math.abs(T.saldo) > cfg.tol ? 'text-red-600' : 'text-emerald-700';
       h += `<div class="p-4 bg-white border border-slate-200 rounded-xl space-y-2"><div class="text-[13px] font-semibold text-slate-800">A. Resumen de la cuenta en tránsito</div>
-        <p class="text-slate-500">Cuenta en tránsito: ${impE(T.tr.map(nm).join('; '))}. Cuentas de inventario: ${impE(T.inv.map(nm).join('; ') || 'no indicadas (se toman de la hoja 2)')}. Asientos que tocan la cuenta: ${T.nTocan}.</p>
+        <p class="text-slate-500">Cuenta en tránsito: ${impE(T.tr.map(nm).join('; '))}. Cuentas de inventario: ${impE(T.inv.map(nm).join('; ') || 'no indicadas (se toman de la hoja 2)')}. <b>Revisa que estas cuentas sean las correctas</b> (se reconocieron por su nombre y por empezar igual que la cuenta en tránsito). Asientos que tocan la cuenta: ${T.nTocan}.</p>
         <div class="overflow-x-auto"><table class="text-[11px] leading-tight border-collapse"><tbody>
         <tr class="border-b border-slate-100"><td class="px-2 py-1">Entradas a tránsito (debe)</td><td class="px-2 text-right">${impF(T.deb)}</td></tr>
         <tr class="border-b border-slate-100"><td class="px-2 py-1">Salidas de tránsito (haber)</td><td class="px-2 text-right">${impF(T.hab)}</td></tr>
