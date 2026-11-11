@@ -2183,7 +2183,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
           <button type="button" id="im-tab-liq" onclick="impTab('liq')" class="px-3 py-1.5 text-xs transition rounded-lg">1. Liquidaciones de importación</button>
           <button type="button" id="im-tab-cruce" onclick="impTab('cruce')" class="px-3 py-1.5 text-xs transition rounded-lg">2. Cruce con mayor (importaciones e inventario)</button>
           <button type="button" id="im-tab-diario" onclick="impTab('diario')" class="px-3 py-1.5 text-xs transition rounded-lg">3. Diario contable (importaciones)</button>
-          <button type="button" id="im-tab-ent" onclick="impTab('ent')" class="px-3 py-1.5 text-xs transition rounded-lg">4. Entradas del mayor vs liquidaciones</button>
+          <button type="button" id="im-tab-ent" onclick="impTab('ent')" class="px-3 py-1.5 text-xs transition rounded-lg">4. Composición de las entradas del mayor</button>
           <button type="button" id="im-descargar" onclick="impDescargar()" class="hidden ml-auto px-3 py-1.5 rounded-lg text-xs bg-slate-100 text-slate-800 hover:bg-slate-200 font-medium transition">Descargar todo (Excel)</button>
         </div>
         <div id="im-panel" class="border border-slate-200 rounded-xl overflow-auto max-h-[78vh]"></div>
@@ -17803,7 +17803,7 @@ ${cont.innerHTML}
         if (error) impMsg('No se guardó: ' + (error.message || error), 'text-red-600 font-bold'); else { impMsg('Guardado ✓'); impEstado.act = { por: fila.actualizado_por, en: fila.updated_at }; impSyncCabecera(); }
       }, 700);
     }
-    const IMP_TABS = [['liq', '1. Liquidaciones de importación'], ['cruce', '2. Cruce con mayor (importaciones e inventario)'], ['diario', '3. Diario contable (importaciones)'], ['ent', '4. Entradas del mayor vs liquidaciones']];
+    const IMP_TABS = [['liq', '1. Liquidaciones de importación'], ['cruce', '2. Cruce con mayor (importaciones e inventario)'], ['diario', '3. Diario contable (importaciones)'], ['ent', '4. Composición de las entradas del mayor']];
     function impTab(t) { impEstado.tab = t; impRender(); }
     function impRender() {
       IMP_TABS.forEach(([t]) => { const b = $im('im-tab-' + t); if (b) b.className = 'px-3 py-1.5 text-xs transition rounded-lg ' + (impEstado.tab === t ? 'bg-slate-200 text-slate-900 font-semibold' : 'text-slate-600 hover:bg-slate-100 font-medium'); });
@@ -18225,25 +18225,14 @@ ${(im.aprendidos || []).length ? `<p class="text-xs text-slate-600 bg-slate-50 b
       const th = 'px-2 py-1.5 text-[11px] font-bold text-slate-700 bg-slate-100 border-b border-slate-300';
       const pill = e => '<span class="' + (e === 'Cuadra' ? 'text-emerald-700' : e === 'N/A' ? 'text-slate-500' : 'text-red-600') + ' font-bold">' + impE(e) + '</span>';
       let h = '<div class="p-3 space-y-4 text-xs text-slate-700">';
-      h += '<p class="text-[11px] text-slate-500"><b>Objetivo:</b> comprobar que cada importación liquidada ingresó al inventario, y que todo lo que ingresó al inventario como compra o importación tiene su liquidación. <b>Cómo se hace:</b> se toman las compras/importaciones registradas en el Movimiento del inventario y cada una se relaciona con su liquidación por el código de importación que aparece en la descripción (si el código está mal escrito, se corrige en la pestaña 1). <b>Qué muestra:</b> si cada liquidación tiene entrada, y qué entradas no tienen liquidación. Los valores (costo total e IVA) se comparan en la pestaña 2.</p>';
+      h += '<p class="text-[11px] text-slate-500"><b>Objetivo:</b> conocer de qué están hechas las entradas al inventario del mayor (importaciones, transferencias entre bodegas, devoluciones, etc.). <b>Cómo se hace:</b> se toman las entradas del Movimiento del inventario y se agrupan por tipo. <b>Qué muestra:</b> cuánto del total corresponde a importaciones y cuánto a otros conceptos que no tienen liquidación. El cruce de valores (costo total e IVA) contra las liquidaciones está en la pestaña 2.</p>';
       if (!L_hay()) h += '<p class="text-[11px] text-amber-700 font-bold">Aún no hay liquidaciones cargadas: sube los PDF o Excel en la pestaña 1 para poder cruzarlas.</p>';
-      // Presencia de cada liquidación en las entradas (el costo y el IVA se cruzan en la pestaña 2)
-      if (R.porImp.length) {
-        const corte = impEstado.cfg.corte;
-        const est = x => x.n > 0 ? ['Tiene entrada', 'text-emerald-700'] : x.cmp ? ['Solo en entradas de varias importaciones', 'text-amber-700'] : (x.fecha && corte && x.fecha > corte) ? ['Posterior al corte', 'text-slate-500'] : ['Sin entrada en el mayor', 'text-red-600'];
-        h += '<div><div class="font-bold text-slate-800 mb-1">A. Liquidaciones y sus entradas de inventario</div><div class="overflow-x-auto border border-slate-200 rounded-lg"><table class="w-full text-[11px] border-collapse min-w-[640px]"><thead><tr><th class="' + th + ' text-left">Importación</th><th class="' + th + ' text-left">Proveedor</th><th class="' + th + ' text-left">Fecha</th><th class="' + th + ' text-right"># entradas</th><th class="' + th + ' text-left">Resultado</th></tr></thead><tbody>' +
-          R.porImp.map(x => { const e = est(x); return '<tr class="border-t border-slate-100"><td class="' + CELL + ' font-semibold">' + impE(x.id) + '</td><td class="' + CELL + '">' + impE(x.proveedor) + '</td><td class="' + CELL + ' whitespace-nowrap">' + impE(x.fecha) + '</td><td class="' + CELL + ' text-right">' + x.n + '</td><td class="' + CELL + ' font-bold ' + e[1] + '">' + e[0] + '</td></tr>'; }).join('') + '</tbody></table></div></div>';
-      }
       // Composición de las entradas
       const ordenTipos = Object.keys(R.tipos).sort((a, b) => R.tipos[b].v - R.tipos[a].v);
-      h += '<div><div class="font-bold text-slate-800 mb-1">B. De qué están hechas las entradas del mayor (las que no son importaciones no tienen liquidación)</div><div class="overflow-x-auto border border-slate-200 rounded-lg"><table class="w-full text-[11px] border-collapse min-w-[520px]"><thead><tr><th class="' + th + ' text-left">Tipo de entrada</th><th class="' + th + ' text-right"># asientos</th><th class="' + th + ' text-right">Valor</th><th class="' + th + ' text-right">% del total</th></tr></thead><tbody>' +
+      h += '<div><div class="font-bold text-slate-800 mb-1">De qué están hechas las entradas del mayor (las que no son importaciones no tienen liquidación)</div><div class="overflow-x-auto border border-slate-200 rounded-lg"><table class="w-full text-[11px] border-collapse min-w-[520px]"><thead><tr><th class="' + th + ' text-left">Tipo de entrada</th><th class="' + th + ' text-right"># asientos</th><th class="' + th + ' text-right">Valor</th><th class="' + th + ' text-right">% del total</th></tr></thead><tbody>' +
         ordenTipos.map(t => '<tr class="border-t border-slate-100"><td class="' + CELL + '">' + impE(t) + '</td><td class="' + CELL + ' text-right">' + R.tipos[t].n + '</td><td class="' + CELL + ' text-right">' + impF(R.tipos[t].v) + '</td><td class="' + CELL + ' text-right">' + (R.tot ? (R.tipos[t].v / R.tot * 100).toFixed(1) + ' %' : '') + '</td></tr>').join('') +
         '<tr class="border-t-2 border-slate-300 bg-slate-50 font-bold"><td class="' + CELL + '">Total entradas del mayor</td><td class="' + CELL + ' text-right">' + R.filas.length + '</td><td class="' + CELL + ' text-right">' + impF(R.tot) + '</td><td></td></tr></tbody></table></div></div>';
-      // Detalle
-      const lista = filtro === '__todos__' ? R.filas : filtro === '__sin__' ? R.filas.filter(f => !f.ids.length) : R.filas.filter(f => f.tipo === filtro || (filtro === '__imp__' && f.ids.length));
-      h += '<div><div class="flex flex-wrap items-center gap-2 mb-1"><span class="font-bold text-slate-800">C. Detalle de las entradas (' + lista.length + ')</span><select onchange="impEstado.entF = this.value; impRender()" class="' + impIn + '"><option value="__todos__">Todas</option><option value="__sin__"' + (filtro === '__sin__' ? ' selected' : '') + '>Sin liquidación</option>' + Object.keys(R.tipos).map(t => '<option value="' + impE(t) + '"' + (filtro === t ? ' selected' : '') + '>' + impE(t) + '</option>').join('') + '</select></div>' +
-        '<div class="max-h-96 overflow-auto border border-slate-200 rounded-lg"><table class="w-full text-[11px] border-collapse min-w-[900px]"><thead><tr class="sticky top-0"><th class="' + th + ' text-left">Cuenta</th><th class="' + th + ' text-left">Fecha</th><th class="' + th + ' text-left">Comprobante</th><th class="' + th + ' text-left">Descripción</th><th class="' + th + ' text-right">Valor</th><th class="' + th + ' text-left">Liquidación / tipo</th></tr></thead><tbody>' +
-        lista.map(f => '<tr class="border-t border-slate-100 align-top"><td class="' + CELL + ' whitespace-nowrap">' + impE(f.cta) + '</td><td class="' + CELL + ' whitespace-nowrap">' + mvFechaCorta(f.fecha) + '</td><td class="' + CELL + ' whitespace-nowrap">' + impE(f.ref) + '</td><td class="' + CELL + '">' + impE(f.desc) + '</td><td class="' + CELL + ' text-right whitespace-nowrap">' + impF(f.valor) + '</td><td class="' + CELL + '">' + (f.ids.length ? '<b>' + impE(f.ids.join(', ')) + '</b>' : impE(f.tipo)) + (f.antes ? ' <span class="text-[10px] text-amber-700">(reclasificada)</span>' : '') + '</td></tr>').join('') + '</tbody></table></div></div></div>';
+      h += '</div>';
       return h;
     }
     const L_hay = () => (impEstado.imports || []).length > 0;
@@ -18288,10 +18277,9 @@ ${(im.aprendidos || []).length ? `<p class="text-xs text-slate-600 bg-slate-50 b
       try {
         const RE = impEntradasCalc();
         if (RE && RE.filas.length) {
-          add('Entradas vs liquidaciones', [['Importación', 'Proveedor', 'Fecha', '# entradas', 'Resultado'], ...RE.porImp.map(x => [x.id, x.proveedor, x.fecha, x.n, x.n > 0 ? 'Tiene entrada' : x.cmp ? 'Solo en entradas de varias importaciones' : (x.fecha && impEstado.cfg.corte && x.fecha > impEstado.cfg.corte) ? 'Posterior al corte' : 'Sin entrada en el mayor'])],
-            [{ wch: 14 }, { wch: 30 }, { wch: 12 }, { wch: 12 }, { wch: 38 }], { titulo: 'Liquidaciones y sus entradas de inventario (el costo y el IVA se cruzan en la hoja Resumen del cruce)', info, fecha: [2], ent: [3] });
-          add('Entradas del mayor (detalle)', [['Cuenta', 'Fecha', 'Comprobante', 'Descripción', 'Valor', 'Liquidación', 'Tipo'], ...RE.filas.map(f => [f.cta, f.fecha, f.ref, f.desc, f.valor, f.ids.join(', '), f.tipo])],
-            [{ wch: 28 }, { wch: 12 }, { wch: 18 }, { wch: 80 }, { wch: 16 }, { wch: 18 }, { wch: 34 }], { titulo: 'Entradas del mayor contable (movimiento del inventario)', info, fecha: [1], totales: [4] });
+          const tp = Object.keys(RE.tipos).sort((x, y) => RE.tipos[y].v - RE.tipos[x].v);
+          add('Composición de entradas', [['Tipo de entrada', '# asientos', 'Valor', '% del total (en %)'], ...tp.map(t => [t, RE.tipos[t].n, RE.tipos[t].v, RE.tot ? Math.round(RE.tipos[t].v / RE.tot * 1000) / 10 : 0]), ['Total entradas del mayor', RE.filas.length, RE.tot, '']],
+            [{ wch: 44 }, { wch: 12 }, { wch: 16 }, { wch: 12 }], { titulo: 'De qué están hechas las entradas del mayor (movimiento del inventario)', info });
         }
       } catch (e) { console.error('Hoja de entradas:', e); }
       try { await arrXlsxConFormato(hojas, cli, `Importaciones_${(cli || 'cliente').replace(/[^A-Za-z0-9]+/g, '_').slice(0, 30)}_${impEstado.anio}.xlsx`); } catch (e) { alert('No se pudo armar el Excel: ' + (e.message || e)); }
