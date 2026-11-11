@@ -4831,7 +4831,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
         if (reiniciar) { clearInterval(timerAvisoPedidos); timerAvisoPedidos = setInterval(() => avisoPedidosClaude(false), 120000); }
         const b = document.getElementById('badge-pedidos-claude');
         const nb = document.getElementById('nav-aprobaciones-claude');
-        if (nb) nb.style.display = (usuarioActivo && herramientaHabilitada('pedidos-claude')) ? '' : 'none';
+        if (nb) nb.style.display = (usuarioActivo && (!window._estHerrCargado || herramientaHabilitada('pedidos-claude'))) ? '' : 'none';
         if (!usuarioActivo || !herramientaHabilitada('pedidos-claude')) { if (b) b.classList.add('hidden'); return; }
         const { data } = await supabaseClient.from('pedidos_claude').select('estado').in('estado', ['solicitado', 'autorizado']);
         const l = data || [], porAut = l.filter(x => x.estado === 'solicitado').length, auts = l.filter(x => x.estado === 'autorizado').length;
@@ -15298,7 +15298,9 @@ ${cont.innerHTML}
         const { data, error } = await supabaseClient.from('config_herramientas').select('clave, habilitada');
         if (!error && data) { estadoHerramientas = {}; data.forEach(r => { estadoHerramientas[r.clave] = r.habilitada !== false; }); }
       } catch (e) { /* sin tabla todavía: todo queda habilitado */ }
+      window._estHerrCargado = true;
       aplicarEstadoMenu();
+      try { avisoPedidosClaude(false); } catch (e) { }
     }
     // Marca en el menú las herramientas "En desarrollo"
     function aplicarEstadoMenu() {
