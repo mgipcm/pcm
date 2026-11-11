@@ -18085,7 +18085,7 @@ ${cont.innerHTML}
       if (data) {
         impEstado.imports = ((data.liquidaciones || {}).imports) || [];
         impEstado.cruce = data.cruce && data.cruce.lineas ? data.cruce : null;
-        const c = data.config || {}; impEstado.cfg = { roles: c.roles || {}, tol: c.tol !== undefined ? c.tol : 1, corte: c.corte || '', kw: c.kw || {}, resp: c.resp || '' };
+        const c = data.config || {}; impEstado.cfg = { roles: c.roles || {}, tol: c.tol !== undefined ? c.tol : 1, corte: c.corte || '', kw: c.kw || {}, resp: c.resp || '', transito: c.transito || '' };
         impEstado.hall = { notas: (data.hallazgos || {}).notas || {}, manuales: (data.hallazgos || {}).manuales || [] };
         impEstado.act = { por: data.actualizado_por, en: data.updated_at };
       } else impEstado.act = null;
@@ -18114,12 +18114,12 @@ ${cont.innerHTML}
         if (error) impMsg('No se guardó: ' + (error.message || error), 'text-red-600 font-bold'); else { impMsg('Guardado ✓'); impEstado.act = { por: fila.actualizado_por, en: fila.updated_at }; impSyncCabecera(); }
       }, 700);
     }
-    const IMP_TABS = [['liq', '1. Liquidaciones de importación'], ['cruce', '2. Cruce con mayor (importaciones e inventario)'], ['ent', '3. Entradas del mayor vs Movimiento']];
+    const IMP_TABS = [['liq', '1. Liquidaciones de importación'], ['cruce', '2. Liquidaciones vs importaciones en tránsito'], ['ent', '3. Importaciones en tránsito → Inventario']];
     function impTab(t) { impEstado.tab = t; impRender(); }
     function impRender() {
       IMP_TABS.forEach(([t]) => { const b = $im('im-tab-' + t); if (b) b.className = 'px-3 py-1.5 text-xs transition rounded-lg ' + (impEstado.tab === t ? 'bg-slate-200 text-slate-900 font-semibold' : 'text-slate-600 hover:bg-slate-100 font-medium'); });
       const p = $im('im-panel'); if (!p) return;
-      p.innerHTML = impEstado.tab === 'liq' ? impHtmlLiq() : impEstado.tab === 'cruce' ? impHtmlCruce() : impEstado.tab === 'ent' ? impHtmlEntradas() : impEstado.tab === 'res' ? impHtmlResumen() : impHtmlLiq();
+      p.innerHTML = impEstado.tab === 'liq' ? impHtmlLiq() : impEstado.tab === 'cruce' ? impHtmlCruce() : impEstado.tab === 'ent' ? impHtmlTransito() : impEstado.tab === 'res' ? impHtmlResumen() : impHtmlLiq();
       if (impEstado.tab === 'liq') { impPintarProc(); }
       impFlechas();
     }
@@ -18330,8 +18330,8 @@ ${(im.aprendidos || []).length ? `<p class="text-xs text-slate-600 bg-slate-50 b
       const por = id => f.filter(x => x.id === id), g = (id, k) => f.find(x => x.id === id && x.k === k) || {};
       const th = (t, c) => `<th class="px-2 py-1 border-b border-slate-200 whitespace-nowrap ${c || 'text-right'}">${t}</th>`;
       if (!impEstado.mov || impEstado.mov.llave !== impEstado.cliente + '|' + impEstado.anio + '|' + impEstado.visita) setTimeout(impCargarMov, 0);
-      const RE = impEntradasCalc(), ENT = RE && impEstado.mov && impEstado.mov.hay && (impEstado.mov.cuentas || []).length ? Object.fromEntries(RE.porImp.map(x => [x.id, x])) : null;
-      let h = `<div class="p-4 bg-white border border-slate-200 rounded-xl space-y-2"><div class="text-[13px] font-semibold text-slate-800">3. Resultado por importación</div>
+      const ENT = null;
+      let h = `<div class="p-4 bg-white border border-slate-200 rounded-xl space-y-2"><div class="text-[13px] font-semibold text-slate-800">3. Liquidaciones contra costos acumulados en importaciones en tránsito</div>
         <p class="text-slate-500">Mayor leído: ${(C.lineasTot || 0).toLocaleString('en-US')} líneas · Debe ${impF(C.debe)} · Haber ${impF(C.haber)}${Math.abs((C.debe || 0) - (C.haber || 0)) > 0.5 ? ' <b class="text-red-600">(el mayor no cuadra)</b>' : ' (cuadra)'} · ${C.lineas.length.toLocaleString('en-US')} líneas de importaciones · ${C.asientos.length} asientos.</p>
         <div class="overflow-x-auto"><table class="w-full text-[11px] leading-tight border-collapse"><thead class="bg-slate-50 text-slate-600"><tr>${th('Importación', 'text-left')}${th('Costo total liquidación')}${th('Costos acumulados en importaciones (mayor)')}${th('Dif.')}${th('Estado', 'text-center')}${ENT ? th('Entrada al inventario (mayor)') + th('Dif. entrada') : ''}${th('IVA liquidación')}${th('IVA en el mayor')}${th('Dif.')}${th('Estado', 'text-center')}</tr></thead><tbody>`;
       let T = { c1: 0, c2: 0, i1: 0, i2: 0, e1: 0 };
@@ -18538,6 +18538,93 @@ ${(im.aprendidos || []).length ? `<p class="text-xs text-slate-600 bg-slate-50 b
       h += '</div></div>';
       return h;
     }
+    // ===== Pestaña 3: lo que sale de importaciones en tránsito contra lo que entra al inventario =====
+    function impCtasTransito() {
+      const C = impEstado.cruce, cfg = impEstado.cfg, roles = impRolesDe(cfg);
+      let tr = impListaCtas(cfg.transito);
+      const nombres = (C && C.cuentas) || {};
+      if (!tr.length) tr = Object.keys(nombres).filter(c => /tr[aá]nsito/i.test(nombres[c] || ''));
+      if (!tr.length && C) { const s = new Set(); (C.asientos || []).forEach(a => a.l.forEach(l => { if (/tr[aá]nsito/i.test(l[1] || '')) s.add(String(l[0])); })); tr = [...s]; }
+      let inv = roles.inv_final.length ? roles.inv_final.slice() : roles.inventario.filter(c => !impCtaEn(c, tr));
+      inv = inv.filter(c => !impCtaEn(c, tr));
+      return { tr, inv };
+    }
+    function impTransitoCalc() {
+      const C = impEstado.cruce; if (!C || !C.asientos) return null;
+      const { tr, inv } = impCtasTransito(); if (!tr.length) return { sinCuenta: true, tr, inv };
+      const filas = [], dest = {}; let deb = 0, hab = 0, nTocan = 0;
+      C.asientos.forEach(a => {
+        let d = 0, h = 0, iv = 0; const otras = {};
+        a.l.forEach(l => {
+          const cod = String(l[0]), dd = Number(l[2]) || 0, hh = Number(l[3]) || 0;
+          if (impCtaEn(cod, tr)) { d += dd; h += hh; }
+          else if (impCtaEn(cod, inv)) iv += dd - hh;
+          else if (dd - hh > 0.005) { const k = cod + '|' + (l[1] || ''); otras[k] = (otras[k] || 0) + dd - hh; }
+        });
+        if (Math.abs(d) < 0.005 && Math.abs(h) < 0.005) return;
+        nTocan++; deb += d; hab += h;
+        const salida = impR2(h - d);
+        if (salida > 0.005) {
+          const ent = impR2(Math.max(iv, 0)), resto = impR2(salida - ent);
+          const dst = Object.keys(otras).map(k => { const [c, n] = k.split('|'); return { cod: c, nombre: n, valor: impR2(otras[k]) }; }).sort((x, y) => y.valor - x.valor);
+          filas.push({ k: a.k, tk: a.tk, num: a.num, d: a.d, salida, ent, dif: resto, dst, det: (a.l.find(l => impCtaEn(String(l[0]), tr) && (Number(l[3]) || 0) > 0) || [])[4] || '' });
+        }
+      });
+      filas.forEach(f => {
+        let rest = f.dif; const cl = {};
+        f.dst.forEach(x => { if (rest <= 0.005) return; const v = Math.min(x.valor, rest); rest = impR2(rest - v); const t = /costo.*venta/i.test(x.nombre) ? 'Costo de ventas' : (/^[4-9]/.test(x.cod) || /gasto/i.test(x.nombre)) ? 'Gasto' : 'Otras cuentas'; const key = t + '|' + x.cod + '|' + x.nombre; cl[key] = (cl[key] || 0) + v; });
+        if (rest > 0.005) { const key = 'Sin destino identificado||'; cl[key] = (cl[key] || 0) + rest; }
+        Object.keys(cl).forEach(key => { const [t, c, n] = key.split('|'); const o = dest[key] || (dest[key] = { tipo: t, cod: c, nombre: n, valor: 0, n: 0 }); o.valor = impR2(o.valor + cl[key]); o.n++; });
+      });
+      filas.sort((x, y) => (x.d || '').localeCompare(y.d || ''));
+      const salidaTot = impR2(filas.reduce((t, f) => t + f.salida, 0)), entTot = impR2(filas.reduce((t, f) => t + f.ent, 0));
+      return { tr, inv, filas, dest: Object.values(dest).sort((x, y) => y.valor - x.valor), deb: impR2(deb), hab: impR2(hab), saldo: impR2(deb - hab), salidaTot, entTot, nTocan };
+    }
+    function impHtmlTransito() {
+      const C = impEstado.cruce, cfg = impEstado.cfg;
+      if (!impEstado.imports.length) return '<p class="p-6 text-xs text-slate-400 text-center">Primero carga las liquidaciones en la hoja 1.</p>';
+      if (!C) return '<p class="p-6 text-xs text-slate-400 text-center">Aún no hay lectura del mayor: pídela a Claude en la pestaña 2.</p>';
+      if (!impEstado.mov || impEstado.mov.llave !== impEstado.cliente + '|' + impEstado.anio + '|' + impEstado.visita) setTimeout(impCargarMov, 0);
+      const T = impTransitoCalc(), th = (t, c) => `<th class="px-2 py-1 border-b border-slate-200 whitespace-nowrap ${c || 'text-right'}">${t}</th>`;
+      let h = `<div class="p-3 space-y-3 text-xs text-slate-700">`;
+      h += `<div class="p-4 bg-white border border-slate-200 rounded-xl space-y-2"><div class="text-[13px] font-semibold text-slate-800">Cuenta de importaciones en tránsito</div>
+        <p class="text-slate-500">Se reconoce sola por su nombre ("tránsito"). Si este cliente la llama distinto, escribe aquí su código (puedes separar varios con coma).</p>
+        <label class="flex flex-col gap-1 text-xs text-slate-600 max-w-md"><span>Código(s) de la cuenta de importaciones en tránsito</span><input type="text" value="${impE(cfg.transito || '')}" placeholder="${impE(((T && T.tr) || []).join(', ') || 'Códigos separados por coma')}" onchange="impEditarTransito(this.value)" class="${impIn} w-full"></label></div>`;
+      if (!T || T.sinCuenta) return h + `<p class="text-red-600 font-semibold">No se encontró la cuenta de importaciones en tránsito en el mayor leído. Escribe su código arriba.</p></div>`;
+      const nm = c => (C.cuentas && C.cuentas[c]) ? c + ' ' + C.cuentas[c] : c;
+      const sCls = Math.abs(T.saldo) > cfg.tol ? 'text-red-600' : 'text-emerald-700';
+      h += `<div class="p-4 bg-white border border-slate-200 rounded-xl space-y-2"><div class="text-[13px] font-semibold text-slate-800">1. Resumen de la cuenta en tránsito</div>
+        <p class="text-slate-500">Cuenta en tránsito: ${impE(T.tr.map(nm).join('; '))}. Cuentas de inventario: ${impE(T.inv.map(nm).join('; ') || 'no indicadas (se toman de la hoja 2)')}. Asientos que tocan la cuenta: ${T.nTocan}.</p>
+        <div class="overflow-x-auto"><table class="text-[11px] leading-tight border-collapse"><tbody>
+        <tr class="border-b border-slate-100"><td class="px-2 py-1">Entradas a tránsito (debe)</td><td class="px-2 text-right">${impF(T.deb)}</td></tr>
+        <tr class="border-b border-slate-100"><td class="px-2 py-1">Salidas de tránsito (haber)</td><td class="px-2 text-right">${impF(T.hab)}</td></tr>
+        <tr class="border-b border-slate-100 font-semibold"><td class="px-2 py-1">Saldo en tránsito al corte</td><td class="px-2 text-right ${sCls}">${impF(T.saldo)}</td></tr></tbody></table></div>
+        <p class="text-slate-500">${T.saldo > cfg.tol ? 'Saldo deudor: importaciones que siguen en tránsito o costos todavía no pasados al inventario. Revisa si siguen realmente en camino.' : T.saldo < -cfg.tol ? 'Saldo acreedor: se pasó al inventario más de lo acumulado en tránsito (por ejemplo valores que no se registraron antes en tránsito). Revisa el origen.' : 'La cuenta en tránsito queda en cero: todo lo acumulado salió.'}</p></div>`;
+      h += `<div class="p-4 bg-white border border-slate-200 rounded-xl space-y-2"><div class="text-[13px] font-semibold text-slate-800">2. Salidas de tránsito: ¿entraron al inventario?</div>
+        <p class="text-slate-500">Por asiento: lo que se acreditó en tránsito contra lo que se debitó en inventario. Si no es igual, la diferencia se explica en el punto 3.</p>
+        <div class="overflow-auto max-h-[60vh] border border-slate-200 rounded-lg"><table class="w-full text-[11px] leading-tight border-collapse"><thead class="bg-slate-50 text-slate-600 sticky top-0"><tr>${th('Fecha', 'text-left')}${th('Comprobante', 'text-left')}${th('Detalle', 'text-left')}${th('Sale de tránsito')}${th('Entra al inventario')}${th('Diferencia')}${th('Fue a', 'text-left')}</tr></thead><tbody>`;
+      T.filas.forEach(f => {
+        const fue = Math.abs(f.dif) > cfg.tol ? f.dst.slice(0, 2).map(x => impE(x.nombre || x.cod) + ' ' + impF(x.valor)).join('; ') || 'Sin destino identificado' : '';
+        h += `<tr class="border-b border-slate-100"><td class="px-2 py-0.5 text-left whitespace-nowrap">${impE(f.d)}</td><td class="px-2 text-left whitespace-nowrap">${impE(f.tk)} ${impE(f.num)}</td><td class="px-2 text-left max-w-[320px] truncate" title="${impE(f.det)}">${impE(f.det)}</td><td class="px-2 text-right">${impF(f.salida)}</td><td class="px-2 text-right">${impF(f.ent)}</td><td class="px-2 text-right ${Math.abs(f.dif) > cfg.tol ? 'text-red-600 font-semibold' : ''}">${impF(f.dif)}</td><td class="px-2 text-left">${fue}</td></tr>`;
+      });
+      h += `</tbody><tfoot class="bg-slate-50 font-semibold sticky bottom-0"><tr><td class="px-2 py-1 text-left" colspan="3">Total</td><td class="px-2 text-right">${impF(T.salidaTot)}</td><td class="px-2 text-right">${impF(T.entTot)}</td><td class="px-2 text-right">${impF(impR2(T.salidaTot - T.entTot))}</td><td></td></tr></tfoot></table></div></div>`;
+      h += `<div class="p-4 bg-white border border-slate-200 rounded-xl space-y-2"><div class="text-[13px] font-semibold text-slate-800">3. Salidas que no fueron al inventario: ¿a dónde fueron?</div>`;
+      if (!T.dest.length) h += `<p class="text-slate-500">Todo lo que salió de tránsito entró al inventario.</p>`;
+      else h += `<div class="overflow-x-auto"><table class="w-full text-[11px] leading-tight border-collapse"><thead class="bg-slate-50 text-slate-600"><tr>${th('Destino', 'text-left')}${th('Cuenta', 'text-left')}${th('Asientos')}${th('Valor')}</tr></thead><tbody>${T.dest.map(x => `<tr class="border-b border-slate-100"><td class="px-2 py-1 text-left font-semibold">${impE(x.tipo)}</td><td class="px-2 text-left">${impE((x.cod ? x.cod + ' ' : '') + (x.nombre || ''))}</td><td class="px-2 text-right">${x.n}</td><td class="px-2 text-right">${impF(x.valor)}</td></tr>`).join('')}</tbody></table></div>`;
+      h += `</div>`;
+      // 4. Informativo: liquidación contra inventario por importación
+      const RE = impEntradasCalc(), ok = RE && impEstado.mov && impEstado.mov.hay && (impEstado.mov.cuentas || []).length;
+      h += `<div class="p-4 bg-white border border-slate-200 rounded-xl space-y-2"><div class="text-[13px] font-semibold text-slate-800">4. Informativo: liquidación contra entradas al inventario (Movimiento del inventario, pestaña i)</div>`;
+      if (!ok) h += `<p class="text-slate-500">Sube el Movimiento del inventario (pestaña i de Inventarios) para ver esta comparación. Es solo informativa: las liquidaciones son manuales y pueden no incluir todo.</p>`;
+      else {
+        const rows = RE.porImp.filter(x => x.liq || x.may);
+        h += `<p class="text-slate-500">Solo informativo, sin estado de revisión: compara el total de cada liquidación con lo que entró al inventario con su nombre en el Movimiento.</p><div class="overflow-x-auto"><table class="w-full text-[11px] leading-tight border-collapse"><thead class="bg-slate-50 text-slate-600"><tr>${th('Importación', 'text-left')}${th('Liquidación')}${th('Entrada al inventario')}${th('Diferencia')}</tr></thead><tbody>${rows.map(x => `<tr class="border-b border-slate-100"><td class="px-2 py-1 text-left font-semibold">${impE(x.id)}</td><td class="px-2 text-right">${impF(x.liq)}</td><td class="px-2 text-right">${impF(x.may)}</td><td class="px-2 text-right">${impF(x.dif)}</td></tr>`).join('')}</tbody><tfoot class="bg-slate-50 font-semibold"><tr><td class="px-2 py-1 text-left">Total</td><td class="px-2 text-right">${impF(impR2(rows.reduce((t, x) => t + x.liq, 0)))}</td><td class="px-2 text-right">${impF(impR2(rows.reduce((t, x) => t + x.may, 0)))}</td><td class="px-2 text-right">${impF(impR2(rows.reduce((t, x) => t + x.dif, 0)))}</td></tr></tfoot></table></div>`;
+      }
+      h += `</div>`;
+      return h + '</div>';
+    }
+    function impEditarTransito(v) { impEstado.cfg.transito = String(v || '').trim(); impGuardar('config'); impRender(); }
+
     function impHtmlEntradas() {
       const M = impEstado.mov, CELL = 'px-2 py-1';
       if (!impEstado.cliente) return '<p class="p-4 text-xs text-slate-500">Selecciona el cliente.</p>';
