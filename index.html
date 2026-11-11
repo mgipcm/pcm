@@ -5300,7 +5300,8 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
     // Barra fija para enviar un pedido a Claude desde la propia pantalla (cuando ya hay datos y se quiere actualizar)
     function pcBarraPedido(hoja, cli, anio, vis, texto) {
       if (!cli) return '';
-      return '<div class="mt-3 p-3 bg-white border border-slate-200 rounded-xl space-y-2 text-xs text-slate-600"><p>' + escapeHtml(texto) + '</p><div><button type="button" onclick="pcIrAPedido(\'AF\', \'' + escapeHtml(cli) + '\', \'' + escapeHtml(anio) + '\', \'' + escapeHtml(vis) + '\', \'' + hoja + '\')" class="px-3 py-1.5 rounded-lg text-xs transition bg-slate-200 text-slate-900 hover:bg-slate-300 font-semibold">Subir archivos y enviar a Claude</button></div></div>';
+      const T = { venta: ['Movimiento del inventario: todo se pide a Claude', 'Pedir a Claude (mayor contable + cuentas de inventario)'], costo_ventas: ['Costo de ventas: todo se pide a Claude', 'Pedir a Claude (mayor contable + cuentas de costo de ventas)'], kardex: ['Kárdex: todo se pide a Claude', 'Pedir a Claude (kárdex)'] }[hoja] || ['Todo se pide a Claude', 'Pedir a Claude'];
+      return '<div class="mt-3 p-3 bg-white border border-slate-200 rounded-xl space-y-2 text-xs text-slate-700"><div class="text-[13px] font-semibold text-slate-800">' + T[0] + '</div><p class="text-slate-600">' + escapeHtml(texto) + '</p><div class="flex flex-wrap items-center gap-2"><button type="button" onclick="pcIrAPedido(\'AF\', \'' + escapeHtml(cli) + '\', \'' + escapeHtml(anio) + '\', \'' + escapeHtml(vis) + '\', \'' + hoja + '\')" class="px-3 py-1.5 rounded-lg text-xs transition bg-slate-200 text-slate-900 hover:bg-slate-300 font-semibold">' + T[1] + '</button></div></div>';
     }
     function pcHtmlAviso(sumaria, cli, anio, vis, hoja) {
       setTimeout(pcRefrescarAvisos, 0);
@@ -17833,7 +17834,7 @@ ${cont.innerHTML}
       h += '<tr class="border-t-2 border-slate-300 bg-slate-50 font-bold"><td class="' + TD + '">Total</td><td class="' + TD + ' text-right">' + F(R.tM) + '</td><td class="' + TD + ' text-right">' + F(R.tK) + '</td><td class="' + TD + ' text-right">' + dc(R.dif, true) + '</td><td class="' + TD + ' text-right">' + (R.hayL ? F(R.tL) : '') + '</td></tr></tbody></table></div>';
       h += '<div class="font-bold text-slate-800 mt-4 mb-1 text-xs">B. Cuadre del movimiento: mayor contable contra kárdex <span class="font-normal text-slate-500">(Diferencia = mayor − kárdex)</span></div><div class="overflow-x-auto border border-slate-200 rounded-xl"><table class="w-full text-[11px] border-collapse min-w-[520px]"><thead><tr><th class="' + TH + ' text-left">Concepto</th><th class="' + TH + ' text-right">Mayor contable (pestaña i)</th><th class="' + TH + ' text-right">Kárdex (pestaña iv)</th><th class="' + TH + ' text-right">Diferencia</th></tr></thead><tbody>' +
         R.cuadre.map(x => '<tr class="border-t border-slate-100' + (x.k === 'compras' ? ' bg-amber-50' : '') + '"><td class="' + TD + '">' + escapeHtml(x.t) + '</td><td class="' + TD + ' text-right">' + F(x.may) + '</td><td class="' + TD + ' text-right">' + F(x.kar) + '</td><td class="' + TD + ' text-right">' + dc(x.dif, true) + '</td></tr>').join('') + '</tbody></table></div>';
-      c.innerHTML = h + pcBarraPedido('kardex', kcE.cliente, kcE.anio, kcE.visita, 'Para actualizar el kárdex, envía el archivo desde aquí. El mayor contable se envía desde la pestaña i.');
+      c.innerHTML = pcBarraPedido('kardex', kcE.cliente, kcE.anio, kcE.visita, 'Para actualizar el kárdex, envía el archivo desde aquí. El mayor contable se envía desde la pestaña i.') + h;
     }
     async function kcDescargar() {
       if (!window.ExcelJS) { alert('No se pudo cargar el generador de Excel. Revisa tu conexión a internet.'); return; }
@@ -17935,7 +17936,7 @@ ${cont.innerHTML}
           '<tr class="border-t-2 border-slate-300 bg-slate-50 font-bold"><td class="' + TD + '">Total</td><td class="' + TD + ' text-right">' + R.nAsientos + '</td><td class="' + TD + ' text-right">' + F(R.tSal) + '</td><td class="' + TD + ' text-right">' + F(R.tCos) + '</td><td class="' + TD + ' text-right">' + dc(R.dif, true) + '</td></tr></tbody></table></div>';
       }
       const notas = cvE.cv.filter(x => x.nota).map(x => '<p class="text-[11px] text-slate-600 mt-2"><b>' + escapeHtml((x.codigo ? x.codigo + ' ' : '') + (x.cuenta || '')) + ':</b> ' + escapeHtml(x.nota) + '</p>').join('');
-      c.innerHTML = h + pcBarraPedido('costo_ventas', cvE.cliente, cvE.anio, cvE.visita, 'Para armar o actualizar el costo de ventas, envía el mayor contable y las cuentas de costo de ventas.') + notas;
+      c.innerHTML = pcBarraPedido('costo_ventas', cvE.cliente, cvE.anio, cvE.visita, 'Para armar o actualizar el costo de ventas, envía el mayor contable y las cuentas de costo de ventas.') + h + notas;
     }
     async function cvDescargar() {
       if (!window.ExcelJS) { alert('No se pudo cargar el generador de Excel. Revisa tu conexión a internet.'); return; }
@@ -18008,7 +18009,7 @@ ${cont.innerHTML}
       });
       h += '<tr class="bg-slate-50 font-bold"><td class="px-2 py-1.5" colspan="2">Total de todos los productos</td>' + MV_COLS.map(([k]) => '<td class="px-2 py-1.5 text-right">' + fm(kxTot(k)) + '</td>').join('') + '<td class="px-2 py-1.5 text-right">' + fm(r2f(kxE.prod.reduce((t, x) => t + mvDif(x), 0))) + '</td></tr></tbody></table></div>';
       h += '<div class="mt-2 text-[11px] text-slate-500">Aumentos con signo positivo y disminuciones (ventas, bajas) con signo negativo. Haz clic en una cifra de movimiento para ver el detalle y reclasificarlo. Diferencia = Saldo inicial + movimientos − Saldo final.</div>';
-      c.innerHTML = h + pcBarraPedido('kardex', kxE.cliente, kxE.anio, kxE.visita, 'Para armar o actualizar el movimiento de kárdex, envía el kárdex del cliente (Excel, CSV, PDF u otro).');
+      c.innerHTML = pcBarraPedido('kardex', kxE.cliente, kxE.anio, kxE.visita, 'Para armar o actualizar el movimiento de kárdex, envía el kárdex del cliente (Excel, CSV, PDF u otro).') + h;
     }
     function kxVer(i, k) { kxE.ver = (kxE.ver && kxE.ver.i === i && kxE.ver.k === k) ? null : { i, k }; kxPintar(); }
     function kxHtmlPartidas(x, k) {
@@ -18118,7 +18119,7 @@ ${cont.innerHTML}
       });
       h += '<tr class="bg-slate-50 font-bold"><td class="px-2 py-1.5">Total</td>' + MV_COLS.map(([k]) => '<td class="px-2 py-1.5 text-right">' + formatoNumeroAnexo(tot[k]) + '</td>').join('') + '<td class="px-2 py-1.5 text-right">' + (hayLibTot ? formatoNumeroAnexo(tot.saldo_libros) : '') + '</td><td class="px-2 py-1.5 text-right">' + celdaDif(difTot, hayLibTot) + '</td><td></td></tr></tbody></table></div>';
       h += '<div class="mt-2 flex flex-wrap items-center gap-3"><button type="button" onclick="mvAgregar()" class="px-2.5 py-1 bg-white text-slate-700 hover:bg-slate-50 border border-slate-400 rounded text-[11px] font-bold transition">+ Agregar cuenta</button><span class="text-[11px] text-slate-500">Aumentos con signo positivo y disminuciones (salidas, bajas) con signo negativo. Haz clic en una cifra de movimiento para ver sus partidas y reclasificarlas. Diferencia = Saldo final − Según libros.</span></div>';
-      c.innerHTML = h + pcBarraPedido('venta', mvE.cliente, mvE.anio, mvE.visita, 'Para armar o actualizar el movimiento del inventario, envía el mayor contable y las cuentas de inventario. Las liquidaciones de importación se envían desde Importaciones.');
+      c.innerHTML = pcBarraPedido('venta', mvE.cliente, mvE.anio, mvE.visita, 'Para armar o actualizar el movimiento del inventario, envía el mayor contable y las cuentas de inventario. Las liquidaciones de importación se envían desde Importaciones.') + h;
     }
     function mvPartidasIdx(x, k) { const r = []; (Array.isArray(x && x.partidas) ? x.partidas : []).forEach((p, ix) => { if (p && p.col === k) r.push({ p, ix }); }); return r; }
     function mvVer(i, k) { mvE.ver = (mvE.ver && mvE.ver.i === i && mvE.ver.k === k) ? null : { i, k }; mvPintar(); }
