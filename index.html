@@ -17656,12 +17656,12 @@ ${cont.innerHTML}
     }
 
     // ===== AF Inventarios › Inventario para la venta › iii) Costo de ventas vs Salidas (mayor contable) =====
-    const cvE = { cargaId: 0, cliente: '', anio: '', visita: '', cargado: false, cv: [], mov: [], bal: {}, act: null, error: '' };
+    const cvE = { abierto: '', cargaId: 0, cliente: '', anio: '', visita: '', cargado: false, cv: [], mov: [], bal: {}, act: null, error: '' };
     const CV_MESES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
     const cvMes = ym => { const m = /^(\d{4})-(\d{2})$/.exec(ym || ''); return m ? CV_MESES[Number(m[2]) - 1] + ' ' + m[1] : (ym || 'Sin fecha'); };
     async function cvCargar() {
       const cli = $im('im-cliente').value, anio = $im('im-anio').value, vis = $im('im-visita').value;
-      Object.assign(cvE, { cliente: cli, anio, visita: vis, cargado: false, cv: [], mov: [], bal: {}, act: null, error: '' });
+      Object.assign(cvE, { abierto: '', cliente: cli, anio, visita: vis, cargado: false, cv: [], mov: [], bal: {}, act: null, error: '' });
       if (!cli) { cvPintar(); return; }
       const id = ++cvE.cargaId;
       const q = h => supabaseClient.from('inventario_movimiento').select('cuentas, updated_at, actualizado_por').eq('cliente_id', cli).eq('anio', Number(anio)).eq('visita', vis).eq('hoja', h).maybeSingle();
@@ -17674,65 +17674,81 @@ ${cont.innerHTML}
       cvE.error = a.error ? (a.error.message || String(a.error)) : '';
       cvE.cargado = true; cvPintar();
     }
-    // Cruce por mes: salidas del inventario (movimiento, con signo positivo) contra el costo de ventas del mayor
+    // Cruce por mes: salidas del inventario contra el costo de ventas del mayor (Diferencia = salidas − costo)
     function cvCalcular() {
-      const meses = {}, f = ym => (meses[ym] = meses[ym] || { ym, sal: 0, cos: 0 });
-      let salSinMes = 0, cosSinMes = 0;
-      cvE.mov.forEach(c => {
-        const ps = (Array.isArray(c.partidas) ? c.partidas : []).filter(p => p && p.col === 'salidas');
-        if (ps.length) ps.forEach(p => { const ym = String(p.fecha || '').slice(0, 7); f(ym || 'sin').sal += -(Number(p.valor) || 0); });
-        else salSinMes += -(Number(c.salidas) || 0);
-      });
-      cvE.cv.forEach(c => {
-        const ps = Array.isArray(c.partidas) ? c.partidas : [];
-        if (ps.length) ps.forEach(p => { const ym = String(p.fecha || '').slice(0, 7); f(ym || 'sin').cos += (Number(p.valor) || 0); });
-        else cosSinMes += (Number(c.neto) || ((Number(c.debe) || 0) - (Number(c.haber) || 0)));
-      });
-      const filas = Object.values(meses).sort((a, b) => a.ym.localeCompare(b.ym)).map(m => ({ ...m, sal: r2f(m.sal), cos: r2f(m.cos), dif: r2f(m.cos - m.sal) }));
-      const tSal = r2f(filas.reduce((t, m) => t + m.sal, 0) + salSinMes), tCos = r2f(filas.reduce((t, m) => t + m.cos, 0) + cosSinMes);
-      return { filas, salSinMes: r2f(salSinMes), cosSinMes: r2f(cosSinMes), tSal, tCos, dif: r2f(tCos - tSal) };
+      const ps = []; cvE.cv.forEach(c => (Array.isArray(c.partidas) ? c.partidas : []).forEach(p => { if (p) ps.push(p); }));
+      const hayVal = ps.some(p => typeof p.salida === 'number');
+      const ymDe = p => /^\d{4}-\d{2}$/.test(String(p.col || '')) ? p.col : (String(p.fecha || '').slice(0, 7) || 'sin');
+      const meses = {}, f = ym => (meses[ym] = meses[ym] || { ym, sal: 0, cos: 0, n: 0, asientos: [] });
+      ps.forEach(p => { const m = f(ymDe(p)); m.cos += Number(p.valor) || 0; if (hayVal) m.sal += Number(p.salida) || 0; m.n++; m.asientos.push(p); });
+      // Movimiento del inventario (pestaña i): salidas con signo positivo
+      const movMes = {}; let movTot = 0, movSinMes = 0;
+      cvE.mov.forEach(c => { const pp = (Array.isArray(c.partidas) ? c.partidas : []).filter(p => p && p.col === 'salidas'); if (pp.length) pp.forEach(p => { const ym = String(p.fecha || '').slice(0, 7) || 'sin', v = -(Number(p.valor) || 0); movMes[ym] = (movMes[ym] || 0) + v; movTot += v; }); else { const v = -(Number(c.salidas) || 0); movSinMes += v; movTot += v; } });
+      if (!hayVal) Object.keys(movMes).forEach(ym => { f(ym).sal = movMes[ym]; });
+      const filas = Object.values(meses).sort((a, b) => a.ym.localeCompare(b.ym)).map(m => { m.asientos.sort((a, b) => String(a.fecha || '').localeCompare(String(b.fecha || ''))); return { ...m, sal: r2f(m.sal), cos: r2f(m.cos), dif: r2f(m.sal - m.cos), mov: r2f(movMes[m.ym] || 0) }; });
+      const tSal = r2f(filas.reduce((t, m) => t + m.sal, 0)), tCos = r2f(filas.reduce((t, m) => t + m.cos, 0));
+      const codigos = cvE.cv.map(c => String(c.codigo || '').trim()).filter(Boolean), conBal = codigos.filter(c => Number.isFinite(cvE.bal[c]));
+      const tBal = r2f(conBal.reduce((t, c) => t + cvE.bal[c], 0)), hayBal = conBal.length > 0;
+      const tipos = {}; ps.forEach(p => { const t = p.tipo || 'Sin clasificar', o = (tipos[t] = tipos[t] || { n: 0, cos: 0, sal: 0 }); o.n++; o.cos += Number(p.valor) || 0; o.sal += Number(p.salida) || 0; });
+      const lt = Object.entries(tipos).map(([t, o]) => ({ tipo: t, n: o.n, cos: r2f(o.cos), sal: r2f(o.sal), dif: r2f(o.sal - o.cos) })).sort((a, b) => Math.abs(b.dif) - Math.abs(a.dif));
+      const mesesDifMov = hayVal ? filas.filter(m => Math.abs(m.sal - m.mov) > 1).length : 0;
+      return { filas, hayVal, tSal, tCos, dif: r2f(tSal - tCos), movTot: r2f(movTot), difMov: r2f(tSal - movTot), mesesDifMov, hayMov: cvE.mov.length > 0, tBal, hayBal, difBal: r2f(tCos - tBal), tipos: lt, nAsientos: ps.length };
     }
+    function cvAbrir(ym) { cvE.abierto = cvE.abierto === ym ? '' : ym; cvPintar(); }
     function cvPintar() {
       if (typeof ivE === 'undefined' || ivE.hoja !== 'venta' || ivE.btn !== 'salidas') return;
       const c = document.getElementById('cv-cont'); if (!c) return;
       if (!cvE.cliente) { c.innerHTML = '<p class="text-xs text-slate-500 border border-dashed border-slate-300 rounded-xl p-4">Selecciona el cliente para comenzar.</p>'; return; }
       if (!cvE.cargado) { c.innerHTML = '<p class="text-xs text-slate-500 p-4">Cargando…</p>'; return; }
       if (cvE.error) { c.innerHTML = '<p class="text-xs text-red-600 font-bold p-4">No se pudo cargar: ' + escapeHtml(cvE.error) + '</p>'; return; }
-      const info = '<div class="text-[11px] text-slate-500 mb-3"><b>Objetivo:</b> comprobar que lo que salió del inventario por ventas coincide con el costo de ventas registrado en el mayor contable. <b>Cómo se hace:</b> las salidas salen del Movimiento del inventario (pestaña i) y el costo de ventas del mayor que se sube en el pedido; se comparan mes a mes y en total. <b>Qué muestra:</b> las diferencias por mes y por cuenta, y una propuesta de ajuste si el total no cuadra.</div>';
+      const info = '<div class="text-[11px] text-slate-500 mb-3"><b>Objetivo:</b> comprobar que lo que salió del inventario por ventas coincide con el costo de ventas registrado en el mayor contable. <b>Cómo se hace:</b> con el mayor del pedido se arma, mes a mes, cada asiento de costo de ventas junto a su salida del inventario; luego el total se compara con el Movimiento del inventario (pestaña i) y con el balance. <b>Qué hacer:</b> haz clic en un mes para ver todos sus asientos.</div>';
       if (!cvE.cv.length) { c.innerHTML = info + '<div class="border border-slate-200 rounded-xl">' + pcHtmlAviso('AF', cvE.cliente, cvE.anio, cvE.visita, 'costo_ventas') + '</div>'; return; }
-      const R = cvCalcular(), hayMov = cvE.mov.length > 0, TH = 'px-2 py-2 text-[11px] font-bold text-slate-700 bg-slate-100 border-b border-slate-300', TD = 'px-2 py-1', F = formatoNumeroAnexo;
-      const cel = (v, hay) => !hay ? '<span class="text-slate-400">–</span>' : '<span class="' + (Math.abs(v) > 1 ? 'text-red-600' : 'text-emerald-700') + ' font-bold">' + F(v) + '</span>';
+      const R = cvCalcular(), TH = 'px-2 py-2 text-[11px] font-bold text-slate-700 bg-slate-100 border-b border-slate-300', TD = 'px-2 py-1', F = formatoNumeroAnexo;
+      const dc = (v, hay) => !hay ? '<span class="text-slate-400">–</span>' : '<span class="' + (Math.abs(v) > 1 ? 'text-red-600' : 'text-emerald-700') + ' font-bold">' + F(v) + '</span>';
       let h = info + '<div class="flex flex-wrap items-center gap-2 mb-2">' + (cvE.act && cvE.act.por === 'Claude' ? '<span class="pill-origen rev">Procesado por Claude, sujeto a modificaciones en caso de existir</span>' : (cvE.act && cvE.act.por ? '<span class="text-[11px] text-slate-500">Actualizado por ' + escapeHtml(cvE.act.por) + '</span>' : '')) + '<button type="button" onclick="cvDescargar()" class="ml-auto px-3 py-1.5 rounded-lg text-xs bg-slate-100 text-slate-800 hover:bg-slate-200 font-medium transition">Descargar en Excel</button></div>';
-      if (!hayMov) h += '<p class="text-[11px] text-amber-700 font-bold mb-2">Todavía no hay Movimiento del inventario (pestaña i): sin él no hay salidas contra qué comparar.</p>';
-      h += '<div class="font-bold text-slate-800 mb-1 text-xs">A. Cruce por mes</div><div class="overflow-x-auto border border-slate-200 rounded-xl"><table class="w-full text-[11px] border-collapse min-w-[560px]"><thead><tr><th class="' + TH + ' text-left">Mes</th><th class="' + TH + ' text-right">Salidas del inventario (movimiento)</th><th class="' + TH + ' text-right">Costo de ventas (mayor)</th><th class="' + TH + ' text-right">Diferencia</th><th class="' + TH + ' text-left">Resultado</th></tr></thead><tbody>';
-      R.filas.forEach(m => { h += '<tr class="border-t border-slate-100"><td class="' + TD + '">' + escapeHtml(cvMes(m.ym)) + '</td><td class="' + TD + ' text-right">' + F(m.sal) + '</td><td class="' + TD + ' text-right">' + F(m.cos) + '</td><td class="' + TD + ' text-right">' + cel(m.dif, true) + '</td><td class="' + TD + ' font-bold ' + (Math.abs(m.dif) > 1 ? 'text-red-600' : 'text-emerald-700') + '">' + (Math.abs(m.dif) > 1 ? 'Revisar' : 'Cuadra') + '</td></tr>'; });
-      if (R.salSinMes || R.cosSinMes) h += '<tr class="border-t border-slate-100"><td class="' + TD + '">Sin detalle por mes</td><td class="' + TD + ' text-right">' + F(R.salSinMes) + '</td><td class="' + TD + ' text-right">' + F(R.cosSinMes) + '</td><td class="' + TD + ' text-right">' + cel(r2f(R.cosSinMes - R.salSinMes), true) + '</td><td></td></tr>';
-      h += '<tr class="border-t-2 border-slate-300 bg-slate-50 font-bold"><td class="' + TD + '">Total</td><td class="' + TD + ' text-right">' + F(R.tSal) + '</td><td class="' + TD + ' text-right">' + F(R.tCos) + '</td><td class="' + TD + ' text-right">' + cel(R.dif, true) + '</td><td class="' + TD + ' ' + (Math.abs(R.dif) > 1 ? 'text-red-600' : 'text-emerald-700') + '">' + (Math.abs(R.dif) > 1 ? 'Revisar' : 'Cuadra') + '</td></tr></tbody></table></div>';
-      // B. Cuentas de costo de ventas contra balance
-      h += '<div class="font-bold text-slate-800 mt-4 mb-1 text-xs">B. Cuentas de costo de ventas del mayor contra el balance</div><div class="overflow-x-auto border border-slate-200 rounded-xl"><table class="w-full text-[11px] border-collapse min-w-[560px]"><thead><tr><th class="' + TH + ' text-left">Cuenta</th><th class="' + TH + ' text-right">Costo según mayor</th><th class="' + TH + ' text-right">Según balance</th><th class="' + TH + ' text-right">Diferencia</th></tr></thead><tbody>';
-      let tD = 0, tH = 0, tN = 0, tB = 0, hayB = false;
-      cvE.cv.forEach(x => { const ps = Array.isArray(x.partidas) ? x.partidas : [], neto = ps.length ? r2f(ps.reduce((t, p) => t + (Number(p.valor) || 0), 0)) : r2f(Number(x.neto) || ((Number(x.debe) || 0) - (Number(x.haber) || 0))), d = Number(x.debe) || 0, hh = Number(x.haber) || 0, b = cvE.bal[String(x.codigo || '').trim()], hb = Number.isFinite(b); tD += d; tH += hh; tN += neto; if (hb) { tB += b; hayB = true; } h += '<tr class="border-t border-slate-100"><td class="' + TD + '">' + escapeHtml((x.codigo ? x.codigo + ' ' : '') + (x.cuenta || '')) + (x.nota ? '<div class="text-[10px] text-slate-500">' + escapeHtml(x.nota) + '</div>' : '') + '</td><td class="' + TD + ' text-right">' + F(neto) + '</td><td class="' + TD + ' text-right">' + (hb ? F(b) : '<span class="text-slate-400">Sin balance</span>') + '</td><td class="' + TD + ' text-right">' + cel(r2f(neto - b), hb) + '</td></tr>'; });
-      h += '<tr class="border-t-2 border-slate-300 bg-slate-50 font-bold"><td class="' + TD + '">Total</td><td class="' + TD + ' text-right">' + F(r2f(tN)) + '</td><td class="' + TD + ' text-right">' + (hayB ? F(r2f(tB)) : '') + '</td><td class="' + TD + ' text-right">' + cel(r2f(tN - tB), hayB) + '</td></tr></tbody></table></div>';
-      // C. Ajuste propuesto
-      if (hayMov && Math.abs(R.dif) > 1) {
-        const v = Math.abs(R.dif), cCos = cvE.cv[0], cInv = cvE.mov[0], mas = R.dif > 0;
-        const nc = x => escapeHtml((x.codigo ? x.codigo + ' ' : '') + (x.cuenta || ''));
-        h += '<div class="font-bold text-slate-800 mt-4 mb-1 text-xs">C. Ajuste propuesto (a criterio del auditor)</div><div class="overflow-x-auto border border-slate-200 rounded-xl"><table class="w-full text-[11px] border-collapse min-w-[520px]"><thead><tr><th class="' + TH + ' text-left">Cuenta</th><th class="' + TH + ' text-right">Debe</th><th class="' + TH + ' text-right">Haber</th></tr></thead><tbody>' +
-          '<tr class="border-t border-slate-100"><td class="' + TD + '">' + (mas ? nc(cInv) : nc(cCos)) + '</td><td class="' + TD + ' text-right">' + F(v) + '</td><td class="' + TD + ' text-right"></td></tr>' +
-          '<tr class="border-t border-slate-100"><td class="' + TD + '">' + (mas ? nc(cCos) : nc(cInv)) + '</td><td class="' + TD + ' text-right"></td><td class="' + TD + ' text-right">' + F(v) + '</td></tr></tbody></table></div>' +
-          '<p class="text-[11px] text-slate-500 mt-1">' + (mas ? 'El costo de ventas del mayor es mayor que lo que salió del inventario: de ser un exceso de costo, se devolvería al inventario.' : 'El costo de ventas del mayor es menor que lo que salió del inventario: de ser una salida no llevada al costo, se registraría como costo.') + ' Antes de ajustar hay que identificar la causa (cortes, ajustes, reclasificaciones, cuentas distintas). Con varias cuentas, se usa la primera de cada lista; cámbiala si corresponde.</p>';
+      h += '<div class="font-bold text-slate-800 mb-1 text-xs">A. Cuadro por mes <span class="font-normal text-slate-500">(Diferencia = salidas − costo; clic en un mes para ver sus asientos)</span></div><div class="overflow-x-auto border border-slate-200 rounded-xl"><table class="w-full text-[11px] border-collapse min-w-[560px]"><thead><tr><th class="' + TH + ' text-left">Mes</th><th class="' + TH + ' text-right">Salidas del inventario</th><th class="' + TH + ' text-right">Costo de ventas</th><th class="' + TH + ' text-right">Diferencia</th><th class="' + TH + ' text-right"># asientos</th></tr></thead><tbody>';
+      R.filas.forEach(m => {
+        const ab = cvE.abierto === m.ym;
+        h += '<tr onclick="cvAbrir(\'' + m.ym + '\')" class="border-t border-slate-100 cursor-pointer hover:bg-slate-50' + (ab ? ' bg-slate-100' : '') + '"><td class="' + TD + ' font-semibold">' + (ab ? '▾ ' : '▸ ') + escapeHtml(cvMes(m.ym)) + '</td><td class="' + TD + ' text-right">' + F(m.sal) + '</td><td class="' + TD + ' text-right">' + F(m.cos) + '</td><td class="' + TD + ' text-right">' + dc(m.dif, true) + '</td><td class="' + TD + ' text-right text-slate-500">' + m.n + '</td></tr>';
+        if (ab) {
+          h += '<tr><td colspan="5" class="p-2 bg-slate-50"><div class="max-h-96 overflow-auto border border-slate-200 rounded-lg bg-white"><table class="w-full text-[11px] border-collapse min-w-[800px]"><thead><tr class="sticky top-0"><th class="' + TH + ' text-left">Fecha</th><th class="' + TH + ' text-left">Comprobante</th><th class="' + TH + ' text-left">Descripción</th><th class="' + TH + ' text-right">Salida del inventario</th><th class="' + TH + ' text-right">Costo de ventas</th><th class="' + TH + ' text-right">Diferencia</th><th class="' + TH + ' text-left">Tipo</th></tr></thead><tbody>' +
+            m.asientos.map(p => { const sal = Number(p.salida) || 0, cos = Number(p.valor) || 0, d = r2f(sal - cos); return '<tr class="border-t border-slate-100 align-top' + (Math.abs(d) > 0.005 ? ' bg-amber-50' : '') + '"><td class="' + TD + ' whitespace-nowrap">' + mvFechaCorta(p.fecha) + '</td><td class="' + TD + ' whitespace-nowrap">' + escapeHtml(p.ref || '') + '</td><td class="' + TD + '">' + escapeHtml(p.desc || '') + '</td><td class="' + TD + ' text-right whitespace-nowrap">' + F(sal) + '</td><td class="' + TD + ' text-right whitespace-nowrap">' + F(cos) + '</td><td class="' + TD + ' text-right whitespace-nowrap">' + (Math.abs(d) > 0.005 ? '<b class="text-red-600">' + F(d) + '</b>' : '<span class="text-slate-400">0.00</span>') + '</td><td class="' + TD + ' text-slate-600">' + escapeHtml(p.tipo || '') + '</td></tr>'; }).join('') + '</tbody></table></div></td></tr>';
+        }
+      });
+      h += '<tr class="border-t-2 border-slate-300 bg-slate-50 font-bold"><td class="' + TD + '">Total</td><td class="' + TD + ' text-right">' + F(R.tSal) + '</td><td class="' + TD + ' text-right">' + F(R.tCos) + '</td><td class="' + TD + ' text-right">' + dc(R.dif, true) + '</td><td class="' + TD + ' text-right text-slate-500">' + R.nAsientos + '</td></tr></tbody></table></div>';
+      // B. Cruces
+      h += '<div class="font-bold text-slate-800 mt-4 mb-1 text-xs">B. Cruces contra el movimiento y el balance</div><div class="grid md:grid-cols-2 gap-3">' +
+        '<div class="border border-slate-200 rounded-xl overflow-hidden"><table class="w-full text-[11px] border-collapse"><thead><tr><th class="' + TH + ' text-left" colspan="2">Salidas del inventario contra el Movimiento (pestaña i)</th></tr></thead><tbody>' +
+        '<tr class="border-t border-slate-100"><td class="' + TD + '">Salidas del cuadro</td><td class="' + TD + ' text-right">' + F(R.tSal) + '</td></tr>' +
+        '<tr class="border-t border-slate-100"><td class="' + TD + '">Salidas del Movimiento del inventario</td><td class="' + TD + ' text-right">' + (R.hayMov ? F(R.movTot) : '<span class="text-slate-400">Sin movimiento</span>') + '</td></tr>' +
+        '<tr class="border-t border-slate-200 bg-slate-50 font-bold"><td class="' + TD + '">Diferencia</td><td class="' + TD + ' text-right">' + dc(R.difMov, R.hayMov) + '</td></tr>' +
+        (R.hayMov && R.hayVal ? '<tr class="border-t border-slate-100"><td class="' + TD + ' text-[10px] text-slate-500" colspan="2">' + (R.mesesDifMov ? R.mesesDifMov + ' mes(es) con diferencia entre el cuadro y el movimiento.' : 'También cuadra mes por mes.') + '</td></tr>' : '') +
+        '</tbody></table></div>' +
+        '<div class="border border-slate-200 rounded-xl overflow-hidden"><table class="w-full text-[11px] border-collapse"><thead><tr><th class="' + TH + ' text-left" colspan="2">Costo de ventas contra el balance</th></tr></thead><tbody>' +
+        '<tr class="border-t border-slate-100"><td class="' + TD + '">Costo de ventas del cuadro (mayor)</td><td class="' + TD + ' text-right">' + F(R.tCos) + '</td></tr>' +
+        '<tr class="border-t border-slate-100"><td class="' + TD + '">Costo de ventas según balance</td><td class="' + TD + ' text-right">' + (R.hayBal ? F(R.tBal) : '<span class="text-slate-400">Sin balance</span>') + '</td></tr>' +
+        '<tr class="border-t border-slate-200 bg-slate-50 font-bold"><td class="' + TD + '">Diferencia</td><td class="' + TD + ' text-right">' + dc(R.difBal, R.hayBal) + '</td></tr>' +
+        '</tbody></table></div></div>';
+      // C. De dónde sale la diferencia
+      const conDif = R.tipos.filter(t => Math.abs(t.dif) > 0.005);
+      if (conDif.length || R.tipos.length > 1) {
+        h += '<div class="font-bold text-slate-800 mt-4 mb-1 text-xs">C. De dónde sale la diferencia entre salidas y costo <span class="font-normal text-slate-500">(por tipo de asiento)</span></div><div class="overflow-x-auto border border-slate-200 rounded-xl"><table class="w-full text-[11px] border-collapse min-w-[560px]"><thead><tr><th class="' + TH + ' text-left">Tipo de asiento</th><th class="' + TH + ' text-right"># asientos</th><th class="' + TH + ' text-right">Salidas</th><th class="' + TH + ' text-right">Costo</th><th class="' + TH + ' text-right">Diferencia</th></tr></thead><tbody>' +
+          R.tipos.map(t => '<tr class="border-t border-slate-100"><td class="' + TD + '">' + escapeHtml(t.tipo) + '</td><td class="' + TD + ' text-right">' + t.n + '</td><td class="' + TD + ' text-right">' + F(t.sal) + '</td><td class="' + TD + ' text-right">' + F(t.cos) + '</td><td class="' + TD + ' text-right">' + dc(t.dif, true) + '</td></tr>').join('') +
+          '<tr class="border-t-2 border-slate-300 bg-slate-50 font-bold"><td class="' + TD + '">Total</td><td class="' + TD + ' text-right">' + R.nAsientos + '</td><td class="' + TD + ' text-right">' + F(R.tSal) + '</td><td class="' + TD + ' text-right">' + F(R.tCos) + '</td><td class="' + TD + ' text-right">' + dc(R.dif, true) + '</td></tr></tbody></table></div>';
       }
-      c.innerHTML = h;
+      const notas = cvE.cv.filter(x => x.nota).map(x => '<p class="text-[11px] text-slate-600 mt-2"><b>' + escapeHtml((x.codigo ? x.codigo + ' ' : '') + (x.cuenta || '')) + ':</b> ' + escapeHtml(x.nota) + '</p>').join('');
+      c.innerHTML = h + notas;
     }
     async function cvDescargar() {
       if (!window.ExcelJS) { alert('No se pudo cargar el generador de Excel. Revisa tu conexión a internet.'); return; }
       const R = cvCalcular(), info = [['Año evaluado', cvE.anio], ['Visita', cvE.visita === 'final' ? 'Final' : 'Preliminar'], ['Preparado por', (typeof nombreUsuarioActivo === 'function' && nombreUsuarioActivo()) || '']];
-      const aoa = [['Mes', 'Salidas del inventario (movimiento)', 'Costo de ventas (mayor)', 'Diferencia', 'Resultado'], ...R.filas.map(m => [cvMes(m.ym), m.sal, m.cos, m.dif, Math.abs(m.dif) > 1 ? 'Revisar' : 'Cuadra'])];
-      if (R.salSinMes || R.cosSinMes) aoa.push(['Sin detalle por mes', R.salSinMes, R.cosSinMes, r2f(R.cosSinMes - R.salSinMes), '']);
-      aoa.push(['Total', R.tSal, R.tCos, R.dif, Math.abs(R.dif) > 1 ? 'Revisar' : 'Cuadra']);
-      const cu = [['Cuenta', 'Costo según mayor', 'Según balance', 'Diferencia'], ...cvE.cv.map(x => { const ps = Array.isArray(x.partidas) ? x.partidas : [], neto = ps.length ? r2f(ps.reduce((t, p) => t + (Number(p.valor) || 0), 0)) : r2f(Number(x.neto) || ((Number(x.debe) || 0) - (Number(x.haber) || 0))), b = cvE.bal[String(x.codigo || '').trim()], hb = Number.isFinite(b); return [(x.codigo ? x.codigo + ' ' : '') + (x.cuenta || ''), neto, hb ? b : '', hb ? r2f(neto - b) : '']; })];
-      const hojas = [{ nombre: 'Cruce por mes', aoa, anchos: [{ wch: 20 }, { wch: 22 }, { wch: 22 }, { wch: 16 }, { wch: 14 }], op: { titulo: 'Costo de ventas vs salidas del inventario (mayor contable)', info, totales: [] } },
-        { nombre: 'Cuentas de costo', aoa: cu, anchos: [{ wch: 44 }, { wch: 18 }, { wch: 16 }, { wch: 16 }], op: { titulo: 'Cuentas de costo de ventas contra el balance', info } }];
+      const aoa = [['Mes', 'Salidas del inventario', 'Costo de ventas', 'Diferencia (salidas − costo)', '# asientos'], ...R.filas.map(m => [cvMes(m.ym), m.sal, m.cos, m.dif, m.n]), ['Total', R.tSal, R.tCos, R.dif, R.nAsientos],
+        [], ['Cruces'], ['Salidas del cuadro', R.tSal], ['Salidas del Movimiento del inventario', R.hayMov ? R.movTot : ''], ['Diferencia', R.hayMov ? R.difMov : ''], [], ['Costo de ventas del cuadro (mayor)', R.tCos], ['Costo de ventas según balance', R.hayBal ? R.tBal : ''], ['Diferencia', R.hayBal ? R.difBal : '']];
+      const ti = [['Tipo de asiento', '# asientos', 'Salidas', 'Costo', 'Diferencia'], ...R.tipos.map(t => [t.tipo, t.n, t.sal, t.cos, t.dif])];
+      const det = [['Mes', 'Fecha', 'Comprobante', 'Descripción', 'Salida del inventario', 'Costo de ventas', 'Diferencia', 'Tipo']]; R.filas.forEach(m => m.asientos.forEach(p => { const sal = Number(p.salida) || 0, cos = Number(p.valor) || 0; det.push([cvMes(m.ym), p.fecha || '', p.ref || '', p.desc || '', sal, cos, r2f(sal - cos), p.tipo || '']); }));
+      const hojas = [{ nombre: 'Cuadro por mes', aoa, anchos: [{ wch: 36 }, { wch: 22 }, { wch: 20 }, { wch: 26 }, { wch: 12 }], op: { titulo: 'Costo de ventas vs salidas del inventario (mayor contable)', info } },
+        { nombre: 'Origen de la diferencia', aoa: ti, anchos: [{ wch: 44 }, { wch: 12 }, { wch: 18 }, { wch: 18 }, { wch: 16 }], op: { titulo: 'De dónde sale la diferencia, por tipo de asiento', info } },
+        { nombre: 'Detalle de asientos', aoa: det, anchos: [{ wch: 14 }, { wch: 12 }, { wch: 26 }, { wch: 80 }, { wch: 18 }, { wch: 18 }, { wch: 16 }, { wch: 36 }], op: { titulo: 'Detalle de todos los asientos por mes', info, fecha: [1] } }];
       const cli = (typeof impNombreCliente === 'function' && impNombreCliente()) || 'cliente';
       try { await arrXlsxConFormato(hojas, cli, 'CostoVentas_vs_Salidas_' + String(cli).replace(/[^A-Za-z0-9]+/g, '_').slice(0, 30) + '_' + cvE.anio + '.xlsx'); } catch (e) { alert('No se pudo armar el Excel: ' + (e.message || e)); }
     }
