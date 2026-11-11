@@ -1210,8 +1210,8 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
 
     <section id="sec-aprobaciones-claude" class="hidden bg-white rounded-2xl shadow-xl border border-slate-200 p-6 min-h-[92vh] space-y-5">
       <div class="border-b pb-4">
-        <h1 class="text-xl font-bold text-slate-800">Aprobaciones de pedidos</h1>
-        <p class="text-xs text-slate-500">Aquí el Socio o el Supervisor autorizan, rechazan o cancelan los pedidos a Claude. Claude solo trabaja los pedidos autorizados y deja el resultado en "Trabajo procesado por Claude".</p>
+        <h1 class="text-xl font-bold text-slate-800">Pedidos y aprobaciones</h1>
+        <p class="text-xs text-slate-500">Aquí todos pueden ver cómo va cada pedido a Claude. Solo el Socio o el Supervisor autorizan o rechazan; cada auditor puede cancelar sus propios pedidos. Claude solo trabaja los pedidos autorizados y deja el resultado en "Trabajo procesado por Claude".</p>
       </div>
       <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div>
@@ -1746,7 +1746,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
 
               <div class="border border-slate-300 rounded-xl p-4 space-y-2" style="background:#ecece9">
                 <h2 class="text-xs font-bold text-slate-700">Cómo se pide el análisis</h2>
-                <p class="text-[11px] text-slate-600 leading-relaxed">El análisis lo prepara Claude a partir de un pedido, igual que en Bancos. Sube la documentación (certificados o pólizas, estados de cuenta, confirmaciones) con el botón de abajo (se abre una ventana, subes los archivos y presionas Enviar), el Socio o Supervisor lo autoriza en "Aprobaciones de pedidos" y Claude lo procesa de forma automática. El resultado aparece aquí, a la derecha, para que lo revises.</p>
+                <p class="text-[11px] text-slate-600 leading-relaxed">El análisis lo prepara Claude a partir de un pedido, igual que en Bancos. Sube la documentación (certificados o pólizas, estados de cuenta, confirmaciones) con el botón de abajo (se abre una ventana, subes los archivos y presionas Enviar), el Socio o Supervisor lo autoriza en "Pedidos y aprobaciones" y Claude lo procesa de forma automática. El resultado aparece aquí, a la derecha, para que lo revises.</p>
                 <button type="button" onclick="solicitarAnalisisInversiones()" class="w-full py-2.5 rounded-lg text-xs transition bg-slate-200 text-slate-900 hover:bg-slate-300 font-semibold">Solicitar análisis a Claude</button>
               </div>
               <div class="hidden">
@@ -3371,7 +3371,6 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
     }
 
     function navegarMenu(seccion, sub, cuenta) {
-      if (seccion === 'aprobaciones-claude' && !puedeAutorizarPedidos()) { alert('Solo el Socio o el Supervisor pueden aprobar pedidos.'); return; }
       if (seccion === 'mayor') { try { mayorPoblarClientes(); } catch (e) { } }
       if (seccion === 'visitas') { fechaCalendarioActual = new Date(); renderizarCalendarioLineal(); setTimeout(posicionarCalendarioHoy, 60); }
       // Clientes y Usuarios solo se abren con ingreso de Socio o Supervisor
@@ -3563,8 +3562,8 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
         <button type="button" onclick="navegarMenu('pedidos-claude')" id="nav-pedidos-claude" style="display:none" class="w-full text-left px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:bg-slate-800 hover:text-white transition flex items-center gap-2">
           <span>Pedidos a Claude</span>
         </button>
-        <button type="button" onclick="navegarMenu('aprobaciones-claude')" id="nav-aprobaciones-claude" style="display:none" class="w-full text-left px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:bg-slate-800 hover:text-white transition flex items-center gap-2">
-          <span>Aprobaciones de pedidos</span><span id="badge-pedidos-claude" class="hidden ml-auto text-[10px] font-bold bg-slate-200 text-slate-900 rounded-full px-2 py-0.5"></span>
+        <button type="button" onclick="navegarMenu('aprobaciones-claude')" id="nav-aprobaciones-claude" class="w-full text-left px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:bg-slate-800 hover:text-white transition flex items-center gap-2">
+          <span>Pedidos y aprobaciones</span><span id="badge-pedidos-claude" class="hidden ml-auto text-[10px] font-bold bg-slate-200 text-slate-900 rounded-full px-2 py-0.5"></span>
         </button>
         <button type="button" onclick="navegarMenu('claude-revisar')" id="nav-claude-revisar" style="display:none" class="w-full text-left px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:bg-slate-800 hover:text-white transition flex items-center gap-2">
           <span>Trabajo procesado por Claude</span>
@@ -4594,7 +4593,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       if (falla.length) { err('El pedido se creó, pero no se subieron: ' + falla.join('; ') + '. Cancela el pedido y vuelve a enviarlo.'); cargarPedidosClaude(); return; }
       msg.textContent = 'Pedido enviado. Avisando por correo al Socio y al Supervisor…';
       const av = await avisarPedidoCorreo(ins.id, 'solicitado');
-      msg.textContent = 'Pedido enviado con ' + archivos.length + ' archivo(s). Quedó en "Aprobaciones de pedidos" esperando la autorización del Socio o Supervisor. ' + av;
+      msg.textContent = 'Pedido enviado con ' + archivos.length + ' archivo(s). Quedó en "Pedidos y aprobaciones" esperando la autorización del Socio o Supervisor. ' + av;
       document.getElementById('pc-nota').value = ''; { const ci = document.getElementById('pc-ctas-inv'); if (ci) ci.value = ''; } { const cj = document.getElementById('pc-ctas-cv'); if (cj) cj.value = ''; } document.getElementById('pc-archivos').value = ''; pcArchivosSel = []; pcEtiquetasElegidas = []; document.getElementById('pc-confirma').checked = false; pcArchivosElegidos();
       registrarActividad('Solicitó análisis a Claude', fila.sumaria + ' · ' + fila.visita, { cliente: fila.cliente_id, anio: String(fila.anio) });
       cargarPedidosClaude();
@@ -4832,7 +4831,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
         if (reiniciar) { clearInterval(timerAvisoPedidos); timerAvisoPedidos = setInterval(() => avisoPedidosClaude(false), 120000); }
         const b = document.getElementById('badge-pedidos-claude');
         const nb = document.getElementById('nav-aprobaciones-claude');
-        if (nb) nb.style.display = (usuarioActivo && puedeAutorizarPedidos() && herramientaHabilitada('pedidos-claude')) ? '' : 'none';
+        if (nb) nb.style.display = (usuarioActivo && herramientaHabilitada('pedidos-claude')) ? '' : 'none';
         if (!usuarioActivo || !herramientaHabilitada('pedidos-claude')) { if (b) b.classList.add('hidden'); return; }
         const { data } = await supabaseClient.from('pedidos_claude').select('estado').in('estado', ['solicitado', 'autorizado']);
         const l = data || [], porAut = l.filter(x => x.estado === 'solicitado').length, auts = l.filter(x => x.estado === 'autorizado').length;
@@ -5227,7 +5226,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       else if (!m) {
         m = document.createElement('div'); m.id = 'pc-modal';
         m.className = 'fixed inset-0 z-[9000] hidden items-start justify-center bg-black/40 p-4 overflow-y-auto';
-        m.innerHTML = '<div class="bg-white rounded-xl shadow-xl w-full max-w-4xl my-6"><div class="px-5 py-3 border-b flex items-center justify-between"><div><div class="font-bold text-slate-800">Enviar pedido a Claude</div><div class="text-[11px] text-slate-500">Sube la documentación y presiona Enviar. El pedido pasa a "Aprobaciones de pedidos" para que el Socio o el Supervisor lo autoricen.</div></div><button type="button" onclick="pcCerrarModal()" class="text-slate-500 hover:text-slate-800 text-lg px-2">✕</button></div><div id="pc-modal-cuerpo" class="p-4"></div></div>';
+        m.innerHTML = '<div class="bg-white rounded-xl shadow-xl w-full max-w-4xl my-6"><div class="px-5 py-3 border-b flex items-center justify-between"><div><div class="font-bold text-slate-800">Enviar pedido a Claude</div><div class="text-[11px] text-slate-500">Sube la documentación y presiona Enviar. El pedido pasa a "Pedidos y aprobaciones" para que el Socio o el Supervisor lo autoricen.</div></div><button type="button" onclick="pcCerrarModal()" class="text-slate-500 hover:text-slate-800 text-lg px-2">✕</button></div><div id="pc-modal-cuerpo" class="p-4"></div></div>';
         document.body.appendChild(m);
       }
       if (!dest) { document.getElementById('pc-modal-cuerpo').appendChild(box); m.classList.remove('hidden'); m.classList.add('flex'); }
@@ -5287,7 +5286,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
         if (!est || !c.isConnected) continue;
         if (est !== 'hecho') sigue = true;
         const txt = { solicitado: 'Pedido enviado, esperando autorización del Socio o Supervisor.', autorizado: 'Pedido autorizado: Claude lo está analizando.', hecho: 'Claude ya procesó este pedido. Actualiza la pantalla (F5) para ver la información; si sigue vacía, avísale al administrador.' }[est];
-        c.innerHTML = '<p>' + txt + '</p><div style="display:flex;justify-content:center">' + pcBarraAvance(fila) + '</div>' + (puedeAutorizarPedidos() ? '<button type="button" onclick="navegarMenu(\'aprobaciones-claude\')" class="px-4 py-2 bg-white text-slate-700 hover:bg-slate-50 border border-slate-400 rounded-lg text-xs font-bold transition">Ir a Aprobaciones de pedidos</button>' : '');
+        c.innerHTML = '<p>' + txt + '</p><div style="display:flex;justify-content:center">' + pcBarraAvance(fila) + '</div><button type="button" onclick="navegarMenu(\'aprobaciones-claude\')" class="px-4 py-2 bg-white text-slate-700 hover:bg-slate-50 border border-slate-400 rounded-lg text-xs font-bold transition">Ver pedidos y aprobaciones</button>';
       }
       clearTimeout(pcAvTimer);
       if (sigue) pcAvTimer = setTimeout(pcRefrescarAvisos, 15000);
@@ -15383,7 +15382,7 @@ ${cont.innerHTML}
     // ===== Históricos de visitas: quién ingresa y qué hace (bitácora en Supabase) =====
     const NOMBRE_PANTALLA = {
       auditoria: '1. Planificación: Cuestionarios de evaluación', desarrollo: 'Pantalla principal', analisis: '2. Auditoría/Análisis Claves',
-      sumarias: 'Sumarias', pendientes: 'Pendientes', 'claude-revisar': 'Trabajo procesado por Claude', 'pedidos-claude': 'Pedidos a Claude', 'aprobaciones-claude': 'Aprobaciones de pedidos', visitas: '1. Planificación: Visitas (Calendario)', asignacion: '1. Planificación: Asignación de cuentas',
+      sumarias: 'Sumarias', pendientes: 'Pendientes', 'claude-revisar': 'Trabajo procesado por Claude', 'pedidos-claude': 'Pedidos a Claude', 'aprobaciones-claude': 'Pedidos y aprobaciones', visitas: '1. Planificación: Visitas (Calendario)', asignacion: '1. Planificación: Asignación de cuentas',
       indices: 'Herramienta: Índices', mayor: 'Herramienta: Mayor', contratos: 'Herramienta: Resumen de contratos',
       flujo: 'Herramienta: Flujo de efectivo', arrend: 'Herramienta: Arrendamientos NIIF 16', pce: 'Herramienta: Matriz PCE',
       reuniones: 'Herramienta: Resumen de reuniones', clientes: 'Configuración: Clientes', usuarios: 'Configuración: Usuarios / Auditores',
