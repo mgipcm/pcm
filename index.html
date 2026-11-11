@@ -17005,7 +17005,7 @@ ${cont.innerHTML}
       { k: 'gastos', t: 'Costos de importación registrados en gastos', rol: 'gastos' }
     ];
     const IMP_ROLES = [
-      ['inventario', 'Inventarios (costo de la importación)'], ['inv_final', 'Cuentas de inventario (detalle de las cuentas donde entra la mercadería)'], ['iva', 'IVA pagado en compras'], ['anticipo', 'Anticipo de importaciones'], ['proveedores', 'Proveedores'],
+      ['inventario', 'Inventarios / Importaciones en tránsito (costo de la importación)'], ['inv_final', 'Cuentas de inventario (detalle de las cuentas donde entra la mercadería)'], ['iva', 'IVA pagado en compras'], ['anticipo', 'Anticipo de importaciones'], ['proveedores', 'Proveedores'],
       ['isd', 'ISD (costo de la importación o su provisión)'], ['gastos', 'Costos de importación registrados en gastos (cuentas de resultados: agente, contenedor, seguro, transporte, logística, financiero)']
     ];
     // Los roles guardados antes con cuentas separadas (agente, manejo, seguro, transporte, logístico, financiero) se suman al rol único "gastos"
@@ -18114,7 +18114,7 @@ ${cont.innerHTML}
         if (error) impMsg('No se guardó: ' + (error.message || error), 'text-red-600 font-bold'); else { impMsg('Guardado ✓'); impEstado.act = { por: fila.actualizado_por, en: fila.updated_at }; impSyncCabecera(); }
       }, 700);
     }
-    const IMP_TABS = [['liq', '1. Liquidaciones de importación'], ['cruce', '2. Liquidaciones vs importaciones en tránsito'], ['ent', '3. Importaciones en tránsito → Inventario']];
+    const IMP_TABS = [['liq', '1. Liquidaciones de importación'], ['cruce', '2. Liquidaciones vs Importaciones (mayor contable)'], ['ent', '3. Importaciones en tránsito → Inventario']];
     function impTab(t) { impEstado.tab = t; impRender(); }
     function impRender() {
       IMP_TABS.forEach(([t]) => { const b = $im('im-tab-' + t); if (b) b.className = 'px-3 py-1.5 text-xs transition rounded-lg ' + (impEstado.tab === t ? 'bg-slate-200 text-slate-900 font-semibold' : 'text-slate-600 hover:bg-slate-100 font-medium'); });
@@ -18319,7 +18319,7 @@ ${(im.aprendidos || []).length ? `<p class="text-xs text-slate-600 bg-slate-50 b
     function impHtmlCruce() {
       const imp = impEstado.imports, C = impEstado.cruce, M = impEstado.mayor, cfg = impEstado.cfg;
       if (!imp.length) return '<p class="p-6 text-xs text-slate-400 text-center">Primero carga las liquidaciones en la hoja 1.</p>';
-      const nombres = IMP_ROLES.map(([k, t]) => `<label class="flex flex-col gap-1 text-xs text-slate-600"><span>${t}</span><input type="text" value="${impE(cfg.roles[k] || '')}" placeholder="Códigos separados por coma" onchange="impEditarRol('${k}', this.value)" class="${impIn} w-full"></label>`).join('');
+      const nombres = IMP_ROLES.filter(([k]) => k !== 'inv_final').map(([k, t]) => `<label class="flex flex-col gap-1 text-xs text-slate-600"><span>${t}</span><input type="text" value="${impE(cfg.roles[k] || '')}" placeholder="Códigos separados por coma" onchange="impEditarRol('${k}', this.value)" class="${impIn} w-full"></label>`).join('');
       let h = `<div class="p-3 space-y-3 text-xs text-slate-700">`;
       if (!C) h += pcHtmlAviso('AF', impEstado.cliente, impEstado.anio, impEstado.visita, 'import');
       h += `<div class="p-4 bg-white border border-slate-200 rounded-xl space-y-2"><div class="text-[13px] font-semibold text-slate-800">A. Cuentas del mayor que usa este cliente</div>
