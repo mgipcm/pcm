@@ -3389,6 +3389,29 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       document.body.appendChild(ov);
       setTimeout(() => { const b = ov.querySelector('[data-s]'); if (b) b.focus(); }, 0);
     }
+    // Globos de ayuda (lo que sale al pasar el cursor): reemplazan al recuadro rectangular del navegador por uno redondeado
+    (function () {
+      let caja = null, actual = null;
+      const mostrar = (el, x, y) => {
+        if (!caja) { caja = document.createElement('div'); caja.style.cssText = 'position:fixed;z-index:30000;pointer-events:none;max-width:300px;padding:9px 13px;border-radius:14px;background:#1e293b;color:#fff;font-size:11.5px;line-height:1.45;box-shadow:0 10px 28px rgba(0,0,0,.28);display:none;white-space:pre-line;word-break:break-word'; document.body.appendChild(caja); }
+        caja.textContent = el.dataset.tip; caja.style.display = 'block';
+        const w = caja.offsetWidth, h = caja.offsetHeight;
+        caja.style.left = Math.max(8, Math.min(x + 14, window.innerWidth - w - 8)) + 'px';
+        caja.style.top = Math.max(8, (y + 22 + h > window.innerHeight - 8) ? y - h - 14 : y + 22) + 'px';
+      };
+      const soltar = () => { if (actual) { if (actual.dataset.tip && !actual.getAttribute('title')) actual.setAttribute('title', actual.dataset.tip); delete actual.dataset.tip; actual = null; } if (caja) caja.style.display = 'none'; };
+      document.addEventListener('mouseover', e => {
+        const el = e.target && e.target.closest ? e.target.closest('[title]') : null;
+        if (!el || el === actual) return;
+        soltar();
+        const t = el.getAttribute('title'); if (!t || !t.trim()) return;
+        el.dataset.tip = t; el.removeAttribute('title'); actual = el; mostrar(el, e.clientX, e.clientY);
+      }, true);
+      document.addEventListener('mousemove', e => { if (actual && caja && caja.style.display === 'block') mostrar(actual, e.clientX, e.clientY); }, true);
+      document.addEventListener('mouseout', e => { if (actual && !(e.relatedTarget && actual.contains(e.relatedTarget))) soltar(); }, true);
+      document.addEventListener('mousedown', soltar, true);
+      document.addEventListener('scroll', soltar, true);
+    })();
     function confirmarApp(msg) { return new Promise(res => dlgAbrir(msg, true, res)); }
     window.alert = function (msg) { dlgAbrir(msg, false, null); };
     function navegarMenu(seccion, sub, cuenta) {
