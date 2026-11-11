@@ -3374,6 +3374,23 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       if (primero) primero.dispatchEvent(new Event('change', { bubbles: true })); // una sola carga; no cuenta como elección de la persona
     }
 
+    // ===== Cuadros de aviso y de confirmación de la app (esquinas redondeadas, tamaño compacto) =====
+    function dlgEsc(t) { return String(t == null ? '' : t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+    function dlgAbrir(msg, conCancelar, ok) {
+      const ov = document.createElement('div');
+      ov.className = 'fixed inset-0 flex items-center justify-center p-4';
+      ov.style.cssText = 'z-index:20000;background:rgba(15,23,42,.45)';
+      ov.innerHTML = '<div role="dialog" aria-modal="true" style="background:#fff;border-radius:18px;box-shadow:0 20px 50px rgba(0,0,0,.25);width:min(92vw,380px);max-height:80vh;display:flex;flex-direction:column;overflow:hidden"><div style="padding:22px 22px 12px;overflow-y:auto;font-size:13px;line-height:1.5;color:#1e293b;word-break:break-word">' + dlgEsc(msg).replace(/\n/g, '<br>') + '</div><div style="padding:12px 18px 18px;display:flex;justify-content:flex-end;gap:8px">' + (conCancelar ? '<button type="button" data-n style="padding:7px 16px;border-radius:12px;border:1px solid #cbd5e1;background:#fff;color:#334155;font-size:12px;font-weight:600;cursor:pointer">Cancelar</button>' : '') + '<button type="button" data-s style="padding:7px 18px;border-radius:12px;border:0;background:#1e293b;color:#fff;font-size:12px;font-weight:700;cursor:pointer">Aceptar</button></div></div>';
+      const cerrar = v => { document.removeEventListener('keydown', tecla, true); ov.remove(); if (ok) ok(v); };
+      const tecla = e => { if (e.key === 'Escape') { e.stopPropagation(); cerrar(false); } else if (e.key === 'Enter') { e.stopPropagation(); e.preventDefault(); cerrar(true); } };
+      ov.querySelector('[data-s]').onclick = () => cerrar(true);
+      const bn = ov.querySelector('[data-n]'); if (bn) bn.onclick = () => cerrar(false);
+      document.addEventListener('keydown', tecla, true);
+      document.body.appendChild(ov);
+      setTimeout(() => { const b = ov.querySelector('[data-s]'); if (b) b.focus(); }, 0);
+    }
+    function confirmarApp(msg) { return new Promise(res => dlgAbrir(msg, true, res)); }
+    window.alert = function (msg) { dlgAbrir(msg, false, null); };
     function navegarMenu(seccion, sub, cuenta) {
       if (seccion === 'mayor') { try { mayorPoblarClientes(); } catch (e) { } }
       if (seccion === 'visitas') { fechaCalendarioActual = new Date(); renderizarCalendarioLineal(); setTimeout(posicionarCalendarioHoy, 60); }
@@ -3797,8 +3814,8 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
         if (el) { el.textContent = 'No se guardó: ' + textoErrorTablaAnalisis(err); el.className = 'text-[11px] min-h-[1rem] text-red-600 font-bold'; }
       }
     }
-    function restablecerProgramaPredeterminado() {
-      if (!window.confirm('Se reemplazarán el objetivo, el procedimiento y la fuente por el texto predeterminado. El responsable y la fecha no cambian.\n\n¿Quieres continuar?')) return;
+    async function restablecerProgramaPredeterminado() {
+      if (!await confirmarApp('Se reemplazarán el objetivo, el procedimiento y la fuente por el texto predeterminado. El responsable y la fecha no cambian.\n\n¿Quieres continuar?')) return;
       const def = programaPredeterminado();
       document.getElementById('an-prog-objetivo').value = def.objetivo;
       document.getElementById('an-prog-procedimiento').value = def.procedimiento;
@@ -4032,7 +4049,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
         const filas = filasReporteProgramas(XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, raw: true, defval: null }));
         if (!filas.length) throw new Error('El archivo no tiene procedimientos.');
         const nSum = new Set(filas.map(x => x.sumaria)).size;
-        if (!window.confirm('El archivo trae ' + filas.length + ' procedimientos de ' + nSum + ' sumarias.\n\nSe reemplazarán todos los procedimientos actuales (' + programasPlantilla.length + ') y se perderán los cambios hechos en esta pantalla.\n\n¿Quieres continuar?')) { est.textContent = ''; return; }
+        if (!await confirmarApp('El archivo trae ' + filas.length + ' procedimientos de ' + nSum + ' sumarias.\n\nSe reemplazarán todos los procedimientos actuales (' + programasPlantilla.length + ') y se perderán los cambios hechos en esta pantalla.\n\n¿Quieres continuar?')) { est.textContent = ''; return; }
         est.textContent = 'Guardando...';
         const quien = nombreUsuarioActivo() || null;
         const del = await supabaseClient.from('programas_plantilla').delete().gte('id', 0);
@@ -4063,7 +4080,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       data = (data || []).filter(r => !motivosNoAplica(r, r.sumaria, ctxP).length);
       if (totalP && data.length < totalP) est.textContent = 'Se omitieron ' + (totalP - data.length) + ' procedimiento(s) que no corresponden por el tamaño de la empresa o el riesgo combinado (se definen en Sumarias).';
       if (!data || !data.length) { est.textContent = 'La plantilla no tiene procedimientos vigentes para ' + sums.join(' y ') + '.'; return; }
-      if (!window.confirm('Se reemplazará el texto del procedimiento por ' + data.length + ' pasos de la plantilla (' + sums.join(' y ') + ').\n\n¿Quieres continuar?')) return;
+      if (!await confirmarApp('Se reemplazará el texto del procedimiento por ' + data.length + ' pasos de la plantilla (' + sums.join(' y ') + ').\n\n¿Quieres continuar?')) return;
       document.getElementById('an-prog-procedimiento').value = data.map(r => (r.codigo ? r.codigo + '. ' : '') + (r.tipo_procedimiento ? '[' + r.tipo_procedimiento + '] ' : '') + r.procedimiento).join('\n\n');
       programarGuardadoPrograma();
     }
@@ -4432,7 +4449,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       const email = usuarioSesionEmail || (usuarioActivo && usuarioActivo.email) || '', quien = nombreUsuarioActivo();
       if (!quien) { alert('Ingresa con tu usuario para enviar el pendiente.'); return; }
       const NOM = { todo: 'To/Do', quicklett: 'Quick Lett', opinion: 'Opinión' };
-      if (!confirm('¿Enviar este pendiente a ' + NOM[destino] + '?\n\n' + x.texto + '\n\nPregunta: C.16. Acuerdos de arrendamiento (' + a.anio + ')')) return;
+      if (!await confirmarApp('¿Enviar este pendiente a ' + NOM[destino] + '?\n\n' + x.texto + '\n\nPregunta: C.16. Acuerdos de arrendamiento (' + a.anio + ')')) return;
       const PREG = 'A_03_P_016', cli = arrEstado.cliente;
       const { data: ex, error: e1 } = await supabaseClient.from('respuestas_auditoria').select('*').eq('cliente_id', cli).eq('anio', Number(a.anio)).eq('pregunta_id', PREG).maybeSingle();
       if (e1) { alert('No se pudo leer la pregunta: ' + (e1.message || e1)); return; }
@@ -4878,13 +4895,13 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       if (cambios.estado === 'autorizado' || cambios.estado === 'rechazado') avisarPedidoCorreo(id, cambios.estado).then(t => { const m = document.getElementById('pc-msg'); if (m) m.textContent = t; });
       return true;
     }
-    function autorizarPedidoClaude(id) {
+    async function autorizarPedidoClaude(id) {
       if (!puedeAutorizarPedidos()) { alert('Solo el Socio o el Supervisor pueden autorizar.'); return; }
       const pp = pedidosClaude.find(x => x.id === id), vivosP = pp ? (pp._arch || []).filter(a => !a.eliminado_at) : [];
       const malos = vivosP.filter(a => a._lectura && a._lectura.error), sinLeer = vivosP.filter(a => !a._lectura);
       if (malos.length || sinLeer.length) {
         const l = malos.map(a => '• ' + a.nombre + ': no se pudo leer').concat(sinLeer.map(a => '• ' + a.nombre + ': todavía se está leyendo'));
-        if (!confirm('Atención: Claude no podrá analizar completo este pedido.\n\n' + l.join('\n') + '\n\n¿Autorizar de todas formas?\n(Aceptar = autorizar; Cancelar = esperar o pedir que vuelvan a subir esos archivos)')) return;
+        if (!await confirmarApp('Atención: Claude no podrá analizar completo este pedido.\n\n' + l.join('\n') + '\n\n¿Autorizar de todas formas?\n(Aceptar = autorizar; Cancelar = esperar o pedir que vuelvan a subir esos archivos)')) return;
       }
       cambiarEstadoPedido(id, { estado: 'autorizado', autorizado_por: nombreUsuarioActivo(), autorizado_at: new Date().toISOString() }, 'Autorizó pedido a Claude');
     }
@@ -4914,7 +4931,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       const aut = puedeAutorizarPedidos(), mio = p.solicitado_por === nombreUsuarioActivo();
       if (!(aut || (mio && ['cancelado', 'rechazado'].includes(p.estado)))) { alert('No tienes permiso para eliminar este pedido.'); return; }
       const c = catalogoCuentas.find(k => k.sumaria === p.sumaria);
-      if (!window.confirm('¿Eliminar este pedido?\n\n' + (c ? c.cuenta : p.sumaria) + ' · ' + p.anio + '\nSolicitado por ' + (p.solicitado_por || '') + '\n\nSe borra también el registro de sus archivos y de quién lo autorizó. No se puede deshacer.')) return;
+      if (!await confirmarApp('¿Eliminar este pedido?\n\n' + (c ? c.cuenta : p.sumaria) + ' · ' + p.anio + '\nSolicitado por ' + (p.solicitado_por || '') + '\n\nSe borra también el registro de sus archivos y de quién lo autorizó. No se puede deshacer.')) return;
       try {
         const { data: ar } = await supabaseClient.from('pedidos_claude_archivos').select('ruta').eq('pedido_id', id).is('eliminado_at', null);
         if (ar && ar.length) await supabaseClient.storage.from('pedidos-claude').remove(ar.map(a => a.ruta));
@@ -4925,8 +4942,8 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       pedidosClaude = pedidosClaude.filter(x => x.id !== id);
       pintarPedidosClaude(); avisoPedidosClaude(false);
     }
-    function cancelarPedidoClaude(id) {
-      if (!window.confirm('¿Cancelar este pedido?')) return;
+    async function cancelarPedidoClaude(id) {
+      if (!await confirmarApp('¿Cancelar este pedido?')) return;
       cambiarEstadoPedido(id, { estado: 'cancelado' }, 'Canceló pedido a Claude');
     }
 
@@ -5018,7 +5035,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       const r = claudeRevisarDatos[idx]; if (!r || r._t !== 'claude') return;
       if (!puedeConfigurar()) { alert('Solo el Socio o el Supervisor pueden eliminar el análisis de Claude.'); return; }
       const fecha = r.updated_at ? formatoFechaContrato(r.updated_at) : '';
-      if (!confirm('¿Eliminar este análisis de Claude?\n\n' + nombreCuentaRevisar(r) + '\n' + (r.anio || '') + ' · ' + (r.visita === 'preliminar' ? 'Visita preliminar' : 'Visita final') + (fecha ? '\nPreparado el ' + fecha : '') + '\n\nNo se puede deshacer.')) return;
+      if (!await confirmarApp('¿Eliminar este análisis de Claude?\n\n' + nombreCuentaRevisar(r) + '\n' + (r.anio || '') + ' · ' + (r.visita === 'preliminar' ? 'Visita preliminar' : 'Visita final') + (fecha ? '\nPreparado el ' + fecha : '') + '\n\nNo se puede deshacer.')) return;
       const { error } = await supabaseClient.from(TABLAS_ORIGEN.claude).delete().eq('id', r.id);
       if (error) { alert('No se pudo eliminar: ' + (error.message || error)); return; }
       bitacoraClaude('Eliminó análisis de Claude', nombreCuentaRevisar(r) + (fecha ? ' · ' + fecha : ''), String(r.cliente_id), r.anio ? String(r.anio) : '');
@@ -5635,7 +5652,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       };
       const tAs = totalesAsiento();
       if ((tAs.debe !== 0 || tAs.haber !== 0) && tAs.dif !== 0 &&
-          !window.confirm('El asiento de ajuste no cuadra: el Debe y el Haber tienen una diferencia de ' + formatoNumeroAnexo(tAs.dif) + '.\n\n¿Quieres guardar de todas formas?')) {
+          !await confirmarApp('El asiento de ajuste no cuadra: el Debe y el Haber tienen una diferencia de ' + formatoNumeroAnexo(tAs.dif) + '.\n\n¿Quieres guardar de todas formas?')) {
         return;
       }
 
@@ -6203,13 +6220,13 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       renderRevisionDocAnexo();
     }
 
-    function usarRevisionComoAnexo() {
+    async function usarRevisionComoAnexo() {
       if (!docRevision || docRevision.filas.length === 0) { alert('No hay inversiones para usar. Agrega al menos una fila.'); return; }
       const incompletas = docRevision.filas.filter(f => !f.inicio || !f.vencimiento || parsearNumeroAnexo(f.valor) === null).length;
       let msg = `Vas a usar ${docRevision.filas.length} inversión(es) como anexo de la ${etiquetaVisita().toLowerCase()}.`;
       if (anexoEstado.registros.length > 0) msg += `\n\nYa hay un anexo cargado (${anexoEstado.registros.length} fila(s)). Se reemplazará y no se podrá recuperar.`;
       if (incompletas) msg += `\n\nAtención: ${incompletas} fila(s) no tienen fecha de emisión, de vencimiento o valor, y no entrarán en los cálculos.`;
-      if (!window.confirm(msg + '\n\n¿Continuar?')) return;
+      if (!await confirmarApp(msg + '\n\n¿Continuar?')) return;
       anexoEstado.registros = docRevision.filas.map((f, i) => {
         const tasa = parsearNumeroAnexo(String(f.tasa || '').replace('%', ''));
         return {
@@ -6242,7 +6259,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
         const actual = anexoEstado.archivo ? `"${anexoEstado.archivo}"` : 'un anexo';
         const cli = buscarCliente(valorAnalisis('an-cliente'));
         const nombreCli = cli ? (cli.nombre_corto || cli.nombre_completo || '') : '';
-        const ok = window.confirm(`Ya hay ${actual} cargado${nombreCli ? ' para ' + nombreCli : ''} (año ${valorAnalisis('an-anio')}, ${etiquetaVisita().toLowerCase()}, ${anexoEstado.registros.length} fila(s)).\n\nSi subes "${f.name}", se reemplazará el anexo actual y no se podrá recuperar.\n\n¿Quieres reemplazarlo?`);
+        const ok = await confirmarApp(`Ya hay ${actual} cargado${nombreCli ? ' para ' + nombreCli : ''} (año ${valorAnalisis('an-anio')}, ${etiquetaVisita().toLowerCase()}, ${anexoEstado.registros.length} fila(s)).\n\nSi subes "${f.name}", se reemplazará el anexo actual y no se podrá recuperar.\n\n¿Quieres reemplazarlo?`);
         if (!ok) { estado.textContent = 'No se reemplazó el anexo. Se mantiene el que estaba cargado.'; return; }
       }
       try {
@@ -6323,19 +6340,19 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
     }
 
     // Quitar filas que no corresponden a inversiones (totales, títulos, filas vacías del archivo)
-    function quitarFilaAnexo(i) {
+    async function quitarFilaAnexo(i) {
       const r = anexoEstado.registros[i]; if (!r) return;
-      if (!window.confirm('¿Quitar la fila ' + (r.fila || (i + 1)) + ' del anexo? Ya no se incluirá en los cálculos.')) return;
+      if (!await confirmarApp('¿Quitar la fila ' + (r.fila || (i + 1)) + ' del anexo? Ya no se incluirá en los cálculos.')) return;
       anexoEstado.registros.splice(i, 1);
       actualizarAnexoUI();
       if (anexoEstado.registros.length) programarGuardadoAnexo();
       else { const e = document.getElementById('an-anexo-estado'); if (e) e.textContent = 'Quitaste todas las filas. Sube el anexo otra vez o usa "Borrar este anexo".'; }
     }
-    function quitarFilasIncompletasAnexo() {
+    async function quitarFilasIncompletasAnexo() {
       const calc = calculoActualAnexo(); if (!calc) return;
       const malas = calc.filas.filter(f => f.estado === 'incompleta').length;
       if (!malas) return;
-      if (!window.confirm('¿Quitar las ' + malas + ' fila(s) con datos incompletos del anexo? Ya no se incluirán en los cálculos.')) return;
+      if (!await confirmarApp('¿Quitar las ' + malas + ' fila(s) con datos incompletos del anexo? Ya no se incluirán en los cálculos.')) return;
       anexoEstado.registros = anexoEstado.registros.filter((r, idx) => calc.filas[idx].estado !== 'incompleta');
       actualizarAnexoUI();
       if (anexoEstado.registros.length) programarGuardadoAnexo();
@@ -6355,7 +6372,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       if (!cliente || !anio) return;
       const cli = buscarCliente(cliente);
       const nombreCli = cli ? (cli.nombre_corto || cli.nombre_completo || '') : '';
-      const ok = window.confirm(`Vas a BORRAR el anexo de la ${etiquetaVisita(visita).toLowerCase()}${nombreCli ? ' de ' + nombreCli : ''} (año ${anio}): ${anexoEstado.archivo ? '"' + anexoEstado.archivo + '", ' : ''}${anexoEstado.registros.length} fila(s), con su fecha de corte y los valores de libros.\n\nNo afecta a la otra visita. No se puede deshacer.\n\n¿Quieres borrarlo?`);
+      const ok = await confirmarApp(`Vas a BORRAR el anexo de la ${etiquetaVisita(visita).toLowerCase()}${nombreCli ? ' de ' + nombreCli : ''} (año ${anio}): ${anexoEstado.archivo ? '"' + anexoEstado.archivo + '", ' : ''}${anexoEstado.registros.length} fila(s), con su fecha de corte y los valores de libros.\n\nNo afecta a la otra visita. No se puede deshacer.\n\n¿Quieres borrarlo?`);
       if (!ok) return;
       try {
         clearTimeout(guardadoAnexo.timer); guardadoAnexo.snap = null; // se cancela cualquier guardado pendiente
@@ -7188,7 +7205,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
     let pedidoGuardadosContratos = 0;
 
     async function borrarResumenGuardado(id) {
-      if (!confirm('¿Borrar este resumen guardado? No se puede deshacer.\n\nSi subes el mismo contrato otra vez, podrás generarlo de nuevo.')) return;
+      if (!await confirmarApp('¿Borrar este resumen guardado? No se puede deshacer.\n\nSi subes el mismo contrato otra vez, podrás generarlo de nuevo.')) return;
       const { data, error } = await supabaseClient.from('resumenes_contratos').delete().eq('id', id).select('id');
       if (error) { alert('No se pudo borrar: ' + error.message); return; }
       if (!data || data.length === 0) { alert('No se pudo borrar. Falta ejecutar en Supabase el archivo Supabase_19_borrar_resumenes_contratos.sql.'); return; }
@@ -7408,9 +7425,9 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       }, 1000);
     }
 
-    function reiniciarContratos() {
+    async function reiniciarContratos() {
       const hayAlgo = archivosContrato.length || ultimoResumenContrato || filasInformeContratos.length || document.getElementById('contr-instruccion').value.trim();
-      if (hayAlgo && !confirm('Se borrarán los archivos cargados, el resumen y la tabla de la versión informe de esta pantalla (los resúmenes ya guardados no se borran). ¿Reiniciar todo?')) return;
+      if (hayAlgo && !await confirmarApp('Se borrarán los archivos cargados, el resumen y la tabla de la versión informe de esta pantalla (los resúmenes ya guardados no se borran). ¿Reiniciar todo?')) return;
       archivosContrato = []; ultimoResumenContrato = ''; filasInformeContratos = [];
       document.getElementById('contr-cliente').value = '';
       document.getElementById('contr-instruccion').value = '';
@@ -7448,8 +7465,8 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       if (f) f[td.dataset.c] = td.innerText.trim();
     }
     function quitarFilaInforme(i) { filasInformeContratos.splice(i, 1); renderInformeContratos(); }
-    function vaciarInformeContrato() {
-      if (filasInformeContratos.length && !confirm('¿Vaciar la tabla de la versión informe?')) return;
+    async function vaciarInformeContrato() {
+      if (filasInformeContratos.length && !await confirmarApp('¿Vaciar la tabla de la versión informe?')) return;
       filasInformeContratos = []; renderInformeContratos();
     }
     function tablaInformeHtml(conEstilo) {
@@ -7634,7 +7651,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
 
     async function eliminarCliente(clienteId) {
       if (!requerirPermisoConfig()) return;
-      if (!confirm(`¿Está completamente seguro de que desea eliminar al cliente con ID "${clienteId}"? Esta acción no se puede deshacer.`)) {
+      if (!await confirmarApp(`¿Está completamente seguro de que desea eliminar al cliente con ID "${clienteId}"? Esta acción no se puede deshacer.`)) {
         return;
       }
 
@@ -7921,7 +7938,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
 
     async function eliminarUsuario(usuarioId, nombreUsuario) {
       if (!requerirPermisoConfig()) return;
-      if (!confirm(`¿Está seguro de que desea eliminar al usuario "${nombreUsuario}"? Esta acción no se puede deshacer.`)) {
+      if (!await confirmarApp(`¿Está seguro de que desea eliminar al usuario "${nombreUsuario}"? Esta acción no se puede deshacer.`)) {
         return;
       }
 
@@ -8354,7 +8371,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
 
     async function eliminarVisitaDirecto(visitaId) {
       if (!puedeGestionarVisitas()) { alert('Solo el Socio y el Supervisor pueden borrar visitas.'); return; }
-      if (!confirm("¿Está seguro de que desea eliminar este agendamiento de visita?")) return;
+      if (!await confirmarApp("¿Está seguro de que desea eliminar este agendamiento de visita?")) return;
 
       const { error } = await supabaseClient
         .from('visitas')
@@ -8374,7 +8391,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       if (!visitaId) return;
       if (!puedeGestionarVisitas()) { alert('Solo el Socio y el Supervisor pueden borrar visitas.'); return; }
 
-      if (confirm("¿Confirmas eliminar permanentemente esta visita agendada?")) {
+      if (await confirmarApp("¿Confirmas eliminar permanentemente esta visita agendada?")) {
         const { error } = await supabaseClient
           .from('visitas')
           .delete()
@@ -8484,7 +8501,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       const c = cambiosVisitaModal();
       if (!c) return;
       if (c.cambio) { alert('Hiciste cambios que todavía no están guardados. Pulsa "Guardar cambios" y luego "Avisar por correo", para que el auditor reciba los datos actualizados.'); return; }
-      if (!confirm('¿Enviar al auditor el aviso de esta visita por correo?')) return;
+      if (!await confirmarApp('¿Enviar al auditor el aviso de esta visita por correo?')) return;
       const btn = document.getElementById('modal-visita-avisar'); btn.disabled = true;
       alert(await avisoVisita(c.id));
       btn.disabled = false;
@@ -8524,7 +8541,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
         const huboCambio = !!(c && c.cambio);
         cerrarModal('modal-apuntes-visita');
         await cargarVisitas();
-        if (huboCambio && confirm('¡Cambios guardados! Cambió el auditor o las fechas de la visita.\n\n¿Quieres avisar al auditor por correo ahora?')) {
+        if (huboCambio && await confirmarApp('¡Cambios guardados! Cambió el auditor o las fechas de la visita.\n\n¿Quieres avisar al auditor por correo ahora?')) {
           alert(await avisoVisita(visitaId));
         } else if (!huboCambio) {
           alert("¡Comentarios actualizados correctamente!");
@@ -9162,7 +9179,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       const fila = capturaCtx.filas[pId];
       if (!fila.prevTexto) return;
       if (fila.actualTexto && fila.actualTexto !== fila.prevTexto) {
-        if (!confirm(`Ya hay una respuesta en ${capturaCtx.anio}. ¿Reemplazarla con la del ${capturaCtx.prev}?`)) return;
+        if (!await confirmarApp(`Ya hay una respuesta en ${capturaCtx.anio}. ¿Reemplazarla con la del ${capturaCtx.prev}?`)) return;
       }
       await guardarCamposRespuesta(capturaCtx.cliente, capturaCtx.anio, pId, { respuesta: fila.prevTexto, estado_revision: 'copiada', copiada_de_anio: capturaCtx.prev });
       await recargarCapturaConservandoPosicion();
@@ -9545,7 +9562,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
         payload = { es_opinion: false };
         if (borrar) Object.assign(payload, { detalle_opinion: '', elaborado_opinion: '', decision_opinion: 'PENDIENTE', revisado_por_opinion: '', comentario_opinion: '' });
       }
-      if (borrar && !confirm('Se borrará todo lo escrito en este módulo y quedará desactivado. ¿Continuar?')) return;
+      if (borrar && !await confirmarApp('Se borrará todo lo escrito en este módulo y quedará desactivado. ¿Continuar?')) return;
 
       const clienteIdVal = document.getElementById('select-cliente').value;
       const anioVal = document.getElementById('select-anio').value;
@@ -10237,7 +10254,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       const porAud = asigAgrupar(filas, r => String(r.auditor).toLowerCase());
       const lista = [...porAud.entries()].map(([a, ra]) => `• ${asigNombreAuditor(a)} (${a}): ${ra.length} cuenta(s)`).join('\n');
       const que = todas ? 'TODAS las cuentas que tiene asignadas' : 'las cuentas nuevas que TÚ le asignaste';
-      if (!confirm(`Se enviará un correo a cada auditor con ${que} en ${asigNombreCliente(f.cliente)} · ${asigTxtVisita(f.visita)} · ${f.anio}:\n\n${lista}\n\n¿Enviar los avisos?`)) return;
+      if (!await confirmarApp(`Se enviará un correo a cada auditor con ${que} en ${asigNombreCliente(f.cliente)} · ${asigTxtVisita(f.visita)} · ${f.anio}:\n\n${lista}\n\n¿Enviar los avisos?`)) return;
       const idBtn = todas ? 'as-avisar-todos' : 'as-avisar';
       const btn = document.getElementById(idBtn); const txt = btn ? btn.textContent : '';
       if (btn) { btn.disabled = true; btn.textContent = 'Enviando…'; }
@@ -10276,7 +10293,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
 
     async function asigQuitar(id) {
       const r = asigDatos.find(x => x.id === id);
-      if (!r || !confirm(`¿Quitar ${r.sumaria} a ${asigNombreAuditor(r.auditor)}?`)) return;
+      if (!r || !await confirmarApp(`¿Quitar ${r.sumaria} a ${asigNombreAuditor(r.auditor)}?`)) return;
       const { error } = await supabaseClient.from('asignaciones_cuentas').delete().eq('id', id);
       if (error) { alert('No se pudo quitar: ' + (error.message || error)); return; }
       await asigCargar();
@@ -10370,7 +10387,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
 
     async function borrarCuentaCatalogo(sumaria) {
       if (!requerirPermisoConfig()) return;
-      if (!window.confirm(`Vas a borrar la cuenta ${sumaria} del catálogo. Los balances ya cargados no se borran. ¿Continuar?`)) return;
+      if (!await confirmarApp(`Vas a borrar la cuenta ${sumaria} del catálogo. Los balances ya cargados no se borran. ¿Continuar?`)) return;
       const { error } = await supabaseClient.from('cuentas_sumarias').delete().eq('sumaria', sumaria);
       const est = document.getElementById('cu-estado');
       if (error) { est.textContent = 'No se pudo borrar: ' + textoErrorSumarias(error); est.className = 'text-[11px] font-bold text-red-600'; return; }
@@ -10411,7 +10428,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
         const existentes = new Set(catalogoCuentas.map(x => x.sumaria));
         const nuevas = filas.filter(x => !existentes.has(x.sumaria)).length;
         const actualiza = filas.length - nuevas;
-        if (!window.confirm(`El archivo trae ${filas.length} cuentas: ${nuevas} nuevas y ${actualiza} que ya existen (se actualizarán sus nombres, clasificación y grupo). ¿Continuar?`)) {
+        if (!await confirmarApp(`El archivo trae ${filas.length} cuentas: ${nuevas} nuevas y ${actualiza} que ya existen (se actualizarán sus nombres, clasificación y grupo). ¿Continuar?`)) {
           est.textContent = 'No se cargó nada.'; return;
         }
         for (let i = 0; i < filas.length; i += 200) {
@@ -11145,8 +11162,8 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
     }
     async function arrEliminar(i) {
       const c = arrEstado.contratos[i]; if (!c) return;
-      if (!confirm(`¿Eliminar el contrato "${arrNombre(c)}"?\n\nSe eliminarán también sus modificaciones. ¿Continuar?`)) return;
-      if (!confirm(`¿Seguro?\n\nEsta acción no se puede deshacer.`)) return;
+      if (!await confirmarApp(`¿Eliminar el contrato "${arrNombre(c)}"?\n\nSe eliminarán también sus modificaciones. ¿Continuar?`)) return;
+      if (!await confirmarApp(`¿Seguro?\n\nEsta acción no se puede deshacer.`)) return;
       if (!c.nuevo) {
         const { error } = await supabaseClient.from('arrendamientos_contratos').delete().eq('id', c.id);
         if (error) { arrEstadoMsg('No se eliminó: ' + textoErrorArr(error), 'text-red-600 font-bold'); return; }
@@ -11671,8 +11688,8 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       delete arrBorradores()[corte];
       arrGuardarVerif(); arrConcRender();
     }
-    function arrConcEliminar() {
-      const corte = arrConcCorte(); if (!confirm('¿Eliminar el corte guardado de ' + corte + '? Los valores del balance de ese mes se borran.')) return;
+    async function arrConcEliminar() {
+      const corte = arrConcCorte(); if (!await confirmarApp('¿Eliminar el corte guardado de ' + corte + '? Los valores del balance de ese mes se borran.')) return;
       delete arrConcCortes()[corte]; delete arrBorradores()[corte]; arrEstado.concBorrador = {}; arrEstado.concManual = {}; arrGuardarVerif(); arrConcRender();
     }
     function arrConcToggle(k) { const s = arrEstado.concAbiertos || (arrEstado.concAbiertos = new Set()); if (s.has(k)) s.delete(k); else s.add(k); arrConcRender(); }
@@ -11764,7 +11781,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
           nuevos.push({ id: arrIdNuevo(), orden: ++orden, arrendador: String(g('arr') || '').trim(), ruc: String(g('ruc') || '').trim(), n_contrato: String(g('con') === null ? '' : g('con')).trim(), local: String(g('loc') || '').trim(), centro_costo: String(g('cc') || '').trim(), canon, desde, hasta: arrFechaCelda(g('hasta')), hasta_proy: arrFechaCelda(g('proy')), tasa, cuotas: cu && cu > 0 ? Math.round(cu) : '', cambios: arrParseCambios(g('camb')), modificaciones: arrParseMods(g('mod')), activo_ini: arrNum(g('aini')) || '', pasivo_ini: arrNum(g('pini')) || '', pago_inicio: /^(si|s|1|true|x|verdadero)$/.test(arrNorm(g('ant'))), iva_no_rec: iva && iva > 0 ? (iva > 1 ? iva / 100 : iva) : '', anticipos: cant('anti'), costos_directos: cant('cdir'), desmantelamiento: cant('desm'), incentivos: cant('incen'), nuevo: true });
         }
         if (!nuevos.length) { alert('No encontré contratos con canon y fecha "Desde" en la hoja "' + hojaOk + '".'); return; }
-        if (!confirm(`Se agregarán ${nuevos.length} contratos de la hoja "${hojaOk}". ¿Continuar?`)) return;
+        if (!await confirmarApp(`Se agregarán ${nuevos.length} contratos de la hoja "${hojaOk}". ¿Continuar?`)) return;
         arrEstadoMsg('Guardando ' + nuevos.length + ' contratos...');
         for (let i = 0; i < nuevos.length; i += 100) {
           const filas = nuevos.slice(i, i + 100).map(arrFilaBD), quitadas = [];
@@ -12424,7 +12441,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       pceEstado.P[campo] = v; pceGuardarParams(); pceRecalcular(); pceRenderLuego();
     }
     function pceParamFl(i, campo, el) { const v = pceNum(el.value); if (v === null || v < 0) { pceRenderLuego(); return; } pceEstado.P.fl[i][campo] = v; pceGuardarParams(); pceRecalcular(); pceRenderLuego(); }
-    function pceRestablecer() { if (!confirm('¿Volver a los valores iniciales de los parámetros?')) return; pceEstado.P = pceCopiar(PCE_DEF); pceGuardarParams(); pceRecalcular(); pceRenderLuego(); }
+    async function pceRestablecer() { if (!await confirmarApp('¿Volver a los valores iniciales de los parámetros?')) return; pceEstado.P = pceCopiar(PCE_DEF); pceGuardarParams(); pceRecalcular(); pceRenderLuego(); }
     function pceCont(campo, el) { const v = el.value.trim() === '' ? '' : pceNum(el.value); if (v === null) { pceRenderLuego(); return; } pceEstado.P.cont[campo] = v; pceGuardarParams(); pceRenderLuego(); }
     function pceIndiv(i, campo, el) {
       const c = pceEstado.topCli[i]; if (!c) return;
@@ -13183,7 +13200,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
 
     async function eliminarAjusteFlujo(id, sinPreguntar) {
       const a = buscarAjusteFlujo(id); if (!a) return;
-      if (!sinPreguntar && !window.confirm(`¿Eliminar el ajuste${a.concepto ? ' "' + a.concepto + '"' : ''}?`)) return;
+      if (!sinPreguntar && !await confirmarApp(`¿Eliminar el ajuste${a.concepto ? ' "' + a.concepto + '"' : ''}?`)) return;
       flujoEstado.asientos = flujoEstado.asientos.filter(x => x.id !== id);
       refrescarAjustesFlujo();
       const est = document.getElementById('fl-estado');
@@ -13820,7 +13837,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
         else { estadoDe(anterior, 'Indica primero la fecha de corte del balance (por ejemplo 30/09/' + anio + ') y vuelve a subir el archivo.', true); return; }
       }
       if (Number(fecha.slice(0, 4)) !== Number(anio) &&
-          !window.confirm(`La fecha de corte (${formatoFechaAnexo(fecha)}) no es del año ${anio}. ¿Continuar de todas formas?`)) {
+          !await confirmarApp(`La fecha de corte (${formatoFechaAnexo(fecha)}) no es del año ${anio}. ¿Continuar de todas formas?`)) {
         estadoDe(anterior, 'No se subió el balance: revisa la fecha de corte.'); return;
       }
       const nombrePeriodo = anterior ? `periodo anterior (31/12/${anio})` : etiquetaVisita(visita).toLowerCase();
@@ -13848,7 +13865,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
         }
         if (!filas.length) throw new Error('No encontré cuentas en el archivo.');
         if (est.registros.length) {
-          const ok = window.confirm(`Ya hay un balance cargado en el ${nombrePeriodo} (${est.registros.length} cuentas${est.archivo ? ', archivo "' + est.archivo + '"' : ''}).\n\nSi continúas se REEMPLAZA por el nuevo (${filas.length} cuentas). ¿Reemplazarlo?`);
+          const ok = await confirmarApp(`Ya hay un balance cargado en el ${nombrePeriodo} (${est.registros.length} cuentas${est.archivo ? ', archivo "' + est.archivo + '"' : ''}).\n\nSi continúas se REEMPLAZA por el nuevo (${filas.length} cuentas). ¿Reemplazarlo?`);
           if (!ok) { estadoDe(anterior, 'No se reemplazó el balance. Se mantiene el que estaba cargado.'); return; }
         }
         estadoDe(anterior, 'Guardando...');
@@ -13882,7 +13899,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       const est = anterior ? sumEstado.prev : sumEstado;
       if (!cliente || !valorAnalisis('su-anio') || !est.registros.length) return;
       const nombrePeriodo = anterior ? `periodo anterior (31/12/${per.anio})` : `${etiquetaVisita(per.visita).toLowerCase()} (año ${per.anio})`;
-      if (!window.confirm(`Vas a BORRAR el balance cargado en el ${nombrePeriodo}. Esta acción no se puede deshacer. ¿Continuar?`)) return;
+      if (!await confirmarApp(`Vas a BORRAR el balance cargado en el ${nombrePeriodo}. Esta acción no se puede deshacer. ¿Continuar?`)) return;
       const { error } = await supabaseClient.from('balance_comprobacion').delete().eq('cliente_id', cliente).eq('anio', per.anio).eq('visita', per.visita);
       if (error) { estadoDe(anterior, 'No se pudo borrar: ' + textoErrorSumarias(error), true); return; }
       await cargarBalanceSumarias();
@@ -14095,18 +14112,18 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       return 'Mgi-' + Array.from(n).map(x => abc[x % abc.length]).join('');
     }
 
-    function crearAccesosFaltantes() {
+    async function crearAccesosFaltantes() {
       if (!requerirPermisoConfig()) return;
       if (accesosEmails === null) { alert('Primero hay que consultar el estado de los accesos. Pulsa "Actualizar estado" y revisa el mensaje.'); return; }
       const faltan = listaUsuariosCache.map(emailDeUsuario).filter(e => e && !accesosEmails.has(e));
       if (!faltan.length) { mostrarEstadoAccesos('Todas las personas de la lista ya tienen acceso.'); return; }
-      if (!window.confirm(`Se crearán ${faltan.length} acceso(s) con una clave temporal para cada persona:\n\n${faltan.join('\n')}\n\n¿Continuar?`)) return;
+      if (!await confirmarApp(`Se crearán ${faltan.length} acceso(s) con una clave temporal para cada persona:\n\n${faltan.join('\n')}\n\n¿Continuar?`)) return;
       crearAccesos(faltan, false);
     }
 
-    function reiniciarClaveUno(email) {
+    async function reiniciarClaveUno(email) {
       if (!requerirPermisoConfig()) return;
-      if (!window.confirm(`Se generará una clave temporal nueva para ${email}. La clave anterior dejará de funcionar. ¿Continuar?`)) return;
+      if (!await confirmarApp(`Se generará una clave temporal nueva para ${email}. La clave anterior dejará de funcionar. ¿Continuar?`)) return;
       crearAccesos([email], true);
     }
 
@@ -14348,9 +14365,9 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
               ...ciclos.filter(p => p.texto).map(p => p.texto), tablaPend].filter(Boolean).join('\n\n');
     }
 
-    function reiniciarReunion() {
+    async function reiniciarReunion() {
       const hayAlgo = document.getElementById('reu-texto').value.trim() || ultimoResumenReunion;
-      if (hayAlgo && !confirm('Se borrará la transcripción, los datos escritos y el análisis de esta pantalla. ¿Reiniciar todo?')) return;
+      if (hayAlgo && !await confirmarApp('Se borrará la transcripción, los datos escritos y el análisis de esta pantalla. ¿Reiniciar todo?')) return;
       ['reu-texto', 'reu-participantes', 'reu-enfoque'].forEach(id => { const e = document.getElementById(id); if (e) e.value = ''; });
       document.getElementById('reu-cliente').value = '';
       document.getElementById('reu-tipo').value = 'todo';
@@ -14703,7 +14720,7 @@ ${cont.innerHTML}
     function cbTab(t) { cbE.tab = t; cbRender(); }
     function cbRenderConScroll() { const p = $cb('cb-panel'), st = p ? p.scrollTop : 0; cbRender(); if (p) p.scrollTop = st; }
     function cbAgregarCuenta() { cbE.cuentas.push({ id: cbId(), banco: '', cuenta: '', tipo: 'Corriente', moneda: 'USD', saldo_estado: '', saldo_libros: '', partidas: [] }); cbGuardar(); cbRenderConScroll(); }
-    function cbQuitarCuenta(cid) { const c = cbE.cuentas.find(x => x.id === cid); if (!c) return; if (!confirm('¿Quitar la cuenta "' + cbNombre(c) + '" y todas sus partidas?')) return; cbE.cuentas = cbE.cuentas.filter(x => x.id !== cid); if (cbE.det && cbE.det.cid === cid) cbE.det = null; cbGuardar(); cbRenderConScroll(); }
+    async function cbQuitarCuenta(cid) { const c = cbE.cuentas.find(x => x.id === cid); if (!c) return; if (!await confirmarApp('¿Quitar la cuenta "' + cbNombre(c) + '" y todas sus partidas?')) return; cbE.cuentas = cbE.cuentas.filter(x => x.id !== cid); if (cbE.det && cbE.det.cid === cid) cbE.det = null; cbGuardar(); cbRenderConScroll(); }
     function cbSetCuenta(cid, campo, el) {
       const c = cbE.cuentas.find(x => x.id === cid); if (!c) return;
       c[campo] = (campo === 'saldo_estado' || campo === 'saldo_libros') ? (el.value.trim() === '' ? '' : cbN(el.value)) : el.value;
@@ -14724,7 +14741,7 @@ ${cont.innerHTML}
       p[campo] = campo === 'valor' ? (el.value.trim() === '' ? '' : cbN(el.value)) : el.value;
       cbGuardar(); cbRenderConScroll();
     }
-    function cbQuitarPartida(cid, pid) { const c = cbE.cuentas.find(x => x.id === cid); if (!c) return; const pp = (c.partidas || []).find(x => x.id === pid); if (!confirm('¿Seguro que quieres eliminar esta partida' + (pp && (pp.ref || pp.desc) ? ' (' + (pp.ref || pp.desc) + ')' : '') + '? No se puede deshacer.')) return; c.partidas = (c.partidas || []).filter(x => x.id !== pid); cbGuardar(); cbRenderConScroll(); }
+    async function cbQuitarPartida(cid, pid) { const c = cbE.cuentas.find(x => x.id === cid); if (!c) return; const pp = (c.partidas || []).find(x => x.id === pid); if (!await confirmarApp('¿Seguro que quieres eliminar esta partida' + (pp && (pp.ref || pp.desc) ? ' (' + (pp.ref || pp.desc) + ')' : '') + '? No se puede deshacer.')) return; c.partidas = (c.partidas || []).filter(x => x.id !== pid); cbGuardar(); cbRenderConScroll(); }
     function cbSetConfig(campo, el) { cbE.config[campo] = el.value; cbGuardar(); cbRenderConScroll(); }
     function cbSetTexto(grupo, campo, el) { cbE.config[grupo] = cbE.config[grupo] || {}; cbE.config[grupo][campo] = el.value; cbGuardar(); }
     function cbVerifEditar(k, campo, el) {
@@ -14948,10 +14965,10 @@ ${cont.innerHTML}
       x += con.length ? ' Las cuentas con diferencia mayor a la tolerancia son: ' + con.map(c => (c.banco || '') + ' ' + (c.cuenta || '')).join(', ') + '.' : ' Ninguna cuenta supera la tolerancia de diferencia.';
       return x;
     }
-    function cbCritRestablecer() {
+    async function cbCritRestablecer() {
       const D = cbDr(), t = cbCritPredeterminado();
       if (!t) { alert('Primero carga las cuentas de la conciliación para generar el texto.'); return; }
-      if (D.criterio.trim() && !window.confirm('Esto reemplaza el texto actual del criterio por el texto predeterminado. ¿Continuar?')) return;
+      if (D.criterio.trim() && !await confirmarApp('Esto reemplaza el texto actual del criterio por el texto predeterminado. ¿Continuar?')) return;
       D.criterio = t; D.original = null; D.prop = null; D.msg = ''; cbRenderConScroll();
     }
     async function cbRedMejorar() {
@@ -14990,7 +15007,7 @@ ${cont.innerHTML}
       if (!quien) { alert('Tu sesión no está activa. Vuelve a ingresar al sistema para guardar el criterio final.'); return; }
       if (D.marcadas.length === 0) { alert('Marca al menos una conclusión.'); return; }
       const t = cbAsTotales();
-      if ((t.debe !== 0 || t.haber !== 0) && t.dif !== 0 && !window.confirm('El asiento de ajuste no cuadra: el Debe y el Haber tienen una diferencia de ' + formatoNumeroAnexo(t.dif) + '.\n\n¿Quieres guardar de todas formas?')) return;
+      if ((t.debe !== 0 || t.haber !== 0) && t.dif !== 0 && !await confirmarApp('El asiento de ajuste no cuadra: el Debe y el Haber tienen una diferencia de ' + formatoNumeroAnexo(t.dif) + '.\n\n¿Quieres guardar de todas formas?')) return;
       const fila = { cliente_id: cbE.cliente, anio: Number(cbE.anio), cuenta: 'bancos', visita: cbE.visita, conclusion: D.marcadas.join(CB_SEP), criterio: D.criterio.trim() || null, auditor: (cbE.config.resp || quien), actualizado_por: quien, asiento: cbAsParaGuardar(), updated_at: new Date().toISOString() };
       const b = $cb('cb-btn-crit'); if (b) b.disabled = true; cbCritMsg('Guardando...');
       try {
@@ -15493,7 +15510,7 @@ ${cont.innerHTML}
       const { count, error: e1 } = await supabaseClient.from('bitacora_actividad').select('id', { count: 'exact', head: true }).lt('creado_at', limite);
       if (e1) { alert('No se pudo consultar: ' + e1.message); return; }
       if (!count) { alert('No hay registros anteriores al ' + f + '.'); return; }
-      if (!confirm('Se borrarán ' + count + ' registro(s) anteriores al ' + f + '. Esta acción no se puede deshacer.\n\n¿Deseas continuar?')) return;
+      if (!await confirmarApp('Se borrarán ' + count + ' registro(s) anteriores al ' + f + '. Esta acción no se puede deshacer.\n\n¿Deseas continuar?')) return;
       const { error } = await supabaseClient.from('bitacora_actividad').delete().lt('creado_at', limite);
       if (error) { alert('No se pudo borrar: ' + error.message); return; }
       registrarActividad('Borró históricos', count + ' registro(s) anteriores al ' + f, { cliente: '', anio: '' });
@@ -18019,7 +18036,7 @@ ${cont.innerHTML}
     function mvNum(i, k, el) { const x = mvE.cuentas[i]; if (!x) return; const n = parsearNumeroAnexo(el.value); x[k] = n === null ? '' : n; mvGuardar(); mvPintar(); }
     function mvTexto(i, v) { const x = mvE.cuentas[i]; if (!x) return; x.cuenta = v; x.codigo = ''; mvGuardar(); }
     function mvAgregar() { mvE.cuentas.push({ id: 'p-' + Date.now().toString(36), codigo: '', cuenta: '', saldo_inicial: '', compras: '', salidas: '', ajustes: '', reclasificaciones: '', otros: '', saldo_final: '', nota: '' }); mvGuardar(); mvPintar(); }
-    function mvQuitar(i) { if (!window.confirm('¿Quitar esta cuenta del movimiento?')) return; mvE.cuentas.splice(i, 1); mvGuardar(); mvPintar(); }
+    async function mvQuitar(i) { if (!await confirmarApp('¿Quitar esta cuenta del movimiento?')) return; mvE.cuentas.splice(i, 1); mvGuardar(); mvPintar(); }
     function ivIrHoja(h) { ivE.hoja = h; ivPintarHojas(); }
     function ivIrBoton(b) { ivE.btn = b; ivPintarHojas(); }
     async function abrirImport() {
@@ -18172,7 +18189,7 @@ ${(im.aprendidos || []).length ? `<p class="text-xs text-slate-600 bg-slate-50 b
     }
     const IMP_CLAVE_TXT = { isd: 'ISD', agente: 'Agente aduanero', manejo: 'Manejo de contenedor', seguro: 'Seguro', flete_int: 'Flete interno', logistico: 'Logístico', gasto_fin: 'Gasto financiero', otro: 'Otro' };
     function impAbrir(id) { impEstado.abierta = impEstado.abierta === id ? null : id; impRender(); }
-    function impEliminar(id) { if (!confirm('¿Seguro que quieres quitar la importación ' + id + '?\n\nSe elimina su liquidación leída de esta pantalla. Para recuperarla habría que volver a subir sus documentos.')) return; impEstado.imports = impEstado.imports.filter(x => x.id !== id); if (impEstado.abierta === id) impEstado.abierta = null; impEstado.aliasCambio = !!impEstado.cruce; impReclasificar(); impGuardar('liquidaciones'); impRender(); }
+    async function impEliminar(id) { if (!await confirmarApp('¿Seguro que quieres quitar la importación ' + id + '?\n\nSe elimina su liquidación leída de esta pantalla. Para recuperarla habría que volver a subir sus documentos.')) return; impEstado.imports = impEstado.imports.filter(x => x.id !== id); if (impEstado.abierta === id) impEstado.abierta = null; impEstado.aliasCambio = !!impEstado.cruce; impReclasificar(); impGuardar('liquidaciones'); impRender(); }
     function impEditarCampo(i, k, v) {
       const im = impEstado.imports[i]; if (!im) return;
       if (k === 'id') { v = v.trim().toUpperCase(); if (!v) return; if (impEstado.imports.some((x, j) => j !== i && x.id === v)) { alert('Ya existe una importación con ese código.'); return impRender(); } impEstado.abierta = v; if (impEstado.cruce) impEstado.aliasCambio = true; }
@@ -18180,8 +18197,8 @@ ${(im.aprendidos || []).length ? `<p class="text-xs text-slate-600 bg-slate-50 b
       else im[k] = v;
       impReclasificar(); impGuardar('liquidaciones'); impRender();
     }
-    function impRegenerarNombres() {
-      if (!confirm('Se volverán a armar el código y los nombres de búsqueda de todas las importaciones a partir del nombre del archivo y del proveedor. Los nombres que agregaste a mano se conservan. ¿Continuar?')) return;
+    async function impRegenerarNombres() {
+      if (!await confirmarApp('Se volverán a armar el código y los nombres de búsqueda de todas las importaciones a partir del nombre del archivo y del proveedor. Los nombres que agregaste a mano se conservan. ¿Continuar?')) return;
       const usados = [];
       impEstado.imports.forEach(im => {
         const viejo = im.id, previos = (im.aliases || []).filter(a => !impAliasPorDefecto({ ...im, id: viejo }).includes(impNorm(a)) && impNorm(a) !== impNorm(viejo));
