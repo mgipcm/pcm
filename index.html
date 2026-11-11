@@ -18044,7 +18044,7 @@ ${cont.innerHTML}
       });
       h += '<tr class="bg-slate-50 font-bold"><td class="px-2 py-1.5">Total</td>' + MV_COLS.map(([k]) => '<td class="px-2 py-1.5 text-right">' + formatoNumeroAnexo(tot[k]) + '</td>').join('') + '<td class="px-2 py-1.5 text-right">' + (hayLibTot ? formatoNumeroAnexo(tot.saldo_libros) : '') + '</td><td class="px-2 py-1.5 text-right">' + celdaDif(difTot, hayLibTot) + '</td><td></td></tr></tbody></table></div>';
       h += '<div class="mt-2 flex flex-wrap items-center gap-3"><button type="button" onclick="mvAgregar()" class="px-2.5 py-1 bg-white text-slate-700 hover:bg-slate-50 border border-slate-400 rounded text-[11px] font-bold transition">+ Agregar cuenta</button><span class="text-[11px] text-slate-500">Aumentos con signo positivo y disminuciones (salidas, bajas) con signo negativo. Haz clic en una cifra de movimiento para ver sus partidas y reclasificarlas. Diferencia = Saldo final − Según libros.</span></div>';
-      c.innerHTML = h + pcBarraPedido('venta', mvE.cliente, mvE.anio, mvE.visita, 'Para armar o actualizar el movimiento del inventario, envía el mayor contable y las cuentas de inventario (y, si lo tienes, las liquidaciones de importación).');
+      c.innerHTML = h + pcBarraPedido('venta', mvE.cliente, mvE.anio, mvE.visita, 'Para armar o actualizar el movimiento del inventario, envía el mayor contable y las cuentas de inventario. Las liquidaciones de importación se envían desde Importaciones.');
     }
     function mvPartidasIdx(x, k) { const r = []; (Array.isArray(x && x.partidas) ? x.partidas : []).forEach((p, ix) => { if (p && p.col === k) r.push({ p, ix }); }); return r; }
     function mvVer(i, k) { mvE.ver = (mvE.ver && mvE.ver.i === i && mvE.ver.k === k) ? null : { i, k }; mvPintar(); }
