@@ -18329,12 +18329,51 @@ ${(im.aprendidos || []).length ? `<p class="text-xs text-slate-600 bg-slate-50 b
         <label class="flex flex-col gap-1 text-xs text-slate-600"><span>Fecha de corte (lo registrado después no cuenta)</span><input type="date" value="${impE(cfg.corte)}" onchange="impCambiarFecha(this.value)" class="${impIn} w-40"></label></div></div>`;
       h += `<div class="flex flex-wrap items-center gap-2"><button type="button" onclick="impRecalcular()" class="${impBtn}" ${C ? '' : 'disabled'}>Recalcular con las cuentas indicadas</button></div>`;
       if (impEstado.aliasCambio) h += `<p class="text-red-600 font-semibold">Cambiaste los nombres de las importaciones desde el último cruce: vuelve a leer el mayor para que se tomen en cuenta.</p>`;
-      if (C && impEstado.cl) h += impHtmlResultadoCruce();
+      if (C && impEstado.cl) { try { h += impHtmlMeses(); } catch (e) { console.error(e); } h += impHtmlResultadoCruce(); }
       return h + '</div>';
     }
     function impAlias() {
       const t = impEstado.imports.map(im => `${im.id}: ${(im.aliases || []).join(', ')}`).join('\n');
       alert('Nombres con los que se busca cada importación en el detalle del mayor.\nPuedes editarlos en la hoja 1, dentro de cada importación.\n\n' + t);
+    }
+    // Comparación por mes: mes de la liquidación contra mes en que se registró en el mayor (se despliega con un clic)
+    function impMesTog(m) { const A = impEstado.mesAb = impEstado.mesAb || {}; A[m] = !A[m]; impRender(); }
+    function impHtmlMeses() {
+      const cl = impEstado.cl, C = impEstado.cruce, cfg = impEstado.cfg, imports = impEstado.imports, tol = cl.tol;
+      const th = (t, c) => `<th class="px-2 py-1 border-b border-slate-200 whitespace-nowrap ${c || 'text-right'}">${t}</th>`;
+      const MN = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+      const nm = m => m ? MN[Number(m.slice(5, 7)) - 1] + ' ' + m.slice(0, 4) : 'sin fecha';
+      const roles = impRolesDe(cfg), LN = impAmpliarLineas(C, imports, cfg);
+      const liq = {}, mesLiq = {}, reg = {}; // reg[id][mes]
+      imports.forEach(im => { const co = cl.filas.find(x => x.id === im.id && x.k === 'costo') || {}; liq[im.id] = impR2(co.liq || 0); mesLiq[im.id] = String(im.fecha || '').slice(0, 7); });
+      LN.forEach(l => { if ((l.ids || []).length !== 1 || !liq.hasOwnProperty(l.ids[0]) || !roles.inventario.length || !impCtaEn(l.cod, roles.inventario)) return;
+        const m = String(l.d || '').slice(0, 7), id = l.ids[0]; (reg[id] = reg[id] || {})[m] = impR2(((reg[id] || {})[m] || 0) + (Number(l.deb) || 0) - (Number(l.hab) || 0)); });
+      const meses = new Set(); imports.forEach(im => { meses.add(mesLiq[im.id]); Object.keys(reg[im.id] || {}).forEach(m => meses.add(m)); });
+      const lista = [...meses].sort(), A = impEstado.mesAb = impEstado.mesAb || {};
+      let tL = 0, tR = 0, h = `<div class="p-4 bg-white border border-slate-200 rounded-xl space-y-2"><div class="text-[13px] font-semibold text-slate-800">B. Liquidaciones contra importaciones por mes</div>
+        <p class="text-slate-500">Cada liquidación se ubica en el mes de su fecha y lo registrado en el mayor, en el mes en que se asentó. Si una liquidación se registró en otro mes, la diferencia de un mes se compensa con la del otro. Haz clic en un mes para ver el detalle por importación.</p>
+        <div class="overflow-x-auto"><table class="w-full text-[11px] leading-tight border-collapse"><thead class="bg-slate-50 text-slate-600"><tr>${th('Mes', 'text-left')}${th('Importaciones liquidadas')}${th('Costo total liquidaciones')}${th('Registrado en el mes (mayor)')}${th('Dif.')}${th('Estado', 'text-center')}</tr></thead><tbody>`;
+      lista.forEach(m => {
+        const ims = imports.filter(im => mesLiq[im.id] === m), L = impR2(ims.reduce((t, im) => t + liq[im.id], 0));
+        const R = impR2(imports.reduce((t, im) => t + (((reg[im.id] || {})[m]) || 0), 0)), d = impR2(L - R); tL += L; tR += R;
+        const ok = Math.abs(d) <= tol, ab = !!A[m];
+        h += `<tr class="border-b border-slate-100 cursor-pointer hover:bg-slate-50" onclick="impMesTog('${m}')"><td class="px-2 py-1 text-left font-semibold"><span class="inline-block w-3">${ab ? '▾' : '▸'}</span> ${impE(nm(m))}</td><td class="px-2 text-right">${ims.length}</td><td class="px-2 text-right">${impF(L)}</td><td class="px-2 text-right">${impF(R)}</td><td class="px-2 text-right ${ok ? '' : 'text-red-600 font-semibold'}">${impF(d)}</td><td class="px-2 text-center font-bold ${ok ? 'text-emerald-700' : 'text-red-600'}">${ok ? 'Cuadra' : 'Revisar'}</td></tr>`;
+        if (ab) {
+          const filas = imports.filter(im => mesLiq[im.id] === m || ((reg[im.id] || {})[m] || 0) !== 0);
+          h += `<tr><td colspan="6" class="px-4 py-2 bg-slate-50"><table class="w-full text-[11px] leading-tight border-collapse"><thead class="text-slate-600"><tr>${th('Importación', 'text-left')}${th('Fecha liquidación', 'text-left')}${th('Costo total liquidación')}${th('Registrado en este mes')}${th('Dif.')}${th('Observación', 'text-left')}</tr></thead><tbody>`;
+          filas.forEach(im => {
+            const esL = mesLiq[im.id] === m, rr = ((reg[im.id] || {})[m]) || 0, lq = esL ? liq[im.id] : 0, dd = impR2(lq - rr), otros = Object.keys(reg[im.id] || {}).filter(x => x !== m && Math.abs(reg[im.id][x]) > tol);
+            let obs = '';
+            if (esL && otros.length) obs = 'Liquidada en ' + nm(m) + ' y registrada también en ' + otros.map(x => nm(x) + ' (' + impF(reg[im.id][x]) + ')').join(', ') + '.';
+            else if (!esL) obs = 'Liquidación de ' + nm(mesLiq[im.id]) + ' registrada en ' + nm(m) + '.';
+            else if (esL && Math.abs(rr) <= tol && lq) obs = 'Liquidada en este mes y sin registro en el mayor.';
+            h += `<tr class="border-b border-slate-100"><td class="px-2 py-0.5 text-left font-semibold">${impE(im.id)}</td><td class="px-2 text-left">${impE(im.fecha || '')}</td><td class="px-2 text-right">${esL ? impF(lq) : ''}</td><td class="px-2 text-right">${impF(rr)}</td><td class="px-2 text-right ${Math.abs(dd) > tol ? 'text-red-600 font-semibold' : ''}">${impF(dd)}</td><td class="px-2 text-left ${!esL || otros.length ? 'text-red-600' : ''}">${impE(obs)}</td></tr>`;
+          });
+          h += '</tbody></table></td></tr>';
+        }
+      });
+      h += `</tbody><tfoot class="bg-slate-50 font-semibold"><tr><td class="px-2 py-1 text-left">Total del año</td><td></td><td class="px-2 text-right">${impF(impR2(tL))}</td><td class="px-2 text-right">${impF(impR2(tR))}</td><td class="px-2 text-right">${impF(impR2(tL - tR))}</td><td></td></tr></tfoot></table></div></div>`;
+      return h;
     }
     function impHtmlResultadoCruce() {
       const cl = impEstado.cl, C = impEstado.cruce, f = cl.filas, imports = impEstado.imports, F = impEstado.filtro;
@@ -18342,7 +18381,7 @@ ${(im.aprendidos || []).length ? `<p class="text-xs text-slate-600 bg-slate-50 b
       const th = (t, c) => `<th class="px-2 py-1 border-b border-slate-200 whitespace-nowrap ${c || 'text-right'}">${t}</th>`;
       if (!impEstado.mov || impEstado.mov.llave !== impEstado.cliente + '|' + impEstado.anio + '|' + impEstado.visita) setTimeout(impCargarMov, 0);
       const ENT = null;
-      let h = `<div class="p-4 bg-white border border-slate-200 rounded-xl space-y-2"><div class="text-[13px] font-semibold text-slate-800">B. Liquidaciones contra costos acumulados en importaciones en tránsito</div>
+      let h = `<div class="p-4 bg-white border border-slate-200 rounded-xl space-y-2"><div class="text-[13px] font-semibold text-slate-800">C. Liquidaciones contra costos acumulados por importación</div>
         <p class="text-slate-500">Mayor leído: ${(C.lineasTot || 0).toLocaleString('en-US')} líneas · Debe ${impF(C.debe)} · Haber ${impF(C.haber)}${Math.abs((C.debe || 0) - (C.haber || 0)) > 0.5 ? ' <b class="text-red-600">(el mayor no cuadra)</b>' : ' (cuadra)'} · ${C.lineas.length.toLocaleString('en-US')} líneas de importaciones · ${C.asientos.length} asientos.</p>
         <div class="overflow-x-auto"><table class="w-full text-[11px] leading-tight border-collapse"><thead class="bg-slate-50 text-slate-600"><tr>${th('Importación', 'text-left')}${th('Costo total liquidación')}${th('Costos acumulados en importaciones (mayor)')}${th('Dif.')}${th('Estado', 'text-center')}${ENT ? th('Entrada al inventario (mayor)') + th('Dif. entrada') : ''}${th('IVA liquidación')}${th('IVA en el mayor')}${th('Dif.')}${th('Estado', 'text-center')}</tr></thead><tbody>`;
       let T = { c1: 0, c2: 0, i1: 0, i2: 0, e1: 0 };
