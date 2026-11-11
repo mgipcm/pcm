@@ -17656,12 +17656,12 @@ ${cont.innerHTML}
     }
 
     // ===== AF Inventarios › Inventario para la venta › iii) Costo de ventas vs Salidas (mayor contable) =====
-    const cvE = { abierto: '', cargaId: 0, cliente: '', anio: '', visita: '', cargado: false, cv: [], mov: [], bal: {}, act: null, error: '' };
+    const cvE = { abierto: '', abiertoTipo: -1, cargaId: 0, cliente: '', anio: '', visita: '', cargado: false, cv: [], mov: [], bal: {}, act: null, error: '' };
     const CV_MESES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
     const cvMes = ym => { const m = /^(\d{4})-(\d{2})$/.exec(ym || ''); return m ? CV_MESES[Number(m[2]) - 1] + ' ' + m[1] : (ym || 'Sin fecha'); };
     async function cvCargar() {
       const cli = $im('im-cliente').value, anio = $im('im-anio').value, vis = $im('im-visita').value;
-      Object.assign(cvE, { abierto: '', cliente: cli, anio, visita: vis, cargado: false, cv: [], mov: [], bal: {}, act: null, error: '' });
+      Object.assign(cvE, { abierto: '', abiertoTipo: -1, cliente: cli, anio, visita: vis, cargado: false, cv: [], mov: [], bal: {}, act: null, error: '' });
       if (!cli) { cvPintar(); return; }
       const id = ++cvE.cargaId;
       const q = h => supabaseClient.from('inventario_movimiento').select('cuentas, updated_at, actualizado_por').eq('cliente_id', cli).eq('anio', Number(anio)).eq('visita', vis).eq('hoja', h).maybeSingle();
@@ -17689,10 +17689,16 @@ ${cont.innerHTML}
       const tSal = r2f(filas.reduce((t, m) => t + m.sal, 0)), tCos = r2f(filas.reduce((t, m) => t + m.cos, 0));
       const codigos = cvE.cv.map(c => String(c.codigo || '').trim()).filter(Boolean), conBal = codigos.filter(c => Number.isFinite(cvE.bal[c]));
       const tBal = r2f(conBal.reduce((t, c) => t + cvE.bal[c], 0)), hayBal = conBal.length > 0;
-      const tipos = {}; ps.forEach(p => { const t = p.tipo || 'Sin clasificar', o = (tipos[t] = tipos[t] || { n: 0, cos: 0, sal: 0 }); o.n++; o.cos += Number(p.valor) || 0; o.sal += Number(p.salida) || 0; });
-      const lt = Object.entries(tipos).map(([t, o]) => ({ tipo: t, n: o.n, cos: r2f(o.cos), sal: r2f(o.sal), dif: r2f(o.sal - o.cos) })).sort((a, b) => Math.abs(b.dif) - Math.abs(a.dif));
+      const tipos = {}; ps.forEach(p => { const t = p.tipo || 'Sin clasificar', o = (tipos[t] = tipos[t] || { n: 0, cos: 0, sal: 0, as: [] }); o.n++; o.cos += Number(p.valor) || 0; o.sal += Number(p.salida) || 0; o.as.push(p); });
+      const lt = Object.entries(tipos).map(([t, o]) => ({ tipo: t, n: o.n, cos: r2f(o.cos), sal: r2f(o.sal), dif: r2f(o.sal - o.cos), as: o.as.sort((a, b) => String(a.fecha || '').localeCompare(String(b.fecha || ''))) })).sort((a, b) => Math.abs(b.dif) - Math.abs(a.dif));
       const mesesDifMov = hayVal ? filas.filter(m => Math.abs(m.sal - m.mov) > 1).length : 0;
       return { filas, hayVal, tSal, tCos, dif: r2f(tSal - tCos), movTot: r2f(movTot), difMov: r2f(tSal - movTot), mesesDifMov, hayMov: cvE.mov.length > 0, tBal, hayBal, difBal: r2f(tCos - tBal), tipos: lt, nAsientos: ps.length };
+    }
+    function cvAbrirTipo(i) { cvE.abiertoTipo = cvE.abiertoTipo === i ? -1 : i; cvPintar(); }
+    function cvTablaAsientos(lista) {
+      const TH = 'px-2 py-2 text-[11px] font-bold text-slate-700 bg-slate-100 border-b border-slate-300', TD = 'px-2 py-1', F = formatoNumeroAnexo;
+      return '<div class="max-h-96 overflow-auto border border-slate-200 rounded-lg bg-white"><table class="w-full text-[11px] border-collapse min-w-[800px]"><thead><tr class="sticky top-0"><th class="' + TH + ' text-left">Fecha</th><th class="' + TH + ' text-left">Comprobante</th><th class="' + TH + ' text-left">Descripción</th><th class="' + TH + ' text-right">Salida del inventario</th><th class="' + TH + ' text-right">Costo de ventas</th><th class="' + TH + ' text-right">Diferencia</th><th class="' + TH + ' text-left">Tipo</th></tr></thead><tbody>' +
+        lista.map(p => { const sal = Number(p.salida) || 0, cos = Number(p.valor) || 0, d = r2f(sal - cos); return '<tr class="border-t border-slate-100 align-top' + (Math.abs(d) > 0.005 ? ' bg-amber-50' : '') + '"><td class="' + TD + ' whitespace-nowrap">' + mvFechaCorta(p.fecha) + '</td><td class="' + TD + ' whitespace-nowrap">' + escapeHtml(p.ref || '') + '</td><td class="' + TD + '">' + escapeHtml(p.desc || '') + '</td><td class="' + TD + ' text-right whitespace-nowrap">' + F(sal) + '</td><td class="' + TD + ' text-right whitespace-nowrap">' + F(cos) + '</td><td class="' + TD + ' text-right whitespace-nowrap">' + (Math.abs(d) > 0.005 ? '<b class="text-red-600">' + F(d) + '</b>' : '<span class="text-slate-400">0.00</span>') + '</td><td class="' + TD + ' text-slate-600">' + escapeHtml(p.tipo || '') + '</td></tr>'; }).join('') + '</tbody></table></div>';
     }
     function cvAbrir(ym) { cvE.abierto = cvE.abierto === ym ? '' : ym; cvPintar(); }
     function cvPintar() {
@@ -17711,8 +17717,7 @@ ${cont.innerHTML}
         const ab = cvE.abierto === m.ym;
         h += '<tr onclick="cvAbrir(\'' + m.ym + '\')" class="border-t border-slate-100 cursor-pointer hover:bg-slate-50' + (ab ? ' bg-slate-100' : '') + '"><td class="' + TD + ' font-semibold">' + (ab ? '▾ ' : '▸ ') + escapeHtml(cvMes(m.ym)) + '</td><td class="' + TD + ' text-right">' + F(m.sal) + '</td><td class="' + TD + ' text-right">' + F(m.cos) + '</td><td class="' + TD + ' text-right">' + dc(m.dif, true) + '</td><td class="' + TD + ' text-right text-slate-500">' + m.n + '</td></tr>';
         if (ab) {
-          h += '<tr><td colspan="5" class="p-2 bg-slate-50"><div class="max-h-96 overflow-auto border border-slate-200 rounded-lg bg-white"><table class="w-full text-[11px] border-collapse min-w-[800px]"><thead><tr class="sticky top-0"><th class="' + TH + ' text-left">Fecha</th><th class="' + TH + ' text-left">Comprobante</th><th class="' + TH + ' text-left">Descripción</th><th class="' + TH + ' text-right">Salida del inventario</th><th class="' + TH + ' text-right">Costo de ventas</th><th class="' + TH + ' text-right">Diferencia</th><th class="' + TH + ' text-left">Tipo</th></tr></thead><tbody>' +
-            m.asientos.map(p => { const sal = Number(p.salida) || 0, cos = Number(p.valor) || 0, d = r2f(sal - cos); return '<tr class="border-t border-slate-100 align-top' + (Math.abs(d) > 0.005 ? ' bg-amber-50' : '') + '"><td class="' + TD + ' whitespace-nowrap">' + mvFechaCorta(p.fecha) + '</td><td class="' + TD + ' whitespace-nowrap">' + escapeHtml(p.ref || '') + '</td><td class="' + TD + '">' + escapeHtml(p.desc || '') + '</td><td class="' + TD + ' text-right whitespace-nowrap">' + F(sal) + '</td><td class="' + TD + ' text-right whitespace-nowrap">' + F(cos) + '</td><td class="' + TD + ' text-right whitespace-nowrap">' + (Math.abs(d) > 0.005 ? '<b class="text-red-600">' + F(d) + '</b>' : '<span class="text-slate-400">0.00</span>') + '</td><td class="' + TD + ' text-slate-600">' + escapeHtml(p.tipo || '') + '</td></tr>'; }).join('') + '</tbody></table></div></td></tr>';
+          h += '<tr><td colspan="5" class="p-2 bg-slate-50">' + cvTablaAsientos(m.asientos) + '</td></tr>';
         }
       });
       h += '<tr class="border-t-2 border-slate-300 bg-slate-50 font-bold"><td class="' + TD + '">Total</td><td class="' + TD + ' text-right">' + F(R.tSal) + '</td><td class="' + TD + ' text-right">' + F(R.tCos) + '</td><td class="' + TD + ' text-right">' + dc(R.dif, true) + '</td><td class="' + TD + ' text-right text-slate-500">' + R.nAsientos + '</td></tr></tbody></table></div>';
@@ -17732,8 +17737,8 @@ ${cont.innerHTML}
       // C. De dónde sale la diferencia
       const conDif = R.tipos.filter(t => Math.abs(t.dif) > 0.005);
       if (conDif.length || R.tipos.length > 1) {
-        h += '<div class="font-bold text-slate-800 mt-4 mb-1 text-xs">C. De dónde sale la diferencia entre salidas y costo <span class="font-normal text-slate-500">(por tipo de asiento)</span></div><div class="overflow-x-auto border border-slate-200 rounded-xl"><table class="w-full text-[11px] border-collapse min-w-[560px]"><thead><tr><th class="' + TH + ' text-left">Tipo de asiento</th><th class="' + TH + ' text-right"># asientos</th><th class="' + TH + ' text-right">Salidas</th><th class="' + TH + ' text-right">Costo</th><th class="' + TH + ' text-right">Diferencia</th></tr></thead><tbody>' +
-          R.tipos.map(t => '<tr class="border-t border-slate-100"><td class="' + TD + '">' + escapeHtml(t.tipo) + '</td><td class="' + TD + ' text-right">' + t.n + '</td><td class="' + TD + ' text-right">' + F(t.sal) + '</td><td class="' + TD + ' text-right">' + F(t.cos) + '</td><td class="' + TD + ' text-right">' + dc(t.dif, true) + '</td></tr>').join('') +
+        h += '<div class="font-bold text-slate-800 mt-4 mb-1 text-xs">C. De dónde sale la diferencia entre salidas y costo <span class="font-normal text-slate-500">(por tipo de asiento; clic en un tipo para ver sus asientos)</span></div><div class="overflow-x-auto border border-slate-200 rounded-xl"><table class="w-full text-[11px] border-collapse min-w-[560px]"><thead><tr><th class="' + TH + ' text-left">Tipo de asiento</th><th class="' + TH + ' text-right"># asientos</th><th class="' + TH + ' text-right">Salidas</th><th class="' + TH + ' text-right">Costo</th><th class="' + TH + ' text-right">Diferencia</th></tr></thead><tbody>' +
+          R.tipos.map((t, i) => { const ab = cvE.abiertoTipo === i; return '<tr onclick="cvAbrirTipo(' + i + ')" class="border-t border-slate-100 cursor-pointer hover:bg-slate-50' + (ab ? ' bg-slate-100' : '') + '"><td class="' + TD + ' font-medium">' + (ab ? '▾ ' : '▸ ') + escapeHtml(t.tipo) + '</td><td class="' + TD + ' text-right">' + t.n + '</td><td class="' + TD + ' text-right">' + F(t.sal) + '</td><td class="' + TD + ' text-right">' + F(t.cos) + '</td><td class="' + TD + ' text-right">' + dc(t.dif, true) + '</td></tr>' + (ab ? '<tr><td colspan="5" class="p-2 bg-slate-50">' + cvTablaAsientos(t.as) + '</td></tr>' : ''); }).join('') +
           '<tr class="border-t-2 border-slate-300 bg-slate-50 font-bold"><td class="' + TD + '">Total</td><td class="' + TD + ' text-right">' + R.nAsientos + '</td><td class="' + TD + ' text-right">' + F(R.tSal) + '</td><td class="' + TD + ' text-right">' + F(R.tCos) + '</td><td class="' + TD + ' text-right">' + dc(R.dif, true) + '</td></tr></tbody></table></div>';
       }
       const notas = cvE.cv.filter(x => x.nota).map(x => '<p class="text-[11px] text-slate-600 mt-2"><b>' + escapeHtml((x.codigo ? x.codigo + ' ' : '') + (x.cuenta || '')) + ':</b> ' + escapeHtml(x.nota) + '</p>').join('');
