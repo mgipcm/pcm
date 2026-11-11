@@ -2142,6 +2142,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       <div class="flex flex-wrap items-center justify-between gap-2"><span id="cb-estado" class="text-[11px] text-slate-500"></span></div>
       <p id="cb-aviso" class="text-xs text-slate-500 border border-dashed border-slate-300 rounded-xl p-4">Selecciona el cliente para comenzar.</p>
       <div id="cb-espacio" class="hidden space-y-2">
+        <div id="cb-subida" class="hidden border border-slate-300 rounded-xl p-3 mb-3 bg-white"></div>
         <div id="cb-tabs" class="flex flex-wrap items-center gap-1"></div>
         <div id="cb-panel" class="border border-slate-200 rounded-xl overflow-auto max-h-[78vh]"></div>
         <div id="cb-notas" class="text-[11px] text-slate-500 leading-relaxed"></div>
@@ -5216,18 +5217,20 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
 
     // ===== Aviso "Realizar pedido" para pantallas sin información (sirve para Bancos, Inversiones y las que vengan) =====
     // El pedido se hace desde la misma herramienta: se abre una ventana con el formulario ya llenado (cliente, año, visita, cuenta y hoja bloqueados)
-    async function pcIrAPedido(sumaria, cli, anio, vis, hoja) {
+    async function pcIrAPedido(sumaria, cli, anio, vis, hoja, destino) {
       if (!usuarioActivo || !nombreUsuarioActivo()) { alert('Ingresa con tu usuario para enviar pedidos.'); return; }
       const box = document.getElementById('pc-form-box'); if (!box) return;
+      pcCerrarModal();
+      const dest = destino ? document.getElementById(destino) : null;
       let m = document.getElementById('pc-modal');
-      if (!m) {
+      if (dest) { dest.classList.remove('hidden'); dest.appendChild(box); pcDestinoAbierto = destino; if (m) { m.classList.add('hidden'); m.classList.remove('flex'); } }
+      else if (!m) {
         m = document.createElement('div'); m.id = 'pc-modal';
         m.className = 'fixed inset-0 z-[9000] hidden items-start justify-center bg-black/40 p-4 overflow-y-auto';
         m.innerHTML = '<div class="bg-white rounded-xl shadow-xl w-full max-w-4xl my-6"><div class="px-5 py-3 border-b flex items-center justify-between"><div><div class="font-bold text-slate-800">Enviar pedido a Claude</div><div class="text-[11px] text-slate-500">Sube la documentación y presiona Enviar. El pedido pasa a "Aprobaciones de pedidos" para que el Socio o el Supervisor lo autoricen.</div></div><button type="button" onclick="pcCerrarModal()" class="text-slate-500 hover:text-slate-800 text-lg px-2">✕</button></div><div id="pc-modal-cuerpo" class="p-4"></div></div>';
         document.body.appendChild(m);
       }
-      document.getElementById('pc-modal-cuerpo').appendChild(box);
-      m.classList.remove('hidden'); m.classList.add('flex');
+      if (!dest) { document.getElementById('pc-modal-cuerpo').appendChild(box); m.classList.remove('hidden'); m.classList.add('flex'); }
       await abrirPedidosClaude();
       const ids = ['pc-cliente', 'pc-anio', 'pc-visita', 'pc-sumaria', 'pc-hoja'];
       ids.forEach(id => { const e = document.getElementById(id); if (e) e.disabled = false; });
@@ -5236,11 +5239,13 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       const msg = document.getElementById('pc-msg'); if (msg) { msg.textContent = ''; msg.className = 'text-[11px] min-h-[1rem] text-slate-500'; }
       const t = document.getElementById('pc-form-titulo'); if (t) { const c = (catalogoCuentas || []).find(k => k.sumaria === sumaria); t.textContent = 'Pedido: ' + (c ? c.cuenta : (sumaria || '')) + (hoja ? ' · ' + pcNombreHoja(hoja) : ''); }
     }
+    let pcDestinoAbierto = '';
     function pcCerrarModal() {
-      const m = document.getElementById('pc-modal'); if (!m) return;
-      m.classList.add('hidden'); m.classList.remove('flex');
+      if (pcDestinoAbierto) { const d = document.getElementById(pcDestinoAbierto); if (d) d.classList.add('hidden'); pcDestinoAbierto = ''; }
+      const m = document.getElementById('pc-modal');
+      if (m) { m.classList.add('hidden'); m.classList.remove('flex'); }
       const sec = document.getElementById('sec-pedidos-claude'), box = document.getElementById('pc-form-box');
-      if (sec && box) { const h = sec.querySelector('.border-b'); if (h && h.nextSibling !== box) h.after(box); }
+      if (sec && box && box.parentElement && box.parentElement.id !== 'sec-pedidos-claude') { const h = sec.querySelector('.border-b'); if (h && h.nextSibling !== box) h.after(box); }
     }
     // Desde las pantallas de análisis (Bancos, Equivalentes, Inversiones, Arrendamientos): toma la cuenta que está abierta
     function pcDesdeAnalisis() {
@@ -15138,7 +15143,7 @@ ${cont.innerHTML}
       const tabs = $cb('cb-tabs'); if (!tabs) return;
       try { pintarHojasAA(); } catch (e) { }
       const _pc = cbPorConcluir(), _npc = _pc.grupos.length;
-      tabs.innerHTML = CB_TABS.map(([t, n]) => '<button type="button" onclick="cbTab(\'' + t + '\')" class="px-3 py-1.5 text-xs transition rounded-lg ' + (cbE.tab === t ? 'bg-slate-200 text-slate-900 font-semibold' : 'text-slate-600 hover:bg-slate-100 font-medium') + '">' + n + (t === 'concluir' && _npc ? ' (' + _npc + ')' : '') + '</button>').join('') + '<button type="button" onclick="pcIrAPedido(\'AA\', cbE.cliente, cbE.anio, cbE.visita, \'bancos\')" class="ml-auto px-3 py-1.5 rounded-lg text-xs bg-slate-800 text-white hover:bg-slate-700 font-semibold" title="Sube conciliaciones o estados de cuenta: se agregan a lo que ya está cargado">⬆ Subir conciliaciones</button><button type="button" onclick="cbDescargar()" class="px-3 py-1.5 rounded-lg text-xs bg-slate-100 text-slate-800 hover:bg-slate-200 font-medium transition">Descargar todo (Excel)</button>';
+      tabs.innerHTML = CB_TABS.map(([t, n]) => '<button type="button" onclick="cbTab(\'' + t + '\')" class="px-3 py-1.5 text-xs transition rounded-lg ' + (cbE.tab === t ? 'bg-slate-200 text-slate-900 font-semibold' : 'text-slate-600 hover:bg-slate-100 font-medium') + '">' + n + (t === 'concluir' && _npc ? ' (' + _npc + ')' : '') + '</button>').join('') + '<button type="button" onclick="pcIrAPedido(\'AA\', cbE.cliente, cbE.anio, cbE.visita, \'bancos\', \'cb-subida\')" class="ml-auto px-3 py-1.5 rounded-lg text-xs bg-slate-800 text-white hover:bg-slate-700 font-semibold" title="Sube conciliaciones o estados de cuenta: se agregan a lo que ya está cargado">⬆ Subir conciliaciones</button><button type="button" onclick="cbDescargar()" class="px-3 py-1.5 rounded-lg text-xs bg-slate-100 text-slate-800 hover:bg-slate-200 font-medium transition">Descargar todo (Excel)</button>';
       const p = $cb('cb-panel'), n = $cb('cb-notas');
       const nota = (tit, items) => '<div class="mb-2"><div class="font-bold text-slate-700">' + tit + '</div><ul class="list-disc pl-5">' + items.map(i => '<li>' + i + '</li>').join('') + '</ul></div>';
       if (cbE.tab === 'resumen') { p.innerHTML = cbHtmlResumen(); n.innerHTML = nota('Cómo se calcula', ['Saldo conciliado = saldo según estado de cuenta − cheques girados y no cobrados + depósitos en tránsito − notas de crédito no registradas + notas de débito no registradas ± otras partidas.', 'La diferencia es el saldo conciliado menos el saldo en libros; debe ser cero o estar dentro de la tolerancia.', 'En cheques, depósitos y notas, ingresa los valores en positivo; el signo lo aplica la herramienta. En "Otras" ingresa el valor con su signo.']); }
