@@ -14718,7 +14718,7 @@ ${cont.innerHTML}
     }
     function cbSync() {
       const f = $cb('cb-fecha'); if (f) f.value = cbE.corte || '';
-      const a = $cb('cb-auditor'); if (a) a.value = cbE.config.resp || nombreUsuarioActivo() || '';
+      const a = $cb('cb-auditor'); if (a) a.value = respPersona(cbE.config.resp) || nombreUsuarioActivo() || '';
       const u = $cb('cb-actualizado'); if (u) u.value = cbE.act && cbE.act.por ? (cbE.act.por === 'Claude' ? 'Claude · Procesado por Claude, sujeto a modificaciones en caso de existir' : cbE.act.por) : '';
     }
     function cbCambiarCorte(v) { cbE.corte = v; cbGuardar(); cbRender(); }
@@ -17036,6 +17036,8 @@ ${cont.innerHTML}
       const lista = fam.length ? [...cods].filter(c => !impCtaEn(c, tr) && fam.some(f => c.startsWith(f))) : [];
       impEstado._fam = { llave, lista }; return lista;
     }
+    // El auditor responsable es una persona: si quedó escrito "Claude", se toma como vacío
+    const respPersona = r => (r && String(r).trim().toLowerCase() !== 'claude') ? r : '';
     function impRolesDe(cfg) {
       const r = {}; IMP_ROLES.forEach(([k]) => { r[k] = impListaCtas(((cfg || {}).roles || {})[k]).slice(); });
       ['agente', 'manejo', 'seguro', 'flete_int', 'logistico', 'gasto_fin'].forEach(k => impListaCtas(((cfg || {}).roles || {})[k]).forEach(c => { if (!r.gastos.includes(c)) r.gastos.push(c); }));
@@ -18189,7 +18191,7 @@ ${cont.innerHTML}
       if (data) {
         impEstado.imports = ((data.liquidaciones || {}).imports) || [];
         impEstado.cruce = data.cruce && data.cruce.lineas ? data.cruce : null;
-        const c = data.config || {}; impEstado.cfg = { roles: c.roles || {}, tol: c.tol !== undefined ? c.tol : 1, corte: c.corte || '', kw: c.kw || {}, resp: c.resp || '', transito: c.transito || '' };
+        const c = data.config || {}; impEstado.cfg = { roles: c.roles || {}, tol: c.tol !== undefined ? c.tol : 1, corte: c.corte || '', kw: c.kw || {}, resp: respPersona(c.resp), transito: c.transito || '' };
         impEstado.hall = { notas: (data.hallazgos || {}).notas || {}, manuales: (data.hallazgos || {}).manuales || [] };
         impEstado.act = { por: data.actualizado_por, en: data.updated_at };
       } else impEstado.act = null;
@@ -18199,7 +18201,7 @@ ${cont.innerHTML}
     }
     function impSyncCabecera() {
       const f = $im('im-fecha'); if (f) f.value = impEstado.cfg.corte || '';
-      const a = $im('im-auditor'); if (a) a.value = impEstado.cfg.resp || (typeof nombreUsuarioActivo === 'function' ? nombreUsuarioActivo() : '') || '';
+      const a = $im('im-auditor'); if (a) a.value = respPersona(impEstado.cfg.resp) || (typeof nombreUsuarioActivo === 'function' ? nombreUsuarioActivo() : '') || '';
       const u = $im('im-actualizado'); if (u) { u.value = impEstado.act && impEstado.act.por ? impEstado.act.por : ''; u.title = impEstado.act && impEstado.act.en ? 'Último cambio: ' + new Date(impEstado.act.en).toLocaleString('es-EC', { day: '2-digit', month: '2-digit', year: 'numeric', hour: 'numeric', minute: '2-digit' }) : ''; }
     }
     function impCambiarFecha(v) { impEstado.cfg.corte = v; impReclasificar(); impGuardar('config'); impRender(); }
