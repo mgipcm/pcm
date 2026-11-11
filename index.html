@@ -14708,10 +14708,15 @@ ${cont.innerHTML}
     }
     function cbSetPartida(cid, pid, campo, el) {
       const c = cbE.cuentas.find(x => x.id === cid), p = c && (c.partidas || []).find(x => x.id === pid); if (!p) return;
+      if (campo === 'fecha' || campo === 'rastreo') {
+        // el calendario avisa cada vez que se escribe una cifra del año: no se vuelve a dibujar para no perder el cursor, y se ignoran años absurdos
+        const a = Number(String(el.value).slice(0, 4)); if (el.value && (a < 2000 || a > 2100)) return;
+        p[campo] = el.value; cbGuardar(); return;
+      }
       p[campo] = campo === 'valor' ? (el.value.trim() === '' ? '' : cbN(el.value)) : el.value;
       cbGuardar(); cbRenderConScroll();
     }
-    function cbQuitarPartida(cid, pid) { const c = cbE.cuentas.find(x => x.id === cid); if (!c) return; c.partidas = (c.partidas || []).filter(x => x.id !== pid); cbGuardar(); cbRenderConScroll(); }
+    function cbQuitarPartida(cid, pid) { const c = cbE.cuentas.find(x => x.id === cid); if (!c) return; const pp = (c.partidas || []).find(x => x.id === pid); if (!confirm('¿Seguro que quieres eliminar esta partida' + (pp && (pp.ref || pp.desc) ? ' (' + (pp.ref || pp.desc) + ')' : '') + '? No se puede deshacer.')) return; c.partidas = (c.partidas || []).filter(x => x.id !== pid); cbGuardar(); cbRenderConScroll(); }
     function cbSetConfig(campo, el) { cbE.config[campo] = el.value; cbGuardar(); cbRenderConScroll(); }
     function cbSetTexto(grupo, campo, el) { cbE.config[grupo] = cbE.config[grupo] || {}; cbE.config[grupo][campo] = el.value; cbGuardar(); }
     function cbVerifEditar(k, campo, el) {
@@ -14790,7 +14795,7 @@ ${cont.innerHTML}
           if (!ps.length) h += '<tr><td colspan="7" class="p-4 text-center text-slate-400">Sin partidas. Usa "+ Agregar partida".</td></tr>';
           ps.forEach(p => {
             const f = (campo, ph, cls, num) => '<td class="px-1 py-1"><input class="' + (cls || CB_IN) + '" value="' + escapeHtml(num ? cbIn(p[campo]) : (p[campo] === undefined || p[campo] === null ? '' : p[campo])) + '" ' + (ph ? 'placeholder="' + ph + '" ' : '') + 'onchange="cbSetPartida(\'' + c.id + '\', \'' + p.id + '\', \'' + campo + '\', this)"></td>';
-            h += '<tr class="border-b border-slate-100">' + '<td class="px-1 py-1 w-32"><input type="date" class="' + CB_IN + '" value="' + escapeHtml(p.fecha || '') + '" onchange="cbSetPartida(\'' + c.id + '\', \'' + p.id + '\', \'fecha\', this)"></td>' + f('ref', '') + f('desc', '') + f('valor', '', CB_INN, true) + '<td class="px-1 py-1 w-36"><input type="date" class="' + CB_IN + '" value="' + escapeHtml(p.rastreo || '') + '" onchange="cbSetPartida(\'' + c.id + '\', \'' + p.id + '\', \'rastreo\', this)"></td>' + f('nota', '') + '<td class="px-1"><button type="button" onclick="cbQuitarPartida(\'' + c.id + '\', \'' + p.id + '\')" class="text-slate-400 hover:text-red-600 px-1" title="Quitar la partida">✕</button></td></tr>';
+            h += '<tr class="border-b border-slate-100">' + '<td class="px-1 py-1 w-32"><input type="date" min="2000-01-01" max="2100-12-31" class="' + CB_IN + '" value="' + escapeHtml(p.fecha || '') + '" onfocus="if (!this.value) { this.value = new Date().toISOString().slice(0, 10); this.onchange(); }" onchange="cbSetPartida(\'' + c.id + '\', \'' + p.id + '\', \'fecha\', this)"></td>' + f('ref', '') + f('desc', '') + f('valor', '', CB_INN, true) + '<td class="px-1 py-1 w-36"><input type="date" min="2000-01-01" max="2100-12-31" class="' + CB_IN + '" value="' + escapeHtml(p.rastreo || '') + '" onfocus="if (!this.value) { this.value = new Date().toISOString().slice(0, 10); this.onchange(); }" onchange="cbSetPartida(\'' + c.id + '\', \'' + p.id + '\', \'rastreo\', this)"></td>' + f('nota', '') + '<td class="px-1"><button type="button" onclick="cbQuitarPartida(\'' + c.id + '\', \'' + p.id + '\')" class="text-slate-400 hover:text-red-600 px-1" title="Quitar la partida">✕</button></td></tr>';
           });
           h += '<tr class="bg-slate-50 font-bold"><td class="px-2 py-1.5" colspan="3">Total (' + ps.length + ' partida(s))</td><td class="px-2 py-1.5 text-right">' + cbFmt(Math.abs(cbSuma(c, tp[0])) * (tp[0] === 'otra' ? Math.sign(cbSuma(c, tp[0])) : 1)) + '</td><td colspan="3"></td></tr></tbody></table></div>';
         }
@@ -15133,7 +15138,7 @@ ${cont.innerHTML}
       const tabs = $cb('cb-tabs'); if (!tabs) return;
       try { pintarHojasAA(); } catch (e) { }
       const _pc = cbPorConcluir(), _npc = _pc.grupos.length;
-      tabs.innerHTML = CB_TABS.map(([t, n]) => '<button type="button" onclick="cbTab(\'' + t + '\')" class="px-3 py-1.5 text-xs transition rounded-lg ' + (cbE.tab === t ? 'bg-slate-200 text-slate-900 font-semibold' : 'text-slate-600 hover:bg-slate-100 font-medium') + '">' + n + (t === 'concluir' && _npc ? ' (' + _npc + ')' : '') + '</button>').join('') + '<button type="button" onclick="cbDescargar()" class="ml-auto px-3 py-1.5 rounded-lg text-xs bg-slate-100 text-slate-800 hover:bg-slate-200 font-medium transition">Descargar todo (Excel)</button>';
+      tabs.innerHTML = CB_TABS.map(([t, n]) => '<button type="button" onclick="cbTab(\'' + t + '\')" class="px-3 py-1.5 text-xs transition rounded-lg ' + (cbE.tab === t ? 'bg-slate-200 text-slate-900 font-semibold' : 'text-slate-600 hover:bg-slate-100 font-medium') + '">' + n + (t === 'concluir' && _npc ? ' (' + _npc + ')' : '') + '</button>').join('') + '<button type="button" onclick="pcIrAPedido(\'AA\', cbE.cliente, cbE.anio, cbE.visita, \'bancos\')" class="ml-auto px-3 py-1.5 rounded-lg text-xs bg-slate-800 text-white hover:bg-slate-700 font-semibold" title="Sube conciliaciones o estados de cuenta: se agregan a lo que ya está cargado">⬆ Subir conciliaciones</button><button type="button" onclick="cbDescargar()" class="px-3 py-1.5 rounded-lg text-xs bg-slate-100 text-slate-800 hover:bg-slate-200 font-medium transition">Descargar todo (Excel)</button>';
       const p = $cb('cb-panel'), n = $cb('cb-notas');
       const nota = (tit, items) => '<div class="mb-2"><div class="font-bold text-slate-700">' + tit + '</div><ul class="list-disc pl-5">' + items.map(i => '<li>' + i + '</li>').join('') + '</ul></div>';
       if (cbE.tab === 'resumen') { p.innerHTML = cbHtmlResumen(); n.innerHTML = nota('Cómo se calcula', ['Saldo conciliado = saldo según estado de cuenta − cheques girados y no cobrados + depósitos en tránsito − notas de crédito no registradas + notas de débito no registradas ± otras partidas.', 'La diferencia es el saldo conciliado menos el saldo en libros; debe ser cero o estar dentro de la tolerancia.', 'En cheques, depósitos y notas, ingresa los valores en positivo; el signo lo aplica la herramienta. En "Otras" ingresa el valor con su signo.']); }
