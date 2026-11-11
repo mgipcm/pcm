@@ -2187,8 +2187,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
         <div class="flex flex-wrap gap-1 p-1.5 bg-white border border-slate-200 rounded-2xl">
           <button type="button" id="im-tab-liq" onclick="impTab('liq')" class="px-3 py-1.5 text-xs transition rounded-lg">1. Liquidaciones de importación</button>
           <button type="button" id="im-tab-cruce" onclick="impTab('cruce')" class="px-3 py-1.5 text-xs transition rounded-lg">2. Cruce con mayor (importaciones e inventario)</button>
-          <button type="button" id="im-tab-diario" onclick="impTab('diario')" class="px-3 py-1.5 text-xs transition rounded-lg">3. Diario contable (importaciones)</button>
-          <button type="button" id="im-tab-ent" onclick="impTab('ent')" class="px-3 py-1.5 text-xs transition rounded-lg">4. Entradas del mayor vs Movimiento</button>
+          <button type="button" id="im-tab-ent" onclick="impTab('ent')" class="px-3 py-1.5 text-xs transition rounded-lg">3. Entradas del mayor vs Movimiento</button>
           <button type="button" id="im-descargar" onclick="impDescargar()" class="hidden ml-auto px-3 py-1.5 rounded-lg text-xs bg-slate-100 text-slate-800 hover:bg-slate-200 font-medium transition">Descargar todo (Excel)</button>
         </div>
         <div id="im-panel" class="border border-slate-200 rounded-xl overflow-auto max-h-[78vh]"></div>
@@ -17925,12 +17924,12 @@ ${cont.innerHTML}
         if (error) impMsg('No se guardó: ' + (error.message || error), 'text-red-600 font-bold'); else { impMsg('Guardado ✓'); impEstado.act = { por: fila.actualizado_por, en: fila.updated_at }; impSyncCabecera(); }
       }, 700);
     }
-    const IMP_TABS = [['liq', '1. Liquidaciones de importación'], ['cruce', '2. Cruce con mayor (importaciones e inventario)'], ['diario', '3. Diario contable (importaciones)'], ['ent', '4. Entradas del mayor vs Movimiento']];
+    const IMP_TABS = [['liq', '1. Liquidaciones de importación'], ['cruce', '2. Cruce con mayor (importaciones e inventario)'], ['ent', '3. Entradas del mayor vs Movimiento']];
     function impTab(t) { impEstado.tab = t; impRender(); }
     function impRender() {
       IMP_TABS.forEach(([t]) => { const b = $im('im-tab-' + t); if (b) b.className = 'px-3 py-1.5 text-xs transition rounded-lg ' + (impEstado.tab === t ? 'bg-slate-200 text-slate-900 font-semibold' : 'text-slate-600 hover:bg-slate-100 font-medium'); });
       const p = $im('im-panel'); if (!p) return;
-      p.innerHTML = impEstado.tab === 'liq' ? impHtmlLiq() : impEstado.tab === 'cruce' ? impHtmlCruce() : impEstado.tab === 'diario' ? impHtmlDiario() : impEstado.tab === 'ent' ? impHtmlEntradas() : impEstado.tab === 'res' ? impHtmlResumen() : impHtmlLiq();
+      p.innerHTML = impEstado.tab === 'liq' ? impHtmlLiq() : impEstado.tab === 'cruce' ? impHtmlCruce() : impEstado.tab === 'ent' ? impHtmlEntradas() : impEstado.tab === 'res' ? impHtmlResumen() : impHtmlLiq();
       if (impEstado.tab === 'liq') { impPintarProc(); }
       impFlechas();
     }
