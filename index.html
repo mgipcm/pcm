@@ -17159,6 +17159,15 @@ ${cont.innerHTML}
         if (mejor) { const sum = impR2(mejor.reduce((t, c) => t + c.liq, 0)), regG = (filas.find(x => x.id === im.id && x.k === 'gastos') || {}).mayor || 0, reg = impR2(Math.max(mejor.reduce((t, c) => t + c.may, 0), regG)); out.push(`La diferencia (${fm(dif)}) coincide con: ${mejor.map(c => c.t).join(' + ')} (${fm(sum)}). ` + (reg > tol ? `En el mayor esos gastos aparecen en cuentas de resultados por ${fm(reg)}, no en inventario.` : 'No se encontraron registrados en el mayor.')); }
       }
       if (kk === 'costo') { const aj = impValoresLiq(im).ajusteHoja || 0; if (aj > tol && Math.abs(aj - ad) <= Math.max(tol, 0.5)) out.push(`La diferencia (${fm(dif)}) coincide con el importe sin detalle que la hoja de liquidación reparte en el costo (línea de ajuste de ${fm(aj)}); no se encontró registrado en el mayor.`); }
+      if (kk === 'costo' && ad > tol) {
+        const aj = impValoresLiq(im).ajusteHoja || 0, viaT = impR2(filas.filter(x => x.id === im.id && x.k !== 'iva').reduce((t, x) => t + (x.via || 0), 0));
+        const hay = out.length > 0;
+        if (!hay && aj > tol && viaT > tol && Math.abs(aj + viaT - dif) <= Math.max(tol, 0.5)) out.push(`La diferencia (${fm(dif)}) se explica con dos partidas: el importe sin detalle de la hoja de liquidación (${fm(aj)}) más pagos hechos por anticipo que no se trasladaron al costo de la importación (${fm(viaT)}).`);
+        else if (!hay && viaT > tol && Math.abs(viaT - dif) <= Math.max(tol, 0.5)) out.push(`La diferencia (${fm(dif)}) coincide con pagos hechos por anticipo (${fm(viaT)}) que no se trasladaron al costo de la importación.`);
+        const mayorC = (filas.find(x => x.id === im.id && x.k === 'costo') || {}).mayor || 0, liqC = (filas.find(x => x.id === im.id && x.k === 'costo') || {}).liq || 0;
+        if (liqC > 0 && mayorC > 0 && Math.abs(mayorC - 2 * liqC) <= Math.max(tol, 0.02 * liqC)) out.push(`El mayor acumula casi el doble de la liquidación (${fm(mayorC)} contra ${fm(liqC)}): la importación parece estar registrada dos veces; revisar asientos duplicados.`);
+        else if (liqC > 0 && mayorC > 0 && mayorC < 0.2 * liqC) out.push(`En el mayor solo se identificó ${fm(mayorC)} de ${fm(liqC)}: lo demás probablemente está en asientos que no mencionan esta importación; filtrar el mayor por proveedor o fecha de llegada.`);
+      }
       if (ad > tol) {
         const sim = []; const vistos = new Set();
         LN.forEach(l => { const m = Math.max(Number(l.deb) || 0, Number(l.hab) || 0); if (Math.abs(m - ad) <= tol) { const k2 = l.k + '|' + l.cod; if (!vistos.has(k2)) { vistos.add(k2); sim.push(l); } } });
