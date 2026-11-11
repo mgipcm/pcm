@@ -1169,6 +1169,11 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
             <p class="mt-1 text-[11px] text-slate-400">Se leen PDF (con texto o escaneados), Excel, CSV, TXT y fotos JPG o PNG. Las fotos y los escaneos los transcribe Claude y las cifras deben verificarse contra el original.</p>
             <label class="flex items-start gap-2 mt-2 text-[11px] text-slate-600"><input type="checkbox" id="pc-confirma" class="mt-0.5"><span>Confirmo que esta documentación es completa y adecuada para realizar el análisis solicitado.</span></label>
           </div>
+          <div id="pc-ctas-cv-caja" class="hidden">
+            <label class="block text-xs font-semibold text-slate-600 mb-1">Cuentas de costo de ventas (obligatorio)</label>
+            <input type="text" id="pc-ctas-cv" placeholder="Códigos contables separados por coma. Ej. 510101001, 510101002" class="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs sm:text-sm outline-none">
+            <p class="mt-1 text-[11px] text-slate-400">Indica los códigos de las cuentas de costo de ventas. Claude armará, mes a mes, el costo de esas cuentas con el mayor contable, para cruzarlo con las salidas del inventario.</p>
+          </div>
           <div id="pc-ctas-caja" class="hidden">
             <label class="block text-xs font-semibold text-slate-600 mb-1">Cuentas del inventario para la venta (obligatorio)</label>
             <input type="text" id="pc-ctas-inv" placeholder="Códigos contables separados por coma. Ej. 110301001, 110301002, 110394001" class="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs sm:text-sm outline-none">
@@ -4566,13 +4571,14 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       if (!v('pc-sumaria')) return err('Elige la cuenta (sumaria).');
       if (PC_HOJAS_SUM[v('pc-sumaria')] && !v('pc-hoja')) return err('Elige la hoja de la cuenta ' + v('pc-sumaria') + '.');
       if (v('pc-sumaria') === 'AF' && v('pc-hoja') === 'venta' && !v('pc-ctas-inv').trim()) return err('Indica los códigos de las cuentas del inventario para la venta.');
+      if (v('pc-sumaria') === 'AF' && v('pc-hoja') === 'costo_ventas' && !v('pc-ctas-cv').trim()) return err('Indica los códigos de las cuentas de costo de ventas.');
       const archivos = [...pcArchivosSel];
       if (!archivos.length) return err('Sube al menos un archivo con la documentación.');
       const grande = archivos.find(f => f.size > 209715200); if (grande) return err('El archivo "' + grande.name + '" supera los 200 MB. Sube una versión resumida o filtrada a lo que se va a analizar.');
       if (archivos.some((f, i) => !pcEtiquetasElegidas[i])) return err('Elige el tipo de cada archivo (conciliación, estado de cuenta, etc.).');
       if (!document.getElementById('pc-confirma').checked) return err('Marca la confirmación de que la documentación es completa y adecuada.');
       if (confirmado !== true) { pcResumenAntesDeEnviar(archivos); return; }
-      const fila = { cliente_id: v('pc-cliente'), anio: Number(v('pc-anio')), visita: v('pc-visita') || 'final', sumaria: v('pc-sumaria'), hoja: PC_HOJAS_SUM[v('pc-sumaria')] ? v('pc-hoja') : null, carpeta: null, nota: ((v('pc-sumaria') === 'AF' && v('pc-hoja') === 'venta' && v('pc-ctas-inv').trim() ? 'CUENTAS DE INVENTARIO PARA LA VENTA (elegidas por el auditor): ' + v('pc-ctas-inv').trim() + '. ' : '') + (v('pc-nota') || '')).trim() || null, doc_confirmada_por: nombreUsuarioActivo(), doc_confirmada_at: new Date().toISOString(), solicitado_por: nombreUsuarioActivo(), solicitado_email: usuarioActivo.email || null };
+      const fila = { cliente_id: v('pc-cliente'), anio: Number(v('pc-anio')), visita: v('pc-visita') || 'final', sumaria: v('pc-sumaria'), hoja: PC_HOJAS_SUM[v('pc-sumaria')] ? v('pc-hoja') : null, carpeta: null, nota: ((v('pc-sumaria') === 'AF' && v('pc-hoja') === 'costo_ventas' && v('pc-ctas-cv').trim() ? 'CUENTAS DE COSTO DE VENTAS (elegidas por el auditor): ' + v('pc-ctas-cv').trim() + '. ' : '') + (v('pc-sumaria') === 'AF' && v('pc-hoja') === 'venta' && v('pc-ctas-inv').trim() ? 'CUENTAS DE INVENTARIO PARA LA VENTA (elegidas por el auditor): ' + v('pc-ctas-inv').trim() + '. ' : '') + (v('pc-nota') || '')).trim() || null, doc_confirmada_por: nombreUsuarioActivo(), doc_confirmada_at: new Date().toISOString(), solicitado_por: nombreUsuarioActivo(), solicitado_email: usuarioActivo.email || null };
       const { data: ins, error } = await supabaseClient.from('pedidos_claude').insert([fila]).select('id').single();
       if (error) return err('No se pudo enviar: ' + (error.message || error));
       msg.textContent = 'Subiendo ' + archivos.length + ' archivo(s)…'; msg.className = 'text-[11px] min-h-[1rem] text-slate-500';
@@ -4589,7 +4595,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       msg.textContent = 'Pedido enviado. Avisando por correo al Socio y al Supervisor…';
       const av = await avisarPedidoCorreo(ins.id, 'solicitado');
       msg.textContent = 'Pedido enviado con ' + archivos.length + ' archivo(s). ' + av;
-      document.getElementById('pc-nota').value = ''; { const ci = document.getElementById('pc-ctas-inv'); if (ci) ci.value = ''; } document.getElementById('pc-archivos').value = ''; pcArchivosSel = []; pcEtiquetasElegidas = []; document.getElementById('pc-confirma').checked = false; pcArchivosElegidos();
+      document.getElementById('pc-nota').value = ''; { const ci = document.getElementById('pc-ctas-inv'); if (ci) ci.value = ''; } { const cj = document.getElementById('pc-ctas-cv'); if (cj) cj.value = ''; } document.getElementById('pc-archivos').value = ''; pcArchivosSel = []; pcEtiquetasElegidas = []; document.getElementById('pc-confirma').checked = false; pcArchivosElegidos();
       registrarActividad('Solicitó análisis a Claude', fila.sumaria + ' · ' + fila.visita, { cliente: fila.cliente_id, anio: String(fila.anio) });
       cargarPedidosClaude();
     }
@@ -4616,6 +4622,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       'AA:caja': ['Acta de arqueo de caja', 'Detalle de fondos y caja chica', 'Documento de soporte', 'Otro'],
       'AA:equivalentes': ['Certificado o póliza de inversión', 'Estado de cuenta', 'Confirmación de la institución', 'Detalle de equivalentes de efectivo', 'Otro'],
       'AF:venta': ['Mayor contable completo', 'Mayor contable de inventarios', 'Balance de comprobación', 'Otro'],
+      'AF:costo_ventas': ['Mayor contable completo', 'Mayor contable de costo de ventas', 'Balance de comprobación', 'Otro'],
       'AF:import': ['Liquidación de importación (PDF)', 'Liquidación de importación (Excel)', 'Declaración aduanera (DAI / DAU)', 'Factura del proveedor', 'Mayor contable completo', 'Otro'],
       AOO: ['Contrato', 'Adenda o renovación', 'Evaluación NIIF 16', 'Factura o soporte de pagos', 'Otro'],
       PCC: ['Contrato', 'Adenda o renovación', 'Evaluación NIIF 16', 'Factura o soporte de pagos', 'Otro'],
@@ -4623,8 +4630,8 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       AB: ['Certificado o póliza de inversión', 'Estado de cuenta', 'Confirmación bancaria', 'Detalle o anexo de inversiones', 'Otro'],
       AS: ['Certificado o póliza de inversión', 'Estado de cuenta', 'Confirmación bancaria', 'Detalle o anexo de inversiones', 'Otro']
     };
-    const PC_HOJAS = { caja: 'Caja', bancos: 'Bancos', equivalentes: 'Equivalentes de efectivo', venta: 'Inventario para la venta', import: 'Importaciones (liquidaciones)' };
-    const PC_HOJAS_SUM = { AA: [['caja', 'Caja'], ['bancos', 'Bancos'], ['equivalentes', 'Equivalentes de efectivo']], AF: [['venta', 'Inventario para la venta'], ['import', 'Importaciones (liquidaciones)']] };
+    const PC_HOJAS = { caja: 'Caja', bancos: 'Bancos', equivalentes: 'Equivalentes de efectivo', venta: 'Inventario para la venta', costo_ventas: 'Costo de ventas vs salidas', import: 'Importaciones (liquidaciones)' };
+    const PC_HOJAS_SUM = { AA: [['caja', 'Caja'], ['bancos', 'Bancos'], ['equivalentes', 'Equivalentes de efectivo']], AF: [['venta', 'Inventario para la venta'], ['costo_ventas', 'Costo de ventas vs salidas'], ['import', 'Importaciones (liquidaciones)']] };
     function pcNombreHoja(h) { return PC_HOJAS[h] || h || ''; }
     const PC_TODO = 'Todo en un archivo (todos los documentos juntos)';
     function pcEtiquetas(sumaria, hoja) {
@@ -4636,6 +4643,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       const caja = document.getElementById('pc-hoja-caja'), sum = valorAnalisis('pc-sumaria'), esAA = !!PC_HOJAS_SUM[sum];
       if (caja) caja.classList.toggle('hidden', !esAA);
       const cc = document.getElementById('pc-ctas-caja'); if (cc) cc.classList.toggle('hidden', !(sum === 'AF' && valorAnalisis('pc-hoja') === 'venta'));
+      { const cv2 = document.getElementById('pc-ctas-cv-caja'); if (cv2) cv2.classList.toggle('hidden', !(sum === 'AF' && valorAnalisis('pc-hoja') === 'costo_ventas')); }
       const h = document.getElementById('pc-hoja');
       if (h) {
         if (esAA) {
@@ -4664,6 +4672,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       const r = reglas.find(x => x[0].test(nombre) && et.includes(x[1])); return r ? r[1] : '';
     }
     function pcArchivosElegidos() {
+      { const cv3 = document.getElementById('pc-ctas-cv-caja'); if (cv3) cv3.classList.toggle('hidden', !(valorAnalisis('pc-sumaria') === 'AF' && valorAnalisis('pc-hoja') === 'costo_ventas')); }
       { const cc2 = document.getElementById('pc-ctas-caja'); if (cc2) cc2.classList.toggle('hidden', !(valorAnalisis('pc-sumaria') === 'AF' && valorAnalisis('pc-hoja') === 'venta')); }
       const fs = pcArchivosSel, et = pcEtiquetas(valorAnalisis('pc-sumaria'), valorAnalisis('pc-hoja')), prev = pcEtiquetasElegidas;
       pcEtiquetasElegidas = fs.map((f, i) => (et.includes(prev[i]) ? prev[i] : pcEtiquetaSugerida(f.name, et)));
@@ -17631,7 +17640,7 @@ ${cont.innerHTML}
         otras.classList.toggle('hidden', imp);
         if (!imp) {
           if (ivE.hoja === 'venta') otras.innerHTML = '<div class="flex flex-wrap gap-1 p-1.5 bg-white border border-slate-200 rounded-2xl">' + IV_VENTA_BOTONES.map(([k, n]) => '<button type="button" onclick="ivIrBoton(\'' + k + '\')" class="px-3 py-1.5 text-xs transition rounded-lg ' + (ivE.btn === k ? 'bg-slate-200 text-slate-900 font-semibold' : 'text-slate-600 hover:bg-slate-100') + '">' + n + '</button>').join('') + '</div>' +
-            (ivE.btn === 'mov' ? '<div id="mv-cont" class="mt-3"></div>' : emb ? '<div class="mt-2 text-[11px] text-slate-500">Pide a Claude, en un solo pedido, la lectura de las liquidaciones y el cruce con el mayor contable; la pestaña 4 las cruza con las entradas del Movimiento del inventario.</div>' : '<div class="border border-dashed border-slate-300 rounded-xl p-8 mt-3 text-center text-sm text-slate-500"><div class="font-bold text-slate-700 mb-1">' + escapeHtml((IV_VENTA_BOTONES.find(x => x[0] === ivE.btn) || [])[1] || '') + '</div>Esta herramienta está en desarrollo. La iremos construyendo en los siguientes pasos.</div>');
+            (ivE.btn === 'mov' ? '<div id="mv-cont" class="mt-3"></div>' : ivE.btn === 'salidas' ? '<div id="cv-cont" class="mt-3"></div>' : emb ? '<div class="mt-2 text-[11px] text-slate-500">Pide a Claude, en un solo pedido, la lectura de las liquidaciones y el cruce con el mayor contable; la pestaña 4 las cruza con las entradas del Movimiento del inventario.</div>' : '<div class="border border-dashed border-slate-300 rounded-xl p-8 mt-3 text-center text-sm text-slate-500"><div class="font-bold text-slate-700 mb-1">' + escapeHtml((IV_VENTA_BOTONES.find(x => x[0] === ivE.btn) || [])[1] || '') + '</div>Esta herramienta está en desarrollo. La iremos construyendo en los siguientes pasos.</div>');
           else otras.innerHTML = '<div class="border border-dashed border-slate-300 rounded-xl p-8 text-center text-sm text-slate-500"><div class="font-bold text-slate-700 mb-1">' + escapeHtml(nom) + '</div>Esta hoja está en desarrollo.</div>';
         }
       }
@@ -17642,7 +17651,90 @@ ${cont.innerHTML}
         else if (cli && impEstado.cargado) { if (impEstado.tab === 'ent' || true) impRender(); }
       }
       else if (!emb) { if (av) av.classList.add('hidden'); if (esp) esp.classList.add('hidden'); }
+      if (!imp && ivE.hoja === 'venta' && ivE.btn === 'salidas') { const hayCambio = cvE.cliente !== $im('im-cliente').value || cvE.anio !== $im('im-anio').value || cvE.visita !== $im('im-visita').value; if (hayCambio || !cvE.cargado) cvCargar(); else cvPintar(); }
       if (!imp && ivE.hoja === 'venta' && ivE.btn === 'mov') { const hayCambio = mvE.cliente !== $im('im-cliente').value || mvE.anio !== $im('im-anio').value || mvE.visita !== $im('im-visita').value; if (hayCambio || !mvE.cargado) mvCargar(); else mvPintar(); }
+    }
+
+    // ===== AF Inventarios › Inventario para la venta › iii) Costo de ventas vs Salidas (mayor contable) =====
+    const cvE = { cargaId: 0, cliente: '', anio: '', visita: '', cargado: false, cv: [], mov: [], bal: {}, act: null, error: '' };
+    const CV_MESES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+    const cvMes = ym => { const m = /^(\d{4})-(\d{2})$/.exec(ym || ''); return m ? CV_MESES[Number(m[2]) - 1] + ' ' + m[1] : (ym || 'Sin fecha'); };
+    async function cvCargar() {
+      const cli = $im('im-cliente').value, anio = $im('im-anio').value, vis = $im('im-visita').value;
+      Object.assign(cvE, { cliente: cli, anio, visita: vis, cargado: false, cv: [], mov: [], bal: {}, act: null, error: '' });
+      if (!cli) { cvPintar(); return; }
+      const id = ++cvE.cargaId;
+      const q = h => supabaseClient.from('inventario_movimiento').select('cuentas, updated_at, actualizado_por').eq('cliente_id', cli).eq('anio', Number(anio)).eq('visita', vis).eq('hoja', h).maybeSingle();
+      const [a, b, c] = await Promise.all([q('costo_ventas'), q('venta'), supabaseClient.from('balance_comprobacion').select('codigo, saldo').eq('cliente_id', cli).eq('anio', Number(anio)).eq('visita', vis).limit(5000)]);
+      if (id !== cvE.cargaId) return;
+      cvE.cv = a.data && Array.isArray(a.data.cuentas) ? a.data.cuentas : [];
+      cvE.act = a.data ? { por: a.data.actualizado_por, en: a.data.updated_at } : null;
+      cvE.mov = b.data && Array.isArray(b.data.cuentas) ? b.data.cuentas : [];
+      ((c && c.data) || []).forEach(f => { cvE.bal[String(f.codigo || '').trim()] = Number(f.saldo); });
+      cvE.error = a.error ? (a.error.message || String(a.error)) : '';
+      cvE.cargado = true; cvPintar();
+    }
+    // Cruce por mes: salidas del inventario (movimiento, con signo positivo) contra el costo de ventas del mayor
+    function cvCalcular() {
+      const meses = {}, f = ym => (meses[ym] = meses[ym] || { ym, sal: 0, cos: 0 });
+      let salSinMes = 0, cosSinMes = 0;
+      cvE.mov.forEach(c => {
+        const ps = (Array.isArray(c.partidas) ? c.partidas : []).filter(p => p && p.col === 'salidas');
+        if (ps.length) ps.forEach(p => { const ym = String(p.fecha || '').slice(0, 7); f(ym || 'sin').sal += -(Number(p.valor) || 0); });
+        else salSinMes += -(Number(c.salidas) || 0);
+      });
+      cvE.cv.forEach(c => {
+        const ps = Array.isArray(c.partidas) ? c.partidas : [];
+        if (ps.length) ps.forEach(p => { const ym = String(p.fecha || '').slice(0, 7); f(ym || 'sin').cos += (Number(p.valor) || 0); });
+        else cosSinMes += (Number(c.neto) || ((Number(c.debe) || 0) - (Number(c.haber) || 0)));
+      });
+      const filas = Object.values(meses).sort((a, b) => a.ym.localeCompare(b.ym)).map(m => ({ ...m, sal: r2f(m.sal), cos: r2f(m.cos), dif: r2f(m.cos - m.sal) }));
+      const tSal = r2f(filas.reduce((t, m) => t + m.sal, 0) + salSinMes), tCos = r2f(filas.reduce((t, m) => t + m.cos, 0) + cosSinMes);
+      return { filas, salSinMes: r2f(salSinMes), cosSinMes: r2f(cosSinMes), tSal, tCos, dif: r2f(tCos - tSal) };
+    }
+    function cvPintar() {
+      if (typeof ivE === 'undefined' || ivE.hoja !== 'venta' || ivE.btn !== 'salidas') return;
+      const c = document.getElementById('cv-cont'); if (!c) return;
+      if (!cvE.cliente) { c.innerHTML = '<p class="text-xs text-slate-500 border border-dashed border-slate-300 rounded-xl p-4">Selecciona el cliente para comenzar.</p>'; return; }
+      if (!cvE.cargado) { c.innerHTML = '<p class="text-xs text-slate-500 p-4">Cargando…</p>'; return; }
+      if (cvE.error) { c.innerHTML = '<p class="text-xs text-red-600 font-bold p-4">No se pudo cargar: ' + escapeHtml(cvE.error) + '</p>'; return; }
+      const info = '<div class="text-[11px] text-slate-500 mb-3"><b>Objetivo:</b> comprobar que lo que salió del inventario por ventas coincide con el costo de ventas registrado en el mayor contable. <b>Cómo se hace:</b> las salidas salen del Movimiento del inventario (pestaña i) y el costo de ventas del mayor que se sube en el pedido; se comparan mes a mes y en total. <b>Qué muestra:</b> las diferencias por mes y por cuenta, y una propuesta de ajuste si el total no cuadra.</div>';
+      if (!cvE.cv.length) { c.innerHTML = info + '<div class="border border-slate-200 rounded-xl">' + pcHtmlAviso('AF', cvE.cliente, cvE.anio, cvE.visita, 'costo_ventas') + '</div>'; return; }
+      const R = cvCalcular(), hayMov = cvE.mov.length > 0, TH = 'px-2 py-2 text-[11px] font-bold text-slate-700 bg-slate-100 border-b border-slate-300', TD = 'px-2 py-1', F = formatoNumeroAnexo;
+      const cel = (v, hay) => !hay ? '<span class="text-slate-400">–</span>' : '<span class="' + (Math.abs(v) > 1 ? 'text-red-600' : 'text-emerald-700') + ' font-bold">' + F(v) + '</span>';
+      let h = info + '<div class="flex flex-wrap items-center gap-2 mb-2">' + (cvE.act && cvE.act.por === 'Claude' ? '<span class="pill-origen rev">Procesado por Claude, sujeto a modificaciones en caso de existir</span>' : (cvE.act && cvE.act.por ? '<span class="text-[11px] text-slate-500">Actualizado por ' + escapeHtml(cvE.act.por) + '</span>' : '')) + '<button type="button" onclick="cvDescargar()" class="ml-auto px-3 py-1.5 rounded-lg text-xs bg-slate-100 text-slate-800 hover:bg-slate-200 font-medium transition">Descargar en Excel</button></div>';
+      if (!hayMov) h += '<p class="text-[11px] text-amber-700 font-bold mb-2">Todavía no hay Movimiento del inventario (pestaña i): sin él no hay salidas contra qué comparar.</p>';
+      h += '<div class="font-bold text-slate-800 mb-1 text-xs">A. Cruce por mes</div><div class="overflow-x-auto border border-slate-200 rounded-xl"><table class="w-full text-[11px] border-collapse min-w-[560px]"><thead><tr><th class="' + TH + ' text-left">Mes</th><th class="' + TH + ' text-right">Salidas del inventario (movimiento)</th><th class="' + TH + ' text-right">Costo de ventas (mayor)</th><th class="' + TH + ' text-right">Diferencia</th><th class="' + TH + ' text-left">Resultado</th></tr></thead><tbody>';
+      R.filas.forEach(m => { h += '<tr class="border-t border-slate-100"><td class="' + TD + '">' + escapeHtml(cvMes(m.ym)) + '</td><td class="' + TD + ' text-right">' + F(m.sal) + '</td><td class="' + TD + ' text-right">' + F(m.cos) + '</td><td class="' + TD + ' text-right">' + cel(m.dif, true) + '</td><td class="' + TD + ' font-bold ' + (Math.abs(m.dif) > 1 ? 'text-red-600' : 'text-emerald-700') + '">' + (Math.abs(m.dif) > 1 ? 'Revisar' : 'Cuadra') + '</td></tr>'; });
+      if (R.salSinMes || R.cosSinMes) h += '<tr class="border-t border-slate-100"><td class="' + TD + '">Sin detalle por mes</td><td class="' + TD + ' text-right">' + F(R.salSinMes) + '</td><td class="' + TD + ' text-right">' + F(R.cosSinMes) + '</td><td class="' + TD + ' text-right">' + cel(r2f(R.cosSinMes - R.salSinMes), true) + '</td><td></td></tr>';
+      h += '<tr class="border-t-2 border-slate-300 bg-slate-50 font-bold"><td class="' + TD + '">Total</td><td class="' + TD + ' text-right">' + F(R.tSal) + '</td><td class="' + TD + ' text-right">' + F(R.tCos) + '</td><td class="' + TD + ' text-right">' + cel(R.dif, true) + '</td><td class="' + TD + ' ' + (Math.abs(R.dif) > 1 ? 'text-red-600' : 'text-emerald-700') + '">' + (Math.abs(R.dif) > 1 ? 'Revisar' : 'Cuadra') + '</td></tr></tbody></table></div>';
+      // B. Cuentas de costo de ventas contra balance
+      h += '<div class="font-bold text-slate-800 mt-4 mb-1 text-xs">B. Cuentas de costo de ventas del mayor contra el balance</div><div class="overflow-x-auto border border-slate-200 rounded-xl"><table class="w-full text-[11px] border-collapse min-w-[700px]"><thead><tr><th class="' + TH + ' text-left">Cuenta</th><th class="' + TH + ' text-right">Débitos</th><th class="' + TH + ' text-right">Créditos</th><th class="' + TH + ' text-right">Costo según mayor</th><th class="' + TH + ' text-right">Según balance</th><th class="' + TH + ' text-right">Diferencia</th></tr></thead><tbody>';
+      let tD = 0, tH = 0, tN = 0, tB = 0, hayB = false;
+      cvE.cv.forEach(x => { const ps = Array.isArray(x.partidas) ? x.partidas : [], neto = ps.length ? r2f(ps.reduce((t, p) => t + (Number(p.valor) || 0), 0)) : r2f(Number(x.neto) || ((Number(x.debe) || 0) - (Number(x.haber) || 0))), d = Number(x.debe) || 0, hh = Number(x.haber) || 0, b = cvE.bal[String(x.codigo || '').trim()], hb = Number.isFinite(b); tD += d; tH += hh; tN += neto; if (hb) { tB += b; hayB = true; } h += '<tr class="border-t border-slate-100"><td class="' + TD + '">' + escapeHtml((x.codigo ? x.codigo + ' ' : '') + (x.cuenta || '')) + (x.nota ? '<div class="text-[10px] text-slate-500">' + escapeHtml(x.nota) + '</div>' : '') + '</td><td class="' + TD + ' text-right">' + F(d) + '</td><td class="' + TD + ' text-right">' + F(hh) + '</td><td class="' + TD + ' text-right">' + F(neto) + '</td><td class="' + TD + ' text-right">' + (hb ? F(b) : '<span class="text-slate-400">Sin balance</span>') + '</td><td class="' + TD + ' text-right">' + cel(r2f(neto - b), hb) + '</td></tr>'; });
+      h += '<tr class="border-t-2 border-slate-300 bg-slate-50 font-bold"><td class="' + TD + '">Total</td><td class="' + TD + ' text-right">' + F(r2f(tD)) + '</td><td class="' + TD + ' text-right">' + F(r2f(tH)) + '</td><td class="' + TD + ' text-right">' + F(r2f(tN)) + '</td><td class="' + TD + ' text-right">' + (hayB ? F(r2f(tB)) : '') + '</td><td class="' + TD + ' text-right">' + cel(r2f(tN - tB), hayB) + '</td></tr></tbody></table></div>';
+      // C. Ajuste propuesto
+      if (hayMov && Math.abs(R.dif) > 1) {
+        const v = Math.abs(R.dif), cCos = cvE.cv[0], cInv = cvE.mov[0], mas = R.dif > 0;
+        const nc = x => escapeHtml((x.codigo ? x.codigo + ' ' : '') + (x.cuenta || ''));
+        h += '<div class="font-bold text-slate-800 mt-4 mb-1 text-xs">C. Ajuste propuesto (a criterio del auditor)</div><div class="overflow-x-auto border border-slate-200 rounded-xl"><table class="w-full text-[11px] border-collapse min-w-[520px]"><thead><tr><th class="' + TH + ' text-left">Cuenta</th><th class="' + TH + ' text-right">Debe</th><th class="' + TH + ' text-right">Haber</th></tr></thead><tbody>' +
+          '<tr class="border-t border-slate-100"><td class="' + TD + '">' + (mas ? nc(cInv) : nc(cCos)) + '</td><td class="' + TD + ' text-right">' + F(v) + '</td><td class="' + TD + ' text-right"></td></tr>' +
+          '<tr class="border-t border-slate-100"><td class="' + TD + '">' + (mas ? nc(cCos) : nc(cInv)) + '</td><td class="' + TD + ' text-right"></td><td class="' + TD + ' text-right">' + F(v) + '</td></tr></tbody></table></div>' +
+          '<p class="text-[11px] text-slate-500 mt-1">' + (mas ? 'El costo de ventas del mayor es mayor que lo que salió del inventario: de ser un exceso de costo, se devolvería al inventario.' : 'El costo de ventas del mayor es menor que lo que salió del inventario: de ser una salida no llevada al costo, se registraría como costo.') + ' Antes de ajustar hay que identificar la causa (cortes, ajustes, reclasificaciones, cuentas distintas). Con varias cuentas, se usa la primera de cada lista; cámbiala si corresponde.</p>';
+      }
+      c.innerHTML = h;
+    }
+    async function cvDescargar() {
+      if (!window.ExcelJS) { alert('No se pudo cargar el generador de Excel. Revisa tu conexión a internet.'); return; }
+      const R = cvCalcular(), info = [['Año evaluado', cvE.anio], ['Visita', cvE.visita === 'final' ? 'Final' : 'Preliminar'], ['Preparado por', (typeof nombreUsuarioActivo === 'function' && nombreUsuarioActivo()) || '']];
+      const aoa = [['Mes', 'Salidas del inventario (movimiento)', 'Costo de ventas (mayor)', 'Diferencia', 'Resultado'], ...R.filas.map(m => [cvMes(m.ym), m.sal, m.cos, m.dif, Math.abs(m.dif) > 1 ? 'Revisar' : 'Cuadra'])];
+      if (R.salSinMes || R.cosSinMes) aoa.push(['Sin detalle por mes', R.salSinMes, R.cosSinMes, r2f(R.cosSinMes - R.salSinMes), '']);
+      aoa.push(['Total', R.tSal, R.tCos, R.dif, Math.abs(R.dif) > 1 ? 'Revisar' : 'Cuadra']);
+      const cu = [['Cuenta', 'Débitos', 'Créditos', 'Costo según mayor', 'Según balance', 'Diferencia'], ...cvE.cv.map(x => { const ps = Array.isArray(x.partidas) ? x.partidas : [], neto = ps.length ? r2f(ps.reduce((t, p) => t + (Number(p.valor) || 0), 0)) : r2f(Number(x.neto) || ((Number(x.debe) || 0) - (Number(x.haber) || 0))), b = cvE.bal[String(x.codigo || '').trim()], hb = Number.isFinite(b); return [(x.codigo ? x.codigo + ' ' : '') + (x.cuenta || ''), Number(x.debe) || 0, Number(x.haber) || 0, neto, hb ? b : '', hb ? r2f(neto - b) : '']; })];
+      const hojas = [{ nombre: 'Cruce por mes', aoa, anchos: [{ wch: 20 }, { wch: 22 }, { wch: 22 }, { wch: 16 }, { wch: 14 }], op: { titulo: 'Costo de ventas vs salidas del inventario (mayor contable)', info, totales: [] } },
+        { nombre: 'Cuentas de costo', aoa: cu, anchos: [{ wch: 44 }, { wch: 16 }, { wch: 16 }, { wch: 18 }, { wch: 16 }, { wch: 16 }], op: { titulo: 'Cuentas de costo de ventas contra el balance', info } }];
+      const cli = (typeof impNombreCliente === 'function' && impNombreCliente()) || 'cliente';
+      try { await arrXlsxConFormato(hojas, cli, 'CostoVentas_vs_Salidas_' + String(cli).replace(/[^A-Za-z0-9]+/g, '_').slice(0, 30) + '_' + cvE.anio + '.xlsx'); } catch (e) { alert('No se pudo armar el Excel: ' + (e.message || e)); }
     }
 
     // ===== AF Inventarios › Inventario para la venta › i) Movimiento del inventario =====
