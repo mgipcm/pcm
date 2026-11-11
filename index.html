@@ -17166,7 +17166,7 @@ ${cont.innerHTML}
       const R = {}, compartidas = [], posteriores = [];
       imports.forEach(im => {
         const c = {}; IMP_CONCEPTOS.forEach(k => { c[k.k] = { liq: 0, mayor: 0, via: 0, viaHab: 0, comp: 0, asientos: new Set(), fechas: new Set(), cuentas: new Set(), post: 0 }; });
-        R[im.id] = { c, lin: 0 };
+        R[im.id] = { c, lin: 0, pm: {} };
       });
       const conceptoPorRol = {}; IMP_CONCEPTOS.forEach(k => { if (k.rol) conceptoPorRol[k.rol] = k.k; });
       const LN = impAmpliarLineas(cruce, imports, cfg);
@@ -17190,9 +17190,10 @@ ${cont.innerHTML}
           R[id].lin++;
           if (!k) { return; }
           const x = cell(k);
-          if (multi) { x.comp += via ? (Number(l.deb) || 0) : Math.abs(net); return; }
+          const pmAdd = v => { if (k === 'costo' && l.d) { const m = String(l.d).slice(0, 7); R[id].pm[m] = (R[id].pm[m] || 0) + v; } };
+          if (multi) { const vv = via ? (Number(l.deb) || 0) : Math.abs(net); x.comp += vv; pmAdd(vv); return; }
           if (fuera) { x.post += net; return; }
-          if (via) { x.via += Number(l.deb) || 0; x.viaHab += Number(l.hab) || 0; } else x.mayor += net;
+          if (via) { x.via += Number(l.deb) || 0; x.viaHab += Number(l.hab) || 0; pmAdd(Number(l.deb) || 0); } else { x.mayor += net; pmAdd(net); }
           if (l.k) x.asientos.add(l.k); if (l.d) x.fechas.add(l.d); x.cuentas.add(l.cod);
         });
       });
@@ -17217,7 +17218,7 @@ ${cont.innerHTML}
             if (est === 'Sin registro' && !x.post && !x.via && !x.comp) com.push(im.fecha && corte && im.fecha > corte ? 'La importación es posterior al corte.' : 'No se identificó en el mayor.');
           } else if (est === 'Cuadra' && x.viaHab > tol && k.soloAnticipo) com.push(`El anticipo tiene créditos por ${x.viaHab}.`);
           const fechas = [...x.fechas].sort();
-          filas.push({ id: im.id, k: k.k, concepto: k.t, liq: x.liq, mayor: k.soloAnticipo ? 0 : impR2(x.mayor + x.comp), total, via: x.via, viaHab: x.viaHab, comp: x.comp, post: x.post, dif, estado: est, comentario: com.join(' '), cuentas: [...x.cuentas].join(', '), asientos: [...x.asientos].map(a => a.replace('|', ' ')).join('; '), fechas: fechas.length ? (fechas[0] === fechas[fechas.length - 1] ? fechas[0] : fechas[0] + ' a ' + fechas[fechas.length - 1]) : '' });
+          filas.push({ pm: k.k === 'costo' ? R[im.id].pm : null, id: im.id, k: k.k, concepto: k.t, liq: x.liq, mayor: k.soloAnticipo ? 0 : impR2(x.mayor + x.comp), total, via: x.via, viaHab: x.viaHab, comp: x.comp, post: x.post, dif, estado: est, comentario: com.join(' '), cuentas: [...x.cuentas].join(', '), asientos: [...x.asientos].map(a => a.replace('|', ' ')).join('; '), fechas: fechas.length ? (fechas[0] === fechas[fechas.length - 1] ? fechas[0] : fechas[0] + ' a ' + fechas[fechas.length - 1]) : '' });
         });
       });
       imports.forEach(im => {
@@ -18343,11 +18344,9 @@ ${(im.aprendidos || []).length ? `<p class="text-xs text-slate-600 bg-slate-50 b
       const th = (t, c) => `<th class="px-2 py-1 border-b border-slate-200 whitespace-nowrap ${c || 'text-right'}">${t}</th>`;
       const MN = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
       const nm = m => m ? MN[Number(m.slice(5, 7)) - 1] + ' ' + m.slice(0, 4) : 'sin fecha';
-      const roles = impRolesDe(cfg), LN = impAmpliarLineas(C, imports, cfg);
       const liq = {}, mesLiq = {}, reg = {}; // reg[id][mes]
       imports.forEach(im => { const co = cl.filas.find(x => x.id === im.id && x.k === 'costo') || {}; liq[im.id] = impR2(co.liq || 0); mesLiq[im.id] = String(im.fecha || '').slice(0, 7); });
-      LN.forEach(l => { if ((l.ids || []).length !== 1 || !liq.hasOwnProperty(l.ids[0]) || !roles.inventario.length || !impCtaEn(l.cod, roles.inventario)) return;
-        const m = String(l.d || '').slice(0, 7), id = l.ids[0]; (reg[id] = reg[id] || {})[m] = impR2(((reg[id] || {})[m] || 0) + (Number(l.deb) || 0) - (Number(l.hab) || 0)); });
+      imports.forEach(im => { const co = cl.filas.find(x => x.id === im.id && x.k === 'costo') || {}; reg[im.id] = {}; Object.keys(co.pm || {}).forEach(m => { reg[im.id][m] = impR2(co.pm[m]); }); });
       const meses = new Set(); imports.forEach(im => { meses.add(mesLiq[im.id]); Object.keys(reg[im.id] || {}).forEach(m => meses.add(m)); });
       const lista = [...meses].sort(), A = impEstado.mesAb = impEstado.mesAb || {};
       let tL = 0, tR = 0, h = `<div class="p-4 bg-white border border-slate-200 rounded-xl space-y-2"><div class="text-[13px] font-semibold text-slate-800">B. Liquidaciones contra importaciones por mes</div>
