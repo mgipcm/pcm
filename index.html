@@ -18550,7 +18550,7 @@ ${(im.aprendidos || []).length ? `<p class="text-xs text-slate-600 bg-slate-50 b
       const th = 'px-2 py-1.5 text-[11px] font-bold text-slate-700 bg-slate-100 border-b border-slate-300';
       const pill = e => '<span class="' + (e === 'Cuadra' ? 'text-emerald-700' : e === 'N/A' ? 'text-slate-500' : 'text-red-600') + ' font-bold">' + impE(e) + '</span>';
       let h = '<div class="p-3 space-y-4 text-xs text-slate-700">';
-      h += '<p class="text-[11px] text-slate-500"><b>Objetivo:</b> comprobar que las entradas al inventario del mayor coinciden con el Movimiento del inventario (pestaña i) y conocer de qué están hechas (importaciones, devoluciones, transferencias entre bodegas, etc.). <b>Cómo se hace:</b> se toman las entradas del Movimiento y se agrupan por mes y por tipo; el total se compara con la columna de compras/importaciones del Movimiento y las que nombran una importación, con las liquidaciones. <b>Qué hacer:</b> haz clic en un mes o en un tipo para ver sus asientos.</p>';
+      { const ctas = [...new Set(R.filas.map(f => f.cta.trim()).filter(Boolean))]; h += '<p class="text-[12px] text-slate-700"><b>Entradas del mayor a la cuenta de inventario:</b> ' + (ctas.length ? ctas.map(impE).join(' · ') : 'sin cuentas identificadas') + '</p>'; }
       if (!L_hay()) h += '<p class="text-[11px] text-amber-700 font-bold">Aún no hay liquidaciones cargadas: sube los PDF o Excel en la pestaña 1 para poder cruzarlas.</p>';
       // Cuadro por mes, cruces y composición
       const F = impF, TH2 = th, ym = f => String(f.fecha || '').slice(0, 7) || 'sin';
