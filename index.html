@@ -17009,9 +17009,21 @@ ${cont.innerHTML}
       ['isd', 'ISD (costo de la importación o su provisión)'], ['gastos', 'Costos de importación registrados en gastos (cuentas de resultados: agente, contenedor, seguro, transporte, logística, financiero)']
     ];
     // Los roles guardados antes con cuentas separadas (agente, manejo, seguro, transporte, logístico, financiero) se suman al rol único "gastos"
+    function impFamiliaInv(cfg) {
+      const C = impEstado.cruce; if (!C || !cfg) return [];
+      const llave = (cfg.transito || '') + '|' + (C.asientos || []).length + '|' + (C.fecha || '');
+      if (impEstado._fam && impEstado._fam.llave === llave) return impEstado._fam.lista;
+      const nombres = C.cuentas || {}, cods = new Set(Object.keys(nombres)); (C.asientos || []).forEach(a => a.l.forEach(l => { cods.add(String(l[0])); if (!nombres[l[0]]) nombres[l[0]] = l[1] || ''; }));
+      let tr = impListaCtas(cfg.transito); if (!tr.length) tr = [...cods].filter(c => /tr[aá]nsito/i.test(nombres[c] || ''));
+      const fam = [...new Set(tr.filter(c => !c.endsWith('*') && c.length >= 7).map(c => c.slice(0, c.length - 5)))];
+      const lista = fam.length ? [...cods].filter(c => !impCtaEn(c, tr) && fam.some(f => c.startsWith(f))) : [];
+      impEstado._fam = { llave, lista }; return lista;
+    }
     function impRolesDe(cfg) {
       const r = {}; IMP_ROLES.forEach(([k]) => { r[k] = impListaCtas(((cfg || {}).roles || {})[k]).slice(); });
       ['agente', 'manejo', 'seguro', 'flete_int', 'logistico', 'gasto_fin'].forEach(k => impListaCtas(((cfg || {}).roles || {})[k]).forEach(c => { if (!r.gastos.includes(c)) r.gastos.push(c); }));
+      // Otras cuentas de inventario de la misma familia que la de tránsito (mismos primeros dígitos) se suman solas al rol de inventarios
+      try { if (r.inventario.length) impFamiliaInv(cfg).forEach(c => { if (!impCtaEn(c, r.inventario)) r.inventario.push(c); }); } catch (e) { }
       return r;
     }
     // Palabras que ayudan a reconocer, en el detalle de un pago por anticipo, de qué concepto es
