@@ -18581,6 +18581,40 @@ ${(im.aprendidos || []).length ? `<p class="text-xs text-slate-600 bg-slate-50 b
         '<tr class="border-t border-slate-100"><td class="' + CELL + '">Costo total de las liquidaciones (' + L.length + ' importaciones)</td><td class="' + CELL + ' text-right">' + (L.length ? F(liqTot) : '<span class="text-slate-400">Sin liquidaciones</span>') + '</td></tr>' +
         '<tr class="border-t border-slate-200 bg-slate-50 font-bold"><td class="' + CELL + '">Diferencia</td><td class="' + CELL + ' text-right">' + dc(impR2(liqTot - entImp), L.length > 0) + '</td></tr></tbody></table></div></div>' +
         (hayMov && filasCta.length > 1 ? '<div class="overflow-x-auto border border-slate-200 rounded-lg mt-3"><table class="w-full text-[11px] border-collapse min-w-[520px]"><thead><tr><th class="' + th + ' text-left">Cuenta de inventario</th><th class="' + th + ' text-right">Entradas según el movimiento (pestaña i)</th><th class="' + th + ' text-right">Movimiento</th><th class="' + th + ' text-right">Diferencia</th></tr></thead><tbody>' + filasCta.map(x => '<tr class="border-t border-slate-100"><td class="' + CELL + '">' + impE(x.cta) + '</td><td class="' + CELL + ' text-right">' + F(x.cu) + '</td><td class="' + CELL + ' text-right">' + F(x.mv) + '</td><td class="' + CELL + ' text-right">' + dc(x.dif, true) + '</td></tr>').join('') + '</tbody></table></div>' : '') + '</div>';
+      // B2. Cuadro puente: liquidaciones, costos acumulados en importaciones y entradas al inventario
+      if (impEstado.cl && impEstado.cruce && L.length) try {
+        const cl = impEstado.cl, tolP = Number(cl.tol) >= 0 ? Number(cl.tol) : 1;
+        const A = liqTot; let Bc = 0, cSin = 0, cMayor = 0, cMenor = 0, cAj = 0, cOtros = 0, cRed = 0, nSin = 0, nMayor = 0, nMenor = 0;
+        L.forEach(im => {
+          const co = cl.filas.find(x => x.id === im.id && x.k === 'costo') || {}, liq = co.liq || 0, tot = co.total || 0, dif = impR2(liq - tot), aj = impValoresLiq(im).ajusteHoja || 0;
+          Bc += tot;
+          if (Math.abs(dif) <= tolP) cRed += dif;
+          else if (!tot) { cSin += dif; nSin++; }
+          else if (dif < 0) { cMayor += dif; nMayor++; }
+          else { cMenor += dif; nMenor++; const x = Math.min(aj, dif); cAj += x; cOtros += dif - x; }
+        });
+        Bc = impR2(Bc); const dAB = impR2(A - Bc), dAC = impR2(A - entImp), dCB = impR2(entImp - Bc), noImp = impR2(R.tot - entImp);
+        const fila = (t, v, extra, neg) => '<tr class="border-t border-slate-100"><td class="' + CELL + (extra === 'sub' ? ' pl-6 text-slate-600' : '') + '">' + t + '</td><td class="' + CELL + ' text-right">' + F(v) + '</td></tr>';
+        const filaT = (t, v) => '<tr class="border-t border-slate-200 bg-slate-50 font-bold"><td class="' + CELL + '">' + t + '</td><td class="' + CELL + ' text-right">' + F(v) + '</td></tr>';
+        h += '<div><div class="font-bold text-slate-800 mb-1">B2. Cuadro puente <span class="font-normal text-slate-500">(cómo se relacionan las liquidaciones, lo acumulado en importaciones y lo que entró al inventario)</span></div><div class="grid md:grid-cols-2 gap-3">' +
+          '<div class="border border-slate-200 rounded-lg overflow-hidden"><table class="w-full text-[11px] border-collapse"><thead><tr><th class="' + th + ' text-left" colspan="2">Las tres cifras</th></tr></thead><tbody>' +
+          fila('(A) Costo total de las liquidaciones', A) +
+          fila('(B) Costos acumulados en importaciones en tránsito (mayor)', Bc) +
+          fila('(C) Entradas al inventario de importaciones (mayor)', entImp) +
+          filaT('A − B: liquidado y no acumulado en importaciones', dAB) +
+          filaT('A − C: liquidado y no entrado al inventario', dAC) +
+          filaT('C − B: entró al inventario y no se acumuló en importaciones', dCB) + '</tbody></table></div>' +
+          '<div class="border border-slate-200 rounded-lg overflow-hidden"><table class="w-full text-[11px] border-collapse"><thead><tr><th class="' + th + ' text-left" colspan="2">Por qué A es distinto de B (detalle por importación en la pestaña 2)</th></tr></thead><tbody>' +
+          fila('Importaciones sin nada acumulado (' + nSin + ')', impR2(cSin)) +
+          fila('Importaciones con acumulado menor que la liquidación (' + nMenor + ')', impR2(cMenor)) +
+          fila('de lo cual: importe sin detalle en la hoja de liquidación, sin asiento en el mayor', impR2(cAj), 'sub') +
+          fila('de lo cual: otros (pagos por anticipo, registros parciales, otros)', impR2(cOtros), 'sub') +
+          fila('Importaciones con acumulado mayor que la liquidación (' + nMayor + ')', impR2(cMayor)) +
+          fila('Importaciones que cuadran (redondeos)', impR2(cRed)) +
+          filaT('Total A − B', impR2(cSin + cMenor + cMayor + cRed)) + '</tbody></table></div></div>' +
+          '<div class="border border-slate-200 rounded-lg overflow-hidden mt-3"><table class="w-full text-[11px] border-collapse"><thead><tr><th class="' + th + ' text-left" colspan="2">Entradas del Movimiento del inventario (pestaña i)</th></tr></thead><tbody>' +
+          fila('Total de entradas', R.tot) + fila('Entradas de importaciones, que deben tener liquidación (C)', entImp) + fila('Entradas que no son importaciones (compras locales, devoluciones, transferencias, otras)', noImp) + '</tbody></table></div></div>';
+      } catch (e) { h += '<p class="text-[11px] text-red-600">No se pudo armar el cuadro puente: ' + impE(e.message || e) + '</p>'; }
       // C. Composición por tipo
       const ordenTipos = Object.keys(R.tipos).sort((a, b) => R.tipos[b].v - R.tipos[a].v);
       h += '<div><div class="font-bold text-slate-800 mb-1">C. De qué están hechas las entradas <span class="font-normal text-slate-500">(las que no son importaciones no tienen liquidación; clic en un tipo para ver sus asientos)</span></div><div class="overflow-x-auto border border-slate-200 rounded-lg"><table class="w-full text-[11px] border-collapse min-w-[520px]"><thead><tr><th class="' + th + ' text-left">Tipo de entrada</th><th class="' + th + ' text-right"># asientos</th><th class="' + th + ' text-right">Valor</th><th class="' + th + ' text-right">% del total</th></tr></thead><tbody>' +
