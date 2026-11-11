@@ -2192,7 +2192,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       <div id="im-espacio" class="hidden space-y-2">
         <div class="flex flex-wrap gap-1 p-1.5 bg-white border border-slate-200 rounded-2xl">
           <button type="button" id="im-tab-liq" onclick="impTab('liq')" class="px-3 py-1.5 text-xs transition rounded-lg">1. Liquidaciones de importación</button>
-          <button type="button" id="im-tab-cruce" onclick="impTab('cruce')" class="px-3 py-1.5 text-xs transition rounded-lg">2. Liquidaciones vs Importaciones (mayor contable)</button>
+          <button type="button" id="im-tab-cruce" onclick="impTab('cruce')" class="px-3 py-1.5 text-xs transition rounded-lg">2. Liquidaciones → Importaciones (mayor contable)</button>
           <button type="button" id="im-tab-ent" onclick="impTab('ent')" class="px-3 py-1.5 text-xs transition rounded-lg">3. Importaciones en tránsito → Inventario</button>
           <button type="button" id="im-descargar" onclick="impDescargar()" class="hidden ml-auto px-3 py-1.5 rounded-lg text-xs bg-slate-100 text-slate-800 hover:bg-slate-200 font-medium transition">Descargar todo (Excel)</button>
         </div>
@@ -4676,8 +4676,8 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       AB: ['Certificado o póliza de inversión', 'Estado de cuenta', 'Confirmación bancaria', 'Detalle o anexo de inversiones', 'Otro'],
       AS: ['Certificado o póliza de inversión', 'Estado de cuenta', 'Confirmación bancaria', 'Detalle o anexo de inversiones', 'Otro']
     };
-    const PC_HOJAS = { caja: 'Caja', bancos: 'Bancos', equivalentes: 'Equivalentes de efectivo', venta: 'Inventario para la venta', costo_ventas: 'Costo de ventas vs salidas', kardex: 'Movimiento de kárdex', import: 'Importaciones (liquidaciones)' };
-    const PC_HOJAS_SUM = { AA: [['caja', 'Caja'], ['bancos', 'Bancos'], ['equivalentes', 'Equivalentes de efectivo']], AF: [['venta', 'Inventario para la venta'], ['costo_ventas', 'Costo de ventas vs salidas'], ['kardex', 'Movimiento de kárdex'], ['import', 'Importaciones (liquidaciones)']] };
+    const PC_HOJAS = { caja: 'Caja', bancos: 'Bancos', equivalentes: 'Equivalentes de efectivo', venta: 'Inventario para la venta', costo_ventas: 'Costo de ventas → salidas', kardex: 'Movimiento de kárdex', import: 'Importaciones (liquidaciones)' };
+    const PC_HOJAS_SUM = { AA: [['caja', 'Caja'], ['bancos', 'Bancos'], ['equivalentes', 'Equivalentes de efectivo']], AF: [['venta', 'Inventario para la venta'], ['costo_ventas', 'Costo de ventas → salidas'], ['kardex', 'Movimiento de kárdex'], ['import', 'Importaciones (liquidaciones)']] };
     function pcNombreHoja(h) { return PC_HOJAS[h] || h || ''; }
     const PC_TODO = 'Todo en un archivo (todos los documentos juntos)';
     function pcEtiquetas(sumaria, hoja) {
@@ -17736,7 +17736,7 @@ ${cont.innerHTML}
 
     // ===== AF Inventarios: hojas (Inventario para la venta, Materia prima, Producción en proceso, Importaciones) =====
     const IV_HOJAS = [['venta', 'Inventario para la venta'], ['materia', 'Materia prima'], ['proceso', 'Producción en proceso'], ['import', 'Importaciones']];
-    const IV_VENTA_BOTONES = [['mov', 'i) Movimiento del inventario'], ['impcompras', 'ii) Compras/Liquidaciones de importación vs Entradas (mayor contable)'], ['salidas', 'iii) Costo de ventas vs Salidas (mayor contable)'], ['kmov', 'iv) Movimiento de kárdex (entradas y salidas)'], ['kcompras', 'v) Kárdex (entradas) vs Compras/Liquidaciones de importación'], ['ksalidas', 'vi) Kárdex (salidas) vs Costo de ventas']];
+    const IV_VENTA_BOTONES = [['mov', 'i) Movimiento del inventario'], ['impcompras', 'ii) Compras/Liquidaciones de importación → Entradas (mayor contable)'], ['salidas', 'iii) Costo de ventas → Salidas (mayor contable)'], ['kmov', 'iv) Movimiento de kárdex (entradas y salidas)'], ['kcompras', 'v) Kárdex (entradas) → Compras/Liquidaciones de importación'], ['ksalidas', 'vi) Kárdex (salidas) → Costo de ventas']];
     const ivE = { hoja: 'venta', btn: 'mov' };
     function ivPintarHojas() {
       const btn = (on, clic, n, extra) => '<button type="button" onclick="' + clic + '" style="padding:8px 18px;font-size:13px;cursor:pointer;background:' + (on ? '#e5e5e1' : 'transparent') + ';color:' + (on ? '#0f172a' : '#64748b') + ';font-weight:' + (on ? '700' : '500') + ';border:0;border-bottom:3px solid ' + (on ? '#1e293b' : 'transparent') + ';margin-bottom:-1px;border-radius:6px 6px 0 0">' + n + (extra || '') + '</button>';
@@ -17865,7 +17865,7 @@ ${cont.innerHTML}
         [], ['Cruces'], ['Salidas del cuadro', R.tSal], ['Salidas del Movimiento del inventario', R.hayMov ? R.movTot : ''], ['Diferencia', R.hayMov ? R.difMov : ''], [], ['Costo de ventas del cuadro (mayor)', R.tCos], ['Costo de ventas según balance', R.hayBal ? R.tBal : ''], ['Diferencia', R.hayBal ? R.difBal : '']];
       const ti = [['Tipo de asiento', '# asientos', 'Salidas', 'Costo', 'Diferencia'], ...R.tipos.map(t => [t.tipo, t.n, t.sal, t.cos, t.dif])];
       const det = [['Mes', 'Fecha', 'Comprobante', 'Descripción', 'Salida del inventario', 'Costo de ventas', 'Diferencia', 'Tipo']]; R.filas.forEach(m => m.asientos.forEach(p => { const sal = Number(p.salida) || 0, cos = Number(p.valor) || 0; det.push([cvMes(m.ym), p.fecha || '', p.ref || '', p.desc || '', sal, cos, r2f(sal - cos), p.tipo || '']); }));
-      const hojas = [{ nombre: 'Cuadro por mes', aoa, anchos: [{ wch: 36 }, { wch: 22 }, { wch: 20 }, { wch: 26 }, { wch: 12 }], op: { titulo: 'Costo de ventas vs salidas del inventario (mayor contable)', info } },
+      const hojas = [{ nombre: 'Cuadro por mes', aoa, anchos: [{ wch: 36 }, { wch: 22 }, { wch: 20 }, { wch: 26 }, { wch: 12 }], op: { titulo: 'Costo de ventas → salidas del inventario (mayor contable)', info } },
         { nombre: 'Origen de la diferencia', aoa: ti, anchos: [{ wch: 44 }, { wch: 12 }, { wch: 18 }, { wch: 18 }, { wch: 16 }], op: { titulo: 'De dónde sale la diferencia, por tipo de asiento', info, totales: [1, 2, 3, 4] } },
         { nombre: 'Detalle de asientos', aoa: det, anchos: [{ wch: 14 }, { wch: 12 }, { wch: 26 }, { wch: 80 }, { wch: 18 }, { wch: 18 }, { wch: 16 }, { wch: 36 }], op: { titulo: 'Detalle de todos los asientos por mes', info, fecha: [1], totales: [4, 5, 6] } }];
       const cli = (typeof impNombreCliente === 'function' && impNombreCliente()) || 'cliente';
@@ -18138,7 +18138,7 @@ ${cont.innerHTML}
         if (error) impMsg('No se guardó: ' + (error.message || error), 'text-red-600 font-bold'); else { impMsg('Guardado ✓'); impEstado.act = { por: fila.actualizado_por, en: fila.updated_at }; impSyncCabecera(); }
       }, 700);
     }
-    const IMP_TABS = [['liq', '1. Liquidaciones de importación'], ['cruce', '2. Liquidaciones vs Importaciones (mayor contable)'], ['ent', '3. Importaciones en tránsito → Inventario']];
+    const IMP_TABS = [['liq', '1. Liquidaciones de importación'], ['cruce', '2. Liquidaciones → Importaciones (mayor contable)'], ['ent', '3. Importaciones en tránsito → Inventario']];
     function impTab(t) { impEstado.tab = t; impRender(); }
     function impRender() {
       IMP_TABS.forEach(([t]) => { const b = $im('im-tab-' + t); if (b) b.className = 'px-3 py-1.5 text-xs transition rounded-lg ' + (impEstado.tab === t ? 'bg-slate-200 text-slate-900 font-semibold' : 'text-slate-600 hover:bg-slate-100 font-medium'); });
@@ -18709,7 +18709,7 @@ ${(im.aprendidos || []).length ? `<p class="text-xs text-slate-600 bg-slate-50 b
           ${Object.keys(otrosTipo).sort((x, y) => otrosTipo[y] - otrosTipo[x]).map(t => `<tr class="border-b border-slate-100"><td class="px-2 py-1">Otras entradas: ${impE(t)}</td><td class="px-2 text-right">${impF(otrosTipo[t])}</td></tr>`).join('')}
           <tr class="border-b border-slate-100 font-semibold"><td class="px-2 py-1">Total Compras/Importaciones del Movimiento</td><td class="px-2 text-right">${impF(totMov)}</td></tr>
           <tr class="border-b border-slate-100"><td class="px-2 py-1">Entró al inventario según la cuenta en tránsito (cuadro B)</td><td class="px-2 text-right">${impF(T.entTot)}</td></tr>
-          <tr class="border-b border-slate-100 font-semibold"><td class="px-2 py-1">Diferencia (tránsito vs lo que el Movimiento tiene de esos comprobantes)</td><td class="px-2 text-right ${Math.abs(difTr) > cfg.tol ? 'text-red-600' : 'text-emerald-700'}">${impF(difTr)}</td></tr></tbody></table></div>`;
+          <tr class="border-b border-slate-100 font-semibold"><td class="px-2 py-1">Diferencia (tránsito menos lo que el Movimiento tiene de esos comprobantes)</td><td class="px-2 text-right ${Math.abs(difTr) > cfg.tol ? 'text-red-600' : 'text-emerald-700'}">${impF(difTr)}</td></tr></tbody></table></div>`;
         if (sinMov.length) h += `<p class="text-slate-500 pt-1">Comprobantes donde lo que entró al inventario según tránsito no es igual a lo que tiene el Movimiento:</p><div class="overflow-x-auto"><table class="w-full text-[11px] leading-tight border-collapse"><thead class="bg-slate-50 text-slate-600"><tr>${th('Fecha', 'text-left')}${th('Comprobante', 'text-left')}${th('Entra al inventario (tránsito)')}${th('En el Movimiento')}${th('Dif.')}</tr></thead><tbody>${sinMov.slice(0, 40).map(f => { const mv = movRef[String(f.num)] || 0; return `<tr class="border-b border-slate-100"><td class="px-2 py-0.5 text-left">${impE(f.d)}</td><td class="px-2 text-left">${impE(f.tk)} ${impE(f.num)}</td><td class="px-2 text-right">${impF(f.ent)}</td><td class="px-2 text-right">${impF(mv)}</td><td class="px-2 text-right text-red-600 font-semibold">${impF(impR2(f.ent - mv))}</td></tr>`; }).join('')}</tbody></table></div>${sinMov.length > 40 ? '<p class="text-slate-400">Y ' + (sinMov.length - 40) + ' más.</p>' : ''}`;
       }
       h += `</div>`;
