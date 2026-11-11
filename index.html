@@ -5300,7 +5300,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
     // Barra fija para enviar un pedido a Claude desde la propia pantalla (cuando ya hay datos y se quiere actualizar)
     function pcBarraPedido(hoja, cli, anio, vis, texto) {
       if (!cli) return '';
-      return '<div class="mt-3 p-3 bg-white border border-slate-200 rounded-xl flex flex-wrap items-center gap-3 text-xs text-slate-600"><span class="flex-1 min-w-[240px]">' + escapeHtml(texto) + '</span><button type="button" onclick="pcIrAPedido(\'AF\', \'' + escapeHtml(cli) + '\', \'' + escapeHtml(anio) + '\', \'' + escapeHtml(vis) + '\', \'' + hoja + '\')" class="px-3 py-1.5 rounded-lg text-xs transition bg-slate-200 text-slate-900 hover:bg-slate-300 font-semibold">Subir archivos y enviar a Claude</button></div>';
+      return '<div class="mt-3 p-3 bg-white border border-slate-200 rounded-xl space-y-2 text-xs text-slate-600"><p>' + escapeHtml(texto) + '</p><div><button type="button" onclick="pcIrAPedido(\'AF\', \'' + escapeHtml(cli) + '\', \'' + escapeHtml(anio) + '\', \'' + escapeHtml(vis) + '\', \'' + hoja + '\')" class="px-3 py-1.5 rounded-lg text-xs transition bg-slate-200 text-slate-900 hover:bg-slate-300 font-semibold">Subir archivos y enviar a Claude</button></div></div>';
     }
     function pcHtmlAviso(sumaria, cli, anio, vis, hoja) {
       setTimeout(pcRefrescarAvisos, 0);
