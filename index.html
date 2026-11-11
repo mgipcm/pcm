@@ -17758,7 +17758,7 @@ ${cont.innerHTML}
         otras.classList.toggle('hidden', imp);
         if (!imp) {
           if (ivE.hoja === 'venta') otras.innerHTML = '<div class="flex flex-wrap gap-1 p-1.5 bg-white border border-slate-200 rounded-2xl">' + IV_VENTA_BOTONES.map(([k, n]) => '<button type="button" onclick="ivIrBoton(\'' + k + '\')" class="px-3 py-1.5 text-xs transition rounded-lg ' + (ivE.btn === k ? 'bg-slate-200 text-slate-900 font-semibold' : 'text-slate-600 hover:bg-slate-100') + '">' + n + '</button>').join('') + '</div>' +
-            (ivE.btn === 'mov' ? '<div id="mv-cont" class="mt-3"></div>' : ivE.btn === 'salidas' ? '<div id="cv-cont" class="mt-3"></div>' : ivE.btn === 'kmov' ? '<div id="kx-cont" class="mt-3"></div>' : emb ? '<div class="mt-2 text-[11px] text-slate-500">Pide a Claude, en un solo pedido, la lectura de las liquidaciones y el cruce con el mayor contable; la pestaña 4 las cruza con las entradas del Movimiento del inventario.</div>' : '<div class="border border-dashed border-slate-300 rounded-xl p-8 mt-3 text-center text-sm text-slate-500"><div class="font-bold text-slate-700 mb-1">' + escapeHtml((IV_VENTA_BOTONES.find(x => x[0] === ivE.btn) || [])[1] || '') + '</div>Esta herramienta está en desarrollo. La iremos construyendo en los siguientes pasos.</div>');
+            (ivE.btn === 'mov' ? '<div id="mv-cont" class="mt-3"></div>' : ivE.btn === 'salidas' ? '<div id="cv-cont" class="mt-3"></div>' : ivE.btn === 'kmov' ? '<div id="kx-cont" class="mt-3"></div>' : ivE.btn === 'kcompras' ? '<div id="kc-cont" class="mt-3"></div>' : emb ? '<div class="mt-2 text-[11px] text-slate-500">Pide a Claude, en un solo pedido, la lectura de las liquidaciones y el cruce con el mayor contable; la pestaña 4 las cruza con las entradas del Movimiento del inventario.</div>' : '<div class="border border-dashed border-slate-300 rounded-xl p-8 mt-3 text-center text-sm text-slate-500"><div class="font-bold text-slate-700 mb-1">' + escapeHtml((IV_VENTA_BOTONES.find(x => x[0] === ivE.btn) || [])[1] || '') + '</div>Esta herramienta está en desarrollo. La iremos construyendo en los siguientes pasos.</div>');
           else otras.innerHTML = '<div class="border border-dashed border-slate-300 rounded-xl p-8 text-center text-sm text-slate-500"><div class="font-bold text-slate-700 mb-1">' + escapeHtml(nom) + '</div>Esta hoja está en desarrollo.</div>';
         }
       }
@@ -17770,8 +17770,82 @@ ${cont.innerHTML}
       }
       else if (!emb) { if (av) av.classList.add('hidden'); if (esp) esp.classList.add('hidden'); }
       if (!imp && ivE.hoja === 'venta' && ivE.btn === 'salidas') { const hayCambio = cvE.cliente !== $im('im-cliente').value || cvE.anio !== $im('im-anio').value || cvE.visita !== $im('im-visita').value; if (hayCambio || !cvE.cargado) cvCargar(); else cvPintar(); }
+      if (!imp && ivE.hoja === 'venta' && ivE.btn === 'kcompras') { const hayCambio = kcE.cliente !== $im('im-cliente').value || kcE.anio !== $im('im-anio').value || kcE.visita !== $im('im-visita').value; if (hayCambio || !kcE.cargado) kcCargar(); else kcPintar(); }
       if (!imp && ivE.hoja === 'venta' && ivE.btn === 'kmov') { const hayCambio = kxE.cliente !== $im('im-cliente').value || kxE.anio !== $im('im-anio').value || kxE.visita !== $im('im-visita').value; if (hayCambio || !kxE.cargado) kxCargar(); else kxPintar(); }
       if (!imp && ivE.hoja === 'venta' && ivE.btn === 'mov') { const hayCambio = mvE.cliente !== $im('im-cliente').value || mvE.anio !== $im('im-anio').value || mvE.visita !== $im('im-visita').value; if (hayCambio || !mvE.cargado) mvCargar(); else mvPintar(); }
+    }
+
+    // ===== AF Inventarios › Inventario para la venta › v) Kárdex (entradas) → Compras/Liquidaciones de importación =====
+    const kcE = { cargaId: 0, cliente: '', anio: '', visita: '', prod: [], mov: [], liq: [], cargado: false, error: '', abierto: '', actK: null, actM: null };
+    async function kcCargar() {
+      const cli = $im('im-cliente').value, anio = $im('im-anio').value, vis = $im('im-visita').value;
+      Object.assign(kcE, { cliente: cli, anio, visita: vis, prod: [], mov: [], liq: [], cargado: false, error: '', abierto: '', actK: null, actM: null });
+      if (!cli) { kcPintar(); return; }
+      const id = ++kcE.cargaId;
+      const q = h => supabaseClient.from('inventario_movimiento').select('cuentas, updated_at, actualizado_por').eq('cliente_id', cli).eq('anio', Number(anio)).eq('visita', vis).eq('hoja', h).maybeSingle();
+      const [a, b, c] = await Promise.all([q('kardex'), q('venta'), supabaseClient.from('importaciones_datos').select('liquidaciones').eq('cliente_id', cli).eq('anio', Number(anio)).eq('visita', vis).maybeSingle()]);
+      if (id !== kcE.cargaId) return;
+      kcE.prod = a.data && Array.isArray(a.data.cuentas) ? a.data.cuentas : []; kcE.actK = a.data ? { por: a.data.actualizado_por, en: a.data.updated_at } : null;
+      kcE.mov = b.data && Array.isArray(b.data.cuentas) ? b.data.cuentas : []; kcE.actM = b.data ? { por: b.data.actualizado_por, en: b.data.updated_at } : null;
+      kcE.liq = c.data && c.data.liquidaciones && Array.isArray(c.data.liquidaciones.imports) ? c.data.liquidaciones.imports : [];
+      kcE.error = a.error ? (a.error.message || String(a.error)) : '';
+      kcE.cargado = true; kcPintar();
+    }
+    function kcCalcular() {
+      const ymDe = f => String(f || '').slice(0, 7) || 'sin', meses = {}, M = ym => (meses[ym] = meses[ym] || { ym, may: 0, kar: 0, liq: 0, asientos: [], tipos: {}, imps: [] });
+      kcE.mov.forEach(c => (Array.isArray(c.partidas) ? c.partidas : []).forEach(p => { if (!p || p.col !== 'compras') return; const m = M(ymDe(p.fecha)), v = Number(p.valor) || 0; m.may += v; m.asientos.push({ ...p, cta: (c.codigo ? c.codigo + ' ' : '') + (c.cuenta || '') }); }));
+      kcE.prod.forEach(x => (Array.isArray(x.partidas) ? x.partidas : []).forEach(p => { if (!p || p.col !== 'compras') return; const m = M(ymDe(p.fecha)), v = Number(p.valor) || 0; m.kar += v; const t = String(p.desc || 'Sin descripción'), o = (m.tipos[t] = m.tipos[t] || { desc: t, n: 0, v: 0, prods: new Set() }); o.n += Number(String(p.ref || '').replace(/[^0-9]/g, '')) || 1; o.v += v; o.prods.add(x.codigo || x.cuenta || ''); }));
+      kcE.liq.forEach(im => { const v = r2f((impValoresLiq(im) || {}).total || 0); if (!v) return; const m = M(ymDe(im.fecha)); m.liq += v; m.imps.push({ id: im.id, fecha: im.fecha || '', v }); });
+      const filas = Object.values(meses).sort((a, b) => a.ym.localeCompare(b.ym)).map(m => { m.asientos.sort((a, b) => String(a.fecha || '').localeCompare(String(b.fecha || ''))); return { ...m, may: r2f(m.may), kar: r2f(m.kar), liq: r2f(m.liq), dif: r2f(m.may - m.kar), tipos: Object.values(m.tipos).map(o => ({ desc: o.desc, n: o.n, v: r2f(o.v), np: o.prods.size })).sort((a, b) => Math.abs(b.v) - Math.abs(a.v)) }; });
+      const tM = r2f(filas.reduce((t, m) => t + m.may, 0)), tK = r2f(filas.reduce((t, m) => t + m.kar, 0)), tL = r2f(filas.reduce((t, m) => t + m.liq, 0));
+      const col = [['saldo_inicial', 'Saldo inicial'], ['compras', 'Compras/Importaciones (entradas)'], ['salidas', 'Ventas (salidas)'], ['ajustes', 'Ajustes'], ['reclasificaciones', 'Reclasificaciones'], ['otros', 'Otros'], ['saldo_final', 'Saldo final']];
+      const cuadre = col.map(([k, t]) => { const a = r2f(kcE.mov.reduce((s, c) => s + (MV_MOV.includes(k) ? mvVal(c, k) : mvN(c[k])), 0)), b = r2f(kcE.prod.reduce((s, c) => s + (MV_MOV.includes(k) ? mvVal(c, k) : mvN(c[k])), 0)); return { k, t, may: a, kar: b, dif: r2f(a - b) }; });
+      return { filas, tM, tK, tL, dif: r2f(tM - tK), cuadre, hayM: kcE.mov.length > 0, hayK: kcE.prod.length > 0, hayL: kcE.liq.length > 0 };
+    }
+    function kcAbrir(ym) { kcE.abierto = kcE.abierto === ym ? '' : ym; kcPintar(); }
+    function kcPintar() {
+      if (typeof ivE === 'undefined' || ivE.hoja !== 'venta' || ivE.btn !== 'kcompras') return;
+      const c = document.getElementById('kc-cont'); if (!c) return;
+      if (!kcE.cliente) { c.innerHTML = '<p class="text-xs text-slate-500 border border-dashed border-slate-300 rounded-xl p-4">Selecciona el cliente para comenzar.</p>'; return; }
+      if (!kcE.cargado) { c.innerHTML = '<p class="text-xs text-slate-500 p-4">Cargando…</p>'; return; }
+      if (kcE.error) { c.innerHTML = '<p class="text-xs text-red-600 font-bold p-4">No se pudo cargar: ' + escapeHtml(kcE.error) + '</p>'; return; }
+      const F = formatoNumeroAnexo, TH = 'px-2 py-2 text-[11px] font-bold text-slate-700 bg-slate-100 border-b border-slate-300', TD = 'px-2 py-1';
+      const info = '<div class="text-[11px] text-slate-500 mb-3"><b>Objetivo:</b> comprobar que lo que entró al inventario según el mayor contable (Movimiento del inventario, pestaña i) coincide, mes a mes, con las entradas del kárdex (pestaña iv). Como referencia se muestran las liquidaciones de importación del mes. Haz clic en un mes para ver su detalle.</div>';
+      if (!kcE.mov.length || !kcE.prod.length) {
+        let m = info + '<div class="p-4 border border-dashed border-slate-300 rounded-xl text-xs text-slate-600 space-y-2"><p class="font-bold text-slate-700">Faltan datos para este cruce:</p><ul class="list-disc pl-5">' + (!kcE.mov.length ? '<li>El Movimiento del inventario con el mayor contable (pestaña i).</li>' : '') + (!kcE.prod.length ? '<li>El Movimiento de kárdex (pestaña iv).</li>' : '') + '</ul><p>Envía los archivos desde esas pestañas y, cuando Claude termine, vuelve aquí.</p></div>';
+        c.innerHTML = m; return;
+      }
+      const R = kcCalcular(), dc = (v, hay) => !hay ? '<span class="text-slate-400">–</span>' : '<span class="' + (Math.abs(v) > 1 ? 'text-red-600' : 'text-emerald-700') + ' font-bold">' + F(v) + '</span>';
+      let h = info + '<div class="flex flex-wrap items-center gap-2 mb-2"><button type="button" onclick="kcDescargar()" class="ml-auto px-3 py-1.5 rounded-lg text-xs transition bg-slate-200 text-slate-900 hover:bg-slate-300 font-semibold">Descargar (Excel)</button></div>';
+      h += '<div class="font-bold text-slate-800 mb-1 text-xs">A. Entradas por mes <span class="font-normal text-slate-500">(Diferencia = mayor − kárdex; clic en un mes para ver su detalle)</span></div><div class="overflow-x-auto border border-slate-200 rounded-xl"><table class="w-full text-[11px] border-collapse min-w-[640px]"><thead><tr><th class="' + TH + ' text-left">Mes</th><th class="' + TH + ' text-right">Entradas del mayor (pestaña i)</th><th class="' + TH + ' text-right">Entradas del kárdex</th><th class="' + TH + ' text-right">Diferencia</th><th class="' + TH + ' text-right">Liquidaciones de importación (informativo)</th></tr></thead><tbody>';
+      R.filas.forEach(m => {
+        const ab = kcE.abierto === m.ym;
+        h += '<tr onclick="kcAbrir(\'' + m.ym + '\')" class="border-t border-slate-100 cursor-pointer hover:bg-slate-50' + (ab ? ' bg-slate-100' : '') + '"><td class="' + TD + ' font-semibold">' + (ab ? '▾ ' : '▸ ') + escapeHtml(cvMes(m.ym)) + '</td><td class="' + TD + ' text-right">' + F(m.may) + '</td><td class="' + TD + ' text-right">' + F(m.kar) + '</td><td class="' + TD + ' text-right">' + dc(m.dif, true) + '</td><td class="' + TD + ' text-right text-slate-600">' + (m.liq ? F(m.liq) : '') + '</td></tr>';
+        if (ab) {
+          h += '<tr><td colspan="5" class="p-2 bg-slate-50"><div class="grid lg:grid-cols-2 gap-3">' +
+            '<div><div class="text-[11px] font-bold text-slate-700 mb-1">Mayor contable: asientos de entrada del mes</div><div class="max-h-80 overflow-auto border border-slate-200 rounded-lg bg-white"><table class="w-full text-[11px] border-collapse"><thead><tr class="sticky top-0"><th class="' + TH + ' text-left">Fecha</th><th class="' + TH + ' text-left">Comprobante</th><th class="' + TH + ' text-left">Descripción</th><th class="' + TH + ' text-right">Valor</th></tr></thead><tbody>' +
+            (m.asientos.map(p => '<tr class="border-t border-slate-100 align-top"><td class="' + TD + ' whitespace-nowrap">' + mvFechaCorta(p.fecha) + '</td><td class="' + TD + ' whitespace-nowrap">' + escapeHtml(p.ref || '') + '</td><td class="' + TD + '" title="' + escapeHtml(p.cta) + '">' + escapeHtml(p.desc || '') + '</td><td class="' + TD + ' text-right">' + F(Number(p.valor) || 0) + '</td></tr>').join('') || '<tr><td class="' + TD + ' text-slate-400" colspan="4">Sin entradas en el mayor este mes.</td></tr>') + '</tbody></table></div></div>' +
+            '<div><div class="text-[11px] font-bold text-slate-700 mb-1">Kárdex: entradas del mes por tipo de movimiento</div><div class="max-h-80 overflow-auto border border-slate-200 rounded-lg bg-white"><table class="w-full text-[11px] border-collapse"><thead><tr class="sticky top-0"><th class="' + TH + ' text-left">Tipo de movimiento</th><th class="' + TH + ' text-right">Productos</th><th class="' + TH + ' text-right">Valor</th></tr></thead><tbody>' +
+            (m.tipos.map(t => '<tr class="border-t border-slate-100"><td class="' + TD + '">' + escapeHtml(t.desc) + '</td><td class="' + TD + ' text-right">' + t.np + '</td><td class="' + TD + ' text-right">' + F(t.v) + '</td></tr>').join('') || '<tr><td class="' + TD + ' text-slate-400" colspan="3">Sin entradas en el kárdex este mes.</td></tr>') + '</tbody></table></div>' +
+            (m.imps.length ? '<div class="text-[11px] font-bold text-slate-700 mt-2 mb-1">Liquidaciones de importación del mes</div><div class="border border-slate-200 rounded-lg bg-white"><table class="w-full text-[11px] border-collapse"><tbody>' + m.imps.map(i => '<tr class="border-t border-slate-100"><td class="' + TD + '">' + escapeHtml(i.id) + '</td><td class="' + TD + '">' + mvFechaCorta(i.fecha) + '</td><td class="' + TD + ' text-right">' + F(i.v) + '</td></tr>').join('') + '</tbody></table></div>' : '') + '</div></div></td></tr>';
+        }
+      });
+      h += '<tr class="border-t-2 border-slate-300 bg-slate-50 font-bold"><td class="' + TD + '">Total</td><td class="' + TD + ' text-right">' + F(R.tM) + '</td><td class="' + TD + ' text-right">' + F(R.tK) + '</td><td class="' + TD + ' text-right">' + dc(R.dif, true) + '</td><td class="' + TD + ' text-right">' + (R.hayL ? F(R.tL) : '') + '</td></tr></tbody></table></div>';
+      h += '<div class="font-bold text-slate-800 mt-4 mb-1 text-xs">B. Cuadre del movimiento: mayor contable contra kárdex <span class="font-normal text-slate-500">(Diferencia = mayor − kárdex)</span></div><div class="overflow-x-auto border border-slate-200 rounded-xl"><table class="w-full text-[11px] border-collapse min-w-[520px]"><thead><tr><th class="' + TH + ' text-left">Concepto</th><th class="' + TH + ' text-right">Mayor contable (pestaña i)</th><th class="' + TH + ' text-right">Kárdex (pestaña iv)</th><th class="' + TH + ' text-right">Diferencia</th></tr></thead><tbody>' +
+        R.cuadre.map(x => '<tr class="border-t border-slate-100' + (x.k === 'compras' ? ' bg-amber-50' : '') + '"><td class="' + TD + '">' + escapeHtml(x.t) + '</td><td class="' + TD + ' text-right">' + F(x.may) + '</td><td class="' + TD + ' text-right">' + F(x.kar) + '</td><td class="' + TD + ' text-right">' + dc(x.dif, true) + '</td></tr>').join('') + '</tbody></table></div>';
+      c.innerHTML = h + pcBarraPedido('kardex', kcE.cliente, kcE.anio, kcE.visita, 'Para actualizar el kárdex, envía el archivo desde aquí. El mayor contable se envía desde la pestaña i.');
+    }
+    async function kcDescargar() {
+      if (!window.ExcelJS) { alert('No se pudo cargar el generador de Excel. Revisa tu conexión a internet.'); return; }
+      const R = kcCalcular(), info = [['Año evaluado', kcE.anio], ['Visita', kcE.visita === 'final' ? 'Final' : 'Preliminar'], ['Preparado por', (typeof nombreUsuarioActivo === 'function' && nombreUsuarioActivo()) || '']];
+      const aoa = [['Mes', 'Entradas del mayor', 'Entradas del kárdex', 'Diferencia (mayor − kárdex)', 'Liquidaciones de importación'], ...R.filas.map(m => [cvMes(m.ym), m.may, m.kar, m.dif, m.liq]), ['Total', R.tM, R.tK, R.dif, R.tL]];
+      const cu = [['Concepto', 'Mayor contable', 'Kárdex', 'Diferencia'], ...R.cuadre.map(x => [x.t, x.may, x.kar, x.dif])];
+      const det = [['Mes', 'Origen', 'Fecha', 'Comprobante / tipo', 'Descripción', 'Valor']]; R.filas.forEach(m => { m.asientos.forEach(p => det.push([cvMes(m.ym), 'Mayor', p.fecha || '', p.ref || '', p.desc || '', Number(p.valor) || 0])); m.tipos.forEach(t => det.push([cvMes(m.ym), 'Kárdex', '', t.np + ' productos', t.desc, t.v])); });
+      const hojas = [{ nombre: 'Entradas por mes', aoa, anchos: [{ wch: 16 }, { wch: 22 }, { wch: 22 }, { wch: 26 }, { wch: 26 }], op: { titulo: 'Kárdex (entradas) → Compras/Liquidaciones de importación', info, totales: [1, 2, 3, 4] } },
+        { nombre: 'Cuadre del movimiento', aoa: cu, anchos: [{ wch: 34 }, { wch: 22 }, { wch: 22 }, { wch: 18 }], op: { titulo: 'Cuadre del movimiento: mayor contable contra kárdex', info } },
+        { nombre: 'Detalle', aoa: det, anchos: [{ wch: 14 }, { wch: 10 }, { wch: 12 }, { wch: 26 }, { wch: 70 }, { wch: 16 }], op: { titulo: 'Detalle por mes', info, fecha: [2], totales: [5] } }];
+      const cli = (typeof impNombreCliente === 'function' && impNombreCliente()) || 'cliente';
+      try { await arrXlsxConFormato(hojas, cli, 'Kardex_entradas_vs_Compras_' + String(cli).replace(/[^A-Za-z0-9]+/g, '_').slice(0, 30) + '_' + kcE.anio + '.xlsx'); } catch (e) { alert('No se pudo armar el Excel: ' + (e.message || e)); }
     }
 
     // ===== AF Inventarios › Inventario para la venta › iii) Costo de ventas vs Salidas (mayor contable) =====
