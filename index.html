@@ -18547,6 +18547,10 @@ ${(im.aprendidos || []).length ? `<p class="text-xs text-slate-600 bg-slate-50 b
       if (!tr.length && C) { const s = new Set(); (C.asientos || []).forEach(a => a.l.forEach(l => { if (/tr[aá]nsito/i.test(l[1] || '')) s.add(String(l[0])); })); tr = [...s]; }
       let inv = roles.inv_final.length ? roles.inv_final.slice() : roles.inventario.filter(c => !impCtaEn(c, tr));
       inv = inv.filter(c => !impCtaEn(c, tr));
+      // Otras cuentas de inventario de la misma familia que la de tránsito (mismos primeros dígitos), por ejemplo otra materia prima o producto
+      const fam = new Set(tr.filter(c => !c.endsWith('*') && c.length >= 7).map(c => c.slice(0, c.length - 5)));
+      const cods = new Set(Object.keys(nombres)); ((C && C.asientos) || []).forEach(a => a.l.forEach(l => cods.add(String(l[0]))));
+      cods.forEach(c => { if (!impCtaEn(c, tr) && !impCtaEn(c, inv) && [...fam].some(f => c.startsWith(f))) inv.push(c); });
       return { tr, inv };
     }
     function impTransitoCalc() {
