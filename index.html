@@ -2883,7 +2883,6 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
     async function tableroAbrir(forzar) {
       const u = usuarioActivo; if (!u) return;
       const email = String(u.email || u.correo || '').trim().toLowerCase();
-      if (!forzar && !tabPref(email)) return;
       const el = document.getElementById('tablero-inicio'); if (!el) return;
       el.classList.remove('hidden'); tabFlecha();
       el.innerHTML = '<div class="min-h-full flex items-start justify-center p-4 sm:p-8"><div class="w-full max-w-5xl bg-white rounded-2xl shadow-2xl p-8 text-sm text-slate-500">Preparando tu tablero...</div></div>';
@@ -2961,7 +2960,6 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
             <div class="rounded-xl border border-slate-200 p-4"><div class="font-bold text-slate-800 mb-1">Tus visitas</div>${enCurso.length || proximas.length ? `<table class="w-full"><tbody>${enCurso.map(v => tarjVisita(v, 'curso')).join('') + proximas.slice(0, 8).map(v => tarjVisita(v, 'prox')).join('')}</tbody></table>` : vacio}<button type="button" onclick="tabIr('visitas')" class="mt-2 text-[11px] text-indigo-700 hover:underline">Ir a Visitas (Calendario)</button></div>
           <div class="rounded-xl border border-slate-200 px-4 py-2.5 flex flex-wrap items-center gap-x-6 gap-y-1 text-[12px] text-slate-700"><span class="font-bold text-slate-800">Pedidos a Claude</span>${D.esJefe ? `<span>Por autorizar: <b class="${porAutorizar ? 'text-rose-600' : 'text-slate-500'}">${porAutorizar}</b></span>` : ''}<span>En proceso: <b>${enMarcha}</b></span><span>Para revisar: <b class="${listos ? 'text-emerald-600' : 'text-slate-500'}">${listos}</b></span><button type="button" onclick="tabIr('claude-revisar')" class="ml-auto text-[11px] text-indigo-700 hover:underline">Ir a revisar los resultados</button>${listos ? `<div class="w-full border-t border-slate-100 pt-1 text-[11px] text-slate-600 grid sm:grid-cols-2 gap-x-6">${porRev.slice(0, 6).map(x => `<div class="truncate">• <b>${esc(nomCli(x.cliente_id))}</b> · ${esc(x.cuenta ? (String(nomCta(x.cuenta)).slice(0, 30)) : 'Sin cuenta')}${x.anio ? ' · ' + esc(x.anio) : ''}</div>`).join('')}${listos > 6 ? `<div class="text-slate-400">y ${listos - 6} más</div>` : ''}</div>` : ''}</div>
           ${equipoH}
-          <label class="flex items-center gap-2 text-[11px] text-slate-500"><input type="checkbox" ${tabPref(D.email) ? 'checked' : ''} onchange="tabGuardarPref(this)"> Mostrar este tablero cada vez que ingrese</label>
         </div></div></div>`;
     }
 
