@@ -2113,7 +2113,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
           <button type="button" id="ar-tab-revel" onclick="arrTab('revel')" class="px-3 py-1.5 text-xs transition rounded-lg">10. Revelaciones</button>
           <button type="button" id="ar-tab-claude" onclick="arrTab('claude')" class="px-3 py-1.5 text-xs transition rounded-lg">11. Análisis de Claude</button>
           <button type="button" id="ar-tab-programa" onclick="arrTab('programa')" class="px-3 py-1.5 text-xs transition rounded-lg">12. Programa de trabajo</button>
-          <button type="button" id="ar-descargar" onclick="arrDescargar()" class="hidden ml-auto px-3 py-1.5 rounded-lg text-xs bg-slate-100 text-slate-800 hover:bg-slate-200 font-medium transition">Descargar todo (Excel)</button>
+          <button type="button" id="ar-descargar" onclick="arrDescargar()" class="hidden ml-auto px-3 py-1.5 rounded-lg text-xs bg-white text-slate-700 border border-slate-400 hover:bg-slate-100 font-semibold transition">⬇ Descargar todo (Excel)</button>
         </div>
         <div id="ar-panel" class="border border-slate-200 rounded-xl overflow-auto max-h-[78vh]"></div>
         <div id="ar-notas" class="text-[11px] text-slate-500 leading-relaxed"></div>
@@ -2205,7 +2205,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
           <button type="button" id="im-tab-liq" onclick="impTab('liq')" class="px-3 py-1.5 text-xs transition rounded-lg">1. Liquidaciones de importación</button>
           <button type="button" id="im-tab-cruce" onclick="impTab('cruce')" class="px-3 py-1.5 text-xs transition rounded-lg">2. Liquidaciones → Importaciones (mayor contable)</button>
           <button type="button" id="im-tab-ent" onclick="impTab('ent')" class="px-3 py-1.5 text-xs transition rounded-lg">3. Importaciones en tránsito → Inventario</button>
-          <button type="button" id="im-descargar" onclick="impDescargar()" class="hidden ml-auto px-3 py-1.5 rounded-lg text-xs bg-slate-100 text-slate-800 hover:bg-slate-200 font-medium transition">Descargar todo (Excel)</button>
+          <button type="button" id="im-descargar" onclick="impDescargar()" class="hidden ml-auto px-3 py-1.5 rounded-lg text-xs bg-white text-slate-700 border border-slate-400 hover:bg-slate-100 font-semibold transition">⬇ Descargar todo (Excel)</button>
         </div>
         <div id="im-panel" class="border border-slate-200 rounded-xl overflow-auto max-h-[78vh]"></div>
       </div>
@@ -18533,7 +18533,7 @@ ${(im.aprendidos || []).length ? `<p class="text-xs text-slate-600 bg-slate-50 b
         <div class="grid grid-cols-1 md:grid-cols-3 gap-3">${nombres}</div>
         <div class="flex flex-wrap items-end gap-4 pt-1"><label class="flex flex-col gap-1 text-xs text-slate-600"><span>Diferencia que se acepta como "Cuadra"</span><input type="text" inputmode="decimal" value="${impE(cfg.tol)}" onchange="impEditarTol(this.value)" class="${impIn} w-28 text-right"></label>
         <label class="flex flex-col gap-1 text-xs text-slate-600"><span>Fecha de corte (lo registrado después no cuenta)</span><input type="date" value="${impE(cfg.corte)}" onchange="impCambiarFecha(this.value)" class="${impIn} w-40"></label></div></div>`;
-      h += `<div class="flex flex-wrap items-center gap-2"><button type="button" onclick="impRecalcular()" class="${impBtn}" ${C ? '' : 'disabled'}>Recalcular con las cuentas indicadas</button></div>`;
+      h += `<div class="flex flex-wrap items-center gap-2"><button type="button" onclick="impRecalcular()" class="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 text-white border border-slate-800 hover:bg-slate-700 transition disabled:opacity-40 disabled:cursor-not-allowed" ${C ? '' : 'disabled'}>↻ Recalcular con las cuentas indicadas</button></div>`;
       if (impEstado.aliasCambio) h += `<p class="text-red-600 font-semibold">Cambiaste los nombres de las importaciones desde el último cruce: vuelve a leer el mayor para que se tomen en cuenta.</p>`;
       if (C && impEstado.cl) { try { h += impHtmlMeses(); } catch (e) { console.error(e); } h += impHtmlResultadoCruce(); }
       return h + '</div>';
