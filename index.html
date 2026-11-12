@@ -18595,6 +18595,27 @@ ${(im.aprendidos || []).length ? `<p class="text-xs text-slate-600 bg-slate-50 b
       impEstado.mov = { llave, cargando: false, cuentas: (!error && data && Array.isArray(data.cuentas)) ? data.cuentas : [], hay: !!(data && !error), error: error ? (error.message || String(error)) : '', act: data ? { por: data.actualizado_por, en: data.updated_at } : null };
       if (impEstado.tab === 'ent' || impEstado.tab === 'cruce') impRender();
     }
+    // Saldos de la cuenta en tránsito según las sumarias (balance de comprobación): final = año y visita actuales; inicial = año anterior (visita final si existe)
+    async function impCargarSaldosTr(tr) {
+      const cli = impEstado.cliente, anio = Number(impEstado.anio), vis = impEstado.visita, llave = cli + '|' + anio + '|' + vis + '|' + tr.join(',');
+      if (!cli || !anio || !tr.length || (impEstado.trSal && impEstado.trSal.llave === llave)) return;
+      impEstado.trSal = { llave, cargando: true };
+      let data = [], error = null;
+      try {
+        for (let d = 0; ; d += 1000) {
+          const r = await supabaseClient.from('balance_comprobacion').select('codigo, saldo, anio, visita').eq('cliente_id', cli).in('anio', [anio, anio - 1]).range(d, d + 999);
+          if (r.error) { error = r.error; break; }
+          data.push(...(r.data || [])); if (!r.data || r.data.length < 1000) break;
+        }
+      } catch (e) { error = e; }
+      if (!impEstado.trSal || impEstado.trSal.llave !== llave) return;
+      const suma = (anioX, visX) => { const f = data.filter(x => Number(x.anio) === anioX && x.visita === visX); if (!f.length) return null; const m = f.filter(x => impCtaEn(String(x.codigo || '').trim(), tr)); return m.length ? impR2(m.reduce((t, x) => t + (Number(x.saldo) || 0), 0)) : null; };
+      const visPrev = [...new Set(data.filter(x => Number(x.anio) === anio - 1).map(x => x.visita))];
+      const vPrev = visPrev.includes('final') ? 'final' : visPrev[0];
+      const hayAct = data.some(x => Number(x.anio) === anio && x.visita === vis);
+      impEstado.trSal = { llave, cargando: false, error: error ? (error.message || String(error)) : '', sf: suma(anio, vis), hayAct, si: vPrev ? suma(anio - 1, vPrev) : null, hayPrev: !!vPrev, vPrev: vPrev || '' };
+      if (impEstado.tab === 'ent') impRender();
+    }
     // Recuadro flotante con la explicación de la diferencia (aparece al pasar el cursor)
     function impTipMostrar(el) {
       let b = document.getElementById('imp-tip-box');
@@ -18762,19 +18783,25 @@ ${(im.aprendidos || []).length ? `<p class="text-xs text-slate-600 bg-slate-50 b
         <label class="flex flex-col gap-1 text-xs text-slate-600 max-w-md"><span>Código(s) de la cuenta de importaciones en tránsito</span><input type="text" value="${impE(cfg.transito || '')}" placeholder="${impE(((T && T.tr) || []).join(', ') || 'Códigos separados por coma')}" onchange="impEditarTransito(this.value)" class="${impIn} w-full"></label></div>`;
       if (!T || T.sinCuenta) return h + `<p class="text-red-600 font-semibold">No se encontró la cuenta de importaciones en tránsito en el mayor leído. Escribe su código arriba.</p></div>`;
       const nm = c => (C.cuentas && C.cuentas[c]) ? c + ' ' + C.cuentas[c] : c;
-      const nsi = impN(cfg.trsi), nsf = impN(cfg.trsf), si = nsi === null ? 0 : nsi, fin = impR2(si + T.saldo), difF = nsf === null ? null : impR2(fin - nsf);
+      setTimeout(() => impCargarSaldosTr(T.tr), 0);
+      const S = (impEstado.trSal && impEstado.trSal.llave === impEstado.cliente + '|' + Number(impEstado.anio) + '|' + impEstado.visita + '|' + T.tr.join(',')) ? impEstado.trSal : null;
+      const mSi = impN(cfg.trsi), mSf = impN(cfg.trsf);
+      const nsi = mSi !== null ? mSi : (S && S.si !== null && S.si !== undefined ? S.si : null), nsf = mSf !== null ? mSf : (S && S.sf !== null && S.sf !== undefined ? S.sf : null);
+      const oSi = mSi !== null ? 'Escrito por ti' : (nsi !== null ? 'Según la sumaria del año anterior (' + (S.vPrev === 'final' ? 'visita final' : 'visita ' + S.vPrev) + ')' : (S && S.cargando ? 'Buscando en las sumarias…' : 'No se encontró en las sumarias: escríbelo')),
+        oSf = mSf !== null ? 'Escrito por ti' : (nsf !== null ? 'Según la sumaria de este año y visita' : (S && S.cargando ? 'Buscando en las sumarias…' : 'No se encontró en las sumarias: escríbelo'));
+      const si = nsi === null ? 0 : nsi, fin = impR2(si + T.saldo), difF = nsf === null ? null : impR2(fin - nsf);
       const sCls = Math.abs(fin) > cfg.tol ? 'text-red-600' : 'text-emerald-700';
-      const inp = (k, v) => `<input type="text" inputmode="decimal" value="${v === '' || v === undefined ? '' : impE(impF(impN(v) === null ? 0 : impN(v)))}" placeholder="Escribe el valor" onchange="impEditarTrSaldo('${k}', this.value)" class="w-36 p-1 border border-slate-300 rounded text-[11px] text-right outline-none bg-white">`;
+      const inp = (k, v, ef) => `<input type="text" inputmode="decimal" value="${ef === null || ef === undefined ? '' : impE(impF(ef))}" placeholder="Escribe el valor" onchange="impEditarTrSaldo('${k}', this.value)" class="w-36 p-1 border border-slate-300 rounded text-[11px] text-right outline-none bg-white">`;
       h += `<div class="p-4 bg-white border border-slate-200 rounded-xl space-y-2"><div class="text-[13px] font-semibold text-slate-800">A. Movimiento de la cuenta de importaciones en tránsito</div>
         <p class="text-slate-500">Cuenta en tránsito: ${impE(T.tr.map(nm).join('; '))}. Cuentas de inventario: ${impE(T.inv.map(nm).join('; ') || 'no indicadas (se toman de la hoja 2)')}. <b>Revisa que estas cuentas sean las correctas</b> (se reconocieron por su nombre y por empezar igual que la cuenta en tránsito). Asientos que tocan la cuenta: ${T.nTocan}.</p>
         <div class="overflow-x-auto"><table class="text-[11px] leading-tight border-collapse"><tbody>
-        <tr class="border-b border-slate-100"><td class="px-2 py-1">Saldo inicial</td><td class="px-2 text-right">${inp('trsi', cfg.trsi)}</td><td class="px-2 text-slate-400">Saldo al inicio del año, según el balance o el mayor</td></tr>
+        <tr class="border-b border-slate-100"><td class="px-2 py-1">Saldo inicial</td><td class="px-2 text-right">${inp('trsi', cfg.trsi, nsi)}</td><td class="px-2 text-slate-400">${oSi}</td></tr>
         <tr class="border-b border-slate-100"><td class="px-2 py-1">(+) Compras/Importaciones (debe)</td><td class="px-2 text-right">${impF(T.deb)}</td><td class="px-2 text-slate-400">Lo que se acumuló en tránsito en el año</td></tr>
         <tr class="border-b border-slate-100"><td class="px-2 py-1">(−) Liquidaciones (haber)</td><td class="px-2 text-right">${impF(T.hab)}</td><td class="px-2 text-slate-400">Lo que salió de tránsito, hacia inventario u otras cuentas</td></tr>
         <tr class="border-b border-slate-100 font-semibold"><td class="px-2 py-1">Saldo final calculado</td><td class="px-2 text-right ${sCls}">${impF(fin)}</td><td class="px-2 text-slate-400">Saldo inicial + compras/importaciones − liquidaciones</td></tr>
-        <tr class="border-b border-slate-100"><td class="px-2 py-1">Saldo final según el mayor o balance</td><td class="px-2 text-right">${inp('trsf', cfg.trsf)}</td><td class="px-2 text-slate-400">Saldo al corte, según el balance o el mayor</td></tr>
-        <tr class="border-b border-slate-100 font-semibold"><td class="px-2 py-1">Diferencia</td><td class="px-2 text-right ${difF === null ? 'text-slate-400' : Math.abs(difF) > cfg.tol ? 'text-red-600' : 'text-emerald-700'}">${difF === null ? '–' : impF(difF)}</td><td class="px-2 text-slate-400">${difF === null ? 'Escribe el saldo final del mayor para comparar' : Math.abs(difF) > cfg.tol ? 'No cuadra: faltan o sobran movimientos' : 'Cuadra con el mayor'}</td></tr></tbody></table></div>
-        ${nsi === null ? '<p class="text-amber-600">Falta el saldo inicial: mientras no lo escribas, el saldo final calculado solo refleja los movimientos del año.</p>' : ''}
+        <tr class="border-b border-slate-100"><td class="px-2 py-1">Saldo final según sumarias (balance)</td><td class="px-2 text-right">${inp('trsf', cfg.trsf, nsf)}</td><td class="px-2 text-slate-400">${oSf}</td></tr>
+        <tr class="border-b border-slate-100 font-semibold"><td class="px-2 py-1">Diferencia</td><td class="px-2 text-right ${difF === null ? 'text-slate-400' : Math.abs(difF) > cfg.tol ? 'text-red-600' : 'text-emerald-700'}">${difF === null ? '–' : impF(difF)}</td><td class="px-2 text-slate-400">${difF === null ? 'Falta el saldo final para comparar' : Math.abs(difF) > cfg.tol ? 'No cuadra: faltan o sobran movimientos' : 'Cuadra con el mayor'}</td></tr></tbody></table></div>
+        ${nsi === null ? '<p class="text-amber-600">Falta el saldo inicial: mientras no esté, el saldo final calculado solo refleja los movimientos del año. Se toma de la sumaria del año anterior; si ese balance no está cargado, escríbelo.</p>' : ''}<p class="text-slate-400">Si escribes un valor, se usa ese en lugar del de las sumarias; para volver al de las sumarias, borra el valor escrito.</p>
         <p class="text-slate-500">${fin > cfg.tol ? 'Saldo deudor: importaciones que siguen en tránsito o costos todavía no pasados al inventario. Revisa si siguen realmente en camino.' : fin < -cfg.tol ? 'Saldo acreedor: se pasó al inventario más de lo acumulado en tránsito (por ejemplo valores que no se registraron antes en tránsito). Revisa el origen.' : 'La cuenta en tránsito queda en cero: todo lo acumulado salió.'}</p></div>`;
       if (T.dups && T.dups.length) h += `<div class="p-4 bg-white border border-red-200 rounded-xl space-y-1"><div class="text-[13px] font-semibold text-red-600">Posibles registros repetidos en la cuenta de tránsito</div><p class="text-slate-500">Solo se comparan movimientos del mismo lado (dos en el debe o dos en el haber), con el mismo valor y la misma fecha, en comprobantes distintos. Una entrada y una salida del mismo valor no se consideran repetidas. Si además el detalle es igual, se marca en rojo.</p>${T.dups.slice(0, 40).map(x => `<p>${x.mismoDet ? '<b class="text-red-600">Mismo detalle</b> · ' : ''}${impF(x.v)} · ${impE(x.lado)} · ${impE(x.d)} · ${x.n} comprobantes: ${impE(x.refs.slice(0, 6).join('; '))}${x.refs.length > 6 ? '…' : ''}</p>`).join('')}${T.dups.length > 40 ? '<p class="text-slate-400">Y ' + (T.dups.length - 40) + ' más.</p>' : ''}</div>`;
       h += `<div class="p-4 bg-white border border-slate-200 rounded-xl space-y-2"><div class="text-[13px] font-semibold text-slate-800">B. Salidas de tránsito y que entraron al inventario</div>
