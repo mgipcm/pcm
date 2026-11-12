@@ -18089,17 +18089,19 @@ ${cont.innerHTML}
       Object.assign(mvE, { cliente: cli, anio, visita: vis, cuentas: [], act: null, cargado: false, ver: null });
       if (!cli) { mvPintar(); return; }
       const id = ++mvE.cargaId;
-      const [{ data, error }, rb] = await Promise.all([
+      const [{ data, error }, rb, ri] = await Promise.all([
         supabaseClient.from('inventario_movimiento').select('*').eq('cliente_id', cli).eq('anio', Number(anio)).eq('visita', vis).eq('hoja', 'venta').maybeSingle(),
-        supabaseClient.from('balance_comprobacion').select('codigo, saldo').eq('cliente_id', cli).eq('anio', Number(anio)).eq('visita', vis).eq('sumaria', 'AF').limit(5000)
+        supabaseClient.from('balance_comprobacion').select('codigo, saldo').eq('cliente_id', cli).eq('anio', Number(anio)).eq('visita', vis).eq('sumaria', 'AF').limit(5000),
+        supabaseClient.from('importaciones_datos').select('cruce, config').eq('cliente_id', cli).eq('anio', Number(anio)).eq('visita', vis).maybeSingle()
       ]);
       if (id !== mvE.cargaId) return;
+      mvE.imp = (ri && ri.data) || null; mvE.trBal = null; mvE.verTr = null;
       if (data) { mvE.cuentas = Array.isArray(data.cuentas) ? data.cuentas : []; mvE.act = { por: data.actualizado_por, en: data.updated_at }; }
       // "Según libros": saldo de cada cuenta en el balance de comprobación (sumaria AF), por código
       const bal = {}; ((rb && rb.data) || []).forEach(f => { bal[String(f.codigo || '').trim()] = Number(f.saldo); });
       mvE.cuentas.forEach(x => { const cod = String(x.codigo || '').trim(); if (cod && Number.isFinite(bal[cod])) x.saldo_libros = bal[cod]; });
       mvE.cargado = true; mvE.error = error ? (error.message || String(error)) : '';
-      mvPintar();
+      mvPintar(); mvCargarBalTr(id);
     }
     function mvPintar() {
       if (typeof ivE === 'undefined' || ivE.hoja !== 'venta' || ivE.btn !== 'mov') return;
@@ -18107,7 +18109,7 @@ ${cont.innerHTML}
       if (!mvE.cliente) { c.innerHTML = '<p class="text-xs text-slate-500 border border-dashed border-slate-300 rounded-xl p-4">Selecciona el cliente para comenzar.</p>'; return; }
       if (!mvE.cargado) { c.innerHTML = '<p class="text-xs text-slate-500 p-4">Cargando…</p>'; return; }
       if (mvE.error) { c.innerHTML = '<p class="text-xs text-red-600 font-bold p-4">No se pudo cargar: ' + escapeHtml(/does not exist|schema cache/i.test(mvE.error) ? 'falta la tabla inventario_movimiento en Supabase.' : mvE.error) + '</p>'; return; }
-      if (!mvE.cuentas.length) { c.innerHTML = '<div class="border border-slate-200 rounded-xl">' + pcHtmlAviso('AF', mvE.cliente, mvE.anio, mvE.visita, 'venta') + '<div class="px-4 pb-4 text-center"><button type="button" onclick="mvAgregar()" class="px-3 py-1.5 text-xs rounded-lg bg-slate-100 text-slate-800 hover:bg-slate-200 font-medium">Agregar cuenta manualmente</button></div></div>'; return; }
+      if (!mvE.cuentas.length) { c.innerHTML = '<div class="border border-slate-200 rounded-xl">' + pcHtmlAviso('AF', mvE.cliente, mvE.anio, mvE.visita, 'venta') + '<div class="px-4 pb-4 text-center"><button type="button" onclick="mvAgregar()" class="px-3 py-1.5 text-xs rounded-lg bg-slate-100 text-slate-800 hover:bg-slate-200 font-medium">Agregar cuenta manualmente</button></div></div>' + mvHtmlTransito(); return; }
       const TH = 'px-2 py-2 text-[11px] font-bold text-slate-700 bg-slate-100 border-b border-slate-300', IN = 'w-full p-1 border border-slate-300 rounded text-[11px] text-right outline-none focus:ring-2 focus:ring-indigo-500 bg-white';
       const tot = {}; [...MV_COLS.map(c => c[0])].forEach(k => { tot[k] = r2f(mvE.cuentas.reduce((a, x) => a + (MV_MOV.includes(k) ? mvVal(x, k) : mvN(x[k])), 0)); });
       tot.saldo_libros = r2f(mvE.cuentas.reduce((a, x) => a + mvN(x.saldo_libros), 0));
@@ -18132,7 +18134,85 @@ ${cont.innerHTML}
       });
       h += '<tr class="bg-slate-50 font-bold"><td class="px-2 py-1.5">Total</td>' + MV_COLS.map(([k]) => '<td class="px-2 py-1.5 text-right">' + formatoNumeroAnexo(tot[k]) + '</td>').join('') + '<td class="px-2 py-1.5 text-right">' + (hayLibTot ? formatoNumeroAnexo(tot.saldo_libros) : '') + '</td><td class="px-2 py-1.5 text-right">' + celdaDif(difTot, hayLibTot) + '</td><td></td></tr></tbody></table></div>';
       h += '<div class="mt-2 flex flex-wrap items-center gap-3"><button type="button" onclick="mvAgregar()" class="px-2.5 py-1 bg-white text-slate-700 hover:bg-slate-50 border border-slate-400 rounded text-[11px] font-bold transition">+ Agregar cuenta</button><span class="text-[11px] text-slate-500">Aumentos con signo positivo y disminuciones (salidas, bajas) con signo negativo. Haz clic en una cifra de movimiento para ver sus partidas y reclasificarlas. Diferencia = Saldo final − Según libros.</span></div>';
-      c.innerHTML = pcBarraPedido('venta', mvE.cliente, mvE.anio, mvE.visita, 'Para armar o actualizar el movimiento del inventario y el de importaciones en tránsito, envía el mayor contable, las cuentas de inventario y, si el cliente importa, la cuenta de importaciones en tránsito. El movimiento de la cuenta en tránsito se ve en Importaciones, pestaña 3; las liquidaciones se envían desde Importaciones.') + h;
+      c.innerHTML = pcBarraPedido('venta', mvE.cliente, mvE.anio, mvE.visita, 'Para armar o actualizar el movimiento del inventario y el de importaciones en tránsito, envía el mayor contable, las cuentas de inventario y, si el cliente importa, la cuenta de importaciones en tránsito. El movimiento de la cuenta en tránsito se ve en Importaciones, pestaña 3; las liquidaciones se envían desde Importaciones.') + h + mvHtmlTransito();
+    }
+
+    // ===== Movimiento de la cuenta de importaciones en tránsito (mismo formato; sale de los asientos del mayor guardados en Importaciones) =====
+    const MV_TR_NOM = { saldo_inicial: 'Saldo inicial', compras: 'Entradas a tránsito (débitos)', salidas: 'Salidas de tránsito (créditos)', ajustes: 'Ajustes', reclasificaciones: 'Reclasificaciones', otros: 'Reversiones y anulaciones', saldo_final: 'Saldo final' };
+    function mvTrCodigos() {
+      const imp = mvE.imp; if (!imp) return [];
+      const cfg = imp.config || {}, C = imp.cruce || {};
+      let tr = String(cfg.transito || '').split(/[,;\s]+/).map(x => x.trim()).filter(Boolean);
+      const nombres = C.cuentas || {};
+      if (!tr.length) tr = Object.keys(nombres).filter(c => /tr[aá]nsito/i.test(nombres[c] || ''));
+      return tr;
+    }
+    function mvTrCuenta() {
+      const imp = mvE.imp, C = imp && imp.cruce; if (!C || !Array.isArray(C.asientos)) return null;
+      const tr = mvTrCodigos(); if (!tr.length) return null;
+      const cfg = imp.config || {}, nombres = C.cuentas || {}, partidas = [];
+      C.asientos.forEach(a => {
+        const lin = a.l || [], propias = lin.filter(l => impCtaEn(String(l[0]), tr)); if (!propias.length) return;
+        const otras = {}; lin.forEach(l => { if (!impCtaEn(String(l[0]), tr)) { const k = String(l[0]) + ' ' + (l[1] || ''); otras[k] = (otras[k] || 0) + (Number(l[2]) || 0) - (Number(l[3]) || 0); } });
+        const contra = Object.keys(otras).map(k => ({ k, v: otras[k] })).filter(o => Math.abs(o.v) > 0.005).sort((x, y) => Math.abs(y.v) - Math.abs(x.v)).slice(0, 3).map(o => o.k.trim() + ' (' + formatoNumeroAnexo(o.v) + ')').join(' · ');
+        propias.forEach(l => {
+          const d = Number(l[2]) || 0, h = Number(l[3]) || 0, v = r2f(d - h); if (Math.abs(v) < 0.005) return;
+          const det = String(l[4] || '').trim(), rev = /revers|anula/i.test(det);
+          partidas.push({ col: rev ? 'otros' : (v > 0 ? 'compras' : 'salidas'), fecha: a.d || '', ref: ((a.tk || '') + ' ' + (a.num || '')).trim(), desc: det.slice(0, 220), contra, valor: v });
+        });
+      });
+      partidas.sort((x, y) => String(x.fecha).localeCompare(String(y.fecha)));
+      const bal = mvE.trBal || {};
+      const mSi = parsearNumeroAnexo(cfg.trsi), mSf = parsearNumeroAnexo(cfg.trsf);
+      const si = (mSi !== null && Number.isFinite(mSi)) ? mSi : (Number.isFinite(bal.si) ? bal.si : null);
+      const sl = (mSf !== null && Number.isFinite(mSf)) ? mSf : (Number.isFinite(bal.sf) ? bal.sf : null);
+      const x = { id: 'tr', codigo: tr.join(', '), cuenta: tr.map(c => nombres[c] || '').filter(Boolean)[0] || 'Importaciones en tránsito', partidas, saldo_inicial: si === null ? 0 : si, siConocido: si !== null, saldo_libros: sl };
+      MV_MOV.forEach(k => { x[k] = mvVal(x, k); });
+      x.saldo_final = r2f(x.saldo_inicial + MV_MOV.reduce((t, k) => t + x[k], 0));
+      return x;
+    }
+    async function mvCargarBalTr(id) {
+      const tr = mvTrCodigos(); if (!tr.length || !mvE.cliente) return;
+      const cli = mvE.cliente, anio = Number(mvE.anio), vis = mvE.visita; let data = [];
+      try {
+        for (let d = 0; ; d += 1000) {
+          const r = await supabaseClient.from('balance_comprobacion').select('codigo, saldo, anio, visita').eq('cliente_id', cli).in('anio', [anio, anio - 1]).range(d, d + 999);
+          if (r.error) return; data.push(...(r.data || [])); if (!r.data || r.data.length < 1000) break;
+        }
+      } catch (e) { return; }
+      if (id !== mvE.cargaId) return;
+      const suma = (a, v) => { const m = data.filter(x => Number(x.anio) === a && x.visita === v && impCtaEn(String(x.codigo || '').trim(), tr)); return m.length ? r2f(m.reduce((t, x) => t + (Number(x.saldo) || 0), 0)) : null; };
+      const vp = [...new Set(data.filter(x => Number(x.anio) === anio - 1).map(x => x.visita))]; const vPrev = vp.includes('final') ? 'final' : vp[0];
+      mvE.trBal = { sf: suma(anio, vis), si: vPrev ? suma(anio - 1, vPrev) : null };
+      mvPintar();
+    }
+    function mvVerTr(k) { mvE.verTr = (mvE.verTr === k) ? null : k; mvPintar(); }
+    function mvHtmlTransito() {
+      const TH = 'px-2 py-2 text-[11px] font-bold text-slate-700 bg-slate-100 border-b border-slate-300';
+      const cab = '<div class="mt-6 mb-2 text-[13px] font-semibold text-slate-800">Movimiento de la cuenta de importaciones en tránsito</div>';
+      const x = mvTrCuenta();
+      if (!x) return cab + '<div class="p-4 border border-dashed border-slate-300 rounded-xl text-xs text-slate-600">Aún no están los asientos de la cuenta de importaciones en tránsito. Haz un pedido a Claude con el mayor contable e indica la cuenta de importaciones en tránsito (campo opcional del pedido); cuando termine, el movimiento aparecerá aquí con sus partidas.</div>';
+      const hayLib = x.saldo_libros !== null && x.saldo_libros !== undefined, dif = hayLib ? r2f(x.saldo_final - x.saldo_libros) : 0;
+      const celdaDif = hayLib ? '<span class="' + (Math.abs(dif) > 1 ? 'text-red-600' : 'text-emerald-700') + '">' + formatoNumeroAnexo(dif) + '</span>' : '<span class="text-slate-400">–</span>';
+      let h = cab + '<div class="overflow-x-auto border border-slate-200 rounded-xl"><table class="w-full text-[11px] leading-tight border-collapse min-w-[1000px]"><thead><tr><th class="' + TH + ' text-left">Cuenta</th>' + MV_COLS.map(([k]) => '<th class="' + TH + ' text-right">' + MV_TR_NOM[k] + '</th>').join('') + '<th class="' + TH + ' text-right" title="Saldo de la sumaria (balance de comprobación) o el escrito en Importaciones, pestaña 3">Según libros</th><th class="' + TH + ' text-right" title="Saldo final − Según libros. Debe ser cero">Diferencia</th></tr></thead><tbody>';
+      h += '<tr class="border-b border-slate-100 align-top"><td class="px-2 py-1">' + escapeHtml((x.codigo ? x.codigo + ' ' : '') + x.cuenta) + (x.siConocido ? '' : '<div class="text-[10px] text-amber-700 font-bold mt-0.5">Falta el saldo inicial: escríbelo en Importaciones, pestaña 3.</div>') + '</td>' +
+        MV_COLS.map(([k]) => {
+          if (MV_MOV.includes(k)) {
+            const n = x.partidas.filter(p => p.col === k).length, v = x[k], ab = mvE.verTr === k;
+            if (!n) return '<td class="px-2 py-1 text-right text-slate-500">' + formatoNumeroAnexo(v) + '</td>';
+            return '<td class="px-1 py-1"><button type="button" onclick="mvVerTr(\'' + k + '\')" class="w-full text-right p-1 rounded font-bold ' + (ab ? 'bg-indigo-100 text-indigo-900' : 'text-indigo-700 hover:bg-indigo-50') + '" style="text-decoration:underline dotted" title="Clic para ver las partidas del mayor de esta cifra">' + (ab ? '▴ ' : '▾ ') + formatoNumeroAnexo(v) + '</button></td>';
+          }
+          return '<td class="px-2 py-1 text-right">' + formatoNumeroAnexo(x[k]) + '</td>';
+        }).join('') + '<td class="px-2 py-1 text-right">' + (hayLib ? formatoNumeroAnexo(x.saldo_libros) : '<span class="text-slate-400">Sin balance</span>') + '</td><td class="px-2 py-1 text-right font-bold">' + celdaDif + '</td></tr>';
+      if (mvE.verTr) {
+        const k = mvE.verTr, lista = x.partidas.filter(p => p.col === k), sum = r2f(lista.reduce((t, p) => t + mvN(p.valor), 0));
+        h += '<tr class="bg-indigo-50/60"><td colspan="' + (MV_COLS.length + 3) + '" class="px-3 py-2"><div style="position:sticky;left:8px;width:min(100%, calc(100vw - 6rem))"><div class="flex items-center justify-between gap-3 mb-1"><span class="text-[11px] font-bold text-indigo-900">' + escapeHtml(MV_TR_NOM[k]) + ' · ' + escapeHtml(x.codigo) + ' — ' + lista.length + (lista.length === 1 ? ' partida' : ' partidas') + '</span><button type="button" onclick="mvVerTr(\'' + k + '\')" class="px-3 py-1 text-[11px] font-bold text-slate-700 bg-white border border-slate-400 rounded-lg hover:bg-slate-100">✕ Cerrar</button></div>' +
+          '<div class="max-h-80 overflow-auto border border-slate-200 rounded-lg bg-white"><table class="w-full text-[11px] leading-tight border-collapse"><thead><tr class="bg-slate-100 text-slate-700"><th class="px-2 py-1 text-left font-bold">Fecha</th><th class="px-2 py-1 text-left font-bold">Comprobante</th><th class="px-2 py-1 text-left font-bold">Descripción</th><th class="px-2 py-1 text-left font-bold">Contrapartida (otras cuentas del asiento)</th><th class="px-2 py-1 text-right font-bold">Valor</th></tr></thead><tbody>' +
+          lista.map(p => '<tr class="border-t border-slate-100 align-top"><td class="px-2 py-1 whitespace-nowrap">' + mvFechaCorta(p.fecha) + '</td><td class="px-2 py-1 whitespace-nowrap">' + escapeHtml(p.ref) + '</td><td class="px-2 py-1">' + escapeHtml(p.desc) + '</td><td class="px-2 py-1 text-slate-600">' + escapeHtml(p.contra) + '</td><td class="px-2 py-1 text-right whitespace-nowrap ' + (p.valor < 0 ? 'text-rose-700' : '') + '">' + formatoNumeroAnexo(p.valor) + '</td></tr>').join('') +
+          '<tr class="border-t-2 border-slate-300 bg-slate-50 font-bold"><td class="px-2 py-1" colspan="4">Total de las partidas</td><td class="px-2 py-1 text-right">' + formatoNumeroAnexo(sum) + '</td></tr></tbody></table></div></div></td></tr>';
+      }
+      h += '</tbody></table></div><p class="mt-2 text-[11px] text-slate-500">Sale de los asientos del mayor que pasan por la cuenta en tránsito. Entradas = débitos; salidas = créditos (liquidaciones y salidas hacia el inventario u otras cuentas). Haz clic en una cifra para ver sus partidas. El saldo inicial y el "Según libros" se toman de las sumarias o de lo escrito en Importaciones, pestaña 3.</p>';
+      return h;
     }
     function mvPartidasIdx(x, k) { const r = []; (Array.isArray(x && x.partidas) ? x.partidas : []).forEach((p, ix) => { if (p && p.col === k) r.push({ p, ix }); }); return r; }
     function mvVer(i, k) { mvE.ver = (mvE.ver && mvE.ver.i === i && mvE.ver.k === k) ? null : { i, k }; mvPintar(); }
