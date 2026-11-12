@@ -1184,15 +1184,15 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
           </div>
           <div id="pc-ctas-cv-caja" class="hidden">
             <label class="block text-xs font-semibold text-slate-600 mb-1">Cuentas de costo de ventas (obligatorio)</label>
-            <input type="text" id="pc-ctas-cv" placeholder="Códigos contables separados por coma. Ej. 510101001, 510101002" class="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs sm:text-sm outline-none">
+            <input type="text" id="pc-ctas-cv" placeholder="Códigos contables separados por coma. Ej. 5101xxxxx, 5101yyyyy" class="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs sm:text-sm outline-none">
             <p class="mt-1 text-[11px] text-slate-400">Indica los códigos de las cuentas de costo de ventas. Claude armará, mes a mes, el costo de esas cuentas con el mayor contable, para cruzarlo con las salidas del inventario.</p>
           </div>
           <div id="pc-ctas-caja" class="hidden">
             <label class="block text-xs font-semibold text-slate-600 mb-1">Cuentas del inventario para la venta (obligatorio)</label>
-            <input type="text" id="pc-ctas-inv" placeholder="Códigos contables separados por coma. Ej. 110301001, 110301002, 110394001" class="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs sm:text-sm outline-none">
+            <input type="text" id="pc-ctas-inv" placeholder="Códigos contables separados por coma. Ej. 1103xxxxx, 1103yyyyy" class="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs sm:text-sm outline-none">
             <p class="mt-1 text-[11px] text-slate-400">Indica los códigos de las cuentas que son inventario para la venta. Claude solo armará el movimiento de esas cuentas. La materia prima y la producción en proceso se trabajan en sus propias hojas.</p>
             <label class="block text-xs font-semibold text-slate-600 mb-1 mt-3">Cuenta de importaciones en tránsito (opcional)</label>
-            <input type="text" id="pc-ctas-tr" placeholder="Código contable de la cuenta de importaciones en tránsito. Ej. 110380001" class="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs sm:text-sm outline-none">
+            <input type="text" id="pc-ctas-tr" placeholder="Código contable de la cuenta de importaciones en tránsito. Ej. 1103zzzzz" class="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs sm:text-sm outline-none">
             <p class="mt-1 text-[11px] text-slate-400">Si el cliente importa, indica la cuenta de importaciones en tránsito. Con el mismo mayor, Claude armará también su movimiento (saldo inicial, compras, liquidaciones y saldo final).</p>
           </div>
           <div>
@@ -17039,20 +17039,19 @@ ${cont.innerHTML}
         const C = impEstado.cruce; if (!C) return '';
         const nom = c => { let n = (C.cuentas || {})[c]; if (!n) (C.asientos || []).some(a => a.l.some(l => String(l[0]) === c && (n = l[1]))); return c + (n ? ' ' + String(n).trim() : ''); };
         const prop = impListaCtas((cfg.roles || {}).inventario), auto = impFamiliaInv(cfg).filter(c => !impCtaEn(c, prop));
-        let h = '<div class="p-3 rounded-xl bg-amber-50 border border-amber-200 text-[11px] text-slate-700 space-y-1"><div class="font-semibold text-slate-800">Revisa las cuentas puestas por defecto</div><p>Las cuentas de esta pantalla se sugieren solas por su nombre y por su parecido con la cuenta de importaciones en tránsito. Confirma que están completas y que no sobra ninguna antes de dar por buenas las diferencias.</p>';
-        if (auto.length) h += '<p><b>Se sumaron solas como inventario</b> (empiezan igual que la cuenta en tránsito): ' + impE(auto.map(nom).join('; ')) + '. Si alguna no es de inventario, escribe aquí las cuentas que sí corresponden y esta suma se mantiene solo para las que empiezan igual.</p>';
+        let h = '<div class="p-3 rounded-xl bg-amber-50 border border-amber-200 text-[11px] text-slate-700 space-y-1"><div class="font-semibold text-slate-800">Revisa las cuentas puestas por defecto</div><p>Las cuentas de esta pantalla se sugieren solas por su nombre y por las cuentas de inventario que elegiste en el pedido de Movimiento del inventario. Confirma que están completas y que no sobra ninguna antes de dar por buenas las diferencias.</p>';
+        if (auto.length) h += '<p><b>Se sumaron solas como inventario</b> (son las cuentas de inventario elegidas en el pedido de Movimiento del inventario): ' + impE(auto.map(nom).join('; ')) + '. Si alguna no corresponde, escribe aquí las cuentas que sí corresponden; las elegidas en el pedido se mantienen.</p>';
         return h + '</div>';
       } catch (e) { return ''; }
     }
+    // Cuentas de inventario que el auditor eligió en el pedido de "Movimiento del inventario" (sirven para cualquier cliente: no se adivinan por la numeración)
     function impFamiliaInv(cfg) {
       const C = impEstado.cruce; if (!C || !cfg) return [];
-      const llave = (cfg.transito || '') + '|' + (C.asientos || []).length + '|' + (C.fecha || '');
-      if (impEstado._fam && impEstado._fam.llave === llave) return impEstado._fam.lista;
-      const nombres = C.cuentas || {}, cods = new Set(Object.keys(nombres)); (C.asientos || []).forEach(a => a.l.forEach(l => { cods.add(String(l[0])); if (!nombres[l[0]]) nombres[l[0]] = l[1] || ''; }));
+      const M = impEstado.mov;
+      if (!M || M.cargando || M.llave !== impEstado.cliente + '|' + impEstado.anio + '|' + impEstado.visita) { setTimeout(impCargarMov, 0); return []; }
+      const nombres = C.cuentas || {}, cods = new Set(Object.keys(nombres)); (C.asientos || []).forEach(a => a.l.forEach(l => cods.add(String(l[0]))));
       let tr = impListaCtas(cfg.transito); if (!tr.length) tr = [...cods].filter(c => /tr[aá]nsito/i.test(nombres[c] || ''));
-      const fam = [...new Set(tr.filter(c => !c.endsWith('*') && c.length >= 7).map(c => c.slice(0, c.length - 5)))];
-      const lista = fam.length ? [...cods].filter(c => !impCtaEn(c, tr) && fam.some(f => c.startsWith(f))) : [];
-      impEstado._fam = { llave, lista }; return lista;
+      return [...new Set((M.cuentas || []).map(x => String(x.codigo || '').trim()).filter(Boolean))].filter(c => !impCtaEn(c, tr));
     }
     // El auditor responsable es una persona: si quedó escrito "Claude", se toma como vacío
     const respPersona = r => (r && String(r).trim().toLowerCase() !== 'claude') ? r : '';
@@ -17164,7 +17163,7 @@ ${cont.innerHTML}
     // ---- Reconocimiento de la importación en el detalle del mayor ----
     const IMP_RUIDO = /^(DOC|DOCS|DOCUMENTO|DOCUMENTOS|DOCUMENTACION|DOCUMENTAION|DETALLE|FACT|FACTURA|FACTURAS|PRELIQ|PRELIQUIDACION|LIQUIDACION|IMPORTACION|IMP|PDF|COPIA|FINAL|DAI|DAU)$/;
     function impAliasValido(n) { if (n.length < 3 || IMP_RUIDO.test(n)) return false; if (/^\d+$/.test(n.replace(/ /g, '')) && n.replace(/ /g, '').length < 4) return false; return true; }
-    function impPatAlias(a) { // a ya normalizado; tolera espacios entre letras y números (H264 = H 264), ceros a la izquierda (HOLY 04 = HOLY 4) y una palabra intermedia (SOLAR GRUP 01)
+    function impPatAlias(a) { // a ya normalizado; tolera espacios entre letras y números (H264 = H 264), ceros a la izquierda (PROV 04 = PROV 4) y una palabra intermedia (NOMBRE GRUPO 01)
       const num = d => (d.length <= 4 && d[0] !== '0') ? '0*' + d : d;
       if (/^[A-Z]{2}\d{1,4}$/.test(a)) return a.replace(/^([A-Z]+)(\d+)$/, (_, l, d) => l + num(d)); // código corto (AL02, C35): pegado, sin espacio (evita 'AL 02 DE FEBRERO')
       let m = /^([A-Z]{4,}) ?(\d{1,4})$/.exec(a);
@@ -17186,7 +17185,7 @@ ${cont.innerHTML}
       const lista = [...mapa.entries()].sort((a, b) => b[0].length - a[0].length);
       if (!lista.length) return null;
       const re = new RegExp(lista.map(([a]) => '(?<![A-Z0-9])(' + impPatAlias(a) + ')(?![A-Z0-9])').join('|'), 'g');
-      // palabras (HOLY, VETO...) que van seguidas de número: sirven para leer listas como "HOLY 263 264 265"
+      // palabras (PROV, ABC...) que van seguidas de número: sirven para leer listas como "PROV 263 264 265"
       const palabras = new Set(); lista.forEach(([a]) => { const m = /^([A-Z]+) ?(\d+)$/.exec(a); if (m) palabras.add(m[1]); });
       const reLista = palabras.size ? new RegExp('(?<![A-Z0-9])(' + [...palabras].join('|') + ')\\s+(\\d+(?:\\s+\\d+){1,8})(?![A-Z0-9])', 'g') : null;
       return { re, lista, reLista };
@@ -17461,7 +17460,7 @@ ${cont.innerHTML}
     }
     const IMP_GEN_PROV = new Set(['CO','COMPANY','LTD','LIMITED','LLC','INC','CORP','CORPORATION','SA','SAS','SRL','BV','EXPORT','IMPORT','IMPORTADORA','EXPORTADORA','THE','DE','DEL','DO','DA','Y','AND','GROUP','GRUPO','CIA','LTDA','NEW','MATERIAL','MATERIALS','TRADING','INTERNATIONAL','TECHNOLOGY','ELECTRICAL','BUILDING','EUROPE','BENELUX','COLOMBIA','CHINA','BRASIL','ECUADOR','INDUSTRIAL','INDUSTRIES','SOURCING','GLOBAL','MUTUAL']);
     function impPalabrasProv(im) { const pal = []; impNorm(im.proveedor || '').split(/[^A-Z0-9]+/).forEach(w => { if (/^[A-Z]{3,}$/.test(w) && !IMP_GEN_PROV.has(w) && !pal.includes(w)) pal.push(w); }); return pal; }
-    // Nombres con los que suele aparecer una importación en el mayor: código, factura, y "nombre del proveedor + número" (HOLY 264, VETO 13)
+    // Nombres con los que suele aparecer una importación en el mayor: código, factura, y "nombre del proveedor + número" (PROV 264, ABC 13)
     function impAliasPorDefecto(im) {
       const set = new Set(); const add = t => { const n = impNorm(t); if (impAliasValido(n) && !(/^\d+$/.test(n) && n.length < 5)) set.add(n); };
       if (im.fuente !== 'consolidado') { add(im.id); add(im.nombre); } (im.facturas || []).forEach(f => { add(f); (String(f).match(/\d{5,}/g) || []).forEach(add); });
@@ -17711,7 +17710,7 @@ ${cont.innerHTML}
       return { archivo: M.nombre, fecha: new Date().toISOString(), lineasTot: n, debe: impR2(debe), haber: impR2(haber), lineas, asientos: (() => { const us = new Set(lineas.map(l => l.k)); return [...as.values()].filter(a => us.has(a.k)); })(), cuentas };
     }
 
-    // Aprende, de los asientos ya identificados, cómo escribe el cliente cada importación: nombre del proveedor + número (BELLOTA 13) y código (BE13)
+    // Aprende, de los asientos ya identificados, cómo escribe el cliente cada importación: nombre del proveedor + número (PROV 13) y código (PR13)
     function impAprender(res, imports) {
       const porAs = new Map(res.asientos.map(a => [a.k, a])), semillas = {};
       res.lineas.forEach(l => { if (l.k && (l.ids || []).length === 1) (semillas[l.ids[0]] || (semillas[l.ids[0]] = new Set())).add(l.k); });
@@ -18423,7 +18422,7 @@ ${cont.innerHTML}
           <label class="flex flex-col gap-1 text-xs text-slate-600"><span>ISD</span><select onchange="impEditarCampo(${i}, 'isd_estado', this.value)" class="w-44 ${impIn}">${[['', 'Sin indicar'], ['pagado', 'Pagado'], ['provisionado', 'Provisionado (proveedor sin pagar)'], ['credito', 'Crédito tributario (no es costo)'], ['no_aplica', 'No aplica']].map(([a, b]) => `<option value="${a}"${(im.isd_estado || '') === a ? ' selected' : ''}>${b}</option>`).join('')}</select></label>
           <label class="flex flex-col gap-1 text-xs text-slate-600"><span>Gasto financiero (NIC 23)</span><select onchange="impEditarCampo(${i}, 'fin_cap', this.value)" class="w-52 ${impIn}">${[['', 'No se capitaliza (gasto)'], ['si', 'Se capitaliza (activo apto)']].map(([a, b]) => `<option value="${a}"${(im.fin_cap || '') === a ? ' selected' : ''}>${b}</option>`).join('')}</select></label>
 </div>
-          <label class="flex flex-col gap-1 text-xs text-slate-600 mt-2"><span>Nombres con los que aparece esta importación en el mayor (separados por coma): código, nombre del proveedor con número, N° de factura. Si el cliente usa otro número (por ejemplo BELLOTA 13 y BE13), agrégalo aquí</span><input type="text" value="${impE(alias)}" onchange="impEditarAlias(${i}, this.value)" class="w-full ${impIn}"></label></div>
+          <label class="flex flex-col gap-1 text-xs text-slate-600 mt-2"><span>Nombres con los que aparece esta importación en el mayor (separados por coma): código, nombre del proveedor con número, N° de factura. Si el cliente usa otro número (por ejemplo PROV 13 y PR13), agrégalo aquí</span><input type="text" value="${impE(alias)}" onchange="impEditarAlias(${i}, this.value)" class="w-full ${impIn}"></label></div>
 ${(im.aprendidos || []).length ? `<p class="text-xs text-slate-600 bg-slate-50 border border-slate-200 rounded-xl p-3"><b>Nombres aprendidos del mayor:</b> ${impE(im.aprendidos.join(', '))}. Se encontraron en los asientos de esta importación; si alguno no corresponde, quítalo del campo de nombres de arriba.</p>` : ''}
         <div class="p-3 bg-white border border-slate-200 rounded-xl"><div class="text-[13px] font-semibold text-slate-800 mb-2">Evaluación del registro: ISD, gasto financiero e IVA</div><div class="space-y-1.5">${impEvalRegistro(im).map(([t, c, x]) => `<div class="border rounded-lg px-3 py-2 ${c}"><b>${t}:</b> ${impE(x)}</div>`).join('')}</div><p class="text-[10px] text-slate-500 mt-2">Criterio general (NIC 2 y NIC 23). La conclusión sobre cada registro la da el auditor.</p></div>
         <div class="p-3 bg-white border border-slate-200 rounded-xl"><div class="text-[13px] font-semibold text-slate-800 mb-2">Controles automáticos</div><div class="space-y-1">${ctrl.map(c => `<div class="flex gap-2"><span class="w-14 shrink-0 font-semibold ${c.est === 'ok' ? 'text-slate-500' : (c.est === 'rev' ? 'text-red-600' : 'text-slate-400')}">${c.est === 'ok' ? 'Cuadra' : (c.est === 'rev' ? 'Revisar' : 'Aviso')}</span><span><b>${impE(c.t)}.</b> ${impE(c.det)}</span></div>`).join('')}</div></div>`;
@@ -18824,10 +18823,8 @@ ${(im.aprendidos || []).length ? `<p class="text-xs text-slate-600 bg-slate-50 b
       if (!tr.length && C) { const s = new Set(); (C.asientos || []).forEach(a => a.l.forEach(l => { if (/tr[aá]nsito/i.test(l[1] || '')) s.add(String(l[0])); })); tr = [...s]; }
       let inv = roles.inv_final.length ? roles.inv_final.slice() : roles.inventario.filter(c => !impCtaEn(c, tr));
       inv = inv.filter(c => !impCtaEn(c, tr));
-      // Otras cuentas de inventario de la misma familia que la de tránsito (mismos primeros dígitos), por ejemplo otra materia prima o producto
-      const fam = new Set(tr.filter(c => !c.endsWith('*') && c.length >= 7).map(c => c.slice(0, c.length - 5)));
-      const cods = new Set(Object.keys(nombres)); ((C && C.asientos) || []).forEach(a => a.l.forEach(l => cods.add(String(l[0]))));
-      cods.forEach(c => { if (!impCtaEn(c, tr) && !impCtaEn(c, inv) && [...fam].some(f => c.startsWith(f))) inv.push(c); });
+      // Cuentas de inventario elegidas por el auditor en el pedido de Movimiento del inventario
+      impFamiliaInv(cfg).forEach(c => { if (!impCtaEn(c, tr) && !impCtaEn(c, inv)) inv.push(c); });
       return { tr, inv };
     }
     function impTransitoCalc() {
