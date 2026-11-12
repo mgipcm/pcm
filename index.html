@@ -1193,7 +1193,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
             <p class="mt-1 text-[11px] text-slate-400">Indica los códigos de las cuentas que son inventario para la venta. Claude solo armará el movimiento de esas cuentas. La materia prima y la producción en proceso se trabajan en sus propias hojas.</p>
             <label class="block text-xs font-semibold text-slate-600 mb-1 mt-3">Cuenta de importaciones en tránsito (opcional)</label>
             <input type="text" id="pc-ctas-tr" placeholder="Código contable de la cuenta de importaciones en tránsito. Ej. 110380001" class="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs sm:text-sm outline-none">
-            <p class="mt-1 text-[11px] text-slate-400">Si el cliente importa, indica la cuenta de importaciones en tránsito. Con el mismo mayor, Claude armará también su movimiento (saldo inicial, compras, liquidaciones y saldo final) para la pestaña 3 de Importaciones. Déjalo vacío si el cliente no la tiene.</p>
+            <p class="mt-1 text-[11px] text-slate-400">Si el cliente importa, indica la cuenta de importaciones en tránsito. Con el mismo mayor, Claude armará también su movimiento (saldo inicial, compras, liquidaciones y saldo final).</p>
           </div>
           <div>
             <label class="block text-xs font-semibold text-slate-600 mb-1">Nota para Claude (opcional)</label>
@@ -4742,6 +4742,11 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       const sum = valorAnalisis('pc-sumaria'); if (!sum) { el.innerHTML = ''; return; }
       const et = pcEtiquetas(sum, valorAnalisis('pc-hoja')).filter(x => x !== 'Otro');
       const todo = pcEtiquetasElegidas.includes(PC_TODO);
+      if (sum === 'AF' && valorAnalisis('pc-hoja') === 'venta') {
+        const nom = { 'Mayor contable completo': 'Mayor contable completo', 'Mayor contable de inventarios': 'Mayor contable de inventarios e importaciones', 'Balance de comprobación': 'Balance de comprobación (subir desde sumarias)' };
+        el.innerHTML = '<div class="font-bold">Qué subir:</div>' + et.filter(x => x !== PC_TODO).map((x, i) => '<div>' + (i + 1) + ') ' + ((todo || pcEtiquetasElegidas.includes(x)) ? '<span class="text-emerald-700">✓ ' : '<span class="text-slate-500">') + escapeHtml(nom[x] || x) + '</span></div>').join('');
+        return;
+      }
       el.innerHTML = '<b>Qué subir:</b> ' + et.filter(x => x !== PC_TODO).map(x => ((todo || pcEtiquetasElegidas.includes(x)) ? '<span class="text-emerald-700">✓ ' : '<span class="text-slate-500">○ ') + escapeHtml(x) + '</span>').join(' · ');
     }
     function pcAgregarArchivos(id) {
