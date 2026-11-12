@@ -3732,7 +3732,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       resp.value = analisisEstado.responsable || act || '';
       const up = document.getElementById('an-actualizado');
       const a = analisisEstado.actualizado;
-      if (up) up.value = a && a.por ? a.por : '';
+      if (up) up.value = a && a.por ? nombreMostrado(a.por) : '';
       const av = document.getElementById('an-identidad-aviso');
       if (av) {
         av.textContent = act ? '' : 'Sin sesión activa. Vuelve a ingresar al sistema.';
@@ -3749,9 +3749,11 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       pintarIdentidadAnalisis();
       return n;
     }
+    // Cuando lo procesó Claude, se muestra el auditor que inició sesión y pidió el trabajo
+    function nombreMostrado(por) { return por === 'Claude' && typeof nombreUsuarioActivo === 'function' && nombreUsuarioActivo() ? nombreUsuarioActivo() : (por || ''); }
     function textoActualizadoPor() {
       const a = analisisEstado.actualizado;
-      return a && a.por ? a.por + (a.cuando ? ' (' + formatoFechaContrato(a.cuando) + ')' : '') : '';
+      return a && a.por ? nombreMostrado(a.por) + (a.cuando ? ' (' + formatoFechaContrato(a.cuando) + ')' : '') : '';
     }
 
 
@@ -10775,7 +10777,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       document.getElementById('ar-timp').value = r2f(arrEstado.tasaImp * 100);
       arrPoblarPeriodo();
       { const ac = document.getElementById('ar-actualizado'), d = rK && rK.data;
-        if (ac) { ac.value = d && d.actualizado_por ? d.actualizado_por : ''; ac.title = d && d.updated_at ? 'Último cambio: ' + new Date(d.updated_at).toLocaleString('es-EC', { day: '2-digit', month: '2-digit', year: 'numeric', hour: 'numeric', minute: '2-digit' }) : ''; } }
+        if (ac) { ac.value = d && d.actualizado_por ? nombreMostrado(d.actualizado_por) : ''; ac.title = d && d.updated_at ? 'Último cambio: ' + new Date(d.updated_at).toLocaleString('es-EC', { day: '2-digit', month: '2-digit', year: 'numeric', hour: 'numeric', minute: '2-digit' }) : ''; } }
       arrEstadoMsg('');
       ORIGEN.arrend = null; pintarOrigenArrend(); cargarClaudeArrend();
       arrRender();
@@ -14735,7 +14737,7 @@ ${cont.innerHTML}
     function cbSync() {
       const f = $cb('cb-fecha'); if (f) f.value = cbE.corte || '';
       const a = $cb('cb-auditor'); if (a) a.value = respPersona(cbE.config.resp) || nombreUsuarioActivo() || '';
-      const u = $cb('cb-actualizado'); if (u) u.value = cbE.act && cbE.act.por ? (cbE.act.por === 'Claude' ? 'Claude · Procesado por Claude, sujeto a modificaciones en caso de existir' : cbE.act.por) : '';
+      const u = $cb('cb-actualizado'); if (u) u.value = cbE.act && cbE.act.por ? (cbE.act.por === 'Claude' ? nombreMostrado('Claude') + ' · Procesado por Claude, sujeto a modificaciones en caso de existir' : cbE.act.por) : '';
     }
     function cbCambiarCorte(v) { cbE.corte = v; cbGuardar(); cbRender(); }
     function cbGuardar() {
@@ -18297,7 +18299,7 @@ ${cont.innerHTML}
     function impSyncCabecera() {
       const f = $im('im-fecha'); if (f) f.value = impEstado.cfg.corte || '';
       const a = $im('im-auditor'); if (a) a.value = respPersona(impEstado.cfg.resp) || (typeof nombreUsuarioActivo === 'function' ? nombreUsuarioActivo() : '') || '';
-      const u = $im('im-actualizado'); if (u) { u.value = impEstado.act && impEstado.act.por ? (impEstado.act.por === 'Claude' && a && a.value ? a.value : impEstado.act.por) : ''; u.title = impEstado.act && impEstado.act.en ? 'Último cambio: ' + new Date(impEstado.act.en).toLocaleString('es-EC', { day: '2-digit', month: '2-digit', year: 'numeric', hour: 'numeric', minute: '2-digit' }) : ''; }
+      const u = $im('im-actualizado'); if (u) { u.value = impEstado.act && impEstado.act.por ? nombreMostrado(impEstado.act.por) : ''; u.title = impEstado.act && impEstado.act.en ? 'Último cambio: ' + new Date(impEstado.act.en).toLocaleString('es-EC', { day: '2-digit', month: '2-digit', year: 'numeric', hour: 'numeric', minute: '2-digit' }) : ''; }
     }
     function impCambiarFecha(v) { impEstado.cfg.corte = v; impReclasificar(); impGuardar('config'); impRender(); }
     function impReclasificar() {
