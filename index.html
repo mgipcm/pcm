@@ -18266,13 +18266,17 @@ ${cont.innerHTML}
       agrupar(im => { const t = impR2(impValoresLiq(im).total || 0); return t > 0 ? 'v' + t.toFixed(2) : ''; }, (k, ids) => 'Las importaciones ' + ids.join(', ') + ' tienen exactamente el mismo costo total (' + formatoNumeroAnexo(Number(k.slice(1))) + '): puede ser una liquidación repetida o dos importaciones parecidas.');
       return out;
     }
+    function impBarraPedido(texto) {
+      const L = impEstado.imports, Cx = impEstado.cruce;
+      return `<div class="m-2 p-3 bg-white border border-slate-200 rounded-xl space-y-2 text-xs text-slate-700"><div class="text-[13px] font-semibold text-slate-800 ic-claude ic-tomate">Importaciones: todo se pide a Claude</div>
+        <p class="text-slate-600">${texto || 'Sube en un mismo pedido las liquidaciones de importación (PDF o Excel), las declaraciones aduaneras y el mayor contable. Claude lee todo, cruza con el mayor y llena las hojas.'}</p>
+        <div class="flex flex-wrap items-center gap-2"><button type="button" onclick="pcIrAPedido('AF', impEstado.cliente, impEstado.anio, impEstado.visita, 'import')" class="${impBtnP} ic-claude">Pedir a Claude (liquidaciones + mayor contable)</button>
+        <p class="text-slate-500">${L.length ? L.length + ' importaciones cargadas por Claude' : 'Aún no hay liquidaciones'} · ${Cx ? 'cruce con el mayor hecho' : 'cruce con el mayor pendiente'}. Cuando el pedido pase a "hecho", presiona F5.</p></div></div>`;
+    }
     function impHtmlLiq() {
       const L = impEstado.imports;
       const Cx = impEstado.cruce;
-      const barra = `<div class="m-2 p-3 bg-white border border-slate-200 rounded-xl space-y-2 text-xs text-slate-700"><div class="text-[13px] font-semibold text-slate-800 ic-claude ic-tomate">Importaciones: todo se pide a Claude</div>
-        <p class="text-slate-600">Sube en un mismo pedido las liquidaciones de importación (PDF o Excel), las declaraciones aduaneras y el mayor contable. Claude lee todo, cruza con el mayor y llena las hojas.</p>
-        <div class="flex flex-wrap items-center gap-2"><button type="button" onclick="pcIrAPedido('AF', impEstado.cliente, impEstado.anio, impEstado.visita, 'import')" class="${impBtnP} ic-claude">Pedir a Claude (liquidaciones + mayor contable)</button>
-        <p class="text-slate-500">${L.length ? L.length + ' importaciones cargadas por Claude' : 'Aún no hay liquidaciones'} · ${Cx ? 'cruce con el mayor hecho' : 'cruce con el mayor pendiente'}. Cuando el pedido pase a "hecho", presiona F5.</p></div>`;
+      const barra = impBarraPedido();
       const proc = '<div id="im-proc" class="px-3 py-2 space-y-1"></div>';
       let dupH = ''; try { const D = impDuplicadasLiq(); if (D.length) dupH = '<div class="m-2 p-3 bg-white border border-red-200 rounded-xl text-xs text-slate-700 space-y-1"><div class="text-[13px] font-semibold text-red-600">Posibles liquidaciones repetidas</div>' + D.map(x => '<p>' + impE(x) + '</p>').join('') + '</div>'; } catch (e) { }
       if (!L.length) return barra + proc + '<div class="border-t border-slate-100">' + pcHtmlAviso('AF', impEstado.cliente, impEstado.anio, impEstado.visita, 'import') + '</div>';
@@ -18775,11 +18779,12 @@ ${(im.aprendidos || []).length ? `<p class="text-xs text-slate-600 bg-slate-50 b
     }
     function impHtmlTransito() {
       const C = impEstado.cruce, cfg = impEstado.cfg;
-      if (!impEstado.imports.length) return '<p class="p-6 text-xs text-slate-400 text-center">Primero carga las liquidaciones en la hoja 1.</p>';
-      if (!C) return '<p class="p-6 text-xs text-slate-400 text-center">Aún no hay lectura del mayor: pídela a Claude en la pestaña 2.</p>';
+      const barraP = impBarraPedido('Para ver el movimiento completo de la cuenta en tránsito, sube el mayor contable completo del cliente (junto con las liquidaciones si aún no están). Claude lee todos los asientos de esa cuenta.');
+      if (!impEstado.imports.length) return barraP + '<p class="p-6 text-xs text-slate-400 text-center">Primero carga las liquidaciones en la hoja 1.</p>';
+      if (!C) return barraP + '<p class="p-6 text-xs text-slate-400 text-center">Aún no hay lectura del mayor: pídela a Claude con el botón de arriba.</p>';
       if (!impEstado.mov || impEstado.mov.llave !== impEstado.cliente + '|' + impEstado.anio + '|' + impEstado.visita) setTimeout(impCargarMov, 0);
       const T = impTransitoCalc(), th = (t, c) => `<th class="px-2 py-1 border-b border-slate-200 whitespace-nowrap ${c || 'text-right'}">${t}</th>`;
-      let h = `<div class="p-3 space-y-3 text-xs text-slate-700">`;
+      let h = barraP + `<div class="p-3 space-y-3 text-xs text-slate-700">`;
       h += `<div class="p-4 bg-white border border-slate-200 rounded-xl space-y-2"><div class="text-[13px] font-semibold text-slate-800">Cuenta de importaciones en tránsito</div>
         <p class="text-slate-500">Se reconoce sola por su nombre ("tránsito"). Si este cliente la llama distinto, escribe aquí su código (puedes separar varios con coma).</p>
         <label class="flex flex-col gap-1 text-xs text-slate-600 max-w-md"><span>Código(s) de la cuenta de importaciones en tránsito</span><input type="text" value="${impE(cfg.transito || '')}" placeholder="${impE(((T && T.tr) || []).join(', ') || 'Códigos separados por coma')}" onchange="impEditarTransito(this.value)" class="${impIn} w-full"></label></div>`;
