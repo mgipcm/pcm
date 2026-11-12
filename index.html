@@ -4687,8 +4687,8 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       AB: ['Certificado o póliza de inversión', 'Estado de cuenta', 'Confirmación bancaria', 'Detalle o anexo de inversiones', 'Otro'],
       AS: ['Certificado o póliza de inversión', 'Estado de cuenta', 'Confirmación bancaria', 'Detalle o anexo de inversiones', 'Otro']
     };
-    const PC_HOJAS = { caja: 'Caja', bancos: 'Bancos', equivalentes: 'Equivalentes de efectivo', venta: 'Inventario para la venta', costo_ventas: 'Costo de ventas → salidas', kardex: 'Movimiento de kárdex', import: 'Importaciones (liquidaciones)' };
-    const PC_HOJAS_SUM = { AA: [['caja', 'Caja'], ['bancos', 'Bancos'], ['equivalentes', 'Equivalentes de efectivo']], AF: [['venta', 'Inventario para la venta'], ['costo_ventas', 'Costo de ventas → salidas'], ['kardex', 'Movimiento de kárdex'], ['import', 'Importaciones (liquidaciones)']] };
+    const PC_HOJAS = { caja: 'Caja', bancos: 'Bancos', equivalentes: 'Equivalentes de efectivo', venta: 'Inventario para la venta y importaciones en tránsito', costo_ventas: 'Costo de ventas → salidas', kardex: 'Movimiento de kárdex', import: 'Importaciones (liquidaciones)' };
+    const PC_HOJAS_SUM = { AA: [['caja', 'Caja'], ['bancos', 'Bancos'], ['equivalentes', 'Equivalentes de efectivo']], AF: [['venta', 'Inventario para la venta y importaciones en tránsito'], ['costo_ventas', 'Costo de ventas → salidas'], ['kardex', 'Movimiento de kárdex'], ['import', 'Importaciones (liquidaciones)']] };
     function pcNombreHoja(h) { return PC_HOJAS[h] || h || ''; }
     const PC_TODO = 'Todo en un archivo (todos los documentos juntos)';
     function pcEtiquetas(sumaria, hoja) {
@@ -17765,7 +17765,7 @@ ${cont.innerHTML}
       const t = $im('im-titulo'), st = $im('im-subtitulo'), nom = (IV_HOJAS.find(x => x[0] === ivE.hoja) || [])[1] || '';
       if (t) t.textContent = '2. Inventarios – ' + nom;
       if (st) st.textContent = ivE.hoja === 'import' ? 'Pasa las liquidaciones de importación (PDF o Excel) a una tabla con controles automáticos y las cruza con el mayor contable del cliente: asientos, fechas, conceptos y hallazgos'
-        : ivE.hoja === 'venta' ? (ivE.btn === 'impcompras' ? 'Compras/Liquidaciones de importación contra las entradas del mayor contable: sube liquidaciones (PDF, ZIP, Excel) y el mayor' : 'Inventario para la venta: movimiento del inventario y cruces con importaciones, compras, salidas y costo de ventas')
+        : ivE.hoja === 'venta' ? (ivE.btn === 'impcompras' ? 'Compras/Liquidaciones de importación contra las entradas del mayor contable: sube liquidaciones (PDF, ZIP, Excel) y el mayor' : 'Inventario para la venta: movimiento del inventario y de importaciones en tránsito, y cruces con importaciones, compras, salidas y costo de ventas')
         : ivE.hoja === 'materia' ? 'Materia prima (hoja en desarrollo)' : 'Producción en proceso (hoja en desarrollo)';
       const otras = $im('im-otras'), esp = $im('im-espacio'), av = $im('im-aviso'), imp = ivE.hoja === 'import', emb = ivE.hoja === 'venta' && ivE.btn === 'impcompras';
       if (otras) {
