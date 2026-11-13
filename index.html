@@ -4693,7 +4693,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       AB: ['Certificado o póliza de inversión', 'Estado de cuenta', 'Confirmación bancaria', 'Detalle o anexo de inversiones', 'Otro'],
       AS: ['Certificado o póliza de inversión', 'Estado de cuenta', 'Confirmación bancaria', 'Detalle o anexo de inversiones', 'Otro']
     };
-    const PC_HOJAS = { caja: 'Caja', bancos: 'Bancos', equivalentes: 'Equivalentes de efectivo', venta: 'Inventario para la venta, importaciones en tránsito y kárdex', costo_ventas: 'Costo de ventas → salidas', kardex: 'Movimiento de kárdex', import: 'Importaciones (liquidaciones)' };
+    const PC_HOJAS = { caja: 'Caja', bancos: 'Bancos', equivalentes: 'Equivalentes de efectivo', venta: 'Inventario para la venta, importaciones en tránsito y kárdex', costo_ventas: 'Costo de ventas → salidas', kardex: 'Movimiento de kárdex', import: 'Importaciones (liquidaciones)', voucheo: 'Revisión de documentación (voucheo)' };
     const PC_HOJAS_SUM = { AA: [['caja', 'Caja'], ['bancos', 'Bancos'], ['equivalentes', 'Equivalentes de efectivo']], AF: [['venta', 'Inventario para la venta, importaciones en tránsito y kárdex']] };
     function pcNombreHoja(h) { return PC_HOJAS[h] || h || ''; }
     const PC_TODO = 'Todo en un archivo (todos los documentos juntos)';
@@ -18045,11 +18045,11 @@ ${cont.innerHTML}
           '- **Importaciones:** lee las liquidaciones, las cruza con el mayor y explica las diferencias.',
           '- **Costo de ventas:** compara las salidas del inventario con el costo de ventas del mayor, mes a mes.',
           '- **Kárdex:** compara sus entradas contra las compras y sus salidas contra el costo de ventas, y analiza cada diferencia.',
-          '- **Revisión de documentación (voucheo):** arma una muestra de las adiciones del inventario, automática por monto, cercanía al corte y conceptos inusuales hasta el porcentaje que defina el auditor según el riesgo, o manual. Para cada partida se marca la documentación revisada (factura, autorización, orden de compra, declaración aduanera, recepción, pago, impuestos) y se suben los soportes en PDF o foto. Los soportes que se suban ahí quedan guardados como respaldo, pero por ahora Claude todavía no los lee: las marcas las llena el auditor.',
+          '- **Revisión de documentación (voucheo):** arma una muestra de las adiciones del inventario, automática por monto, cercanía al corte y conceptos inusuales hasta el porcentaje que defina el auditor según el riesgo, o manual. Para cada partida se marca la documentación revisada (factura, autorización, orden de compra, declaración aduanera, recepción, pago, impuestos) y se suben los soportes en PDF o foto. Los soportes (PDF, fotos o Excel) se suben en cada partida, y con «Pedir a Claude que lea los soportes» Claude los compara con la partida y deja sus marcas con la evidencia (se ven con borde naranja, el auditor las ratifica o las cambia). Lo que Claude no puede comprobar lo deja pendiente.',
           '',
           '## Qué está en desarrollo',
-          '- **Voucheo con lectura de Claude:** que Claude lea las facturas, declaraciones y comprobantes que se suban y llene las marcas de documentación. Hoy subir un PDF o una foto en el voucheo no activa ninguna revisión automática.',
           '- **Inventarios, otras hojas:** materia prima y producción en proceso aparecen como pestañas, pero todavía no tienen contenido.',
+          '- **Índices financieros, flujo de efectivo y matriz de transición (PCE):** están construidas, pero todavía en pruebas y no habilitadas para el equipo.',
           '',
           '## Cómo leerlo',
           '- Todo sale con el sello «Procesado por Claude, sujeto a modificaciones en caso de existir»: el auditor revisa, modifica o ratifica.',
@@ -18060,7 +18060,7 @@ ${cont.innerHTML}
           '- **Planificación:** cuestionarios de evaluación, visitas (calendario) y asignación de cuentas.',
           '- **Análisis claves:** sumarias; To/Do, Quick Lett y Opinión; pedidos a Claude y pedidos y aprobaciones.',
           '- **Cuentas:** efectivo y equivalentes de efectivo (bancos con resumen de conciliaciones y equivalentes), inversiones corrientes, activos por derecho de uso y pasivos por arrendamiento (NIIF 16) e inventarios (la nueva).',
-          '- **Herramientas de auditoría:** índices financieros, análisis de mayor contable, resumen de contratos, flujo de efectivo, matriz de transición (PCE) y resumen de reuniones.',
+          '- **Herramientas de auditoría:** análisis de mayor contable, resumen de contratos y resumen de reuniones.',
           '',
           'Cualquier duda o error que vean, avísenme.',
           '',
@@ -18120,10 +18120,11 @@ ${cont.innerHTML}
       { k: 'per', t: 'Fecha y período correctos', ap: 'ambas' }
     ];
     const VC_ESTADOS = { '': ['·', '#94a3b8', '#f1f5f9'], ok: ['✓', '#047857', '#d1fae5'], ex: ['✗', '#b91c1c', '#fee2e2'], na: ['N/A', '#64748b', '#e2e8f0'] };
-    const vcE = { cargaId: 0, cliente: '', anio: '', visita: '', cargado: false, error: '', mov: [], imp: null, cfg: { pct: 20, cuentas: null }, filas: [], org: null, act: null, docAbierto: '', tmp: null, filtro: '', nuevo: false };
+    const vcE = { cargaId: 0, cliente: '', anio: '', visita: '', cargado: false, error: '', mov: [], imp: null, cfg: { pct: 20, cuentas: null }, filas: [], org: null, act: null, docAbierto: '', tmp: null, filtro: '', nuevo: false, claude: {}, ped: null, tPed: 0 };
     async function vcCargar() {
       const cli = $im('im-cliente').value, anio = $im('im-anio').value, vis = $im('im-visita').value;
-      Object.assign(vcE, { cliente: cli, anio, visita: vis, cargado: false, error: '', mov: [], imp: null, cfg: { pct: 20, cuentas: null }, filas: [], org: null, act: null, docAbierto: '', filtro: '', nuevo: false });
+      Object.assign(vcE, { cliente: cli, anio, visita: vis, cargado: false, error: '', mov: [], imp: null, cfg: { pct: 20, cuentas: null }, filas: [], org: null, act: null, docAbierto: '', filtro: '', nuevo: false, claude: {}, ped: null });
+      clearTimeout(vcE.tPed);
       if (!cli) { vcPintar(); return; }
       const id = ++vcE.cargaId;
       const f = (t, sel) => supabaseClient.from(t).select(sel).eq('cliente_id', cli).eq('anio', Number(anio)).eq('visita', vis);
@@ -18131,22 +18132,98 @@ ${cont.innerHTML}
       if (id !== vcE.cargaId) return;
       vcE.mov = a.data && Array.isArray(a.data.cuentas) ? a.data.cuentas : [];
       vcE.imp = b.data || null;
-      if (c.data) { vcE.cfg = { pct: 20, cuentas: null, ...(c.data.config || {}) }; vcE.filas = Array.isArray(c.data.filas) ? c.data.filas : []; vcE.org = { origen: c.data.origen, estado_revision: c.data.estado_revision, revisado_por: c.data.revisado_por, revisado_at: c.data.revisado_at }; vcE.act = { por: c.data.actualizado_por, en: c.data.updated_at }; }
+      if (c.data) { vcE.cfg = { pct: 20, cuentas: null, ...(c.data.config || {}) }; vcE.filas = Array.isArray(c.data.filas) ? c.data.filas : []; vcE.claude = (c.data.claude && typeof c.data.claude === 'object') ? c.data.claude : {}; vcE.org = { origen: c.data.origen, estado_revision: c.data.estado_revision, revisado_por: c.data.revisado_por, revisado_at: c.data.revisado_at }; vcE.act = { por: c.data.actualizado_por, en: c.data.updated_at }; }
       vcE.error = c.error ? (/does not exist|schema cache/i.test(c.error.message || '') ? 'Falta la tabla voucheo_inventario en Supabase.' : (c.error.message || String(c.error))) : '';
-      vcE.cargado = true; vcPintar();
+      vcE.cargado = true; vcPintar(); vcCargarPedido();
     }
+    function vcSnap() { return { cliente_id: vcE.cliente, anio: Number(vcE.anio), visita: vcE.visita, config: vcE.cfg, filas: vcE.filas }; }
     function vcGuardar() {
       clearTimeout(vcE.tmp); const m = document.getElementById('vc-msg'); if (m) { m.textContent = 'Guardando…'; m.style.color = '#64748b'; }
-      const snap = { cliente_id: vcE.cliente, anio: Number(vcE.anio), visita: vcE.visita, config: vcE.cfg, filas: vcE.filas };
-      vcE.tmp = setTimeout(async () => {
-        if (!snap.cliente_id) return;
-        const quien = nombreUsuarioActivo() || null;
-        const { error } = await supabaseClient.from('voucheo_inventario').upsert({ ...snap, actualizado_por: quien, updated_at: new Date().toISOString() }, { onConflict: 'cliente_id,anio,visita' });
-        const m2 = document.getElementById('vc-msg');
-        if (error) { if (m2) { m2.textContent = 'No se guardó: ' + (error.message || error); m2.style.color = '#b91c1c'; } return; }
-        vcE.act = { por: quien, en: new Date().toISOString() };
-        if (m2) { m2.textContent = 'Guardado ✓'; m2.style.color = '#047857'; }
-      }, 600);
+      const snap = vcSnap(); vcE.tmp = setTimeout(() => vcEscribir(snap), 600);
+    }
+    function vcGuardarAhora() { clearTimeout(vcE.tmp); return vcEscribir(vcSnap()); }
+    async function vcEscribir(snap) {
+      if (!snap.cliente_id) return false;
+      const quien = nombreUsuarioActivo() || null, cambios = { ...snap, actualizado_por: quien, updated_at: new Date().toISOString() };
+      // si una persona modifica lo que dejó Claude, el sello pasa a «Modificado»
+      const pasa = vcE.org && vcE.org.origen === 'claude' && vcE.org.estado_revision === 'procesado';
+      if (pasa) cambios.estado_revision = 'modificado';
+      const { error } = await supabaseClient.from('voucheo_inventario').upsert(cambios, { onConflict: 'cliente_id,anio,visita' });
+      const m2 = document.getElementById('vc-msg');
+      if (error) { if (m2) { m2.textContent = 'No se guardó: ' + (error.message || error); m2.style.color = '#b91c1c'; } return false; }
+      vcE.act = { por: quien, en: new Date().toISOString() };
+      if (pasa) { vcE.org.estado_revision = 'modificado'; vcPintar(); }
+      const m3 = document.getElementById('vc-msg'); if (m3) { m3.textContent = 'Guardado ✓'; m3.style.color = '#047857'; }
+      return true;
+    }
+    async function vcRatificar() {
+      const quien = nombreUsuarioActivo(); if (!quien) { alert('Ingresa con tu usuario para marcar el trabajo como revisado.'); return; }
+      const cambios = { estado_revision: 'revisado', revisado_por: quien, revisado_at: new Date().toISOString() };
+      const { error } = await supabaseClient.from('voucheo_inventario').update(cambios).eq('cliente_id', vcE.cliente).eq('anio', Number(vcE.anio)).eq('visita', vcE.visita);
+      if (error) { alert('No se pudo marcar como revisado: ' + (error.message || error)); return; }
+      Object.assign(vcE.org, cambios); vcPintar();
+      try { registrarActividad('Revisó trabajo de Claude', 'Voucheo', { cliente: vcE.cliente, anio: String(vcE.anio) }); } catch (e) { }
+    }
+    // Valor de una marca: la de la persona manda; si no hay, se muestra la que dejó Claude
+    function vcDeClaude(f, k) { const c = f.k && vcE.claude && vcE.claude[f.k]; return (c && c.rev && c.rev[k]) || ''; }
+    function vcVal(f, k) { return ((f.rev || {})[k]) || vcDeClaude(f, k); }
+    async function vcCargarPedido() {
+      clearTimeout(vcE.tPed);
+      if (!vcE.cliente || typeof ivE === 'undefined' || ivE.hoja !== 'voucheo') return;
+      const cli = vcE.cliente, an = vcE.anio, vi = vcE.visita;
+      const { data } = await supabaseClient.from('pedidos_claude').select('id, estado, progreso, progreso_texto').eq('cliente_id', cli).eq('anio', Number(an)).eq('visita', vi || 'final').eq('sumaria', 'AF').eq('hoja', 'voucheo').in('estado', ['solicitado', 'autorizado', 'hecho']).order('created_at', { ascending: false }).limit(1);
+      if (cli !== vcE.cliente || an !== vcE.anio || vi !== vcE.visita) return;
+      const p = data && data[0] ? data[0] : null, antes = vcE.ped;
+      if (antes && p && antes.id === p.id && antes.estado !== 'hecho' && p.estado === 'hecho') { vcCargar(); return; }
+      if (JSON.stringify(antes) !== JSON.stringify(p)) { vcE.ped = p; vcPintar(); } else vcE.ped = p;
+      if (p && p.estado !== 'hecho') vcE.tPed = setTimeout(vcCargarPedido, 15000);
+    }
+    async function vcPedirClaude() {
+      if (!usuarioActivo || !nombreUsuarioActivo()) { alert('Ingresa con tu usuario para solicitar.'); return; }
+      if (vcE.ped && vcE.ped.estado !== 'hecho') { alert('Ya hay un pedido en curso (' + (vcE.ped.estado === 'solicitado' ? 'esperando autorización' : 'autorizado, Claude lo está trabajando') + '). Espera a que termine antes de pedir de nuevo.'); return; }
+      const conDocs = vcE.filas.filter(f => f.docs && f.docs.length);
+      if (!conDocs.length) { alert('Primero sube los soportes de las partidas (botón 📎 de cada fila).'); return; }
+      let envio = []; conDocs.forEach(f => f.docs.forEach(d => { if (!d.pedido) envio.push({ f, d }); }));
+      if (!envio.length) {
+        if (!await confirmarApp('Todos los soportes ya fueron enviados a Claude. ¿Pedir de nuevo con todos?')) return;
+        conDocs.forEach(f => f.docs.forEach(d => envio.push({ f, d })));
+      }
+      const pesados = envio.filter(x => /\.(jpe?g|png|webp|gif)$/i.test(x.d.nombre) ? x.d.tamano > 5242880 : (/\.pdf$/i.test(x.d.nombre) && x.d.tamano > 20971520)).map(x => x.d.nombre);
+      if (pesados.length) { alert('Estos soportes son muy pesados para que Claude los lea (fotos de más de 5 MB o PDF de más de 20 MB): ' + pesados.join(', ') + '. Bórralos y sube una versión más liviana.'); return; }
+      const noLee = envio.filter(x => !/\.(pdf|jpe?g|png|webp|gif|xlsx?|xlsm|csv|tsv|txt)$/i.test(x.d.nombre)).map(x => x.d.nombre);
+      if (noLee.length) { alert('Claude no puede leer estos archivos: ' + noLee.join(', ') + '. Usa PDF, foto JPG o PNG, Excel, CSV o TXT.'); return; }
+      let max = 0; vcE.filas.forEach(f => { const n = parseInt(String(f.k || '').slice(1), 10); if (n > max) max = n; });
+      vcE.filas.forEach(f => { if (!f.k) f.k = 'V' + String(++max).padStart(3, '0'); });
+      const filasEnvio = [...new Set(envio.map(x => x.f))];
+      if (!await confirmarApp('Se enviará un pedido a Claude con ' + envio.length + ' soporte(s) de ' + filasEnvio.length + ' partida(s).\n\nQuedará esperando la autorización del Socio o Supervisor; Claude lo revisa cada hora. Las marcas que ya puso una persona no se cambian. ¿Continuar?')) return;
+      const m = document.getElementById('vc-msg'); if (m) { m.textContent = 'Preparando el pedido…'; m.style.color = '#64748b'; }
+      if (!await vcGuardarAhora()) { alert('No se pudo guardar la muestra antes de pedir. Intenta de nuevo.'); return; }
+      const TN = { imp: 'Importación', loc: 'Compra local', dev: 'Devolución o reversión', bod: 'Transferencia entre bodegas' };
+      const nota = 'REVISIÓN DE DOCUMENTACIÓN (VOUCHEO). Cada archivo se llama CLAVE__nombre: la clave (V001, V002…) identifica la partida del voucheo a la que pertenece. PARTIDAS: ' + filasEnvio.map(f => f.k + ' = ' + (TN[f.tipo] || 'Compra local') + '; fecha ' + f.fecha + '; referencia ' + (f.ref || 'sin referencia') + '; descripción: ' + String(f.desc || '').replace(/\s+/g, ' ').slice(0, 160) + '; valor ' + Number(f.valor).toFixed(2) + '; atributos que aplican: ' + VC_ATRIB.filter(a => vcAplica(a, f)).map(a => a.k).join(', ') + (f.nota ? '; comentario del auditor: ' + String(f.nota).slice(0, 120) : '')).join(' || ');
+      const fila = { cliente_id: vcE.cliente, anio: Number(vcE.anio), visita: vcE.visita || 'final', sumaria: 'AF', hoja: 'voucheo', carpeta: null, nota, doc_confirmada_por: nombreUsuarioActivo(), doc_confirmada_at: new Date().toISOString(), solicitado_por: nombreUsuarioActivo(), solicitado_email: usuarioActivo.email || null };
+      const { data: ins, error } = await supabaseClient.from('pedidos_claude').insert([fila]).select('id').single();
+      if (error) { alert('No se pudo enviar: ' + (error.message || error)); return; }
+      const limpio = t => String(t).normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^A-Za-z0-9._-]+/g, '_'), falla = [];
+      for (const x of envio) {
+        if (m) m.textContent = 'Copiando ' + x.d.nombre + '…';
+        const nombre = x.f.k + '__' + x.d.nombre;
+        const { data: blob, error: ed } = await supabaseClient.storage.from('voucheo').download(x.d.ruta);
+        if (ed || !blob) { falla.push(x.d.nombre + ' (' + ((ed && ed.message) || 'no se pudo abrir') + ')'); continue; }
+        const ruta = ins.id + '/' + Date.now() + '_' + limpio(nombre);
+        const { error: eu } = await supabaseClient.storage.from('pedidos-claude').upload(ruta, blob, { contentType: x.d.tipo || blob.type || 'application/octet-stream' });
+        if (eu) { falla.push(x.d.nombre + ' (' + (eu.message || eu) + ')'); continue; }
+        const { error: ea } = await supabaseClient.from('pedidos_claude_archivos').insert([{ pedido_id: ins.id, nombre, ruta, tamano: x.d.tamano || blob.size, tipo: x.d.tipo || blob.type || '', subido_por: nombreUsuarioActivo(), etiqueta: 'Soporte de voucheo' }]);
+        if (ea) { falla.push(x.d.nombre + ' (' + (ea.message || ea) + ')'); continue; }
+        x.d.pedido = ins.id;
+      }
+      await vcGuardarAhora();
+      if (falla.length) { alert('El pedido se creó, pero no se pudieron copiar: ' + falla.join('; ') + '. Cancélalo en «Pedidos y aprobaciones» y vuelve a pedir.'); try { cargarPedidosClaude(); } catch (e) { } vcPintar(); vcCargarPedido(); return; }
+      try { await avisarPedidoCorreo(ins.id, 'solicitado'); } catch (e) { }
+      try { registrarActividad('Pidió a Claude leer los soportes del voucheo', 'AF · ' + fila.visita, { cliente: fila.cliente_id, anio: String(fila.anio) }); } catch (e) { }
+      try { cargarPedidosClaude(); } catch (e) { }
+      if (m) m.textContent = '';
+      vcPintar(); vcCargarPedido();
+      alert('Pedido enviado con ' + envio.length + ' soporte(s). Quedó en «Pedidos y aprobaciones» esperando la autorización del Socio o Supervisor.');
     }
     function vcCorte() { const c = vcE.imp && vcE.imp.config && vcE.imp.config.corte; return c || (vcE.visita === 'final' ? vcE.anio + '-12-31' : vcE.anio + '-09-30'); }
     // Población: las adiciones (compras) de las cuentas de inventario del Movimiento del inventario, asiento por asiento
@@ -18229,14 +18306,14 @@ ${cont.innerHTML}
     }
     function vcCiclo(id, k) {
       const f = vcE.filas.find(x => x.id === id); if (!f) return; f.rev = f.rev || {};
-      const sig = { '': 'ok', ok: 'ex', ex: 'na', na: '' }; f.rev[k] = sig[f.rev[k] || ''] || '';
+      const sig = { '': 'ok', ok: 'ex', ex: 'na', na: '' }; f.rev[k] = sig[vcVal(f, k)] || '';
       vcGuardar(); vcPintar();
     }
     function vcTipo(id, v) { const f = vcE.filas.find(x => x.id === id); if (!f) return; f.tipo = (v === 'imp' || v === 'dev' || v === 'bod') ? v : 'loc'; vcGuardar(); vcPintar(); }
     function vcNota(id, v) { const f = vcE.filas.find(x => x.id === id); if (!f) return; f.nota = v; vcGuardar(); }
     function vcAplica(a, f) { return a.ap === 'imp' ? f.tipo === 'imp' : (a.ap === 'comp' ? (f.tipo !== 'dev' && f.tipo !== 'bod') : true); }
     function vcResultado(f) {
-      const ap = VC_ATRIB.filter(a => vcAplica(a, f)), v = ap.map(a => (f.rev || {})[a.k] || '');
+      const ap = VC_ATRIB.filter(a => vcAplica(a, f)), v = ap.map(a => vcVal(f, a.k));
       if (v.includes('ex')) return 'ex'; if (v.every(x => x === 'ok' || x === 'na') && v.some(x => x === 'ok')) return 'ok'; return '';
     }
     function vcDocs(id) { vcE.docAbierto = vcE.docAbierto === id ? '' : id; vcPintar(); }
@@ -18277,6 +18354,8 @@ ${cont.innerHTML}
       const lkIng = impLkIng('Ingreso de información'), lkMov = impLkMov('Movimiento del inventario');
       let h = '<div class="text-[11px] text-slate-500 mb-3">El voucheo va de lo registrado en los libros al documento que lo respalda: prueba que la partida existe, es del período y está bien registrada. La población son las adiciones (compras e importaciones) del ' + lkMov + '. ' + (vcE.mov.length ? '' : 'Aún no hay movimiento: haz el pedido en ' + lkIng + '.') + '</div>';
       if (!vcE.mov.length) { c.innerHTML = h; return; }
+      { const pe = vcE.ped, nSop = vcE.filas.reduce((t, f) => t + (f.docs ? f.docs.length : 0), 0), nNue = vcE.filas.reduce((t, f) => t + (f.docs ? f.docs.filter(d => !d.pedido).length : 0), 0);
+        h += '<div class="mb-3 p-3 bg-white border border-slate-200 rounded-xl space-y-2 text-xs text-slate-700"><div class="text-[13px] font-semibold text-slate-800 ic-claude ic-tomate">Claude lee los soportes y llena las marcas</div><p class="text-slate-600">Sube los documentos de cada partida (📎) y pídele a Claude que los lea. Claude compara cada documento con la partida (monto, fecha, proveedor, número) y deja marcas con su evidencia en cada casilla. Nunca cambia lo que ya marcó una persona, y lo que no pueda comprobar lo deja pendiente. Las marcas de Claude se ven con borde naranja; pasa el cursor sobre la casilla para ver su evidencia. Para dejar una marca como propia, haz clic en la casilla.</p><div class="flex flex-wrap items-center gap-3"><button type="button" onclick="vcPedirClaude()" class="px-3 py-1.5 rounded-lg text-xs font-bold text-white" style="background:#449964">Pedir a Claude que lea los soportes</button><span class="text-slate-500">' + nSop + ' soporte(s) subido(s)' + (nSop ? ', ' + nNue + ' sin enviar a Claude' : '') + '</span></div>' + (pe ? '<div class="text-slate-600">' + ({ solicitado: 'Pedido enviado, esperando la autorización del Socio o Supervisor.', autorizado: 'Pedido autorizado: Claude lo está trabajando.', hecho: 'El último pedido ya fue procesado por Claude.' }[pe.estado] || '') + '</div>' + pcBarraAvance(pe) : '') + '</div>'; }
       const pop = vcPoblacion(), base = r2f(pop.reduce((t, x) => t + x.valor, 0)), pct = Number(vcE.cfg.pct) || 0, meta = r2f(base * pct / 100);
       const cub = r2f(vcE.filas.reduce((t, f) => t + (Number(f.valor) || 0), 0)), cubPct = base ? r2f(cub * 100 / base) : 0;
       const sel = Array.isArray(vcE.cfg.cuentas) ? vcE.cfg.cuentas : null;
@@ -18300,7 +18379,7 @@ ${cont.innerHTML}
         (vcE.nuevo ? '<div class="flex flex-wrap items-end gap-2 p-2 bg-slate-50 rounded-lg"><label class="flex flex-col gap-1">Fecha<input id="vc-nf" type="date" class="p-1.5 border border-slate-300 rounded"></label><label class="flex flex-col gap-1">Referencia<input id="vc-nr" type="text" class="p-1.5 border border-slate-300 rounded w-32"></label><label class="flex flex-col gap-1 flex-1 min-w-[200px]">Descripción<input id="vc-nd" type="text" class="p-1.5 border border-slate-300 rounded"></label><label class="flex flex-col gap-1">Valor<input id="vc-nv" type="text" inputmode="decimal" class="p-1.5 border border-slate-300 rounded w-28 text-right"></label><label class="flex flex-col gap-1">Tipo<select id="vc-nt" class="p-1.5 border border-slate-300 rounded"><option value="loc">Compra local</option><option value="imp">Importación</option><option value="dev">Devolución o reversión</option><option value="bod">Transferencia entre bodegas</option></select></label><button type="button" onclick="vcAgregarLibre()" class="px-3 py-1.5 rounded-lg text-xs font-bold text-white" style="background:#449964">Agregar</button></div>' : '') +
         (filtro || cands.length ? '<div class="max-h-48 overflow-auto border border-slate-200 rounded-lg"><table class="w-full text-[11px] border-collapse"><tbody>' + (cands.length ? cands.map(x => '<tr class="border-t border-slate-100 hover:bg-slate-50"><td class="' + TD + ' whitespace-nowrap">' + mvFechaCorta(x.fecha) + '</td><td class="' + TD + ' whitespace-nowrap">' + e(x.ref) + '</td><td class="' + TD + '">' + e(x.desc.slice(0, 110)) + '</td><td class="' + TD + ' whitespace-nowrap font-semibold">' + e(vcNumDoc(x.desc, x.ref, x.imp)) + '</td><td class="' + TD + ' text-right whitespace-nowrap">' + F(x.valor) + '</td><td class="' + TD + '"><button type="button" onclick="vcAgregar(\'' + e(x.id).replace(/\\/g, '\\\\').replace(/'/g, "\\'") + '\')" class="font-bold hover:underline" style="color:#449964">+ Agregar</button></td></tr>').join('') : '<tr><td class="' + TD + ' text-slate-400">Sin coincidencias.</td></tr>') + '</tbody></table></div>' : '') + '</div>';
       // 3. Tabla horizontal de revisión
-      const sello = estadoOrigen(vcE.org) ? pillOrigen(vcE.org).replace('class="pill-origen', 'class="ic-claude pill-origen') : '';
+      const eo = estadoOrigen(vcE.org), sello = eo ? pillOrigen(vcE.org).replace('class="pill-origen', 'class="ic-claude pill-origen') + ((eo === 'procesado' || eo === 'modificado' || eo === 'pendiente') ? '<button type="button" onclick="vcRatificar()" class="px-1 py-1.5 text-xs font-bold bg-transparent border-0 hover:underline transition" style="color:#449964">Ratificar</button>' : '') : '';
       h += '<div class="flex flex-wrap items-center gap-2 mt-4 mb-2">' + sello + '<span id="vc-msg" class="text-[11px] text-slate-500"></span></div>';
       h += '<div class="font-bold text-slate-800 mb-1 text-xs">Partidas a revisar <span class="font-normal text-slate-500">(clic en cada casilla: · pendiente, ✓ sin excepción, ✗ con excepción, N/A no aplica)</span></div>';
       if (!vcE.filas.length) { h += '<p class="p-4 text-xs text-slate-500 border border-dashed border-slate-300 rounded-xl text-center">Aún no hay partidas. Usa «Armar muestra automática» o agrégalas a mano.</p>'; c.innerHTML = h; return; }
@@ -18310,13 +18389,13 @@ ${cont.innerHTML}
         const res = vcResultado(f), idq = e(f.id).replace(/\\/g, '\\\\').replace(/'/g, "\\'"), nd = f.docs ? f.docs.length : 0;
         h += '<tr class="border-t border-slate-100"><td class="' + TD + ' whitespace-nowrap">' + mvFechaCorta(f.fecha) + '</td><td class="' + TD + ' whitespace-nowrap">' + e(f.ref) + '</td><td class="' + TD + '" style="min-width:240px"><div>' + e(String(f.desc).slice(0, 140)) + '</div><div class="text-[10px] text-slate-400">' + (f.fuente === 'auto' ? 'Por qué: ' : '') + e(f.motivo || '') + '</div></td><td class="' + TD + ' whitespace-nowrap font-semibold">' + e(vcNumDoc(f.desc, f.ref, f.imp)) + '</td><td class="' + TD + ' text-right whitespace-nowrap">' + F(f.valor) + '</td>' +
           '<td class="' + TD + '"><select onchange="vcTipo(\'' + idq + '\', this.value)" class="p-1 border border-slate-300 rounded text-[11px]"><option value="loc"' + (f.tipo !== 'imp' ? ' selected' : '') + '>Compra local</option><option value="imp"' + (f.tipo === 'imp' ? ' selected' : '') + '>Importación</option><option value="dev"' + (f.tipo === 'dev' ? ' selected' : '') + '>Devolución o reversión</option><option value="bod"' + (f.tipo === 'bod' ? ' selected' : '') + '>Transferencia entre bodegas</option></select></td>' +
-          VC_ATRIB.map(a => { if (!vcAplica(a, f)) return '<td class="' + TD + ' text-center text-slate-300">—</td>'; const v = (f.rev || {})[a.k] || '', st = VC_ESTADOS[v]; return '<td class="' + TD + ' text-center"><button type="button" onclick="vcCiclo(\'' + idq + '\', \'' + a.k + '\')" title="' + e(a.t) + '" style="min-width:38px;padding:3px 6px;border-radius:6px;font-weight:700;color:' + st[1] + ';background:' + st[2] + '">' + st[0] + '</button></td>'; }).join('') +
+          VC_ATRIB.map(a => { if (!vcAplica(a, f)) return '<td class="' + TD + ' text-center text-slate-300">—</td>'; const v = vcVal(f, a.k), st = VC_ESTADOS[v], dc = !(f.rev || {})[a.k] && vcDeClaude(f, a.k), ev = dc && vcE.claude[f.k].detalle && vcE.claude[f.k].detalle[a.k]; return '<td class="' + TD + ' text-center"><button type="button" onclick="vcCiclo(\'' + idq + '\', \'' + a.k + '\')" title="' + e(dc ? 'Claude: ' + (ev || 'sin detalle') : a.t) + '" style="min-width:38px;padding:3px 6px;border-radius:6px;font-weight:700;color:' + st[1] + ';background:' + st[2] + (dc ? ';box-shadow:0 0 0 2px #f97316' : '') + '">' + st[0] + '</button></td>'; }).join('') +
           '<td class="' + TD + ' text-center font-bold" style="color:' + (res === 'ok' ? '#047857' : (res === 'ex' ? '#b91c1c' : '#94a3b8')) + '">' + (res === 'ok' ? 'Sin excepción' : (res === 'ex' ? 'Con excepción' : 'Pendiente')) + '</td>' +
-          '<td class="' + TD + '"><input type="text" value="' + e(f.nota || '') + '" onchange="vcNota(\'' + idq + '\', this.value)" class="w-44 p-1 border border-slate-300 rounded text-[11px]" placeholder="Comentario"></td>' +
+          '<td class="' + TD + '"><input type="text" value="' + e(f.nota || '') + '" onchange="vcNota(\'' + idq + '\', this.value)" class="w-44 p-1 border border-slate-300 rounded text-[11px]" placeholder="Comentario">' + (f.k && vcE.claude[f.k] && vcE.claude[f.k].resumen ? '<div class="mt-1 text-[10px]" style="color:#c2410c;max-width:260px">Claude: ' + e(vcE.claude[f.k].resumen) + '</div>' : '') + '</td>' +
           '<td class="' + TD + ' text-center"><button type="button" onclick="vcDocs(\'' + idq + '\')" class="font-bold hover:underline whitespace-nowrap" style="color:#449964">' + (vcE.docAbierto === f.id ? '▾ ' : '▸ ') + '📎 ' + nd + '</button></td>' +
           '<td class="' + TD + '"><button type="button" onclick="vcQuitar(\'' + idq + '\')" class="text-slate-400 hover:text-red-600" title="Quitar de la muestra">✕</button></td></tr>';
         if (vcE.docAbierto === f.id) h += '<tr><td colspan="' + (6 + VC_ATRIB.length + 4) + '" class="p-2 bg-slate-50"><div class="space-y-2 text-[11px]"><div class="font-bold text-slate-700">Documentos de soporte (facturas, declaraciones, comprobantes de pago, fotos, PDF)</div>' +
-          (nd ? '<ul class="space-y-1">' + f.docs.map((d, i) => '<li class="flex flex-wrap items-center gap-2"><button type="button" onclick="vcVerDoc(\'' + idq + '\', ' + i + ')" class="underline font-semibold" style="color:#005cab">' + e(d.nombre) + '</button><span class="text-slate-400">' + (d.tamano ? Math.round(d.tamano / 1024) + ' KB' : '') + (d.por ? ' · ' + e(d.por) : '') + '</span><button type="button" onclick="vcBorrarDoc(\'' + idq + '\', ' + i + ')" class="text-slate-400 hover:text-red-600" title="Borrar">✕</button></li>').join('') + '</ul>' : '<p class="text-slate-500">Aún no hay documentos.</p>') +
+          (nd ? '<ul class="space-y-1">' + f.docs.map((d, i) => '<li class="flex flex-wrap items-center gap-2"><button type="button" onclick="vcVerDoc(\'' + idq + '\', ' + i + ')" class="underline font-semibold" style="color:#005cab">' + e(d.nombre) + '</button><span class="text-slate-400">' + (d.tamano ? Math.round(d.tamano / 1024) + ' KB' : '') + (d.por ? ' · ' + e(d.por) : '') + (d.pedido ? ' · enviado a Claude' : ' · sin enviar a Claude') + '</span><button type="button" onclick="vcBorrarDoc(\'' + idq + '\', ' + i + ')" class="text-slate-400 hover:text-red-600" title="Borrar">✕</button></li>').join('') + '</ul>' : '<p class="text-slate-500">Aún no hay documentos.</p>') +
           '<label class="inline-block px-3 py-1.5 rounded-lg text-xs font-bold text-white cursor-pointer" style="background:#449964">Subir documentos<input type="file" multiple accept=".pdf,.jpg,.jpeg,.png,.webp,.xlsx,.xls,.csv,.txt" class="hidden" onchange="vcSubir(\'' + idq + '\', this)"></label></div></td></tr>';
       });
       h += '</tbody></table></div>';
