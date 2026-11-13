@@ -17889,9 +17889,9 @@ ${cont.innerHTML}
       if (!kcE.cargado) { c.innerHTML = '<p class="text-xs text-slate-500 p-4">Cargando…</p>'; return; }
       if (kcE.error) { c.innerHTML = '<p class="text-xs text-red-600 font-bold p-4">No se pudo cargar: ' + escapeHtml(kcE.error) + '</p>'; return; }
       const F = formatoNumeroAnexo, TH = 'px-2 py-2 text-[11px] font-bold text-slate-700 bg-slate-100 border-b border-slate-300', TD = 'px-2 py-1';
-      const info = '<div class="text-[11px] text-slate-500 mb-3"><b>Objetivo:</b> comprobar que lo que entró al inventario según el mayor contable (Movimiento del inventario, pestaña i) coincide, mes a mes, con las entradas del kárdex (pestaña iv). Como referencia se muestran las liquidaciones de importación del mes. Haz clic en un mes para ver su detalle.</div>';
+      const info = '<div class="text-[11px] text-slate-500 mb-3"><b>Objetivo:</b> comprobar que lo que entró al inventario según el mayor contable (Movimiento del inventario, pestaña i) coincide, mes a mes, con las entradas del kárdex (pestaña i). Como referencia se muestran las liquidaciones de importación del mes. Haz clic en un mes para ver su detalle.</div>';
       if (!kcE.mov.length || !kcE.prod.length) {
-        let m = info + '<div class="p-4 border border-dashed border-slate-300 rounded-xl text-xs text-slate-600 space-y-2"><p class="font-bold text-slate-700">Faltan datos para este cruce:</p><ul class="list-disc pl-5">' + (!kcE.mov.length ? '<li>El Movimiento del inventario con el mayor contable (pestaña i).</li>' : '') + (!kcE.prod.length ? '<li>El Movimiento de kárdex (pestaña iv).</li>' : '') + '</ul><p>Envía los archivos desde esas pestañas y, cuando Claude termine, vuelve aquí.</p></div>';
+        let m = info + '<div class="p-4 border border-dashed border-slate-300 rounded-xl text-xs text-slate-600 space-y-2"><p class="font-bold text-slate-700">Faltan datos para este cruce:</p><ul class="list-disc pl-5">' + (!kcE.mov.length ? '<li>El Movimiento del inventario con el mayor contable (pestaña i).</li>' : '') + (!kcE.prod.length ? '<li>El Movimiento de kárdex (pestaña i).</li>' : '') + '</ul><p>Envía los archivos desde esas pestañas y, cuando Claude termine, vuelve aquí.</p></div>';
         c.innerHTML = m; return;
       }
       const R = kcCalcular(), dc = (v, hay) => !hay ? '<span class="text-slate-400">–</span>' : '<span class="' + (Math.abs(v) > 1 ? 'text-red-600' : 'text-emerald-700') + ' font-bold">' + F(v) + '</span>';
@@ -17910,7 +17910,7 @@ ${cont.innerHTML}
         }
       });
       h += '<tr class="border-t-2 border-slate-300 bg-slate-50 font-bold"><td class="' + TD + '">Total</td><td class="' + TD + ' text-right">' + F(R.tM) + '</td><td class="' + TD + ' text-right">' + F(R.tK) + '</td><td class="' + TD + ' text-right">' + dc(R.dif, true) + '</td><td class="' + TD + ' text-right">' + (R.hayL ? F(R.tL) : '') + '</td></tr></tbody></table></div>';
-      h += '<div class="font-bold text-slate-800 mt-4 mb-1 text-xs">B. Cuadre del movimiento: mayor contable contra kárdex <span class="font-normal text-slate-500">(Diferencia = mayor − kárdex)</span></div><div class="overflow-x-auto border border-slate-200 rounded-xl"><table class="w-full text-[11px] border-collapse min-w-[520px]"><thead><tr><th class="' + TH + ' text-left">Concepto</th><th class="' + TH + ' text-right">Mayor contable (pestaña i)</th><th class="' + TH + ' text-right">Kárdex (pestaña iv)</th><th class="' + TH + ' text-right">Diferencia</th></tr></thead><tbody>' +
+      h += '<div class="font-bold text-slate-800 mt-4 mb-1 text-xs">B. Cuadre del movimiento: mayor contable contra kárdex <span class="font-normal text-slate-500">(Diferencia = mayor − kárdex)</span></div><div class="overflow-x-auto border border-slate-200 rounded-xl"><table class="w-full text-[11px] border-collapse min-w-[520px]"><thead><tr><th class="' + TH + ' text-left">Concepto</th><th class="' + TH + ' text-right">Mayor contable (pestaña i)</th><th class="' + TH + ' text-right">Kárdex (pestaña i)</th><th class="' + TH + ' text-right">Diferencia</th></tr></thead><tbody>' +
         R.cuadre.map(x => '<tr class="border-t border-slate-100' + (x.k === 'compras' ? ' bg-amber-50' : '') + '"><td class="' + TD + '">' + escapeHtml(x.t) + '</td><td class="' + TD + ' text-right">' + F(x.may) + '</td><td class="' + TD + ' text-right">' + F(x.kar) + '</td><td class="' + TD + ' text-right">' + dc(x.dif, true) + '</td></tr>').join('') + '</tbody></table></div>';
       c.innerHTML = '<p class="mt-3 text-[11px] text-slate-500">El kárdex y el mayor contable se envían juntos en un solo pedido desde la pestaña i.</p>' + h;
     }
@@ -18532,7 +18532,7 @@ ${(im.aprendidos || []).length ? `<p class="text-xs text-slate-600 bg-slate-50 b
     }
     function impHtmlCruce() {
       const imp = impEstado.imports, C = impEstado.cruce, M = impEstado.mayor, cfg = impEstado.cfg;
-      if (!imp.length) return '<p class="p-6 text-xs text-slate-400 text-center">Primero carga las liquidaciones en la hoja 1.</p>';
+      if (!imp.length) return '<p class="p-6 text-xs text-slate-400 text-center">Primero carga las liquidaciones en la pestaña 1.</p>';
       const nombres = IMP_ROLES.filter(([k]) => k !== 'inv_final').map(([k, t]) => `<label class="flex flex-col gap-1 text-xs text-slate-600"><span>${t}</span><input type="text" value="${impE(cfg.roles[k] || '')}" placeholder="Códigos separados por coma" onchange="impEditarRol('${k}', this.value)" class="${impIn} w-full"></label>`).join('');
       let h = `<div class="p-3 space-y-3 text-xs text-slate-700">`;
       if (!C) h += pcHtmlAviso('AF', impEstado.cliente, impEstado.anio, impEstado.visita, 'import');
@@ -18549,7 +18549,7 @@ ${(im.aprendidos || []).length ? `<p class="text-xs text-slate-600 bg-slate-50 b
     }
     function impAlias() {
       const t = impEstado.imports.map(im => `${im.id}: ${(im.aliases || []).join(', ')}`).join('\n');
-      alert('Nombres con los que se busca cada importación en el detalle del mayor.\nPuedes editarlos en la hoja 1, dentro de cada importación.\n\n' + t);
+      alert('Nombres con los que se busca cada importación en el detalle del mayor.\nPuedes editarlos en la pestaña 1, dentro de cada importación.\n\n' + t);
     }
     // Comparación por mes: mes de la liquidación contra mes en que se registró en el mayor (se despliega con un clic)
     function impRevTog(k) { const A = impEstado.revAb = impEstado.revAb || {}; A[k] = !A[k]; impRender(); }
@@ -18603,13 +18603,13 @@ ${(im.aprendidos || []).length ? `<p class="text-xs text-slate-600 bg-slate-50 b
         const dTot = impR2(impR2(tL) - mayorSal), r1 = impR2(impR2(tL) - LP), r2 = impR2(LP - impR2(tR)), r3 = impR2(mayorSal - impR2(tR));
         const fila = (t, v, neg, neg2) => `<tr class="border-b border-slate-100"><td class="px-2 py-1.5 ${neg2 ? 'font-bold' : ''}">${t}</td><td class="px-2 py-1.5 text-right whitespace-nowrap ${neg2 ? 'font-bold' : ''}">${impF(v)}</td></tr>`;
         const colD = Math.abs(dTot) <= tol ? 'text-emerald-700' : 'text-red-600';
-        ctl = `<div class="p-4 bg-white border border-slate-200 rounded-xl space-y-2"><div class="text-[13px] font-semibold text-slate-800">C. Costo de las liquidaciones contra las salidas de tránsito del Movimiento de la cuenta (hoja i de Inventarios)</div>
+        ctl = `<div class="p-4 bg-white border border-slate-200 rounded-xl space-y-2"><div class="text-[13px] font-semibold text-slate-800">C. Costo de las liquidaciones contra las salidas de tránsito del Movimiento de la cuenta (pestaña i de Inventario para la venta)</div>
           <p class="text-slate-500">Cruza el costo total de las liquidaciones con lo que salió de la cuenta en tránsito según su Movimiento. Los créditos de reversión (${impF(impR2(revC))}) cancelan entradas anteriores y no son salidas. <a href="#" onclick="impRevTog('C'); return false" class="font-semibold" style="color:#449964">${RA.C ? 'Ocultar' : 'Ver'} las ${lstC.length} partidas</a></p>${RA.C ? `<div class="max-h-72 overflow-auto border border-slate-200 rounded-lg bg-white"><table class="w-full text-[11px] leading-tight border-collapse"><thead class="bg-slate-100 text-slate-700"><tr><th class="px-2 py-1 text-left">Fecha</th><th class="px-2 py-1 text-left">Comprobante</th><th class="px-2 py-1 text-left">Detalle</th><th class="px-2 py-1 text-right">Valor</th></tr></thead><tbody>${lstC.slice().sort((x, y) => String(x.d).localeCompare(String(y.d))).map(x => `<tr class="border-t border-slate-100 align-top"><td class="px-2 py-1 whitespace-nowrap">${impE(x.d)}</td><td class="px-2 py-1 whitespace-nowrap">${impE(x.ref)}</td><td class="px-2 py-1">${impE(x.det)}</td><td class="px-2 py-1 text-right whitespace-nowrap">${impF(impR2(x.v))}</td></tr>`).join('')}</tbody></table></div>` : ''}
           <div class="overflow-x-auto"><table class="text-[11px] leading-tight border-collapse" style="min-width:34rem"><tbody>
           ${fila('Salidas de tránsito del Movimiento (créditos que no son reversión)', impR2(sal))}
           <tr class="border-b border-slate-100 cursor-pointer hover:bg-slate-50" onclick="impRevTog('D')"><td class="px-2 py-1.5"><span class="inline-block w-3">${RA.D ? '▾' : '▸'}</span> Menos: reversiones de salidas (débitos que anulan una liquidación) <span class="text-slate-400">· clic para ver las ${lstD.length} partidas</span></td><td class="px-2 py-1.5 text-right whitespace-nowrap">${impF(-impR2(revD))}</td></tr>${detRev(lstD, 'D')}
           ${fila('Salidas netas de tránsito según el Movimiento (literal A)', mayorSal, false, true)}
-          ${fila('Costo total de las liquidaciones (hoja 1) (literal B)', impR2(tL))}
+          ${fila('Costo total de las liquidaciones (pestaña 1) (literal B)', impR2(tL))}
           <tr class="border-b border-slate-100"><td class="px-2 py-1.5 font-bold">Diferencia (literal B menos literal A: liquidaciones menos salidas netas)</td><td class="px-2 py-1.5 text-right font-bold whitespace-nowrap ${colD}">${impF(dTot)}</td></tr>
           <tr><td colspan="2" class="px-2 pt-2 pb-1 text-slate-500 font-semibold">A qué se debe la diferencia</td></tr>
           ${fila('Liquidaciones sin ninguna salida ubicada en el mayor (' + sinSal.length + ' importaciones)', r1)}
@@ -18623,7 +18623,7 @@ ${(im.aprendidos || []).length ? `<p class="text-xs text-slate-600 bg-slate-50 b
           ${fila('Salidas ubicadas en las importaciones (total de la tabla por mes) (literal C)', impR2(tR))}
           ${fila('Salidas netas de tránsito según el Movimiento (literal A)', mayorSal)}
           <tr class="border-b border-slate-100"><td class="px-2 py-1.5 font-bold">Diferencia (literal C menos literal A: ubicadas menos Movimiento)</td><td class="px-2 py-1.5 text-right font-bold whitespace-nowrap ${Math.abs(r3) <= tol ? 'text-emerald-700' : 'text-red-600'}">${impF(impR2(impR2(tR) - mayorSal))}</td></tr>
-          ${fila('Costo total de las liquidaciones (hoja 1) (literal B)', impR2(tL))}
+          ${fila('Costo total de las liquidaciones (pestaña 1) (literal B)', impR2(tL))}
           <tr><td class="px-2 py-1.5 font-bold">Diferencia (literal B menos literal C: liquidaciones menos ubicadas)</td><td class="px-2 py-1.5 text-right font-bold whitespace-nowrap ${Math.abs(impR2(tL - tR)) <= tol ? 'text-emerald-700' : 'text-red-600'}">${impF(impR2(impR2(tL) - impR2(tR)))}</td></tr>
           </tbody></table></div></div>`;
       } catch (e) { }
@@ -18673,13 +18673,13 @@ ${(im.aprendidos || []).length ? `<p class="text-xs text-slate-600 bg-slate-50 b
         const cruce = await impLeerMayor(M, impEstado.imports, (paso, p, n) => { pr.textContent = `Paso ${paso}: leyendo el mayor ${Math.round((p || 0) * 100)}%${n ? ' (' + Number(n).toLocaleString('en-US') + ' líneas)' : ''}…`; });
         impEstado.cruce = cruce; impEstado.aliasCambio = false; impGuardar('liquidaciones'); impSugerirRoles(); impReclasificar();
         impGuardar('cruce'); impGuardar('config'); impRender();
-        const e = $im('im-prog'); if (e) e.textContent = `Listo: ${cruce.lineas.length} líneas y ${cruce.asientos.length} asientos de importaciones.${cruce.aprendio ? ' Se aprendieron nombres nuevos del mayor (ábrelos en la hoja 1).' : ''}${cruce.aviso ? ' ' + cruce.aviso : ''}`;
+        const e = $im('im-prog'); if (e) e.textContent = `Listo: ${cruce.lineas.length} líneas y ${cruce.asientos.length} asientos de importaciones.${cruce.aprendio ? ' Se aprendieron nombres nuevos del mayor (ábrelos en la pestaña 1).' : ''}${cruce.aviso ? ' ' + cruce.aviso : ''}`;
       } catch (e) { pr.textContent = ''; alert(e.message || e); b.disabled = false; }
     }
 
     // ---------- 3. Diario contable ----------
     function impHtmlDiario() {
-      const C = impEstado.cruce; if (!C) return '<p class="p-6 text-xs text-slate-400 text-center">Aún no hay cruce: pídelo a Claude en la hoja 1.</p>';
+      const C = impEstado.cruce; if (!C) return '<p class="p-6 text-xs text-slate-400 text-center">Aún no hay cruce: pídelo a Claude en la pestaña 1.</p>';
       const D = impEstado.diario, ims = impEstado.imports.map(x => x.id);
       const idsDe = a => { const s = new Set(); C.lineas.forEach(l => { if (l.k === a.k) (l.ids || []).forEach(x => s.add(x)); }); return [...s]; };
       let lista = C.asientos.map(a => ({ a, ids: idsDe(a) }));
@@ -18838,7 +18838,7 @@ ${(im.aprendidos || []).length ? `<p class="text-xs text-slate-600 bg-slate-50 b
     }
     function impHtmlResumen() {
       if (!impEstado.cliente) return '<p class="p-4 text-xs text-slate-500">Selecciona el cliente.</p>';
-      if (!impEstado.cl) return '<p class="p-6 text-xs text-slate-400 text-center">Este resumen aparece cuando Claude termine el pedido con el mayor contable (hoja 1).</p>';
+      if (!impEstado.cl) return '<p class="p-6 text-xs text-slate-400 text-center">Este resumen aparece cuando Claude termine el pedido con el mayor contable (pestaña 1).</p>';
       const M = impEstado.mov; if (!M || M.llave !== impEstado.cliente + '|' + impEstado.anio + '|' + impEstado.visita) setTimeout(impCargarMov, 0);
       const Z = impResumenCalc(); if (!Z) return '<p class="p-6 text-xs text-slate-400 text-center">Aún no hay cruce con el mayor.</p>';
       const th = 'px-2 py-1.5 text-[11px] font-bold text-slate-700 bg-slate-100 border-b border-slate-300 whitespace-nowrap', td = 'px-2 py-1 text-right', F = impF;
@@ -18849,7 +18849,7 @@ ${(im.aprendidos || []).length ? `<p class="text-xs text-slate-600 bg-slate-50 b
       h += '<div><div class="font-bold text-slate-800 mb-1">A. Por importación</div><div class="overflow-x-auto border border-slate-200 rounded-lg"><table class="w-full text-[11px] border-collapse min-w-[900px]"><thead><tr><th class="' + th + ' text-left">Importación</th><th class="' + th + ' text-left">Proveedor</th><th class="' + th + ' text-right">Costo total de la liquidación</th><th class="' + th + ' text-right">Entradas al inventario (mayor)</th><th class="' + th + ' text-right">Diferencia</th><th class="' + th + ' text-right">Gastos de importación en resultados</th><th class="' + th + ' text-right">Diferencia no explicada</th><th class="' + th + ' text-right">ISD provisionado (pasivo)</th><th class="' + th + ' text-left">Estado</th></tr></thead><tbody>';
       Z.filas.forEach(x => { h += '<tr class="border-t border-slate-100"><td class="px-2 py-1 font-semibold">' + impE(x.id) + '</td><td class="px-2 py-1">' + impE(x.proveedor) + '</td><td class="' + td + ' font-semibold">' + F(x.baseLiq) + '</td><td class="' + td + '">' + F(x.inv) + '</td><td class="' + td + (Math.abs(x.difBruta) > Z.tol ? ' text-red-600' : '') + '">' + F(x.difBruta) + '</td><td class="' + td + (x.cap ? ' text-red-600 font-semibold' : '') + '">' + F(x.cap) + '</td><td class="' + td + (Math.abs(x.dif) > Z.tol ? ' text-red-600 font-semibold' : '') + '">' + F(x.dif) + '</td><td class="' + td + '">' + F(x.prov) + '</td><td class="px-2 py-1">' + pill(x.est) + '</td></tr>'; });
       h += '</tbody><tfoot class="bg-slate-50 font-semibold"><tr><td class="px-2 py-1 text-left" colspan="2">Total</td>' + ['baseLiq', 'inv', 'difBruta', 'cap', 'dif', 'prov'].map(k => '<td class="' + td + '">' + F(sum(k)) + '</td>').join('') + '<td></td></tr></tfoot></table></div></div>';
-      h += '<p class="text-[11px] text-slate-500">Lectura: el costo total de la liquidación (producto y todos sus gastos) se compara con lo que entró al inventario. La diferencia se explica, en lo posible, con los gastos de importación llevados a resultados; lo que queda sin explicar hay que buscarlo en los asientos (hoja 2, "A qué se debe la diferencia").</p>';
+      h += '<p class="text-[11px] text-slate-500">Lectura: el costo total de la liquidación (producto y todos sus gastos) se compara con lo que entró al inventario. La diferencia se explica, en lo posible, con los gastos de importación llevados a resultados; lo que queda sin explicar hay que buscarlo en los asientos (pestaña 2, "A qué se debe la diferencia").</p>';
       if (Z.compartido || Z.posterior) h += '<p class="text-[11px] text-amber-700">' + (Z.compartido ? 'Gastos de pagos conjuntos de varias importaciones, no asignados: ' + F(Z.compartido) + '. ' : '') + (Z.posterior ? 'Gastos registrados después del corte (no incluidos arriba): ' + F(Z.posterior) + '.' : '') + '</p>';
       h += '<div><div class="font-bold text-slate-800 mb-1">B. Gastos de importación registrados en resultados, por cuenta</div>';
       if (!Z.cuentas.length) h += '<p class="text-[11px] text-slate-500">No se identificaron gastos de importación en cuentas de resultados.</p>';
@@ -18965,7 +18965,7 @@ ${(im.aprendidos || []).length ? `<p class="text-xs text-slate-600 bg-slate-50 b
     function impHtmlTransito() {
       const C = impEstado.cruce, cfg = impEstado.cfg;
       const barraP = impBarraPedido('Para ver las salidas de la cuenta en tránsito y lo que entró al inventario, sube el mayor contable completo del cliente (junto con las liquidaciones si aún no están). Claude lee todos los asientos de esa cuenta.');
-      if (!impEstado.imports.length) return barraP + '<p class="p-6 text-xs text-slate-400 text-center">Primero carga las liquidaciones en la hoja 1.</p>';
+      if (!impEstado.imports.length) return barraP + '<p class="p-6 text-xs text-slate-400 text-center">Primero carga las liquidaciones en la pestaña 1.</p>';
       if (!C) return barraP + '<p class="p-6 text-xs text-slate-400 text-center">Aún no hay lectura del mayor: pídela a Claude con el botón de arriba.</p>';
       if (!impEstado.mov || impEstado.mov.llave !== impEstado.cliente + '|' + impEstado.anio + '|' + impEstado.visita) setTimeout(impCargarMov, 0);
       const T = impSalInvCalc(), th = (t, c) => `<th class="px-2 py-1 border-b border-slate-200 whitespace-nowrap ${c || 'text-right'}">${t}</th>`;
