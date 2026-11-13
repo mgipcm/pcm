@@ -17792,21 +17792,27 @@ ${cont.innerHTML}
 
     // ===== AF Inventarios: hojas (Inventario para la venta, Materia prima, Producción en proceso, Importaciones) =====
     const IV_HOJAS = [['venta', 'Inventario para la venta'], ['materia', 'Materia prima'], ['proceso', 'Producción en proceso'], ['import', 'Importaciones']];
-    // Flechas de desplegar: la flecha de lo que está abierto (▾) se pinta de otro color para distinguirla de la de lo cerrado (▸)
+    // Flechas de desplegar: todas se dibujan como triángulos del mismo tamaño (no dependen de la letra del navegador) y la de lo abierto (▾) va en naranja
     (function () {
-      const CLS = 'flecha-abierta', ABIERTA = /[▾▴]/;
+      const GL = /[▸▾▴◂]/, FORMA = { '▸': 'polygon(0 0,100% 50%,0 100%)', '▾': 'polygon(0 0,100% 0,50% 100%)', '▴': 'polygon(50% 0,100% 100%,0 100%)', '◂': 'polygon(100% 0,0 50%,100% 100%)' };
       const iniciar = () => {
-        const st = document.createElement('style'); st.textContent = '.' + CLS + '{color:#d97706 !important}'; document.head.appendChild(st);
+        const st = document.createElement('style');
+        st.textContent = '.fl-tri{display:inline-block;width:9px;height:9px;font-size:0 !important;vertical-align:middle;position:relative;top:-0.5px;background:currentColor;margin-right:1px}' +
+          Object.keys(FORMA).map(k => '.fl-tri[data-f="' + k + '"]{clip-path:' + FORMA[k] + ';-webkit-clip-path:' + FORMA[k] + '}').join('') + '.fl-tri.fl-ab{color:#d97706 !important}';
+        document.head.appendChild(st);
         let pend = false;
         const pintar = () => {
           pend = false;
-          const w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, { acceptNode: n => ABIERTA.test(n.nodeValue) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT });
+          const w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, { acceptNode: n => GL.test(n.nodeValue) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT });
           const lista = []; while (w.nextNode()) lista.push(w.currentNode);
           lista.forEach(n => {
-            const pa = n.parentElement; if (!pa || pa.closest('.' + CLS + ',.transition-transform,script,style,textarea,option,select')) return;
-            const v = n.nodeValue, i = v.search(ABIERTA); if (v.slice(0, i).trim() !== '') return;
-            const sp = document.createElement('span'); sp.className = CLS; sp.textContent = v.charAt(i);
-            const fr = document.createDocumentFragment(); if (i > 0) fr.appendChild(document.createTextNode(v.slice(0, i))); fr.appendChild(sp); if (v.length > i + 1) fr.appendChild(document.createTextNode(v.slice(i + 1)));
+            const pa = n.parentElement; if (!pa || pa.closest('script,style,textarea,option,select,.fl-tri')) return;
+            const fijo = !!pa.closest('.transition-transform'), fr = document.createDocumentFragment();
+            n.nodeValue.split(/([▸▾▴◂])/).forEach(t => {
+              if (!t) return;
+              if (t.length === 1 && FORMA[t]) { const sp = document.createElement('span'); sp.className = 'fl-tri' + ((t === '▾' || t === '▴') && !fijo ? ' fl-ab' : ''); sp.setAttribute('data-f', t); sp.textContent = t; fr.appendChild(sp); }
+              else fr.appendChild(document.createTextNode(t));
+            });
             n.parentNode.replaceChild(fr, n);
           });
         };
