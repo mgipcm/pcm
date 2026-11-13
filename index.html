@@ -18185,8 +18185,7 @@ ${cont.innerHTML}
     function mvVerKarP(i) { mvE.verKarP = mvE.verKarP === i ? null : i; mvPintar(); }
     function mvHtmlKardex() {
       const TH = 'px-2 py-2 text-[11px] font-bold text-slate-700 bg-slate-100 border-b border-slate-300', fm = formatoNumeroAnexo, P = mvE.kar || [];
-      const pill = mvE.karAct && mvE.karAct.por === 'Claude' ? '<span class="pill-origen rev ic-claude">Procesado por Claude, sujeto a modificaciones en caso de existir</span>' : (mvE.karAct && mvE.karAct.por ? '<span class="text-[11px] text-slate-500">Actualizado por ' + escapeHtml(mvE.karAct.por) + '</span>' : '');
-      const cab = '<div class="mt-6 mb-2 flex flex-wrap items-center gap-2">' + pill + '<span class="text-[13px] font-semibold text-slate-800">Movimiento del kárdex</span>' + (P.length ? '<button type="button" onclick="mvKarDescargar()" class="ml-auto px-1 py-1.5 text-xs font-bold bg-transparent border-0 hover:underline transition" style="color:#449964">⬇ Descargar Excel</button>' : '') + '</div>';
+      const cab = '<div class="mt-6 mb-2 flex flex-wrap items-center gap-2"><span class="text-[13px] font-semibold text-slate-800">Movimiento del kárdex</span>' + (P.length ? '<button type="button" onclick="mvKarDescargar()" class="ml-auto px-1 py-1.5 text-xs font-bold bg-transparent border-0 hover:underline transition" style="color:#449964">⬇ Descargar Excel</button>' : '') + '</div>';
       if (!P.length) return cab + '<div class="p-4 border border-dashed border-slate-300 rounded-xl text-xs text-slate-600">Aún no hay kárdex. Súbelo en el mismo pedido de arriba (punto 4, Kárdex del cliente: movimiento por producto) y Claude lo lee junto con el mayor.</div>';
       const hayMay = (mvE.cuentas || []).length > 0, K = {}, M = {};
       MV_KAR_COLS.forEach(([k]) => { K[k] = mvKarTot(P, k); M[k] = hayMay ? mvKarTot(mvE.cuentas, k) : null; });
