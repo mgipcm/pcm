@@ -18319,7 +18319,7 @@ ${cont.innerHTML}
       if (data) {
         impEstado.imports = ((data.liquidaciones || {}).imports) || [];
         impEstado.cruce = data.cruce && data.cruce.lineas ? data.cruce : null;
-        const c = data.config || {}; impEstado.cfg = { roles: c.roles || {}, tol: c.tol !== undefined ? c.tol : 1, corte: c.corte || '', kw: c.kw || {}, resp: respPersona(c.resp), transito: c.transito || '', trsi: c.trsi !== undefined ? c.trsi : '', trsf: c.trsf !== undefined ? c.trsf : '', mdeb: c.mdeb !== undefined ? c.mdeb : '', mhab: c.mhab !== undefined ? c.mhab : '' };
+        const c = data.config || {}; impEstado.cfg = { roles: c.roles || {}, tol: c.tol !== undefined ? c.tol : 1, corte: c.corte || '', kw: c.kw || {}, resp: respPersona(c.resp), transito: c.transito || '', invcods: c.invcods || '', trsi: c.trsi !== undefined ? c.trsi : '', trsf: c.trsf !== undefined ? c.trsf : '', mdeb: c.mdeb !== undefined ? c.mdeb : '', mhab: c.mhab !== undefined ? c.mhab : '' };
         impEstado.hall = { notas: (data.hallazgos || {}).notas || {}, manuales: (data.hallazgos || {}).manuales || [] };
         impEstado.act = { por: data.actualizado_por, en: data.updated_at };
       } else impEstado.act = null;
