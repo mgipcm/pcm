@@ -18334,6 +18334,7 @@ ${cont.innerHTML}
     const IC_OJO = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="#449964" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;position:relative;top:-1px"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>';
     function impIrMov() { ivE.hoja = 'venta'; ivE.btn = 'mov'; ivPintarHojas(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
     const impLk = (txt, id, tab) => '<a href="#" onclick="impIrA(\'' + id + '\', ' + (tab ? '\'' + tab + '\'' : 'null') + '); return false" class="underline text-indigo-700 font-semibold" title="Ver los datos de ' + txt + '">' + txt + ' ' + IC_OJO + '</a>';
+    const impLkTab = (txt, tab) => '<a href="#" onclick="impTab(\'' + tab + '\'); window.scrollTo({ top: 0, behavior: \'smooth\' }); return false" class="underline text-indigo-700 font-semibold" title="Ver ' + txt + '">' + txt + ' ' + IC_OJO + '</a>';
     const impLkMov = txt => '<a href="#" onclick="impIrMov(); return false" class="underline text-indigo-700 font-semibold" title="Ver el Movimiento del inventario">' + txt + ' ' + IC_OJO + '</a>';
     function impRender() {
       IMP_TABS.forEach(([t]) => { const b = $im('im-tab-' + t); if (b) b.className = 'px-3 py-1.5 text-xs transition rounded-lg ' + (impEstado.tab === t ? 'bg-slate-200 text-slate-900 font-semibold' : 'text-slate-600 hover:bg-slate-100 font-medium'); });
@@ -18574,7 +18575,7 @@ ${(im.aprendidos || []).length ? `<p class="text-xs text-slate-600 bg-slate-50 b
       const meses = new Set(); imports.forEach(im => { meses.add(mesLiq[im.id]); Object.keys(reg[im.id] || {}).forEach(m => meses.add(m)); });
       const lista = [...meses].sort(), A = impEstado.mesAb = impEstado.mesAb || {};
       const corteOk = d => !cfg.corte || !d || String(d) <= cfg.corte;
-      let tL = 0, tR = 0, h = `<div class="p-4 bg-white border border-slate-200 rounded-xl space-y-2"><div class="text-[13px] font-semibold text-slate-800">B. Liquidaciones contra importaciones por mes</div>
+      let tL = 0, tR = 0, h = `<div id="imp-cr-B" class="p-4 bg-white border border-slate-200 rounded-xl space-y-2"><div class="text-[13px] font-semibold text-slate-800">B. Liquidaciones contra importaciones por mes</div>
         <p class="text-slate-500">Cada liquidación se ubica en el mes de su fecha y lo que salió de importaciones en tránsito (crédito en el mayor), en el mes en que se asentó. Si una liquidación se registró en otro mes, la diferencia de un mes se compensa con la del otro. Haz clic en un mes para ver el detalle por importación.</p>
         <div class="overflow-x-auto"><table class="w-full text-[11px] leading-tight border-collapse"><thead class="bg-slate-50 text-slate-600"><tr>${th('Mes', 'text-left')}${th('Importaciones liquidadas')}${th('Costo total liquidaciones')}${th('Salida de tránsito en el mes (crédito)')}${th('Dif.')}${th('Estado', 'text-center')}</tr></thead><tbody>`;
       lista.forEach(m => {
@@ -18617,8 +18618,8 @@ ${(im.aprendidos || []).length ? `<p class="text-xs text-slate-600 bg-slate-50 b
           <div class="overflow-x-auto"><table class="text-[11px] leading-tight border-collapse" style="min-width:34rem"><tbody>
           ${fila('Salidas de tránsito del Movimiento (créditos que no son reversión)', impR2(sal))}
           <tr class="border-b border-slate-100 cursor-pointer hover:bg-slate-50" onclick="impRevTog('D')"><td class="px-2 py-1.5"><span class="inline-block w-3">${RA.D ? '▾' : '▸'}</span> Menos: reversiones de salidas (débitos que anulan una liquidación) <span class="text-slate-500 whitespace-nowrap" title="Ver las ${lstD.length} partidas">${IC_OJO} ${lstD.length}</span></td><td class="px-2 py-1.5 text-right whitespace-nowrap">${impF(-impR2(revD))}</td></tr>${detRev(lstD, 'D')}
-          ${fila('Salidas netas de tránsito según el Movimiento', mayorSal, false, true)}
-          ${fila('Costo total de las liquidaciones de importación', impR2(tL))}
+          ${fila(impLkMov('Salidas netas de tránsito según el Movimiento'), mayorSal, false, true)}
+          ${fila(impLkTab('Costo total de las liquidaciones de importación', 'liq'), impR2(tL))}
           <tr class="border-b border-slate-100"><td class="px-2 py-1.5 font-bold">Diferencia</td><td class="px-2 py-1.5 text-right font-bold whitespace-nowrap ${colD}">${impF(dTot)}</td></tr>
           <tr><td colspan="2" class="px-2 pt-2 pb-1 text-slate-500 font-semibold">A qué se debe la diferencia</td></tr>
           ${fila('Liquidaciones sin ninguna salida ubicada en el mayor (' + sinSal.length + ' importaciones)', r1)}
@@ -18629,10 +18630,10 @@ ${(im.aprendidos || []).length ? `<p class="text-xs text-slate-600 bg-slate-50 b
           <div id="imp-cr-conc" class="text-[13px] font-semibold text-slate-800 pt-3">Conciliación con lo ubicado en las importaciones (total de la tabla por mes)</div>
           <p class="text-slate-500">Las salidas que cubren varias importaciones y no igualan la suma de sus liquidaciones se reparten en proporción al costo de cada una.</p>
           <div class="overflow-x-auto"><table class="text-[11px] leading-tight border-collapse" style="min-width:34rem"><tbody>
-          ${fila('Salidas ubicadas en las importaciones (total de la tabla por mes)', impR2(tR))}
-          ${fila('Salidas netas de tránsito según el Movimiento', mayorSal)}
+          ${fila(impLk('Salidas ubicadas en las importaciones (total de la tabla por mes)', 'imp-cr-B'), impR2(tR))}
+          ${fila(impLkMov('Salidas netas de tránsito según el Movimiento'), mayorSal)}
           <tr class="border-b border-slate-100"><td class="px-2 py-1.5 font-bold">Diferencia</td><td class="px-2 py-1.5 text-right font-bold whitespace-nowrap ${Math.abs(r3) <= tol ? 'text-emerald-700' : 'text-red-600'}">${impF(impR2(impR2(tR) - mayorSal))}</td></tr>
-          ${fila('Costo total de las liquidaciones de importación', impR2(tL))}
+          ${fila(impLkTab('Costo total de las liquidaciones de importación', 'liq'), impR2(tL))}
           <tr><td class="px-2 py-1.5 font-bold">Diferencia</td><td class="px-2 py-1.5 text-right font-bold whitespace-nowrap ${Math.abs(impR2(tL - tR)) <= tol ? 'text-emerald-700' : 'text-red-600'}">${impF(impR2(impR2(tL) - impR2(tR)))}</td></tr>
           </tbody></table></div></div>`;
       } catch (e) { }
