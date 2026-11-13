@@ -19001,7 +19001,8 @@ ${(im.aprendidos || []).length ? `<p class="text-xs text-slate-600 bg-slate-50 b
         <p class="text-slate-500">Se reconoce sola por su nombre ("tránsito"). Si este cliente la llama distinto, escribe aquí su código (puedes separar varios con coma).</p>
         <label class="flex flex-col gap-1 text-xs text-slate-600 max-w-md"><span>Código(s) de la cuenta de importaciones en tránsito</span><input type="text" value="${impE(cfg.transito || '')}" placeholder="${impE(((T && T.tr) || []).join(', ') || 'Códigos separados por coma')}" onchange="impEditarTransito(this.value)" class="${impIn} w-full"></label>
         <label class="flex flex-col gap-1 text-xs text-slate-600 max-w-2xl"><span>Código(s) de las cuentas de inventario que reciben lo que sale de tránsito</span><input type="text" value="${impE(cfg.invcods || '')}" placeholder="${impE(((T && T.inv) || []).join(', ') || 'Códigos separados por coma')}" onchange="impEditarInvCods(this.value)" class="${impIn} w-full"></label>
-        <p class="text-slate-400">Ya se toman las cuentas de inventario del pedido de Movimiento del inventario${(T && T.inv && T.inv.length) ? ' (' + impE(T.inv.join(', ')) + ')' : ''}. Si falta alguna, escríbela aquí y se suma. Puedes poner un prefijo con * al final (por ejemplo 1103*).</p></div>`;
+        <p class="text-slate-400">Ya se toman las cuentas de inventario del pedido de Movimiento del inventario${(T && T.inv && T.inv.length) ? ' (' + impE(T.inv.join(', ')) + ')' : ''}. Si falta alguna, escríbela aquí y se suma. Puedes poner un prefijo con * al final (por ejemplo 1103*).</p>
+        <div><button type="button" onclick="impRecalcularTr()" class="px-1 py-1.5 text-xs font-bold bg-transparent border-0 hover:underline transition" style="color:#449964">↻ Recalcular con las cuentas indicadas</button></div></div>`;
       if (!T || T.sinCuenta) return h + `<p class="text-red-600 font-semibold">No se encontró la cuenta de importaciones en tránsito en el mayor leído. Escribe su código arriba.</p></div>`;
       const nm = c => (C.cuentas && C.cuentas[c]) ? c + ' ' + C.cuentas[c] : c;
       const tablaAs = lista => `<div class="max-h-72 overflow-auto border border-slate-200 rounded-lg bg-white"><table class="w-full text-[11px] leading-tight border-collapse"><thead class="bg-slate-100 text-slate-700"><tr>${th('Fecha', 'text-left')}${th('Comprobante', 'text-left')}${th('Detalle', 'text-left')}${th('Sale de tránsito')}${th('Entra al inventario')}${th('Diferencia')}${th('Fue a', 'text-left')}</tr></thead><tbody>${lista.map(f => {
@@ -19064,6 +19065,7 @@ ${(im.aprendidos || []).length ? `<p class="text-xs text-slate-600 bg-slate-50 b
       return h + '</div>';
     }
     function impEditarTrSaldo(k, v) { impEstado.cfg[k] = String(v || '').trim(); impGuardar('config'); impRender(); }
+    function impRecalcularTr() { impEstado.mov = null; impEstado.trSal = null; impRender(); }
     function impEditarInvCods(v) { impEstado.cfg.invcods = String(v || '').trim(); impGuardar('config'); impRender(); }
     function impEditarTransito(v) { impEstado.cfg.transito = String(v || '').trim(); impGuardar('config'); impRender(); }
 
