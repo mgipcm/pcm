@@ -17995,7 +17995,9 @@ ${cont.innerHTML}
     }
     // Cruce por mes: salidas del inventario contra el costo de ventas del mayor (Diferencia = salidas − costo)
     function cvCalcular() {
-      const ps = []; cvE.cv.forEach(c => (Array.isArray(c.partidas) ? c.partidas : []).forEach(p => { if (p) ps.push(p); }));
+      // El tipo de asiento se deduce de la descripción del mayor, para que el nombre sea el correcto aunque venga mal escrito
+      const cvTipoReal = p => { const d = String(p.desc || ''); if (/reversi[oó]n/i.test(d) && /ord\.? ?prod/i.test(d)) return 'Reversión de comprobante de inventario (orden de producción)'; if (/dev\.? en ventas|devoluci[oó]n/i.test(d)) return 'Ingreso por devolución en ventas (crédito al costo)'; if (/costo de venta/i.test(d)) return 'Salida de inventario = costo'; return p.tipo || 'Sin clasificar'; };
+      const ps = []; cvE.cv.forEach(c => (Array.isArray(c.partidas) ? c.partidas : []).forEach(p => { if (p) ps.push({ ...p, tipo: cvTipoReal(p) }); }));
       const hayVal = ps.some(p => typeof p.salida === 'number');
       const ymDe = p => /^\d{4}-\d{2}$/.test(String(p.col || '')) ? p.col : (String(p.fecha || '').slice(0, 7) || 'sin');
       const meses = {}, f = ym => (meses[ym] = meses[ym] || { ym, sal: 0, cos: 0, n: 0, asientos: [] });
