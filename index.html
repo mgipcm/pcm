@@ -18613,14 +18613,28 @@ ${(im.aprendidos || []).length ? `<p class="text-xs text-slate-600 bg-slate-50 b
         const trc = impListaCtas((cfg.roles || {}).inventario); let sal = 0, revD = 0, revC = 0;
         ((C && C.asientos) || []).forEach(a => (a.l || []).forEach(l => { if (!trc.length || !impCtaEn(String(l[0]), trc)) return; if (!corteOk(a.d)) return; const d = Number(l[2]) || 0, hh = Number(l[3]) || 0, esR = IMP_REV_RE.test(String(l[4] || '')); if (hh > 0) { if (esR) revC += hh; else sal += hh; } else if (d > 0 && esR) revD += d; }));
         const mayorSal = impR2(sal - revD), difSin = impR2(mayorSal - tR);
-        ctl = `<div class="mt-2 p-3 rounded-lg border ${Math.abs(difSin) <= tol ? 'border-emerald-200 bg-emerald-50' : 'border-amber-200 bg-amber-50'} text-[11px] text-slate-700 space-y-0.5"><div class="font-semibold text-slate-800">Cuadre con el movimiento de la cuenta en tránsito (hoja i de Inventarios)</div>
-          <div>Salidas de tránsito (créditos que no son reversión): <b>${impF(impR2(sal))}</b></div>
-          <div>Menos reversiones de salidas (débitos que anulan una liquidación): <b>${impF(impR2(revD))}</b></div>
-          <div>Salidas netas según el mayor: <b>${impF(mayorSal)}</b> · Ubicadas en una importación: <b>${impF(impR2(tR))}</b> · ${difSin >= 0 ? 'Sin ubicar en ninguna importación' : 'De más contra el mayor (revisar pagos que agrupan varias importaciones)'}: <b>${impF(Math.abs(difSin))}</b></div>
-          <div>Costo total de las liquidaciones: <b>${impF(impR2(tL))}</b> · Diferencia contra las salidas netas: <b>${impF(impR2(tL - mayorSal))}</b></div>
-          <div class="text-slate-500">Los créditos de reversión (${impF(impR2(revC))}) cancelan entradas anteriores y no son salidas: forman parte de "Reversiones y anulaciones" del movimiento.</div></div>`;
+        const regTot = id => Object.values(reg[id] || {}).reduce((t, v) => t + v, 0);
+        const ubic = imports.filter(im => Math.abs(regTot(im.id)) > tol), LP = impR2(ubic.reduce((t, im) => t + liq[im.id], 0));
+        const sinSal = imports.filter(im => Math.abs(regTot(im.id)) <= tol && liq[im.id] > tol);
+        const dTot = impR2(impR2(tL) - mayorSal), r1 = impR2(impR2(tL) - LP), r2 = impR2(LP - impR2(tR)), r3 = impR2(mayorSal - impR2(tR));
+        const fila = (t, v, neg, neg2) => `<tr class="border-b border-slate-100"><td class="px-2 py-1.5 ${neg2 ? 'font-bold' : ''}">${t}</td><td class="px-2 py-1.5 text-right whitespace-nowrap ${neg2 ? 'font-bold' : ''}">${impF(v)}</td></tr>`;
+        const colD = Math.abs(dTot) <= tol ? 'text-emerald-700' : 'text-red-600';
+        ctl = `<div class="p-4 bg-white border border-slate-200 rounded-xl space-y-2"><div class="text-[13px] font-semibold text-slate-800">C. Costo de las liquidaciones contra las salidas de tránsito del Movimiento de la cuenta (hoja i de Inventarios)</div>
+          <p class="text-slate-500">Cruza el costo total de las liquidaciones con lo que salió de la cuenta en tránsito según su Movimiento. Los créditos de reversión (${impF(impR2(revC))}) cancelan entradas anteriores y no son salidas.</p>
+          <div class="overflow-x-auto"><table class="text-[11px] leading-tight border-collapse" style="min-width:34rem"><tbody>
+          ${fila('Salidas de tránsito del Movimiento (créditos que no son reversión)', impR2(sal))}
+          ${fila('Menos: reversiones de salidas (débitos que anulan una liquidación)', -impR2(revD))}
+          ${fila('Salidas netas de tránsito según el Movimiento', mayorSal, false, true)}
+          ${fila('Costo total de las liquidaciones (hoja 1)', impR2(tL))}
+          <tr class="border-b border-slate-100"><td class="px-2 py-1.5 font-bold">Diferencia (liquidaciones menos salidas netas)</td><td class="px-2 py-1.5 text-right font-bold whitespace-nowrap ${colD}">${impF(dTot)}</td></tr>
+          <tr><td colspan="2" class="px-2 pt-2 pb-1 text-slate-500 font-semibold">A qué se debe la diferencia</td></tr>
+          ${fila('Liquidaciones sin ninguna salida ubicada en el mayor (' + sinSal.length + ' importaciones)', r1)}
+          ${fila('Diferencias de valor en las importaciones ubicadas (liquidación menos salida)', r2)}
+          ${fila('Menos: salidas netas que no se pudieron ubicar en ninguna importación', -r3)}
+          <tr><td class="px-2 py-1.5 font-bold">Total explicado</td><td class="px-2 py-1.5 text-right font-bold whitespace-nowrap ${colD}">${impF(impR2(r1 + r2 - r3))}</td></tr>
+          </tbody></table></div></div>`;
       } catch (e) { }
-      h += `</tbody><tfoot class="bg-slate-50 font-semibold"><tr><td class="px-2 py-1 text-left">Total del año</td><td></td><td class="px-2 text-right">${impF(impR2(tL))}</td><td class="px-2 text-right">${impF(impR2(tR))}</td><td class="px-2 text-right">${impF(impR2(tL - tR))}</td><td></td></tr></tfoot></table></div>${ctl}</div>`;
+      h += `</tbody><tfoot class="bg-slate-50 font-semibold"><tr><td class="px-2 py-1 text-left">Total del año</td><td></td><td class="px-2 text-right">${impF(impR2(tL))}</td><td class="px-2 text-right">${impF(impR2(tR))}</td><td class="px-2 text-right">${impF(impR2(tL - tR))}</td><td></td></tr></tfoot></table></div></div>${ctl}`;
       return h;
     }
     function impHtmlResultadoCruce() {
@@ -18629,7 +18643,7 @@ ${(im.aprendidos || []).length ? `<p class="text-xs text-slate-600 bg-slate-50 b
       const th = (t, c) => `<th class="px-2 py-1 border-b border-slate-200 whitespace-nowrap ${c || 'text-right'}">${t}</th>`;
       if (!impEstado.mov || impEstado.mov.llave !== impEstado.cliente + '|' + impEstado.anio + '|' + impEstado.visita) setTimeout(impCargarMov, 0);
       const ENT = null;
-      let h = `<div class="p-4 bg-white border border-slate-200 rounded-xl space-y-2"><div class="text-[13px] font-semibold text-slate-800">C. Liquidaciones contra costos acumulados por importación</div>
+      let h = `<div class="p-4 bg-white border border-slate-200 rounded-xl space-y-2"><div class="text-[13px] font-semibold text-slate-800">D. Liquidaciones contra costos acumulados por importación</div>
         <p class="text-slate-500">Mayor leído: ${(C.lineasTot || 0).toLocaleString('en-US')} líneas · Debe ${impF(C.debe)} · Haber ${impF(C.haber)}${Math.abs((C.debe || 0) - (C.haber || 0)) > 0.5 ? ' <b class="text-red-600">(el mayor no cuadra)</b>' : ' (cuadra)'} · ${C.lineas.length.toLocaleString('en-US')} líneas de importaciones · ${C.asientos.length} asientos.</p>
         <div class="overflow-x-auto"><table class="w-full text-[11px] leading-tight border-collapse"><thead class="bg-slate-50 text-slate-600"><tr>${th('Importación', 'text-left')}${th('Costo total liquidación')}${th('Costos acumulados en importaciones (mayor)')}${th('Dif.')}${th('Estado', 'text-center')}${ENT ? th('Entrada al inventario (mayor)') + th('Dif. entrada') : ''}${th('IVA liquidación')}${th('IVA en el mayor')}${th('Dif.')}${th('Estado', 'text-center')}</tr></thead><tbody>`;
       let T = { c1: 0, c2: 0, i1: 0, i2: 0, e1: 0 };
