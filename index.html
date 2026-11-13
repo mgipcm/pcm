@@ -18120,7 +18120,7 @@ ${cont.innerHTML}
       { k: 'per', t: 'Fecha y período correctos', ap: 'ambas' }
     ];
     const VC_ESTADOS = { '': ['·', '#94a3b8', '#f1f5f9'], ok: ['✓', '#047857', '#d1fae5'], ex: ['✗', '#b91c1c', '#fee2e2'], na: ['N/A', '#64748b', '#e2e8f0'] };
-    const vcE = { cargaId: 0, cliente: '', anio: '', visita: '', cargado: false, error: '', mov: [], imp: null, cfg: { pct: 20, cuentas: null }, filas: [], org: null, act: null, docAbierto: '', tmp: null, filtro: '', nuevo: false, claude: {}, ped: null, tPed: 0 };
+    const vcE = { cargaId: 0, cliente: '', anio: '', visita: '', cargado: false, error: '', mov: [], imp: null, cfg: { pct: 20, cuentas: null }, filas: [], org: null, act: null, docAbierto: '', tmp: null, filtro: '', nuevo: false, claude: {}, ped: null, tPed: 0, concAbierto: '' };
     async function vcCargar() {
       const cli = $im('im-cliente').value, anio = $im('im-anio').value, vis = $im('im-visita').value;
       Object.assign(vcE, { cliente: cli, anio, visita: vis, cargado: false, error: '', mov: [], imp: null, cfg: { pct: 20, cuentas: null }, filas: [], org: null, act: null, docAbierto: '', filtro: '', nuevo: false, claude: {}, ped: null });
@@ -18177,6 +18177,59 @@ ${cont.innerHTML}
       if (antes && p && antes.id === p.id && antes.estado !== 'hecho' && p.estado === 'hecho') { vcCargar(); return; }
       if (JSON.stringify(antes) !== JSON.stringify(p)) { vcE.ped = p; vcPintar(); } else vcE.ped = p;
       if (p && p.estado !== 'hecho') vcE.tPed = setTimeout(vcCargarPedido, 15000);
+    }
+    // Conceptos de una importación: valores tomados de la liquidación (lo declarado por el cliente) y recuadro de soporte
+    function vcImpDe(f) { const L = vcE.imp && vcE.imp.liquidaciones && Array.isArray(vcE.imp.liquidaciones.imports) ? vcE.imp.liquidaciones.imports : []; return f.imp ? L.find(i => String(i.id) === String(f.imp)) || null : null; }
+    function vcConceptos(f) {
+      const im = vcImpDe(f); if (!im) return null;
+      const it = Array.isArray(im.items) ? im.items : [], ind = Array.isArray(im.indirectos) ? im.indirectos : [];
+      const sumI = (...ks) => r2f(it.reduce((t, x) => t + ks.reduce((u, k) => u + (Number(x[k]) || 0), 0), 0));
+      const sumD = k => r2f(ind.filter(x => x.clave === k).reduce((t, x) => t + (Number(x.valor) || 0), 0));
+      const val = (k, ...ks) => { const d = sumD(k); return d > 0 ? d : sumI(...ks); };
+      const dai = im.dai || {}, num = x => String(x == null ? '' : x).trim();
+      const L = [
+        { k: 'factura', t: 'Factura del proveedor', v: sumI('fob_total'), sug: (Array.isArray(im.facturas) ? im.facturas : []).filter(Boolean).join(', '), est: im.proveedor ? 'Proveedor: ' + im.proveedor : '' },
+        { k: 'flete_int', t: 'Flete internacional', v: sumI('flete'), sug: '', est: 'Factura del transportista o naviera' },
+        { k: 'seguro_int', t: 'Seguro internacional', v: sumI('seguro'), sug: '', est: 'Póliza o factura del seguro' },
+        { k: 'dau', t: 'Declaración aduanera (DAI / DAU) y tributos', v: r2f((Number(dai.arancel) || 0) + (Number(dai.fodinfa) || 0)) || sumI('arancel', 'fodinfa'), sug: num(im.dau) || num(dai.numero), est: 'Arancel y FODINFA' },
+        { k: 'isd', t: 'ISD', v: val('isd', 'isd'), sug: '', est: im.isd_estado ? ({ pagado: 'Según la liquidación: pagado', provisionado: 'Según la liquidación: provisionado', credito: 'Según la liquidación: crédito tributario', no_aplica: 'No aplica' }[im.isd_estado] || im.isd_estado) : '' },
+        { k: 'agente', t: 'Agente de aduana', v: val('agente', 'agente'), sug: '', est: 'Factura del agente' },
+        { k: 'manejo', t: 'Manejo de contenedor / naviera (handling, THC)', v: val('manejo', 'naviera', 'thc'), sug: '', est: 'Factura de la naviera' },
+        { k: 'portuarios', t: 'Almacenaje en puerto', v: sumI('portuarios'), sug: '', est: 'Factura del puerto o depósito' },
+        { k: 'flete_loc', t: 'Transporte local', v: val('flete_int', 'flete_interno'), sug: '', est: 'Factura del transportista' },
+        { k: 'seguro_loc', t: 'Seguro local', v: sumD('seguro'), sug: '', est: 'Póliza o factura' },
+        { k: 'logistico', t: 'Custodia / logístico', v: val('logistico', 'logistico'), sug: '', est: '' },
+        { k: 'bodega', t: 'Recepción en bodega', v: 0, sug: '', est: im.fecha_ingreso ? 'Fecha de ingreso según la liquidación: ' + im.fecha_ingreso : 'Ingreso, guía o acta' }
+      ];
+      return L.filter(c => c.v > 0 || ['factura', 'dau', 'bodega'].includes(c.k));
+    }
+    function vcConcEstado(f, c) {
+      const cc = (f.conc || {})[c.k] || {}, tieneDoc = (f.docs || []).some(d => d.conc === c.k), sop = !!(String(cc.num || '').trim() || tieneDoc);
+      if (cc.ex) return 'rojo';
+      if (sop) return 'verde';
+      return c.v > 0 ? 'amarillo' : 'gris';
+    }
+    function vcConcDato(id, k) { const f = vcE.filas.find(x => x.id === id); if (!f) return null; f.conc = f.conc || {}; f.conc[k] = f.conc[k] || {}; return f.conc[k]; }
+    function vcConcNum(id, k, v) { const c = vcConcDato(id, k); if (!c) return; c.num = String(v).trim(); vcGuardar(); vcPintar(); }
+    function vcConcUsar(id, k) { const f = vcE.filas.find(x => x.id === id), cs = f && vcConceptos(f), c = cs && cs.find(x => x.k === k); if (c && c.sug) vcConcNum(id, k, c.sug); }
+    function vcConcEx(id, k) { const c = vcConcDato(id, k); if (!c) return; c.ex = !c.ex; vcGuardar(); vcPintar(); }
+    function vcConcAbrir(id) { vcE.concAbierto = vcE.concAbierto === id ? '' : id; vcPintar(); }
+    function vcHtmlConceptos(f, idq, cs, ncol) {
+      const e = escapeHtml, F = formatoNumeroAnexo, im = vcImpDe(f), COL = { verde: ['#047857', '#d1fae5', 'Con soporte'], amarillo: ['#a16207', '#fef3c7', 'Falta soporte'], rojo: ['#b91c1c', '#fee2e2', 'Con excepción'], gris: ['#64748b', '#e2e8f0', 'Sin soporte'] };
+      const tot = r2f((Array.isArray(im.items) ? im.items : []).reduce((t, x) => t + (Number(x.costo_total) || 0), 0) + (Array.isArray(im.indirectos) ? im.indirectos : []).filter(x => x.clave !== 'gasto_fin').reduce((t, x) => t + (Number(x.valor) || 0), 0));
+      let h = '<tr><td colspan="' + ncol + '" class="p-2 bg-slate-50"><div class="space-y-2 text-[11px]"><div class="font-bold text-slate-700">Conceptos de la importación ' + e(String(f.imp)) + (im.proveedor ? ' · ' + e(im.proveedor) : '') + '</div>' +
+        '<p class="text-slate-500">Los valores salen de la liquidación cargada en Importaciones: son lo declarado por el cliente y no prueban que el documento exista. Para que un concepto quede en verde hace falta el soporte: escribe el número del documento o adjunta el archivo. Rojo lo marca la persona cuando el documento tiene una diferencia.</p>' +
+        '<table class="w-full border-collapse"><thead><tr><th class="px-2 py-1 text-left bg-slate-100 border-b border-slate-300">Concepto</th><th class="px-2 py-1 text-right bg-slate-100 border-b border-slate-300">Valor según la liquidación</th><th class="px-2 py-1 text-left bg-slate-100 border-b border-slate-300">N.° de documento (soporte)</th><th class="px-2 py-1 text-left bg-slate-100 border-b border-slate-300">Adjunto</th><th class="px-2 py-1 text-center bg-slate-100 border-b border-slate-300">Estado</th><th class="px-2 py-1 bg-slate-100 border-b border-slate-300"></th></tr></thead><tbody>' +
+        cs.map(c => {
+          const cc = (f.conc || {})[c.k] || {}, est = vcConcEstado(f, c), col = COL[est], docs = (f.docs || []).filter(d => d.conc === c.k);
+          return '<tr class="border-t border-slate-200"><td class="px-2 py-1 align-top"><div class="font-semibold">' + e(c.t) + '</div>' + (c.est ? '<div class="text-[10px] text-slate-400">' + e(c.est) + '</div>' : '') + '</td><td class="px-2 py-1 text-right align-top whitespace-nowrap">' + (c.v > 0 ? F(c.v) : '—') + '</td>' +
+            '<td class="px-2 py-1 align-top"><input type="text" value="' + e(cc.num || '') + '" placeholder="' + e(c.sug ? 'Según la liquidación: ' + c.sug : 'N.° de factura o documento') + '" onchange="vcConcNum(\'' + idq + '\', \'' + c.k + '\', this.value)" class="w-52 p-1 border border-slate-300 rounded text-[11px]">' + (c.sug && !cc.num ? ' <button type="button" onclick="vcConcUsar(\'' + idq + '\', \'' + c.k + '\')" class="font-bold hover:underline" style="color:#449964">Confirmar «' + e(c.sug.slice(0, 30)) + '»</button>' : '') + '</td>' +
+            '<td class="px-2 py-1 align-top">' + docs.map(d => '<div class="whitespace-nowrap">📎 ' + e(d.nombre.slice(0, 28)) + '</div>').join('') + '<label class="cursor-pointer font-bold hover:underline" style="color:#449964">+ Adjuntar<input type="file" multiple accept=".pdf,.jpg,.jpeg,.png,.webp,.xlsx,.xls,.csv,.txt" class="hidden" onchange="vcSubir(\'' + idq + '\', this, \'' + c.k + '\')"></label></td>' +
+            '<td class="px-2 py-1 text-center align-top"><span style="display:inline-block;padding:2px 8px;border-radius:999px;font-weight:700;color:' + col[0] + ';background:' + col[1] + '">' + col[2] + '</span></td>' +
+            '<td class="px-2 py-1 align-top"><button type="button" onclick="vcConcEx(\'' + idq + '\', \'' + c.k + '\')" class="hover:underline" style="color:' + (cc.ex ? '#b91c1c' : '#64748b') + '">' + (cc.ex ? 'Quitar excepción' : 'Marcar excepción') + '</button></td></tr>';
+        }).join('') + '</tbody></table>' +
+        '<p class="text-slate-500">Costo total según la liquidación (producto, tributos y gastos de importación, sin gastos financieros): <b>' + F(tot) + '</b>. Valor de esta partida en el mayor: <b>' + F(f.valor) + '</b>. ' + (Math.abs(tot - f.valor) <= 1 ? 'Coinciden.' : 'La partida puede ser solo una parte del costo (por ejemplo un pago o un gasto); compara con el cuadro de Importaciones.') + '</p></div></td></tr>';
+      return h;
     }
     // Documentos sueltos: se suben primero y Claude los asigna a las partidas de la muestra
     function vcSueltos() { return Array.isArray(vcE.cfg.sueltos) ? vcE.cfg.sueltos : (vcE.cfg.sueltos = []); }
@@ -18363,7 +18416,7 @@ ${cont.innerHTML}
       if (v.includes('ex')) return 'ex'; if (v.every(x => x === 'ok' || x === 'na') && v.some(x => x === 'ok')) return 'ok'; return '';
     }
     function vcDocs(id) { vcE.docAbierto = vcE.docAbierto === id ? '' : id; vcPintar(); }
-    async function vcSubir(id, input) {
+    async function vcSubir(id, input, conc) {
       const f = vcE.filas.find(x => x.id === id), archivos = [...(input.files || [])]; if (!f || !archivos.length) return;
       const m = document.getElementById('vc-msg'); const aviso = t => { if (m) { m.textContent = t; m.style.color = '#64748b'; } };
       const limpio = t => String(t).normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^A-Za-z0-9._-]+/g, '_');
@@ -18373,7 +18426,7 @@ ${cont.innerHTML}
         const ruta = vcE.cliente + '/' + vcE.anio + '_' + vcE.visita + '/' + limpio(id).slice(0, 60) + '/' + Date.now() + '_' + limpio(a.name);
         const { error } = await supabaseClient.storage.from('voucheo').upload(ruta, a, { contentType: a.type || 'application/octet-stream' });
         if (error) { alert('No se pudo subir "' + a.name + '": ' + (error.message || error)); continue; }
-        f.docs = f.docs || []; f.docs.push({ nombre: a.name, ruta, tamano: a.size, tipo: a.type || '', por: nombreUsuarioActivo() || '', en: new Date().toISOString() });
+        f.docs = f.docs || []; f.docs.push({ nombre: a.name, ruta, tamano: a.size, tipo: a.type || '', por: nombreUsuarioActivo() || '', en: new Date().toISOString(), ...(conc ? { conc } : {}) });
       }
       input.value = ''; vcGuardar(); vcPintar();
     }
@@ -18432,14 +18485,15 @@ ${cont.innerHTML}
       h += '<div class="overflow-x-auto border border-slate-200 rounded-xl"><table class="w-full text-[11px] border-collapse" style="min-width:1600px"><thead><tr><th class="' + TH + ' text-left">Fecha</th><th class="' + TH + ' text-left">Referencia</th><th class="' + TH + ' text-left">Descripción</th><th class="' + TH + ' text-left">N.° de compra / importación</th><th class="' + TH + ' text-right">Valor</th><th class="' + TH + ' text-left">Tipo</th>' +
         VC_ATRIB.map(a => '<th class="' + TH + ' text-center" style="max-width:96px" title="' + e(a.t) + '">' + e(a.t) + '</th>').join('') + '<th class="' + TH + ' text-center">Resultado</th><th class="' + TH + ' text-left">Comentario</th><th class="' + TH + ' text-center">Soporte</th><th class="' + TH + '"></th></tr></thead><tbody>';
       vcE.filas.forEach(f => {
-        const res = vcResultado(f), idq = e(f.id).replace(/\\/g, '\\\\').replace(/'/g, "\\'"), nd = f.docs ? f.docs.length : 0;
+        const res = vcResultado(f), idq = e(f.id).replace(/\\/g, '\\\\').replace(/'/g, "\\'"), nd = f.docs ? f.docs.length : 0, cs = f.tipo === 'imp' ? vcConceptos(f) : null;
         h += '<tr class="border-t border-slate-100"><td class="' + TD + ' whitespace-nowrap">' + mvFechaCorta(f.fecha) + '</td><td class="' + TD + ' whitespace-nowrap">' + e(f.ref) + '</td><td class="' + TD + '" style="min-width:240px"><div>' + e(String(f.desc).slice(0, 140)) + '</div><div class="text-[10px] text-slate-400">' + (f.fuente === 'auto' ? 'Por qué: ' : '') + e(f.motivo || '') + '</div></td><td class="' + TD + ' whitespace-nowrap font-semibold">' + e(vcNumDoc(f.desc, f.ref, f.imp)) + '</td><td class="' + TD + ' text-right whitespace-nowrap">' + F(f.valor) + '</td>' +
           '<td class="' + TD + '"><select onchange="vcTipo(\'' + idq + '\', this.value)" class="p-1 border border-slate-300 rounded text-[11px]"><option value="loc"' + (f.tipo !== 'imp' ? ' selected' : '') + '>Compra local</option><option value="imp"' + (f.tipo === 'imp' ? ' selected' : '') + '>Importación</option><option value="dev"' + (f.tipo === 'dev' ? ' selected' : '') + '>Devolución o reversión</option><option value="bod"' + (f.tipo === 'bod' ? ' selected' : '') + '>Transferencia entre bodegas</option></select></td>' +
           VC_ATRIB.map(a => { if (!vcAplica(a, f)) return '<td class="' + TD + ' text-center text-slate-300">—</td>'; const v = vcVal(f, a.k), st = VC_ESTADOS[v], dc = !(f.rev || {})[a.k] && vcDeClaude(f, a.k), ev = dc && vcE.claude[f.k].detalle && vcE.claude[f.k].detalle[a.k]; return '<td class="' + TD + ' text-center"><button type="button" onclick="vcCiclo(\'' + idq + '\', \'' + a.k + '\')" title="' + e(dc ? 'Claude: ' + (ev || 'sin detalle') : a.t) + '" style="min-width:38px;padding:3px 6px;border-radius:6px;font-weight:700;color:' + st[1] + ';background:' + st[2] + (dc ? ';box-shadow:0 0 0 2px #f97316' : '') + '">' + st[0] + '</button></td>'; }).join('') +
           '<td class="' + TD + ' text-center font-bold" style="color:' + (res === 'ok' ? '#047857' : (res === 'ex' ? '#b91c1c' : '#94a3b8')) + '">' + (res === 'ok' ? 'Sin excepción' : (res === 'ex' ? 'Con excepción' : 'Pendiente')) + '</td>' +
           '<td class="' + TD + '"><input type="text" value="' + e(f.nota || '') + '" onchange="vcNota(\'' + idq + '\', this.value)" class="w-44 p-1 border border-slate-300 rounded text-[11px]" placeholder="Comentario">' + (f.k && vcE.claude[f.k] && vcE.claude[f.k].resumen ? '<div class="mt-1 text-[10px]" style="color:#c2410c;max-width:260px">Claude: ' + e(vcE.claude[f.k].resumen) + '</div>' : '') + '</td>' +
-          '<td class="' + TD + ' text-center"><button type="button" onclick="vcDocs(\'' + idq + '\')" class="font-bold hover:underline whitespace-nowrap" style="color:#449964">' + (vcE.docAbierto === f.id ? '▾ ' : '▸ ') + '📎 ' + nd + '</button></td>' +
+          '<td class="' + TD + ' text-center"><button type="button" onclick="vcDocs(\'' + idq + '\')" class="font-bold hover:underline whitespace-nowrap" style="color:#449964">' + (vcE.docAbierto === f.id ? '▾ ' : '▸ ') + '📎 ' + nd + '</button>' + (cs ? '<br><button type="button" onclick="vcConcAbrir(\'' + idq + '\')" class="font-bold hover:underline whitespace-nowrap" style="color:#449964">' + (vcE.concAbierto === f.id ? '▾ ' : '▸ ') + 'Conceptos ' + cs.filter(c => vcConcEstado(f, c) === 'verde').length + '/' + cs.length + '</button>' : '') + '</td>' +
           '<td class="' + TD + '"><button type="button" onclick="vcQuitar(\'' + idq + '\')" class="text-slate-400 hover:text-red-600" title="Quitar de la muestra">✕</button></td></tr>';
+        if (cs && vcE.concAbierto === f.id) h += vcHtmlConceptos(f, idq, cs, 6 + VC_ATRIB.length + 4);
         if (vcE.docAbierto === f.id) h += '<tr><td colspan="' + (6 + VC_ATRIB.length + 4) + '" class="p-2 bg-slate-50"><div class="space-y-2 text-[11px]"><div class="font-bold text-slate-700">Documentos de soporte (facturas, declaraciones, comprobantes de pago, fotos, PDF)</div>' +
           (nd ? '<ul class="space-y-1">' + f.docs.map((d, i) => '<li class="flex flex-wrap items-center gap-2"><button type="button" onclick="vcVerDoc(\'' + idq + '\', ' + i + ')" class="underline font-semibold" style="color:#005cab">' + e(d.nombre) + '</button><span class="text-slate-400">' + (d.tamano ? Math.round(d.tamano / 1024) + ' KB' : '') + (d.por ? ' · ' + e(d.por) : '') + (d.pedido ? ' · enviado a Claude' : ' · sin enviar a Claude') + '</span><button type="button" onclick="vcBorrarDoc(\'' + idq + '\', ' + i + ')" class="text-slate-400 hover:text-red-600" title="Borrar">✕</button></li>').join('') + '</ul>' : '<p class="text-slate-500">Aún no hay documentos.</p>') + (f.k && vcE.claude[f.k] && vcE.claude[f.k].archivos && vcE.claude[f.k].archivos.length ? '<p style="color:#c2410c">Documentos que Claude usó para esta partida: ' + e(vcE.claude[f.k].archivos.join(', ')) + '</p>' : '') +
           '<label class="inline-block px-3 py-1.5 rounded-lg text-xs font-bold text-white cursor-pointer" style="background:#449964">Subir documentos<input type="file" multiple accept=".pdf,.jpg,.jpeg,.png,.webp,.xlsx,.xls,.csv,.txt" class="hidden" onchange="vcSubir(\'' + idq + '\', this)"></label></div></td></tr>';
