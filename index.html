@@ -1590,7 +1590,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
 
             <div class="flex flex-wrap items-center justify-between gap-3">
               <div class="flex flex-wrap items-center gap-2">
-                <button type="button" onclick="descargarPapelAnexo()" class="px-3 py-1.5 bg-white text-slate-700 hover:bg-slate-50 border border-slate-400 rounded text-[11px] font-bold transition">Descargar papel de trabajo (Excel)</button>
+                <button type="button" onclick="descargarPapelAnexo()" class="px-1 py-1.5 text-xs font-bold bg-transparent border-0 hover:underline transition" style="color:#449964">⬇ Descargar papel de trabajo (Excel)</button>
                 <button type="button" onclick="borrarAnexoVisita()" class="px-3 py-1.5 bg-white text-rose-600 hover:bg-rose-50 border border-rose-300 rounded text-[11px] font-bold transition">Borrar este anexo</button>
               </div>
               <p id="an-anexo-guardado" class="text-[11px] text-slate-400 min-h-[1rem]"></p>
@@ -1918,7 +1918,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
 
         <div class="flex flex-wrap justify-between items-center gap-2">
           <div id="my-tabs" class="flex flex-wrap bg-white p-1.5 rounded-2xl border border-slate-200 gap-1"></div>
-          <button onclick="mayorExportar()" class="px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-bold">Descargar todo en Excel</button>
+          <button onclick="mayorExportar()" class="px-1 py-1.5 text-xs font-bold bg-transparent border-0 hover:underline transition" style="color:#449964">⬇ Descargar todo en Excel</button>
         </div>
         <div id="my-panel" class="space-y-3"></div>
       </div>
@@ -2029,7 +2029,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
         <select id="fl-anio" onchange="cargarFlujo()" class="w-28 px-2 py-1 bg-white border border-slate-300 rounded-lg text-[11px] focus:ring-2 focus:ring-indigo-500 outline-none">
           <option value="2026">Año 2026</option>
         </select>
-        <button type="button" id="fl-btn-descargar" onclick="descargarFlujo()" class="hidden px-2.5 py-1 bg-white text-slate-700 hover:bg-slate-50 border border-slate-400 rounded-lg text-[11px] font-bold transition">Descargar (Excel)</button>
+        <button type="button" id="fl-btn-descargar" onclick="descargarFlujo()" class="hidden px-1 py-1.5 text-xs font-bold bg-transparent border-0 hover:underline transition" style="color:#449964">⬇ Descargar (Excel)</button>
         <button type="button" id="fl-btn-libro" onclick="alternarLibroAjustes()" class="hidden px-2.5 py-1 rounded-lg text-[11px] transition bg-slate-100 text-slate-800 hover:bg-slate-200 font-medium">Ver libro de ajustes</button>
         <span id="fl-estado" class="text-[11px] text-slate-500"></span>
       </div>
@@ -2219,7 +2219,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
           <option value="">-- Selecciona un Cliente --</option>
         </select>
         <span id="pce-estado" class="text-[11px] text-slate-500"></span>
-        <button type="button" id="pce-descargar" onclick="pceDescargar()" class="hidden ml-auto px-2.5 py-1 bg-white text-slate-700 hover:bg-slate-50 border border-slate-400 rounded-lg text-[11px] font-bold transition">Descargar todo (Excel)</button>
+        <button type="button" id="pce-descargar" onclick="pceDescargar()" class="hidden ml-auto px-1 py-1.5 text-xs font-bold bg-transparent border-0 hover:underline transition" style="color:#449964">⬇ Descargar todo (Excel)</button>
       </div>
 
       <p id="pce-aviso" class="text-xs text-slate-500 border border-dashed border-slate-300 rounded-xl p-4">Selecciona el cliente para comenzar.</p>
@@ -2351,7 +2351,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
           <h1 class="text-xl font-bold text-slate-800">6e. Configuración: Históricos de visitas</h1>
           <p class="text-xs text-slate-500">Quién ingresa a la aplicación, cuándo, y qué está revisando o llenando. Solo lo ven el Socio y el Supervisor.</p>
         </div>
-        <button type="button" onclick="descargarHistorial()" class="px-3 py-1.5 text-xs font-bold text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50">Descargar Excel</button>
+        <button type="button" onclick="descargarHistorial()" class="px-1 py-1.5 text-xs font-bold bg-transparent border-0 hover:underline transition" style="color:#449964">⬇ Descargar Excel</button>
       </div>
       <div class="grid grid-cols-2 md:grid-cols-6 gap-2 items-end">
         <div><label class="block text-[10px] font-bold text-slate-500 mb-1">Desde</label><input type="date" id="his-desde" class="w-full p-2 border border-slate-300 rounded-lg text-xs bg-white"></div>
@@ -15211,7 +15211,7 @@ ${cont.innerHTML}
       const tabs = $cb('cb-tabs'); if (!tabs) return;
       try { pintarHojasAA(); } catch (e) { }
       const _pc = cbPorConcluir(), _npc = _pc.grupos.length;
-      tabs.innerHTML = CB_TABS.map(([t, n]) => '<button type="button" onclick="cbTab(\'' + t + '\')" class="px-3 py-1.5 text-xs transition rounded-lg ' + (cbE.tab === t ? 'bg-slate-200 text-slate-900 font-semibold' : 'text-slate-600 hover:bg-slate-100 font-medium') + '">' + n + (t === 'concluir' && _npc ? ' (' + _npc + ')' : '') + '</button>').join('') + '<button type="button" onclick="pcIrAPedido(\'AA\', cbE.cliente, cbE.anio, cbE.visita, \'bancos\', \'cb-subida\')" class="ml-auto px-3 py-1.5 rounded-lg text-xs bg-slate-800 text-white hover:bg-slate-700 font-semibold" title="Sube conciliaciones o estados de cuenta: se agregan a lo que ya está cargado">⬆ Subir conciliaciones</button><button type="button" onclick="cbDescargar()" class="px-3 py-1.5 rounded-lg text-xs bg-slate-100 text-slate-800 hover:bg-slate-200 font-medium transition">Descargar todo (Excel)</button>';
+      tabs.innerHTML = CB_TABS.map(([t, n]) => '<button type="button" onclick="cbTab(\'' + t + '\')" class="px-3 py-1.5 text-xs transition rounded-lg ' + (cbE.tab === t ? 'bg-slate-200 text-slate-900 font-semibold' : 'text-slate-600 hover:bg-slate-100 font-medium') + '">' + n + (t === 'concluir' && _npc ? ' (' + _npc + ')' : '') + '</button>').join('') + '<button type="button" onclick="pcIrAPedido(\'AA\', cbE.cliente, cbE.anio, cbE.visita, \'bancos\', \'cb-subida\')" class="ml-auto px-3 py-1.5 rounded-lg text-xs bg-slate-800 text-white hover:bg-slate-700 font-semibold" title="Sube conciliaciones o estados de cuenta: se agregan a lo que ya está cargado">⬆ Subir conciliaciones</button><button type="button" onclick="cbDescargar()" class="px-1 py-1.5 text-xs font-bold bg-transparent border-0 hover:underline transition" style="color:#449964">⬇ Descargar todo (Excel)</button>';
       const p = $cb('cb-panel'), n = $cb('cb-notas');
       const nota = (tit, items) => '<div class="mb-2"><div class="font-bold text-slate-700">' + tit + '</div><ul class="list-disc pl-5">' + items.map(i => '<li>' + i + '</li>').join('') + '</ul></div>';
       if (cbE.tab === 'resumen') { p.innerHTML = cbHtmlResumen(); n.innerHTML = nota('Cómo se calcula', ['Saldo conciliado = saldo según estado de cuenta − cheques girados y no cobrados + depósitos en tránsito − notas de crédito no registradas + notas de débito no registradas ± otras partidas.', 'La diferencia es el saldo conciliado menos el saldo en libros; debe ser cero o estar dentro de la tolerancia.', 'En cheques, depósitos y notas, ingresa los valores en positivo; el signo lo aplica la herramienta. En "Otras" ingresa el valor con su signo.']); }
@@ -17835,7 +17835,7 @@ ${cont.innerHTML}
         c.innerHTML = m; return;
       }
       const R = kcCalcular(), dc = (v, hay) => !hay ? '<span class="text-slate-400">–</span>' : '<span class="' + (Math.abs(v) > 1 ? 'text-red-600' : 'text-emerald-700') + ' font-bold">' + F(v) + '</span>';
-      let h = info + '<div class="flex flex-wrap items-center gap-2 mb-2"><button type="button" onclick="kcDescargar()" class="ml-auto px-3 py-1.5 rounded-lg text-xs transition bg-slate-200 text-slate-900 hover:bg-slate-300 font-semibold">Descargar (Excel)</button></div>';
+      let h = info + '<div class="flex flex-wrap items-center gap-2 mb-2"><button type="button" onclick="kcDescargar()" class="ml-auto px-1 py-1.5 text-xs font-bold bg-transparent border-0 hover:underline transition" style="color:#449964">⬇ Descargar (Excel)</button></div>';
       h += '<div class="font-bold text-slate-800 mb-1 text-xs">A. Entradas por mes <span class="font-normal text-slate-500">(Diferencia = mayor − kárdex; clic en un mes para ver su detalle)</span></div><div class="overflow-x-auto border border-slate-200 rounded-xl"><table class="w-full text-[11px] border-collapse min-w-[640px]"><thead><tr><th class="' + TH + ' text-left">Mes</th><th class="' + TH + ' text-right">Entradas del mayor (pestaña i)</th><th class="' + TH + ' text-right">Entradas del kárdex</th><th class="' + TH + ' text-right">Diferencia</th><th class="' + TH + ' text-right">Liquidaciones de importación (informativo)</th></tr></thead><tbody>';
       R.filas.forEach(m => {
         const ab = kcE.abierto === m.ym;
@@ -17923,7 +17923,7 @@ ${cont.innerHTML}
       if (!cvE.cv.length) { c.innerHTML = info + '<div class="border border-slate-200 rounded-xl">' + pcHtmlAviso('AF', cvE.cliente, cvE.anio, cvE.visita, 'costo_ventas') + '</div>'; return; }
       const R = cvCalcular(), TH = 'px-2 py-2 text-[11px] font-bold text-slate-700 bg-slate-100 border-b border-slate-300', TD = 'px-2 py-1', F = formatoNumeroAnexo;
       const dc = (v, hay) => !hay ? '<span class="text-slate-400">–</span>' : '<span class="' + (Math.abs(v) > 1 ? 'text-red-600' : 'text-emerald-700') + ' font-bold">' + F(v) + '</span>';
-      let h = info + '<div class="flex flex-wrap items-center gap-2 mt-4 mb-2">' + (cvE.act && cvE.act.por === 'Claude' ? '<span class="pill-origen rev ic-claude">Procesado por Claude, sujeto a modificaciones en caso de existir</span>' : (cvE.act && cvE.act.por ? '<span class="text-[11px] text-slate-500">Actualizado por ' + escapeHtml(cvE.act.por) + '</span>' : '')) + '<button type="button" onclick="cvDescargar()" class="ml-auto px-3 py-1.5 rounded-lg text-xs bg-slate-100 text-slate-800 hover:bg-slate-200 font-medium transition">Descargar en Excel</button></div>';
+      let h = info + '<div class="flex flex-wrap items-center gap-2 mt-4 mb-2">' + (cvE.act && cvE.act.por === 'Claude' ? '<span class="pill-origen rev ic-claude">Procesado por Claude, sujeto a modificaciones en caso de existir</span>' : (cvE.act && cvE.act.por ? '<span class="text-[11px] text-slate-500">Actualizado por ' + escapeHtml(cvE.act.por) + '</span>' : '')) + '<button type="button" onclick="cvDescargar()" class="ml-auto px-1 py-1.5 text-xs font-bold bg-transparent border-0 hover:underline transition" style="color:#449964">⬇ Descargar en Excel</button></div>';
       h += '<div class="font-bold text-slate-800 mb-1 text-xs">A. Cuadro por mes <span class="font-normal text-slate-500">(Diferencia = salidas − costo; clic en un mes para ver sus asientos)</span></div><div class="overflow-x-auto border border-slate-200 rounded-xl"><table class="w-full text-[11px] border-collapse min-w-[560px]"><thead><tr><th class="' + TH + ' text-left">Mes</th><th class="' + TH + ' text-right">Salidas del inventario</th><th class="' + TH + ' text-right">Costo de ventas</th><th class="' + TH + ' text-right">Diferencia</th><th class="' + TH + ' text-right"># asientos</th></tr></thead><tbody>';
       R.filas.forEach(m => {
         const ab = cvE.abierto === m.ym;
@@ -18004,7 +18004,7 @@ ${cont.innerHTML}
       const lista = kxFiltrados(), pags = Math.max(1, Math.ceil(lista.length / KX_POR_PAG)); if (kxE.pag >= pags) kxE.pag = pags - 1;
       const vis = lista.slice(kxE.pag * KX_POR_PAG, (kxE.pag + 1) * KX_POR_PAG);
       const nDif = kxE.prod.filter(x => Math.abs(mvDif(x)) > 0.005).length;
-      let h = '<div class="flex flex-wrap items-center gap-2 mt-4 mb-2">' + (kxE.act && kxE.act.por === 'Claude' ? '<span class="pill-origen rev ic-claude">Procesado por Claude, sujeto a modificaciones en caso de existir</span>' : (kxE.act && kxE.act.por ? '<span class="text-[11px] text-slate-500">Actualizado por ' + escapeHtml(kxE.act.por) + '</span>' : '')) + '<span id="kx-msg" class="text-[11px] text-slate-500"></span><button type="button" onclick="kxDescargar()" class="ml-auto px-3 py-1.5 text-[11px] font-bold bg-white text-slate-700 border border-slate-400 rounded-lg hover:bg-slate-100">⬇ Descargar Excel</button></div>';
+      let h = '<div class="flex flex-wrap items-center gap-2 mt-4 mb-2">' + (kxE.act && kxE.act.por === 'Claude' ? '<span class="pill-origen rev ic-claude">Procesado por Claude, sujeto a modificaciones en caso de existir</span>' : (kxE.act && kxE.act.por ? '<span class="text-[11px] text-slate-500">Actualizado por ' + escapeHtml(kxE.act.por) + '</span>' : '')) + '<span id="kx-msg" class="text-[11px] text-slate-500"></span><button type="button" onclick="kxDescargar()" class="ml-auto px-1 py-1.5 text-xs font-bold bg-transparent border-0 hover:underline transition" style="color:#449964">⬇ Descargar Excel</button></div>';
       // Comparación con el movimiento del inventario según el mayor (pestaña i)
       const hayMov = kxE.mov.length > 0, movTot = k => r2f(kxE.mov.reduce((t, x) => t + (MV_MOV.includes(k) ? mvVal(x, k) : mvN(x[k])), 0));
       h += '<div class="border border-slate-200 rounded-xl overflow-hidden mb-3"><div class="px-3 py-2 bg-slate-50 text-[11px] font-bold text-slate-700">Kárdex contra el movimiento del inventario según el mayor (pestaña i)</div><table class="w-full text-[11px] border-collapse"><thead><tr><th class="' + TH + ' text-left">Concepto</th><th class="' + TH + ' text-right">Kárdex</th><th class="' + TH + ' text-right">Mayor contable (i)</th><th class="' + TH + ' text-right">Diferencia (kárdex − mayor)</th></tr></thead><tbody>';
