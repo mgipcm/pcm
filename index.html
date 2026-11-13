@@ -18608,9 +18608,9 @@ ${(im.aprendidos || []).length ? `<p class="text-xs text-slate-600 bg-slate-50 b
           <div class="overflow-x-auto"><table class="text-[11px] leading-tight border-collapse" style="min-width:34rem"><tbody>
           ${fila('Salidas de tránsito del Movimiento (créditos que no son reversión)', impR2(sal))}
           <tr class="border-b border-slate-100 cursor-pointer hover:bg-slate-50" onclick="impRevTog('D')"><td class="px-2 py-1.5"><span class="inline-block w-3">${RA.D ? '▾' : '▸'}</span> Menos: reversiones de salidas (débitos que anulan una liquidación) <span class="text-slate-400">· clic para ver las ${lstD.length} partidas</span></td><td class="px-2 py-1.5 text-right whitespace-nowrap">${impF(-impR2(revD))}</td></tr>${detRev(lstD, 'D')}
-          ${fila('Salidas netas de tránsito según el Movimiento (literal A)', mayorSal, false, true)}
-          ${fila('Costo total de las liquidaciones (pestaña 1) (literal B)', impR2(tL))}
-          <tr class="border-b border-slate-100"><td class="px-2 py-1.5 font-bold">Diferencia (literal B menos literal A: liquidaciones menos salidas netas)</td><td class="px-2 py-1.5 text-right font-bold whitespace-nowrap ${colD}">${impF(dTot)}</td></tr>
+          ${fila('Salidas netas de tránsito según el Movimiento', mayorSal, false, true)}
+          ${fila('Costo total de las liquidaciones de importación', impR2(tL))}
+          <tr class="border-b border-slate-100"><td class="px-2 py-1.5 font-bold">Diferencia</td><td class="px-2 py-1.5 text-right font-bold whitespace-nowrap ${colD}">${impF(dTot)}</td></tr>
           <tr><td colspan="2" class="px-2 pt-2 pb-1 text-slate-500 font-semibold">A qué se debe la diferencia</td></tr>
           ${fila('Liquidaciones sin ninguna salida ubicada en el mayor (' + sinSal.length + ' importaciones)', r1)}
           ${fila('Diferencias de valor en las importaciones ubicadas (liquidación menos salida)', r2)}
@@ -18620,11 +18620,11 @@ ${(im.aprendidos || []).length ? `<p class="text-xs text-slate-600 bg-slate-50 b
           <div class="text-[13px] font-semibold text-slate-800 pt-3">Conciliación con lo ubicado en las importaciones (total de la tabla por mes)</div>
           <p class="text-slate-500">Las salidas que cubren varias importaciones y no igualan la suma de sus liquidaciones se reparten en proporción al costo de cada una.</p>
           <div class="overflow-x-auto"><table class="text-[11px] leading-tight border-collapse" style="min-width:34rem"><tbody>
-          ${fila('Salidas ubicadas en las importaciones (total de la tabla por mes) (literal C)', impR2(tR))}
-          ${fila('Salidas netas de tránsito según el Movimiento (literal A)', mayorSal)}
-          <tr class="border-b border-slate-100"><td class="px-2 py-1.5 font-bold">Diferencia (literal C menos literal A: ubicadas menos Movimiento)</td><td class="px-2 py-1.5 text-right font-bold whitespace-nowrap ${Math.abs(r3) <= tol ? 'text-emerald-700' : 'text-red-600'}">${impF(impR2(impR2(tR) - mayorSal))}</td></tr>
-          ${fila('Costo total de las liquidaciones (pestaña 1) (literal B)', impR2(tL))}
-          <tr><td class="px-2 py-1.5 font-bold">Diferencia (literal B menos literal C: liquidaciones menos ubicadas)</td><td class="px-2 py-1.5 text-right font-bold whitespace-nowrap ${Math.abs(impR2(tL - tR)) <= tol ? 'text-emerald-700' : 'text-red-600'}">${impF(impR2(impR2(tL) - impR2(tR)))}</td></tr>
+          ${fila('Salidas ubicadas en las importaciones (total de la tabla por mes)', impR2(tR))}
+          ${fila('Salidas netas de tránsito según el Movimiento', mayorSal)}
+          <tr class="border-b border-slate-100"><td class="px-2 py-1.5 font-bold">Diferencia</td><td class="px-2 py-1.5 text-right font-bold whitespace-nowrap ${Math.abs(r3) <= tol ? 'text-emerald-700' : 'text-red-600'}">${impF(impR2(impR2(tR) - mayorSal))}</td></tr>
+          ${fila('Costo total de las liquidaciones de importación', impR2(tL))}
+          <tr><td class="px-2 py-1.5 font-bold">Diferencia</td><td class="px-2 py-1.5 text-right font-bold whitespace-nowrap ${Math.abs(impR2(tL - tR)) <= tol ? 'text-emerald-700' : 'text-red-600'}">${impF(impR2(impR2(tL) - impR2(tR)))}</td></tr>
           </tbody></table></div></div>`;
       } catch (e) { }
       h += `</tbody><tfoot class="bg-slate-50 font-semibold"><tr><td class="px-2 py-1 text-left">Total del año</td><td></td><td class="px-2 text-right">${impF(impR2(tL))}</td><td class="px-2 text-right">${impF(impR2(tR))}</td><td class="px-2 text-right">${impF(impR2(tL - tR))}</td><td></td></tr></tfoot></table></div></div>${ctl}`;
@@ -18986,7 +18986,7 @@ ${(im.aprendidos || []).length ? `<p class="text-xs text-slate-600 bg-slate-50 b
         return `<tr class="border-t border-slate-100 align-top"><td class="px-2 py-1 whitespace-nowrap">${impE(f.d)}</td><td class="px-2 py-1 whitespace-nowrap">${impE((f.tk + ' ' + f.num).trim())}</td><td class="px-2 py-1">${impE(f.det)}</td><td class="px-2 py-1 text-right whitespace-nowrap">${impF(f.salida)}</td><td class="px-2 py-1 text-right whitespace-nowrap">${impF(f.ent)}</td><td class="px-2 py-1 text-right whitespace-nowrap ${col(f.dif)}">${impF(f.dif)}</td><td class="px-2 py-1">${fue}</td></tr>`;
       }).join('')}<tr class="border-t-2 border-slate-300 bg-slate-50 font-bold"><td class="px-2 py-1" colspan="3">Total (${lista.length} asientos)</td><td class="px-2 py-1 text-right">${impF(impR2(lista.reduce((t, f) => t + f.salida, 0)))}</td><td class="px-2 py-1 text-right">${impF(impR2(lista.reduce((t, f) => t + f.ent, 0)))}</td><td class="px-2 py-1 text-right">${impF(impR2(lista.reduce((t, f) => t + f.dif, 0)))}</td><td></td></tr></tbody></table></div>`;
       h += `<div class="p-4 bg-white border border-slate-200 rounded-xl space-y-2"><div class="text-[13px] font-semibold text-slate-800">A. Salidas de importaciones en tránsito y lo que entró al inventario, por mes</div>
-        <p class="text-slate-500">Cuenta en tránsito: ${impE(T.tr.map(nm).join('; '))}. Cuentas de inventario: ${impE(T.inv.map(nm).join('; ') || 'no indicadas (se toman del pedido de Movimiento del inventario)')}. <b>Revisa que sean las correctas.</b> Sale de tránsito = créditos de la cuenta que no son reversión, menos las reversiones de salidas (débitos); es la misma regla del literal A de la pestaña 2. Entra al inventario = lo debitado en las cuentas de inventario en el mismo asiento. Haz clic en un mes para ver sus asientos.</p>
+        <p class="text-slate-500">Cuenta en tránsito: ${impE(T.tr.map(nm).join('; '))}. Cuentas de inventario: ${impE(T.inv.map(nm).join('; ') || 'no indicadas (se toman del pedido de Movimiento del inventario)')}. <b>Revisa que sean las correctas.</b> Sale de tránsito = créditos de la cuenta que no son reversión, menos las reversiones de salidas (débitos); es la misma regla de las salidas netas de la pestaña 2. Entra al inventario = lo debitado en las cuentas de inventario en el mismo asiento. Haz clic en un mes para ver sus asientos.</p>
         <div class="overflow-x-auto"><table class="w-full text-[11px] leading-tight border-collapse"><thead class="bg-slate-50 text-slate-600"><tr>${th('Mes', 'text-left')}${th('Asientos')}${th('Sale de tránsito')}${th('Entra al inventario')}${th('Diferencia')}</tr></thead><tbody>`;
       T.meses.forEach(o => {
         const ab = !!SA['m' + o.m], d = impR2(o.salida - o.ent);
