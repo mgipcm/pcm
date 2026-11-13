@@ -645,6 +645,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
           <h1 class="text-xl font-bold text-slate-800">Gestión de Usuarios / Auditores</h1>
           <p class="text-xs text-slate-500">Administra el personal auditor asignado a la firma</p>
         </div>
+        <button type="button" id="btn-comunicado" onclick="comAbrir()" style="display:none;color:#449964" class="px-1 py-1.5 text-xs font-bold bg-transparent border-0 hover:underline transition">✉ Enviar comunicado a los usuarios</button>
       </div>
 
       <form onsubmit="guardarNuevoUsuario(event)" class="bg-slate-50 p-4 rounded-xl border border-slate-200 grid grid-cols-1 md:grid-cols-5 gap-3">
@@ -7973,6 +7974,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       }
 
       listaUsuariosCache = usuarios || [];
+      { const bc = document.getElementById('btn-comunicado'); if (bc) bc.style.display = (typeof cargoUsuarioNorm === 'function' && cargoUsuarioNorm() === 'socio') ? '' : 'none'; }
       await cargarAccesosClientes();
       if (!usuarioSesionEmail && listaUsuariosCache.length > 0) {
         usuarioSesionEmail = listaUsuariosCache[0].email || '';
@@ -18014,6 +18016,84 @@ ${cont.innerHTML}
       try { await arrXlsxConFormato(hojas, cli, 'Kardex_entradas_vs_Compras_' + String(cli).replace(/[^A-Za-z0-9]+/g, '_').slice(0, 30) + '_' + kcE.anio + '.xlsx'); } catch (e) { alert('No se pudo armar el Excel: ' + (e.message || e)); }
     }
 
+
+
+    // ===== Comunicados por correo a los usuarios (solo el Socio; función enviar-comunicado en Supabase) =====
+    function comBorrador() {
+      const yo = (typeof nombreUsuarioActivo === 'function' && nombreUsuarioActivo()) || '';
+      return {
+        asunto: 'PCM Inteligente: ya está disponible la prueba de Inventarios',
+        mensaje: [
+          'Ya está disponible en PCM Inteligente la prueba de **Inventarios**. Les cuento qué se sube, qué hace y qué más tiene la aplicación.',
+          '',
+          '## Qué se sube (un solo pedido, en «Ingreso de información»)',
+          '- Mayor contable completo.',
+          '- Balance de comprobación.',
+          '- Kárdex del cliente.',
+          '- Liquidaciones de importación (PDF o Excel), si el cliente importa; con la declaración aduanera y las facturas del proveedor, si las tienen.',
+          '- Códigos de las cuentas de inventario, de importaciones en tránsito y de costo de ventas.',
+          '',
+          'El pedido lo autoriza el Socio o el Supervisor y Claude lo procesa en su siguiente revisión (se hace cada hora). No hace falta subir nada más en las otras pestañas.',
+          '',
+          '## Qué hace',
+          '- **Movimiento del inventario:** arma el movimiento de cada cuenta, del saldo inicial al final, junto con el de importaciones en tránsito y el del kárdex.',
+          '- **Importaciones:** lee las liquidaciones, las cruza con el mayor y explica las diferencias.',
+          '- **Costo de ventas:** compara las salidas del inventario con el costo de ventas del mayor, mes a mes.',
+          '- **Kárdex:** compara sus entradas contra las compras y sus salidas contra el costo de ventas, y analiza cada diferencia.',
+          '',
+          '## Cómo leerlo',
+          '- Todo sale con el sello «Procesado por Claude, sujeto a modificaciones en caso de existir»: el auditor revisa, modifica o ratifica.',
+          '- Si cambian los archivos, se usa «Pedir de nuevo a Claude». Para recalcular con lo ya leído, «↻ Recalcular».',
+          '- Al abrir la aplicación, presionar Ctrl+F5.',
+          '',
+          '## Esta herramienta se suma a las que ya tiene PCM Inteligente',
+          '- **Planificación:** cuestionarios de evaluación, visitas (calendario) y asignación de cuentas.',
+          '- **Análisis claves:** sumarias; To/Do, Quick Lett y Opinión; pedidos a Claude y pedidos y aprobaciones.',
+          '- **Cuentas:** efectivo y equivalentes de efectivo (bancos con resumen de conciliaciones y equivalentes), inversiones corrientes, activos por derecho de uso y pasivos por arrendamiento (NIIF 16) e inventarios (la nueva).',
+          '- **Herramientas de auditoría:** índices financieros, análisis de mayor contable, resumen de contratos, flujo de efectivo, matriz de transición (PCE) y resumen de reuniones.',
+          '',
+          'Cualquier duda o error que vean, avísenme.',
+          '',
+          'Saludos,',
+          yo
+        ].join('\n')
+      };
+    }
+    function comAbrir() {
+      if (cargoUsuarioNorm() !== 'socio') { alert('Solo el Socio puede enviar comunicados.'); return; }
+      const b = comBorrador(), us = (listaUsuariosCache || []).filter(u => u.email);
+      const ov = document.createElement('div'); ov.id = 'com-overlay';
+      ov.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
+      ov.innerHTML = '<div class="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[92vh] overflow-auto p-5 space-y-3 text-xs text-slate-700">' +
+        '<div class="flex items-center justify-between"><div class="text-sm font-bold text-slate-800">Enviar comunicado por correo</div><button type="button" onclick="comCerrar()" class="text-slate-500 hover:text-slate-800 text-base" title="Cerrar">✕</button></div>' +
+        '<p class="text-slate-500">Edita el texto como quieras. Formato sencillo: «## Título» para un subtítulo, «- » para una viñeta y **negrita** con dos asteriscos. Cada persona recibe el correo con su nombre. Se envía desde info@mgipcm.com y las respuestas llegan a tu correo.</p>' +
+        '<label class="block font-bold text-slate-600">Asunto<input id="com-asunto" type="text" class="mt-1 w-full p-2 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 font-normal" value="' + escapeHtml(b.asunto) + '"></label>' +
+        '<label class="block font-bold text-slate-600">Mensaje<textarea id="com-mensaje" rows="18" class="mt-1 w-full p-2 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 font-normal" style="font-family:inherit">' + escapeHtml(b.mensaje) + '</textarea></label>' +
+        '<div><div class="font-bold text-slate-600 mb-1">Destinatarios</div><div class="grid sm:grid-cols-2 gap-1">' + us.map(u => '<label class="flex items-center gap-2"><input type="checkbox" class="com-dest" value="' + escapeHtml(String(u.email).toLowerCase()) + '" checked> <span>' + escapeHtml(u.nombre || u.email) + ' <span class="text-slate-400">· ' + escapeHtml(u.cargo || '') + '</span></span></label>').join('') + '</div></div>' +
+        '<div id="com-msg" class="min-h-[1rem] text-[11px] text-slate-500"></div>' +
+        '<div class="flex flex-wrap items-center justify-end gap-3"><button type="button" onclick="comEnviar(true)" class="px-1 py-1.5 text-xs font-bold bg-transparent border-0 hover:underline transition" style="color:#449964">Enviarme una prueba</button><button type="button" onclick="comEnviar(false)" class="px-3 py-1.5 rounded-lg text-xs font-bold text-white" style="background:#449964">Enviar a los seleccionados</button></div></div>';
+      document.body.appendChild(ov);
+    }
+    function comCerrar() { const o = document.getElementById('com-overlay'); if (o) o.remove(); }
+    async function comEnviar(prueba) {
+      const msg = document.getElementById('com-msg'), asunto = document.getElementById('com-asunto').value.trim(), mensaje = document.getElementById('com-mensaje').value.trim();
+      const dest = [...document.querySelectorAll('.com-dest:checked')].map(c => c.value);
+      const err = t => { msg.textContent = t; msg.className = 'min-h-[1rem] text-[11px] text-red-600 font-bold'; };
+      if (!asunto) return err('Escribe el asunto.');
+      if (!mensaje) return err('Escribe el mensaje.');
+      if (!prueba && !dest.length) return err('Elige al menos un destinatario.');
+      if (!await confirmarApp(prueba ? 'Se enviará una prueba solo a tu correo. ¿Continuar?' : 'Se enviará el comunicado a ' + dest.length + ' persona(s). No se puede deshacer. ¿Continuar?')) return;
+      msg.textContent = 'Enviando…'; msg.className = 'min-h-[1rem] text-[11px] text-slate-500';
+      try {
+        const { data, error } = await supabaseClient.functions.invoke('enviar-comunicado', { body: { asunto, mensaje, destinatarios: dest, prueba: !!prueba } });
+        if (error) { let det = ''; try { const j = error.context && await error.context.json(); det = (j && j.error) || ''; } catch (e) { } throw new Error(det || error.message || 'sin conexión'); }
+        if (data && data.error) throw new Error(data.error);
+        const n = data && data.enviados ? data.enviados.length : 0, f = data && data.fallidos ? data.fallidos : [];
+        if (f.length) { err('Se envió a ' + n + ' persona(s); falló con: ' + f.map(x => x.email + ' (' + x.error + ')').join('; ')); return; }
+        msg.textContent = (prueba ? 'Prueba enviada a tu correo.' : 'Comunicado enviado a ' + n + ' persona(s).'); msg.className = 'min-h-[1rem] text-[11px] text-emerald-700 font-bold';
+        if (!prueba) { try { registrarActividad('Envió comunicado por correo', asunto + ' · ' + n + ' destinatario(s)', {}); } catch (e) { } }
+      } catch (e) { err('No se pudo enviar: ' + (e.message || e)); }
+    }
 
     // ===== AF Inventarios › Inventario para la venta › vi) Kárdex (salidas) → Costo de ventas =====
     const ksE = { abierto: '', abiertoC: '', cargaId: 0, cliente: '', anio: '', visita: '', cargado: false, kar: [], cv: [], actK: null, actC: null, error: '' };
