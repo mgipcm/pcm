@@ -17792,6 +17792,29 @@ ${cont.innerHTML}
 
     // ===== AF Inventarios: hojas (Inventario para la venta, Materia prima, Producción en proceso, Importaciones) =====
     const IV_HOJAS = [['venta', 'Inventario para la venta'], ['materia', 'Materia prima'], ['proceso', 'Producción en proceso'], ['import', 'Importaciones']];
+    // Flechas de desplegar: la flecha de lo que está abierto (▾) se pinta de otro color para distinguirla de la de lo cerrado (▸)
+    (function () {
+      const CLS = 'flecha-abierta', ABIERTA = /[▾▴]/;
+      const iniciar = () => {
+        const st = document.createElement('style'); st.textContent = '.' + CLS + '{color:#d97706 !important}'; document.head.appendChild(st);
+        let pend = false;
+        const pintar = () => {
+          pend = false;
+          const w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, { acceptNode: n => ABIERTA.test(n.nodeValue) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT });
+          const lista = []; while (w.nextNode()) lista.push(w.currentNode);
+          lista.forEach(n => {
+            const pa = n.parentElement; if (!pa || pa.closest('.' + CLS + ',.transition-transform,script,style,textarea,option,select')) return;
+            const v = n.nodeValue, i = v.search(ABIERTA); if (v.slice(0, i).trim() !== '') return;
+            const sp = document.createElement('span'); sp.className = CLS; sp.textContent = v.charAt(i);
+            const fr = document.createDocumentFragment(); if (i > 0) fr.appendChild(document.createTextNode(v.slice(0, i))); fr.appendChild(sp); if (v.length > i + 1) fr.appendChild(document.createTextNode(v.slice(i + 1)));
+            n.parentNode.replaceChild(fr, n);
+          });
+        };
+        new MutationObserver(() => { if (!pend) { pend = true; requestAnimationFrame(pintar); } }).observe(document.body, { childList: true, subtree: true, characterData: true });
+        pintar();
+      };
+      if (document.body) iniciar(); else document.addEventListener('DOMContentLoaded', iniciar);
+    })();
     const IV_VENTA_BOTONES = [['mov', 'i) Movimiento del inventario, importaciones en tránsito y kárdex'], ['impcompras', 'ii) Compras/Liquidaciones de importación → Entradas (mayor contable)'], ['salidas', 'iii) Costo de ventas → Salidas (mayor contable)'], ['kcompras', 'iv) Kárdex (entradas) → Compras/Liquidaciones de importación'], ['ksalidas', 'v) Kárdex (salidas) → Costo de ventas']];
     const ivE = { hoja: 'venta', btn: 'mov' };
     function ivPintarHojas() {
@@ -18055,7 +18078,7 @@ ${cont.innerHTML}
             if (MV_MOV.includes(k) && mvTienePartidas(x)) {
               const n = mvPartidasIdx(x, k).length, v = mvVal(x, k), abierto = mvE.ver && mvE.ver.i === i && mvE.ver.k === k;
               if (!n) return '<td class="px-2 py-1 text-right text-slate-500">' + formatoNumeroAnexo(v) + '</td>';
-              return '<td class="px-1 py-1"><button type="button" onclick="mvVer(' + i + ', \'' + k + '\')" class="w-full text-right p-1 rounded font-bold ' + (abierto ? 'bg-indigo-100 text-indigo-900' : 'text-indigo-700 hover:bg-indigo-50') + '" style="text-decoration:underline dotted" title="Clic para ver las partidas del mayor de esta cifra">' + (abierto ? '▴ ' : '▾ ') + formatoNumeroAnexo(v) + '</button></td>';
+              return '<td class="px-1 py-1"><button type="button" onclick="mvVer(' + i + ', \'' + k + '\')" class="w-full text-right p-1 rounded font-bold ' + (abierto ? 'bg-indigo-100 text-indigo-900' : 'text-indigo-700 hover:bg-indigo-50') + '" style="text-decoration:underline dotted" title="Clic para ver las partidas del mayor de esta cifra">' + (abierto ? '▾ ' : '▸ ') + formatoNumeroAnexo(v) + '</button></td>';
             }
             return '<td class="px-1 py-1"><input type="text" inputmode="decimal" value="' + escapeHtml(x[k] === undefined || x[k] === null || x[k] === '' ? '' : formatoNumeroAnexo(mvN(x[k]))) + '" onchange="mvNum(' + i + ', \'' + k + '\', this)" class="' + IN + '"></td>';
           }).join('') +
@@ -18131,7 +18154,7 @@ ${cont.innerHTML}
           if (MV_TR_MOV.includes(k)) {
             const n = x.partidas.filter(p => p.col === k).length, v = x[k], ab = mvE.verTr === k;
             if (!n) return '<td class="px-2 py-1 text-right text-slate-500">' + formatoNumeroAnexo(v) + '</td>';
-            return '<td class="px-1 py-1"><button type="button" onclick="mvVerTr(\'' + k + '\')" class="w-full text-right p-1 rounded font-bold ' + (ab ? 'bg-indigo-100 text-indigo-900' : 'text-indigo-700 hover:bg-indigo-50') + '" style="text-decoration:underline dotted" title="Clic para ver las partidas del mayor de esta cifra">' + (ab ? '▴ ' : '▾ ') + formatoNumeroAnexo(v) + '</button></td>';
+            return '<td class="px-1 py-1"><button type="button" onclick="mvVerTr(\'' + k + '\')" class="w-full text-right p-1 rounded font-bold ' + (ab ? 'bg-indigo-100 text-indigo-900' : 'text-indigo-700 hover:bg-indigo-50') + '" style="text-decoration:underline dotted" title="Clic para ver las partidas del mayor de esta cifra">' + (ab ? '▾ ' : '▸ ') + formatoNumeroAnexo(v) + '</button></td>';
           }
           return '<td class="px-2 py-1 text-right">' + formatoNumeroAnexo(x[k]) + '</td>';
         }).join('') + '<td class="px-2 py-1 text-right">' + (hayLib ? formatoNumeroAnexo(x.saldo_libros) : '<span class="text-slate-400">Sin balance</span>') + '</td><td class="px-2 py-1 text-right font-bold">' + celdaDif + '</td></tr>';
@@ -18167,7 +18190,7 @@ ${cont.innerHTML}
       h += '<div class="overflow-x-auto border border-slate-200 rounded-xl mt-2"><table class="w-full text-[11px] leading-tight border-collapse min-w-[900px]"><thead><tr><th class="' + TH + ' text-left"></th>' + MV_KAR_COLS.map(([k, n]) => '<th class="' + TH + ' text-right">' + n + '</th>').join('') + '</tr></thead><tbody>';
       h += '<tr class="border-b border-slate-100"><td class="px-2 py-1 font-semibold">Kárdex (' + P.length + ' productos)</td>' + MV_KAR_COLS.map(([k]) => {
         const ab = mvE.verKar === k;
-        return '<td class="px-1 py-1"><button type="button" onclick="mvVerKar(\'' + k + '\')" class="w-full text-right p-1 rounded font-bold ' + (ab ? 'bg-indigo-100 text-indigo-900' : 'text-indigo-700 hover:bg-indigo-50') + '" style="text-decoration:underline dotted" title="Clic para ver esta cifra por producto">' + (ab ? '▴ ' : '▾ ') + fm(K[k]) + '</button></td>';
+        return '<td class="px-1 py-1"><button type="button" onclick="mvVerKar(\'' + k + '\')" class="w-full text-right p-1 rounded font-bold ' + (ab ? 'bg-indigo-100 text-indigo-900' : 'text-indigo-700 hover:bg-indigo-50') + '" style="text-decoration:underline dotted" title="Clic para ver esta cifra por producto">' + (ab ? '▾ ' : '▸ ') + fm(K[k]) + '</button></td>';
       }).join('') + '</tr>';
       if (mvE.verKar) {
         const k = mvE.verKar, nomK = (MV_KAR_COLS.find(c => c[0] === k) || [k, k])[1], esMov = MV_KAR_MOV.includes(k);
