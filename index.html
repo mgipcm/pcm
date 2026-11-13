@@ -18644,11 +18644,11 @@ ${(im.aprendidos || []).length ? `<p class="text-xs text-slate-600 bg-slate-50 b
           <div class="text-[13px] font-semibold text-slate-800 pt-3">Conciliación con lo ubicado en las importaciones (total de la tabla por mes)</div>
           <p class="text-slate-500">Las salidas que cubren varias importaciones y no igualan la suma de sus liquidaciones se reparten en proporción al costo de cada una.</p>
           <div class="overflow-x-auto"><table class="text-[11px] leading-tight border-collapse" style="min-width:34rem"><tbody>
-          ${fila('Salidas ubicadas en las importaciones (total de la tabla por mes)', impR2(tR))}
-          ${fila('Salidas netas de tránsito según el Movimiento', mayorSal)}
-          <tr class="border-b border-slate-100"><td class="px-2 py-1.5 font-bold">Diferencia (ubicadas menos Movimiento)</td><td class="px-2 py-1.5 text-right font-bold whitespace-nowrap ${Math.abs(r3) <= tol ? 'text-emerald-700' : 'text-red-600'}">${impF(impR2(impR2(tR) - mayorSal))}</td></tr>
-          ${fila('Costo total de las liquidaciones (hoja 1)', impR2(tL))}
-          <tr><td class="px-2 py-1.5 font-bold">Diferencia (liquidaciones menos ubicadas)</td><td class="px-2 py-1.5 text-right font-bold whitespace-nowrap ${Math.abs(impR2(tL - tR)) <= tol ? 'text-emerald-700' : 'text-red-600'}">${impF(impR2(impR2(tL) - impR2(tR)))}</td></tr>
+          ${fila('Salidas ubicadas en las importaciones (total de la tabla por mes) (Literal C)', impR2(tR))}
+          ${fila('Salidas netas de tránsito según el Movimiento (Literal A)', mayorSal)}
+          <tr class="border-b border-slate-100"><td class="px-2 py-1.5 font-bold">Diferencia (Literal C menos Literal A: ubicadas menos Movimiento)</td><td class="px-2 py-1.5 text-right font-bold whitespace-nowrap ${Math.abs(r3) <= tol ? 'text-emerald-700' : 'text-red-600'}">${impF(impR2(impR2(tR) - mayorSal))}</td></tr>
+          ${fila('Costo total de las liquidaciones (hoja 1) (Literal B)', impR2(tL))}
+          <tr><td class="px-2 py-1.5 font-bold">Diferencia (Literal B menos Literal C: liquidaciones menos ubicadas)</td><td class="px-2 py-1.5 text-right font-bold whitespace-nowrap ${Math.abs(impR2(tL - tR)) <= tol ? 'text-emerald-700' : 'text-red-600'}">${impF(impR2(impR2(tL) - impR2(tR)))}</td></tr>
           </tbody></table></div></div>`;
       } catch (e) { }
       h += `</tbody><tfoot class="bg-slate-50 font-semibold"><tr><td class="px-2 py-1 text-left">Total del año</td><td></td><td class="px-2 text-right">${impF(impR2(tL))}</td><td class="px-2 text-right">${impF(impR2(tR))}</td><td class="px-2 text-right">${impF(impR2(tL - tR))}</td><td></td></tr></tfoot></table></div></div>${ctl}`;
