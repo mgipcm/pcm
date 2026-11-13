@@ -17212,10 +17212,11 @@ ${cont.innerHTML}
       const R = {}, compartidas = [], posteriores = [];
       imports.forEach(im => {
         const c = {}; IMP_CONCEPTOS.forEach(k => { c[k.k] = { liq: 0, mayor: 0, via: 0, viaHab: 0, comp: 0, asientos: new Set(), fechas: new Set(), cuentas: new Set(), post: 0 }; });
-        R[im.id] = { c, lin: 0, pm: {} };
+        R[im.id] = { c, lin: 0, pm: {}, revs: [] };
       });
       const conceptoPorRol = {}; IMP_CONCEPTOS.forEach(k => { if (k.rol) conceptoPorRol[k.rol] = k.k; });
       const LN = impAmpliarLineas(cruce, imports, cfg);
+      const asPorNum = {}; (cruce.asientos || []).forEach(a => { if (a.num) asPorNum[String(a.num)] = a; });
       const liqTot = {}; imports.forEach(im => { liqTot[im.id] = impR2(impValoresLiq(im).total || 0); });
       LN.forEach(l => {
         const net0 = (Number(l.deb) || 0) - (Number(l.hab) || 0);
@@ -17223,8 +17224,14 @@ ${cont.innerHTML}
         for (const [r] of IMP_ROLES) if (roles[r].length && impCtaEn(l.cod, roles[r])) { rol = r; break; }
         if (!rol) return;
         // Importaciones en tránsito: se compara solo la salida (crédito); un débito cuenta únicamente si es la reversión de una salida
-        const esRev = /^reversi/i.test(l.met || '') || /revers|anula/i.test(String(l.det || ''));
-        const net = rol === 'inventario' ? (Number(l.hab) || 0) - (esRev ? (Number(l.deb) || 0) : 0) : net0;
+        const esRev = /^reversi/i.test(l.met || '') || /revers|anula|nota de cr[eé]dito/i.test(String(l.det || ''));
+        // Importaciones en tránsito: solo cuenta como salida el crédito que no es reversión. Una reversión en crédito cancela un débito anterior (se explica aparte); una reversión en débito cancela una salida y la resta.
+        const net = rol === 'inventario' ? (esRev ? -(Number(l.deb) || 0) : (Number(l.hab) || 0)) : net0;
+        if (rol === 'inventario' && esRev && (Number(l.hab) || 0) > 0) {
+          const mo = /asiento\s+(\d+)/i.exec(String(l.det || '')), orig = mo ? asPorNum[mo[1]] : null;
+          const dOrig = orig ? (orig.l || []).filter(x => impCtaEn(String(x[0]), roles.inventario) && (Number(x[2]) || 0) > 0).reduce((t, x) => t + (Number(x[2]) || 0), 0) : 0;
+          (l.ids || []).filter(id => R[id]).forEach(id => R[id].revs.push({ m: String(l.d || '').slice(0, 7), v: impR2(Number(l.hab) || 0), asiento: mo ? mo[1] : '', fechaOrig: orig ? orig.d : '', debOrig: impR2(dOrig), hallado: !!orig }));
+        }
         const ids = (l.ids || []).filter(id => R[id]);
         if (!ids.length) return;
         const multi = (l.ids || []).length > 1;
@@ -17271,7 +17278,7 @@ ${cont.innerHTML}
             if (est === 'Sin registro' && !x.post && !x.via && !x.comp) com.push(im.fecha && corte && im.fecha > corte ? 'La importación es posterior al corte.' : 'No se identificó en el mayor.');
           } else if (est === 'Cuadra' && x.viaHab > tol && k.soloAnticipo) com.push(`El anticipo tiene créditos por ${x.viaHab}.`);
           const fechas = [...x.fechas].sort();
-          filas.push({ pm: k.k === 'costo' ? R[im.id].pm : null, id: im.id, k: k.k, concepto: k.t, liq: x.liq, mayor: k.soloAnticipo ? 0 : impR2(x.mayor + x.comp), total, via: x.via, viaHab: x.viaHab, comp: x.comp, post: x.post, dif, estado: est, comentario: com.join(' '), cuentas: [...x.cuentas].join(', '), asientos: [...x.asientos].map(a => a.replace('|', ' ')).join('; '), fechas: fechas.length ? (fechas[0] === fechas[fechas.length - 1] ? fechas[0] : fechas[0] + ' a ' + fechas[fechas.length - 1]) : '' });
+          filas.push({ pm: k.k === 'costo' ? R[im.id].pm : null, revs: k.k === 'costo' ? R[im.id].revs : null, id: im.id, k: k.k, concepto: k.t, liq: x.liq, mayor: k.soloAnticipo ? 0 : impR2(x.mayor + x.comp), total, via: x.via, viaHab: x.viaHab, comp: x.comp, post: x.post, dif, estado: est, comentario: com.join(' '), cuentas: [...x.cuentas].join(', '), asientos: [...x.asientos].map(a => a.replace('|', ' ')).join('; '), fechas: fechas.length ? (fechas[0] === fechas[fechas.length - 1] ? fechas[0] : fechas[0] + ' a ' + fechas[fechas.length - 1]) : '' });
         });
       });
       imports.forEach(im => {
@@ -18570,7 +18577,7 @@ ${(im.aprendidos || []).length ? `<p class="text-xs text-slate-600 bg-slate-50 b
         const ok = Math.abs(d) <= tol, ab = !!A[m];
         h += `<tr class="border-b border-slate-100 cursor-pointer hover:bg-slate-50" onclick="impMesTog('${m}')"><td class="px-2 py-1 text-left font-semibold"><span class="inline-block w-3">${ab ? '▾' : '▸'}</span> ${impE(nm(m))}</td><td class="px-2 text-right">${ims.length}</td><td class="px-2 text-right">${impF(L)}</td><td class="px-2 text-right">${impF(R)}</td><td class="px-2 text-right ${ok ? '' : 'text-red-600 font-semibold'}">${impF(d)}</td><td class="px-2 text-center font-bold ${ok ? 'text-emerald-700' : 'text-red-600'}">${ok ? 'Cuadra' : 'Revisar'}</td></tr>`;
         if (ab) {
-          const filas = imports.filter(im => mesLiq[im.id] === m || ((reg[im.id] || {})[m] || 0) !== 0);
+          const filas = imports.filter(im => mesLiq[im.id] === m || ((reg[im.id] || {})[m] || 0) !== 0 || ((((cl.filas.find(x => x.id === im.id && x.k === 'costo') || {}).revs) || []).some(x => x.m === m)));
           h += `<tr><td colspan="6" class="px-4 py-2 bg-slate-50"><table class="w-full text-[11px] leading-tight border-collapse"><thead class="text-slate-600"><tr>${th('Importación', 'text-left')}${th('Fecha liquidación', 'text-left')}${th('Costo total liquidación')}${th('Registrado en este mes')}${th('Dif.')}${th('Observación', 'text-left')}</tr></thead><tbody>`;
           filas.forEach(im => {
             const esL = mesLiq[im.id] === m, rr = ((reg[im.id] || {})[m]) || 0, lq = esL ? liq[im.id] : 0, dd = impR2(lq - rr), otros = Object.keys(reg[im.id] || {}).filter(x => x !== m && Math.abs(reg[im.id][x]) > tol);
@@ -18578,6 +18585,8 @@ ${(im.aprendidos || []).length ? `<p class="text-xs text-slate-600 bg-slate-50 b
             if (esL && otros.length) obs = 'Liquidada en ' + nm(m) + ' y registrada también en ' + otros.map(x => nm(x) + ' (' + impF(reg[im.id][x]) + ')').join(', ') + '.';
             else if (!esL) obs = 'Liquidación de ' + nm(mesLiq[im.id]) + ' registrada en ' + nm(m) + '.';
             else if (esL && Math.abs(rr) <= tol && lq) obs = 'Liquidada en este mes y sin registro en el mayor.';
+            const rv = (((cl.filas.find(x => x.id === im.id && x.k === 'costo') || {}).revs) || []).filter(x => x.m === m);
+            if (rv.length) obs += (obs ? ' ' : '') + 'No se cuenta como salida: ' + rv.map(x => 'reversión de ' + impF(x.v) + (x.asiento ? ' del asiento ' + x.asiento : '') + (x.hallado ? ' (débito original del ' + x.fechaOrig + ' por ' + impF(x.debOrig) + ')' : ' (el asiento original no está en la lectura)')).join('; ') + '.';
             h += `<tr class="border-b border-slate-100"><td class="px-2 py-0.5 text-left font-semibold">${impE(im.id)}</td><td class="px-2 text-left">${impE(im.fecha || '')}</td><td class="px-2 text-right">${esL ? impF(lq) : ''}</td><td class="px-2 text-right">${impF(rr)}</td><td class="px-2 text-right ${Math.abs(dd) > tol ? 'text-red-600 font-semibold' : ''}">${impF(dd)}</td><td class="px-2 text-left ${!esL || otros.length ? 'text-red-600' : ''}">${impE(obs)}</td></tr>`;
           });
           h += '</tbody></table></td></tr>';
@@ -18587,7 +18596,7 @@ ${(im.aprendidos || []).length ? `<p class="text-xs text-slate-600 bg-slate-50 b
       let ctl = '';
       try {
         const trc = impListaCtas((cfg.roles || {}).inventario); let sal = 0, rev = 0;
-        ((C && C.asientos) || []).forEach(a => (a.l || []).forEach(l => { if (!trc.length || !impCtaEn(String(l[0]), trc)) return; if (corteOk(a.d)) { const d = Number(l[2]) || 0, hh = Number(l[3]) || 0; if (hh > 0) sal += hh; else if (d > 0 && /revers|anula/i.test(String(l[4] || ''))) rev += d; } }));
+        ((C && C.asientos) || []).forEach(a => (a.l || []).forEach(l => { if (!trc.length || !impCtaEn(String(l[0]), trc)) return; if (corteOk(a.d)) { const d = Number(l[2]) || 0, hh = Number(l[3]) || 0; const esR = /revers|anula|nota de cr[eé]dito/i.test(String(l[4] || '')); if (hh > 0 && !esR) sal += hh; else if (d > 0 && esR) rev += d; } }));
         const mayorSal = impR2(sal - rev), difSin = impR2(mayorSal - tR);
         ctl = `<p class="mt-2 text-[11px] ${Math.abs(difSin) <= tol ? 'text-emerald-700' : 'text-amber-700'}"><b>Control:</b> salidas de tránsito según el mayor (créditos menos reversiones) ${impF(mayorSal)}; ubicadas en una importación ${impF(impR2(tR))}; ${difSin >= 0 ? 'sin ubicar en ninguna importación' : 'de más contra el mayor (revisar pagos que agrupan varias importaciones)'} ${impF(Math.abs(difSin))}.</p>`;
       } catch (e) { }
