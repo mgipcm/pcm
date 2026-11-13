@@ -18178,35 +18178,81 @@ ${cont.innerHTML}
       if (JSON.stringify(antes) !== JSON.stringify(p)) { vcE.ped = p; vcPintar(); } else vcE.ped = p;
       if (p && p.estado !== 'hecho') vcE.tPed = setTimeout(vcCargarPedido, 15000);
     }
+    // Documentos sueltos: se suben primero y Claude los asigna a las partidas de la muestra
+    function vcSueltos() { return Array.isArray(vcE.cfg.sueltos) ? vcE.cfg.sueltos : (vcE.cfg.sueltos = []); }
+    async function vcSubirSueltos(input) {
+      const archivos = [...(input.files || [])]; if (!archivos.length) return;
+      const m = document.getElementById('vc-msg'), limpio = t => String(t).normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^A-Za-z0-9._-]+/g, '_');
+      for (const a of archivos) {
+        if (a.size > 52428800) { alert('"' + a.name + '" pesa más de 50 MB. Sube una versión más liviana.'); continue; }
+        if (m) { m.textContent = 'Subiendo ' + a.name + '…'; m.style.color = '#64748b'; }
+        const id = 'S' + Date.now().toString(36).slice(-5) + Math.random().toString(36).slice(2, 4);
+        const ruta = vcE.cliente + '/' + vcE.anio + '_' + vcE.visita + '/sueltos/' + id + '_' + limpio(a.name);
+        const { error } = await supabaseClient.storage.from('voucheo').upload(ruta, a, { contentType: a.type || 'application/octet-stream' });
+        if (error) { alert('No se pudo subir "' + a.name + '": ' + (error.message || error)); continue; }
+        vcSueltos().push({ id, nombre: a.name, ruta, tamano: a.size, tipo: a.type || '', por: nombreUsuarioActivo() || '', en: new Date().toISOString() });
+      }
+      input.value = ''; vcGuardar(); vcPintar();
+    }
+    async function vcVerSuelto(i) {
+      const d = vcSueltos()[i]; if (!d) return;
+      const { data, error } = await supabaseClient.storage.from('voucheo').createSignedUrl(d.ruta, 120, { download: d.nombre });
+      if (error || !data) { alert('No se pudo abrir el documento: ' + ((error && error.message) || 'sin acceso')); return; }
+      window.open(data.signedUrl, '_blank');
+    }
+    async function vcBorrarSuelto(i) {
+      const d = vcSueltos()[i]; if (!d) return;
+      if (!await confirmarApp('¿Borrar el documento "' + d.nombre + '"? No se puede deshacer.')) return;
+      try { await supabaseClient.storage.from('voucheo').remove([d.ruta]); } catch (e) { }
+      vcSueltos().splice(i, 1); vcGuardar(); vcPintar();
+    }
+    function vcAsignarSuelto(i, idFila) {
+      const d = vcSueltos()[i], f = vcE.filas.find(x => x.id === idFila); if (!d || !f) return;
+      f.docs = f.docs || []; f.docs.push({ nombre: d.nombre, ruta: d.ruta, tamano: d.tamano, tipo: d.tipo, por: d.por, en: d.en, pedido: d.pedido || '' });
+      vcSueltos().splice(i, 1); vcE.docAbierto = f.id; vcGuardar(); vcPintar();
+    }
+    function vcHtmlSueltos() {
+      const e = escapeHtml, sl = vcSueltos(), F = formatoNumeroAnexo;
+      if (!sl.length) return '';
+      const opts = '<option value="">Asignar a una partida…</option>' + vcE.filas.map(f => '<option value="' + e(f.id) + '">' + e(mvFechaCorta(f.fecha) + ' · ' + (f.ref || 'sin ref.') + ' · ' + F(f.valor)) + '</option>').join('');
+      return '<ul class="space-y-1 mt-1">' + sl.map((d, i) => {
+        const r = vcE.claude && vcE.claude._sueltos && vcE.claude._sueltos[d.id], fa = r && r.partida ? vcE.filas.find(f => f.k === r.partida) : null;
+        const est = r ? (fa ? '<span style="color:#c2410c">Claude lo asignó a la partida ' + e(mvFechaCorta(fa.fecha) + ' · ' + (fa.ref || '') + ' · ' + F(fa.valor)) + (r.motivo ? ' (' + e(r.motivo) + ')' : '') + '</span>' : '<span style="color:#c2410c">Claude no encontró a qué partida pertenece' + (r.motivo ? ': ' + e(r.motivo) : '') + '</span>') : '';
+        return '<li class="flex flex-wrap items-center gap-2"><button type="button" onclick="vcVerSuelto(' + i + ')" class="underline font-semibold" style="color:#005cab">' + e(d.nombre) + '</button><span class="text-slate-400">' + (d.tamano ? Math.round(d.tamano / 1024) + ' KB' : '') + (d.pedido ? ' · enviado a Claude' : ' · sin enviar a Claude') + '</span>' + est + '<select onchange="vcAsignarSuelto(' + i + ', this.value)" class="p-1 border border-slate-300 rounded text-[11px] max-w-[260px]">' + opts + '</select><button type="button" onclick="vcBorrarSuelto(' + i + ')" class="text-slate-400 hover:text-red-600" title="Borrar">✕</button></li>';
+      }).join('') + '</ul>';
+    }
     async function vcPedirClaude() {
       if (!usuarioActivo || !nombreUsuarioActivo()) { alert('Ingresa con tu usuario para solicitar.'); return; }
       if (vcE.ped && vcE.ped.estado !== 'hecho') { alert('Ya hay un pedido en curso (' + (vcE.ped.estado === 'solicitado' ? 'esperando autorización' : 'autorizado, Claude lo está trabajando') + '). Espera a que termine antes de pedir de nuevo.'); return; }
-      const conDocs = vcE.filas.filter(f => f.docs && f.docs.length);
-      if (!conDocs.length) { alert('Primero sube los soportes de las partidas (botón 📎 de cada fila).'); return; }
-      let envio = []; conDocs.forEach(f => f.docs.forEach(d => { if (!d.pedido) envio.push({ f, d }); }));
+      const conDocs = vcE.filas.filter(f => f.docs && f.docs.length), sueltos = vcSueltos();
+      if (!conDocs.length && !sueltos.length) { alert('Primero sube los soportes: con el 📎 de cada partida, o como documentos sueltos para que Claude los asigne.'); return; }
+      let envio = []; conDocs.forEach(f => f.docs.forEach(d => { if (!d.pedido) envio.push({ f, d }); })); sueltos.forEach(s => { if (!s.pedido) envio.push({ s }); });
       if (!envio.length) {
         if (!await confirmarApp('Todos los soportes ya fueron enviados a Claude. ¿Pedir de nuevo con todos?')) return;
-        conDocs.forEach(f => f.docs.forEach(d => envio.push({ f, d })));
+        conDocs.forEach(f => f.docs.forEach(d => envio.push({ f, d }))); sueltos.forEach(s => envio.push({ s }));
       }
+      envio.forEach(x => { x.d = x.d || x.s; });
+      const hayS = envio.some(x => x.s);
+      if (hayS && !vcE.filas.length) { alert('Para asignar documentos sueltos primero arma la muestra (automática o manual): Claude los compara contra las partidas que estén en ella.'); return; }
       const pesados = envio.filter(x => /\.(jpe?g|png|webp|gif)$/i.test(x.d.nombre) ? x.d.tamano > 5242880 : (/\.pdf$/i.test(x.d.nombre) && x.d.tamano > 20971520)).map(x => x.d.nombre);
       if (pesados.length) { alert('Estos soportes son muy pesados para que Claude los lea (fotos de más de 5 MB o PDF de más de 20 MB): ' + pesados.join(', ') + '. Bórralos y sube una versión más liviana.'); return; }
       const noLee = envio.filter(x => !/\.(pdf|jpe?g|png|webp|gif|xlsx?|xlsm|csv|tsv|txt)$/i.test(x.d.nombre)).map(x => x.d.nombre);
       if (noLee.length) { alert('Claude no puede leer estos archivos: ' + noLee.join(', ') + '. Usa PDF, foto JPG o PNG, Excel, CSV o TXT.'); return; }
       let max = 0; vcE.filas.forEach(f => { const n = parseInt(String(f.k || '').slice(1), 10); if (n > max) max = n; });
       vcE.filas.forEach(f => { if (!f.k) f.k = 'V' + String(++max).padStart(3, '0'); });
-      const filasEnvio = [...new Set(envio.map(x => x.f))];
-      if (!await confirmarApp('Se enviará un pedido a Claude con ' + envio.length + ' soporte(s) de ' + filasEnvio.length + ' partida(s).\n\nQuedará esperando la autorización del Socio o Supervisor; Claude lo revisa cada hora. Las marcas que ya puso una persona no se cambian. ¿Continuar?')) return;
+      const filasEnvio = hayS ? [...vcE.filas] : [...new Set(envio.filter(x => x.f).map(x => x.f))];
+      if (!await confirmarApp('Se enviará un pedido a Claude con ' + envio.length + ' soporte(s)' + (hayS ? ' (' + envio.filter(x => x.s).length + ' suelto(s) que Claude asignará a las ' + filasEnvio.length + ' partida(s) de la muestra)' : ' de ' + filasEnvio.length + ' partida(s)') + '.\n\nQuedará esperando la autorización del Socio o Supervisor; Claude lo revisa cada hora. Las marcas que ya puso una persona no se cambian. ¿Continuar?')) return;
       const m = document.getElementById('vc-msg'); if (m) { m.textContent = 'Preparando el pedido…'; m.style.color = '#64748b'; }
       if (!await vcGuardarAhora()) { alert('No se pudo guardar la muestra antes de pedir. Intenta de nuevo.'); return; }
       const TN = { imp: 'Importación', loc: 'Compra local', dev: 'Devolución o reversión', bod: 'Transferencia entre bodegas' };
-      const nota = 'REVISIÓN DE DOCUMENTACIÓN (VOUCHEO). Cada archivo se llama CLAVE__nombre: la clave (V001, V002…) identifica la partida del voucheo a la que pertenece. PARTIDAS: ' + filasEnvio.map(f => f.k + ' = ' + (TN[f.tipo] || 'Compra local') + '; fecha ' + f.fecha + '; referencia ' + (f.ref || 'sin referencia') + '; descripción: ' + String(f.desc || '').replace(/\s+/g, ' ').slice(0, 160) + '; valor ' + Number(f.valor).toFixed(2) + '; atributos que aplican: ' + VC_ATRIB.filter(a => vcAplica(a, f)).map(a => a.k).join(', ') + (f.nota ? '; comentario del auditor: ' + String(f.nota).slice(0, 120) : '')).join(' || ');
+      const nota = 'REVISIÓN DE DOCUMENTACIÓN (VOUCHEO). Los archivos CLAVE__nombre (V001__factura.pdf) ya están asignados a la partida de esa clave. Los archivos SUELTO-ID__nombre NO están asignados a ninguna partida: asígnalos tú a la partida que corresponda de la lista (el ID es la clave de respuesta). PARTIDAS: ' + filasEnvio.map(f => f.k + ' = ' + (TN[f.tipo] || 'Compra local') + '; fecha ' + f.fecha + '; referencia ' + (f.ref || 'sin referencia') + '; descripción: ' + String(f.desc || '').replace(/\s+/g, ' ').slice(0, 160) + '; valor ' + Number(f.valor).toFixed(2) + '; atributos que aplican: ' + VC_ATRIB.filter(a => vcAplica(a, f)).map(a => a.k).join(', ') + (f.nota ? '; comentario del auditor: ' + String(f.nota).slice(0, 120) : '')).join(' || ');
       const fila = { cliente_id: vcE.cliente, anio: Number(vcE.anio), visita: vcE.visita || 'final', sumaria: 'AF', hoja: 'voucheo', carpeta: null, nota, doc_confirmada_por: nombreUsuarioActivo(), doc_confirmada_at: new Date().toISOString(), solicitado_por: nombreUsuarioActivo(), solicitado_email: usuarioActivo.email || null };
       const { data: ins, error } = await supabaseClient.from('pedidos_claude').insert([fila]).select('id').single();
       if (error) { alert('No se pudo enviar: ' + (error.message || error)); return; }
       const limpio = t => String(t).normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^A-Za-z0-9._-]+/g, '_'), falla = [];
       for (const x of envio) {
         if (m) m.textContent = 'Copiando ' + x.d.nombre + '…';
-        const nombre = x.f.k + '__' + x.d.nombre;
+        const nombre = x.f ? x.f.k + '__' + x.d.nombre : 'SUELTO-' + x.s.id + '__' + x.s.nombre;
         const { data: blob, error: ed } = await supabaseClient.storage.from('voucheo').download(x.d.ruta);
         if (ed || !blob) { falla.push(x.d.nombre + ' (' + ((ed && ed.message) || 'no se pudo abrir') + ')'); continue; }
         const ruta = ins.id + '/' + Date.now() + '_' + limpio(nombre);
@@ -18354,8 +18400,8 @@ ${cont.innerHTML}
       const lkIng = impLkIng('Ingreso de información'), lkMov = impLkMov('Movimiento del inventario');
       let h = '<div class="text-[11px] text-slate-500 mb-3">El voucheo va de lo registrado en los libros al documento que lo respalda: prueba que la partida existe, es del período y está bien registrada. La población son las adiciones (compras e importaciones) del ' + lkMov + '. ' + (vcE.mov.length ? '' : 'Aún no hay movimiento: haz el pedido en ' + lkIng + '.') + '</div>';
       if (!vcE.mov.length) { c.innerHTML = h; return; }
-      { const pe = vcE.ped, nSop = vcE.filas.reduce((t, f) => t + (f.docs ? f.docs.length : 0), 0), nNue = vcE.filas.reduce((t, f) => t + (f.docs ? f.docs.filter(d => !d.pedido).length : 0), 0);
-        h += '<div class="mb-3 p-3 bg-white border border-slate-200 rounded-xl space-y-2 text-xs text-slate-700"><div class="text-[13px] font-semibold text-slate-800 ic-claude ic-tomate">Claude lee los soportes y llena las marcas</div><p class="text-slate-600">Sube los documentos de cada partida (📎) y pídele a Claude que los lea. Claude compara cada documento con la partida (monto, fecha, proveedor, número) y deja marcas con su evidencia en cada casilla. Nunca cambia lo que ya marcó una persona, y lo que no pueda comprobar lo deja pendiente. Las marcas de Claude se ven con borde naranja; pasa el cursor sobre la casilla para ver su evidencia. Para dejar una marca como propia, haz clic en la casilla.</p><div class="flex flex-wrap items-center gap-3"><button type="button" onclick="vcPedirClaude()" class="px-3 py-1.5 rounded-lg text-xs font-bold text-white" style="background:#449964">Pedir a Claude que lea los soportes</button><span class="text-slate-500">' + nSop + ' soporte(s) subido(s)' + (nSop ? ', ' + nNue + ' sin enviar a Claude' : '') + '</span></div>' + (pe ? '<div class="text-slate-600">' + ({ solicitado: 'Pedido enviado, esperando la autorización del Socio o Supervisor.', autorizado: 'Pedido autorizado: Claude lo está trabajando.', hecho: 'El último pedido ya fue procesado por Claude.' }[pe.estado] || '') + '</div>' + pcBarraAvance(pe) : '') + '</div>'; }
+      { const pe = vcE.ped, nSop = vcE.filas.reduce((t, f) => t + (f.docs ? f.docs.length : 0), 0) + vcSueltos().length, nNue = vcE.filas.reduce((t, f) => t + (f.docs ? f.docs.filter(d => !d.pedido).length : 0), 0) + vcSueltos().filter(d => !d.pedido).length;
+        h += '<div class="mb-3 p-3 bg-white border border-slate-200 rounded-xl space-y-2 text-xs text-slate-700"><div class="text-[13px] font-semibold text-slate-800 ic-claude ic-tomate">Claude lee los soportes y llena las marcas</div><p class="text-slate-600">Hay dos formas de trabajar, y se pueden combinar: (1) sube los documentos de cada partida con el 📎; o (2) sube aquí todos los documentos sueltos y Claude los asigna a las partidas de la muestra. Luego pídele a Claude que los lea: compara cada documento con la partida (monto, fecha, proveedor, número) y deja marcas con su evidencia en cada casilla. Nunca cambia lo que ya marcó una persona, y lo que no pueda comprobar lo deja pendiente. Las marcas de Claude se ven con borde naranja; pasa el cursor sobre la casilla para ver su evidencia. Para dejar una marca como propia, haz clic en la casilla.</p><div class="flex flex-wrap items-center gap-3"><button type="button" onclick="vcPedirClaude()" class="px-3 py-1.5 rounded-lg text-xs font-bold text-white" style="background:#449964">Pedir a Claude que lea los soportes</button><span class="text-slate-500">' + nSop + ' soporte(s) subido(s)' + (nSop ? ', ' + nNue + ' sin enviar a Claude' : '') + '</span><label class="px-3 py-1.5 rounded-lg text-xs font-bold cursor-pointer border border-slate-300 bg-white" style="color:#449964">Subir documentos sueltos<input type="file" multiple accept=".pdf,.jpg,.jpeg,.png,.webp,.xlsx,.xls,.csv,.txt" class="hidden" onchange="vcSubirSueltos(this)"></label></div>' + vcHtmlSueltos() + (pe ? '<div class="text-slate-600">' + ({ solicitado: 'Pedido enviado, esperando la autorización del Socio o Supervisor.', autorizado: 'Pedido autorizado: Claude lo está trabajando.', hecho: 'El último pedido ya fue procesado por Claude.' }[pe.estado] || '') + '</div>' + pcBarraAvance(pe) : '') + '</div>'; }
       const pop = vcPoblacion(), base = r2f(pop.reduce((t, x) => t + x.valor, 0)), pct = Number(vcE.cfg.pct) || 0, meta = r2f(base * pct / 100);
       const cub = r2f(vcE.filas.reduce((t, f) => t + (Number(f.valor) || 0), 0)), cubPct = base ? r2f(cub * 100 / base) : 0;
       const sel = Array.isArray(vcE.cfg.cuentas) ? vcE.cfg.cuentas : null;
@@ -18395,7 +18441,7 @@ ${cont.innerHTML}
           '<td class="' + TD + ' text-center"><button type="button" onclick="vcDocs(\'' + idq + '\')" class="font-bold hover:underline whitespace-nowrap" style="color:#449964">' + (vcE.docAbierto === f.id ? '▾ ' : '▸ ') + '📎 ' + nd + '</button></td>' +
           '<td class="' + TD + '"><button type="button" onclick="vcQuitar(\'' + idq + '\')" class="text-slate-400 hover:text-red-600" title="Quitar de la muestra">✕</button></td></tr>';
         if (vcE.docAbierto === f.id) h += '<tr><td colspan="' + (6 + VC_ATRIB.length + 4) + '" class="p-2 bg-slate-50"><div class="space-y-2 text-[11px]"><div class="font-bold text-slate-700">Documentos de soporte (facturas, declaraciones, comprobantes de pago, fotos, PDF)</div>' +
-          (nd ? '<ul class="space-y-1">' + f.docs.map((d, i) => '<li class="flex flex-wrap items-center gap-2"><button type="button" onclick="vcVerDoc(\'' + idq + '\', ' + i + ')" class="underline font-semibold" style="color:#005cab">' + e(d.nombre) + '</button><span class="text-slate-400">' + (d.tamano ? Math.round(d.tamano / 1024) + ' KB' : '') + (d.por ? ' · ' + e(d.por) : '') + (d.pedido ? ' · enviado a Claude' : ' · sin enviar a Claude') + '</span><button type="button" onclick="vcBorrarDoc(\'' + idq + '\', ' + i + ')" class="text-slate-400 hover:text-red-600" title="Borrar">✕</button></li>').join('') + '</ul>' : '<p class="text-slate-500">Aún no hay documentos.</p>') +
+          (nd ? '<ul class="space-y-1">' + f.docs.map((d, i) => '<li class="flex flex-wrap items-center gap-2"><button type="button" onclick="vcVerDoc(\'' + idq + '\', ' + i + ')" class="underline font-semibold" style="color:#005cab">' + e(d.nombre) + '</button><span class="text-slate-400">' + (d.tamano ? Math.round(d.tamano / 1024) + ' KB' : '') + (d.por ? ' · ' + e(d.por) : '') + (d.pedido ? ' · enviado a Claude' : ' · sin enviar a Claude') + '</span><button type="button" onclick="vcBorrarDoc(\'' + idq + '\', ' + i + ')" class="text-slate-400 hover:text-red-600" title="Borrar">✕</button></li>').join('') + '</ul>' : '<p class="text-slate-500">Aún no hay documentos.</p>') + (f.k && vcE.claude[f.k] && vcE.claude[f.k].archivos && vcE.claude[f.k].archivos.length ? '<p style="color:#c2410c">Documentos que Claude usó para esta partida: ' + e(vcE.claude[f.k].archivos.join(', ')) + '</p>' : '') +
           '<label class="inline-block px-3 py-1.5 rounded-lg text-xs font-bold text-white cursor-pointer" style="background:#449964">Subir documentos<input type="file" multiple accept=".pdf,.jpg,.jpeg,.png,.webp,.xlsx,.xls,.csv,.txt" class="hidden" onchange="vcSubir(\'' + idq + '\', this)"></label></div></td></tr>';
       });
       h += '</tbody></table></div>';
