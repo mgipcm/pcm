@@ -4681,7 +4681,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       'AA:bancos': ['Conciliación bancaria', 'Estado de cuenta', 'Confirmación bancaria', 'Firmas autorizadas', 'Otro'],
       'AA:caja': ['Acta de arqueo de caja', 'Detalle de fondos y caja chica', 'Documento de soporte', 'Otro'],
       'AA:equivalentes': ['Certificado o póliza de inversión', 'Estado de cuenta', 'Confirmación de la institución', 'Detalle de equivalentes de efectivo', 'Otro'],
-      'AF:venta': ['Mayor contable completo', 'Mayor contable de inventarios', 'Balance de comprobación', 'Kárdex (movimiento por producto)', 'Otro'],
+      'AF:venta': ['Mayor contable completo', 'Mayor contable de inventarios', 'Balance de comprobación', 'Kárdex (movimiento por producto)', 'Liquidación de importación (PDF)', 'Liquidación de importación (Excel)', 'Declaración aduanera (DAI / DAU)', 'Factura del proveedor', 'Otro'],
       'AF:costo_ventas': ['Mayor contable completo', 'Mayor contable de costo de ventas', 'Balance de comprobación', 'Otro'],
       'AF:kardex': ['Kárdex (movimiento por producto)', 'Kárdex (saldos por producto)', 'Balance de comprobación', 'Otro'],
       'AF:import': ['Liquidación de importación (PDF)', 'Liquidación de importación (Excel)', 'Declaración aduanera (DAI / DAU)', 'Factura del proveedor', 'Mayor contable completo', 'Otro'],
@@ -4692,7 +4692,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       AS: ['Certificado o póliza de inversión', 'Estado de cuenta', 'Confirmación bancaria', 'Detalle o anexo de inversiones', 'Otro']
     };
     const PC_HOJAS = { caja: 'Caja', bancos: 'Bancos', equivalentes: 'Equivalentes de efectivo', venta: 'Inventario para la venta, importaciones en tránsito y kárdex', costo_ventas: 'Costo de ventas → salidas', kardex: 'Movimiento de kárdex', import: 'Importaciones (liquidaciones)' };
-    const PC_HOJAS_SUM = { AA: [['caja', 'Caja'], ['bancos', 'Bancos'], ['equivalentes', 'Equivalentes de efectivo']], AF: [['venta', 'Inventario para la venta, importaciones en tránsito y kárdex'], ['costo_ventas', 'Costo de ventas → salidas'], ['import', 'Importaciones (liquidaciones)']] };
+    const PC_HOJAS_SUM = { AA: [['caja', 'Caja'], ['bancos', 'Bancos'], ['equivalentes', 'Equivalentes de efectivo']], AF: [['venta', 'Inventario para la venta, importaciones en tránsito y kárdex'], ['costo_ventas', 'Costo de ventas → salidas']] };
     function pcNombreHoja(h) { return PC_HOJAS[h] || h || ''; }
     const PC_TODO = 'Todo en un archivo (todos los documentos juntos)';
     function pcEtiquetas(sumaria, hoja) {
@@ -4747,7 +4747,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       const et = pcEtiquetas(sum, valorAnalisis('pc-hoja')).filter(x => x !== 'Otro');
       const todo = pcEtiquetasElegidas.includes(PC_TODO);
       if (sum === 'AF' && valorAnalisis('pc-hoja') === 'venta') {
-        const nom = { 'Mayor contable completo': 'Mayor contable completo', 'Mayor contable de inventarios': 'Mayor contable de inventarios e importaciones', 'Balance de comprobación': 'Balance de comprobación (subir desde sumarias)', 'Kárdex (movimiento por producto)': 'Kárdex del cliente: movimiento por producto (Excel, CSV o PDF)' };
+        const nom = { 'Mayor contable completo': 'Mayor contable completo', 'Mayor contable de inventarios': 'Mayor contable de inventarios e importaciones', 'Balance de comprobación': 'Balance de comprobación (subir desde sumarias)', 'Kárdex (movimiento por producto)': 'Kárdex del cliente: movimiento por producto (Excel, CSV o PDF)', 'Liquidación de importación (PDF)': 'Liquidaciones de importación (PDF)', 'Liquidación de importación (Excel)': 'Liquidaciones de importación (Excel)', 'Declaración aduanera (DAI / DAU)': 'Declaraciones aduaneras (DAI / DAU)', 'Factura del proveedor': 'Facturas del proveedor' };
         el.innerHTML = '<div class="font-bold">Qué subir:</div>' + et.filter(x => x !== PC_TODO).map((x, i) => '<div>' + (i + 1) + ') ' + ((todo || pcEtiquetasElegidas.includes(x)) ? '<span class="text-emerald-700">✓ ' : '<span class="text-slate-500">') + escapeHtml(nom[x] || x) + '</span></div>').join('');
         return;
       }
@@ -5320,7 +5320,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
     // Barra fija para enviar un pedido a Claude desde la propia pantalla (cuando ya hay datos y se quiere actualizar)
     function pcBarraPedido(hoja, cli, anio, vis, texto) {
       if (!cli) return '';
-      const T = { venta: ['Movimiento del inventario, importaciones en tránsito y kárdex: todo se pide a Claude', 'Pedir a Claude (mayor contable + cuentas de inventario y de tránsito + kárdex)'], costo_ventas: ['Costo de ventas: todo se pide a Claude', 'Pedir a Claude (mayor contable + cuentas de costo de ventas)'], kardex: ['Kárdex: todo se pide a Claude', 'Pedir a Claude (kárdex)'] }[hoja] || ['Todo se pide a Claude', 'Pedir a Claude'];
+      const T = { venta: ['Movimiento del inventario, importaciones en tránsito y kárdex: todo se pide a Claude', 'Pedir a Claude (mayor contable + cuentas de inventario y de tránsito + kárdex + liquidaciones)'], costo_ventas: ['Costo de ventas: todo se pide a Claude', 'Pedir a Claude (mayor contable + cuentas de costo de ventas)'], kardex: ['Kárdex: todo se pide a Claude', 'Pedir a Claude (kárdex)'] }[hoja] || ['Todo se pide a Claude', 'Pedir a Claude'];
       return '<div class="mt-3 p-3 bg-white border border-slate-200 rounded-xl space-y-2 text-xs text-slate-700"><div class="text-[13px] font-semibold text-slate-800 ic-claude ic-tomate">' + T[0] + '</div><p class="text-slate-600">' + escapeHtml(texto) + '</p><div class="flex flex-wrap items-center gap-2"><button type="button" onclick="pcIrAPedido(\'AF\', \'' + escapeHtml(cli) + '\', \'' + escapeHtml(anio) + '\', \'' + escapeHtml(vis) + '\', \'' + hoja + '\')" class="px-3 py-1.5 rounded-lg text-xs transition bg-slate-200 text-slate-900 hover:bg-slate-300 font-semibold ic-claude">' + T[1] + '</button></div></div>';
     }
     function pcHtmlAviso(sumaria, cli, anio, vis, hoja) {
@@ -18093,7 +18093,7 @@ ${cont.innerHTML}
         if (mvE.ver && mvE.ver.i === i) h += mvHtmlPartidas(x, mvE.ver.k);
       });
       h += '<tr class="bg-slate-50 font-bold"><td class="px-2 py-1.5">Total</td>' + MV_COLS.map(([k]) => '<td class="px-2 py-1.5 text-right">' + formatoNumeroAnexo(tot[k]) + '</td>').join('') + '<td class="px-2 py-1.5 text-right">' + (hayLibTot ? formatoNumeroAnexo(tot.saldo_libros) : '') + '</td><td class="px-2 py-1.5 text-right">' + celdaDif(difTot, hayLibTot) + '</td></tr></tbody></table></div>';
-      c.innerHTML = pcBarraPedido('venta', mvE.cliente, mvE.anio, mvE.visita, 'Para armar o actualizar el movimiento del inventario y el de importaciones en tránsito, envía el mayor contable, las cuentas de inventario, el kárdex del cliente y, si el cliente importa, la cuenta de importaciones en tránsito. Todo va en un solo pedido y Claude lo lee junto. Las liquidaciones se envían desde Importaciones.') + h + mvHtmlTransito() + mvHtmlKardex();
+      c.innerHTML = pcBarraPedido('venta', mvE.cliente, mvE.anio, mvE.visita, 'Para armar o actualizar el movimiento del inventario y el de importaciones en tránsito, envía el mayor contable, las cuentas de inventario, el kárdex del cliente y, si el cliente importa, la cuenta de importaciones en tránsito y las liquidaciones de importación. Todo va en un solo pedido y Claude lo lee junto; las demás pestañas leen de aquí.') + h + mvHtmlTransito() + mvHtmlKardex();
     }
 
     // ===== Movimiento de la cuenta de importaciones en tránsito (mismo formato; sale de los asientos del mayor guardados en Importaciones) =====
@@ -18374,10 +18374,9 @@ ${cont.innerHTML}
     }
     function impBarraPedido(texto) {
       const L = impEstado.imports, Cx = impEstado.cruce;
-      return `<div class="m-2 p-3 bg-white border border-slate-200 rounded-xl space-y-2 text-xs text-slate-700"><div class="text-[13px] font-semibold text-slate-800 ic-claude ic-tomate">Importaciones: todo se pide a Claude</div>
-        <p class="text-slate-600">${texto || 'Sube en un mismo pedido las liquidaciones de importación (PDF o Excel), las declaraciones aduaneras y el mayor contable. Claude lee todo, cruza con el mayor y llena las hojas.'}</p>
-        <div class="flex flex-wrap items-center gap-2"><button type="button" onclick="pcIrAPedido('AF', impEstado.cliente, impEstado.anio, impEstado.visita, 'import')" class="${impBtnP} ic-claude">Pedir a Claude (liquidaciones + mayor contable)</button>
-        <p class="text-slate-500">${L.length ? L.length + ' importaciones cargadas por Claude' : 'Aún no hay liquidaciones'} · ${Cx ? 'cruce con el mayor hecho' : 'cruce con el mayor pendiente'}. Cuando el pedido pase a "hecho", presiona F5.</p></div></div>`;
+      return `<div class="m-2 p-3 bg-white border border-slate-200 rounded-xl space-y-1 text-xs text-slate-700"><div class="text-[13px] font-semibold text-slate-800">La información de Importaciones se lee desde el pedido de la pestaña i</div>
+        <p class="text-slate-600">${texto || 'Liquidaciones, mayor contable y kárdex se piden juntos en un solo pedido, en ' + impLkMov('pestaña i (Movimiento del inventario, importaciones en tránsito y kárdex)') + '. Aquí no se sube nada: si aún no hay pedido, hazlo allí.'}</p>
+        <p class="text-slate-500">${L.length ? L.length + ' importaciones leídas' : 'Aún no hay liquidaciones leídas'} · ${Cx ? 'mayor contable leído' : 'mayor contable pendiente'}. Cuando el pedido pase a "hecho", presiona F5.</p></div>`;
     }
     function impHtmlLiq() {
       const L = impEstado.imports;
@@ -18385,7 +18384,7 @@ ${cont.innerHTML}
       const barra = impBarraPedido();
       const proc = '<div id="im-proc" class="px-3 py-2 space-y-1"></div>';
       let dupH = ''; try { const D = impDuplicadasLiq(); if (D.length) dupH = '<div class="m-2 p-3 bg-white border border-red-200 rounded-xl text-xs text-slate-700 space-y-1"><div class="text-[13px] font-semibold text-red-600">Posibles liquidaciones repetidas</div>' + D.map(x => '<p>' + impE(x) + '</p>').join('') + '</div>'; } catch (e) { }
-      if (!L.length) return barra + proc + '<div class="border-t border-slate-100">' + pcHtmlAviso('AF', impEstado.cliente, impEstado.anio, impEstado.visita, 'import') + '</div>';
+      if (!L.length) return barra + proc + '<p class="p-6 text-xs text-slate-400 text-center">Aún no hay información: haz el pedido en la pestaña i.</p>';
       const th = (t, c) => `<th class="px-2 py-1 border-b border-slate-200 whitespace-nowrap ${c || 'text-right'}">${t}</th>`;
       const G = impEstado.gr = impEstado.gr || {};
       const GRP = [
@@ -18542,10 +18541,10 @@ ${(im.aprendidos || []).length ? `<p class="text-xs text-slate-600 bg-slate-50 b
     }
     function impHtmlCruce() {
       const imp = impEstado.imports, C = impEstado.cruce, M = impEstado.mayor, cfg = impEstado.cfg;
-      if (!imp.length) return '<p class="p-6 text-xs text-slate-400 text-center">Primero carga las liquidaciones en la pestaña 1.</p>';
+      if (!imp.length) return '<p class="p-6 text-xs text-slate-400 text-center">Aún no hay liquidaciones leídas: haz el pedido en la pestaña i.</p>';
       const nombres = IMP_ROLES.filter(([k]) => k !== 'inv_final').map(([k, t]) => `<label class="flex flex-col gap-1 text-xs text-slate-600"><span>${t}</span><input type="text" value="${impE(cfg.roles[k] || '')}" placeholder="Códigos separados por coma" onchange="impEditarRol('${k}', this.value)" class="${impIn} w-full"></label>`).join('');
       let h = `<div class="p-3 space-y-3 text-xs text-slate-700">`;
-      if (!C) h += pcHtmlAviso('AF', impEstado.cliente, impEstado.anio, impEstado.visita, 'import');
+      if (!C) h += '<p class="p-6 text-xs text-slate-400 text-center">Aún no hay lectura del mayor: haz el pedido en la pestaña i.</p>';
       h += `<div class="p-4 bg-white border border-slate-200 rounded-xl space-y-2"><div class="text-[13px] font-semibold text-slate-800">A. Cuentas del mayor que usa este cliente</div>
         <p class="text-slate-500">Cada cliente codifica distinto. Escribe los códigos de cuenta de cada concepto (puedes usar un asterisco al final para incluir todas las cuentas que empiezan igual). Al terminar de leer el mayor, las cuentas se sugieren solas por su nombre.</p>
         ${impAvisoCuentas(cfg)}
@@ -18974,9 +18973,8 @@ ${(im.aprendidos || []).length ? `<p class="text-xs text-slate-600 bg-slate-50 b
     function impSiTog(k) { const A = impEstado.siAb = impEstado.siAb || {}; A[k] = !A[k]; impRender(); }
     function impHtmlTransito() {
       const C = impEstado.cruce, cfg = impEstado.cfg;
-      const barraP = impBarraPedido('Para ver las salidas de la cuenta en tránsito y lo que entró al inventario, sube el mayor contable completo del cliente (junto con las liquidaciones si aún no están). Claude lee todos los asientos de esa cuenta.');
-      if (!impEstado.imports.length) return barraP + '<p class="p-6 text-xs text-slate-400 text-center">Primero carga las liquidaciones en la pestaña 1.</p>';
-      if (!C) return barraP + '<p class="p-6 text-xs text-slate-400 text-center">Aún no hay lectura del mayor: pídela a Claude con el botón de arriba.</p>';
+      const barraP = impBarraPedido('Para ver las salidas de la cuenta en tránsito y lo que entró al inventario, el mayor contable completo del cliente se lee desde el pedido de la pestaña i. Claude lee todos los asientos de esa cuenta.');
+      if (!C) return barraP + '<p class="p-6 text-xs text-slate-400 text-center">Aún no hay lectura del mayor: haz el pedido en la pestaña i.</p>';
       if (!impEstado.mov || impEstado.mov.llave !== impEstado.cliente + '|' + impEstado.anio + '|' + impEstado.visita) setTimeout(impCargarMov, 0);
       const T = impSalInvCalc(), th = (t, c) => `<th class="px-2 py-1 border-b border-slate-200 whitespace-nowrap ${c || 'text-right'}">${t}</th>`;
       const tol = Number(cfg.tol) >= 0 ? Number(cfg.tol) : 1, SA = impEstado.siAb = impEstado.siAb || {};
