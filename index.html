@@ -17265,8 +17265,10 @@ ${cont.innerHTML}
           if (!k) { return; }
           const x = cell(k);
           const pmAdd = v => { if (k === 'costo' && l.d) { const m = String(l.d).slice(0, 7); R[id].pm[m] = (R[id].pm[m] || 0) + v; } };
-          if (multi && !asig) { const vv = via ? (Number(l.deb) || 0) : Math.abs(net); x.comp += vv; pmAdd(vv); return; }
-          const netId = asig ? (liqTot[id] || 0) : net;
+          let netId = asig ? (liqTot[id] || 0) : net;
+          // Salida de tránsito que agrupa varias importaciones y no iguala la suma de sus liquidaciones: se reparte en proporción al costo de cada una (no se cuenta completa en cada importación)
+          if (multi && !asig && rol === 'inventario' && net > 0 && !via) { const sL = ids.reduce((t, i2) => t + (liqTot[i2] || 0), 0); netId = sL > 0 ? net * (liqTot[id] || 0) / sL : net / ids.length; }
+          else if (multi && !asig) { const vv = via ? (Number(l.deb) || 0) : Math.abs(net); x.comp += vv; pmAdd(vv); return; }
           if (fuera) { x.post += netId; return; }
           if (via) { x.via += Number(l.deb) || 0; x.viaHab += Number(l.hab) || 0; pmAdd(Number(l.deb) || 0); } else { x.mayor += netId; pmAdd(netId); }
           if (l.k) x.asientos.add(l.k); if (l.d) x.fechas.add(l.d); x.cuentas.add(l.cod);
@@ -18632,6 +18634,15 @@ ${(im.aprendidos || []).length ? `<p class="text-xs text-slate-600 bg-slate-50 b
           ${fila('Diferencias de valor en las importaciones ubicadas (liquidación menos salida)', r2)}
           ${fila('Menos: salidas netas que no se pudieron ubicar en ninguna importación', -r3)}
           <tr><td class="px-2 py-1.5 font-bold">Total explicado</td><td class="px-2 py-1.5 text-right font-bold whitespace-nowrap ${colD}">${impF(impR2(r1 + r2 - r3))}</td></tr>
+          </tbody></table></div>
+          <div class="text-[13px] font-semibold text-slate-800 pt-3">Conciliación con lo ubicado en las importaciones (total de la tabla por mes)</div>
+          <p class="text-slate-500">Las salidas que cubren varias importaciones y no igualan la suma de sus liquidaciones se reparten en proporción al costo de cada una.</p>
+          <div class="overflow-x-auto"><table class="text-[11px] leading-tight border-collapse" style="min-width:34rem"><tbody>
+          ${fila('Salidas ubicadas en las importaciones (total de la tabla por mes)', impR2(tR))}
+          ${fila('Salidas netas de tránsito según el Movimiento', mayorSal)}
+          <tr class="border-b border-slate-100"><td class="px-2 py-1.5 font-bold">Diferencia (ubicadas menos Movimiento)</td><td class="px-2 py-1.5 text-right font-bold whitespace-nowrap ${Math.abs(r3) <= tol ? 'text-emerald-700' : 'text-red-600'}">${impF(impR2(impR2(tR) - mayorSal))}</td></tr>
+          ${fila('Costo total de las liquidaciones (hoja 1)', impR2(tL))}
+          <tr><td class="px-2 py-1.5 font-bold">Diferencia (liquidaciones menos ubicadas)</td><td class="px-2 py-1.5 text-right font-bold whitespace-nowrap ${Math.abs(impR2(tL - tR)) <= tol ? 'text-emerald-700' : 'text-red-600'}">${impF(impR2(impR2(tL) - impR2(tR)))}</td></tr>
           </tbody></table></div></div>`;
       } catch (e) { }
       h += `</tbody><tfoot class="bg-slate-50 font-semibold"><tr><td class="px-2 py-1 text-left">Total del año</td><td></td><td class="px-2 text-right">${impF(impR2(tL))}</td><td class="px-2 text-right">${impF(impR2(tR))}</td><td class="px-2 text-right">${impF(impR2(tL - tR))}</td><td></td></tr></tfoot></table></div></div>${ctl}`;
