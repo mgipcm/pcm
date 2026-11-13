@@ -17057,8 +17057,7 @@ ${cont.innerHTML}
     function impRolesDe(cfg) {
       const r = {}; IMP_ROLES.forEach(([k]) => { r[k] = impListaCtas(((cfg || {}).roles || {})[k]).slice(); });
       ['agente', 'manejo', 'seguro', 'flete_int', 'logistico', 'gasto_fin'].forEach(k => impListaCtas(((cfg || {}).roles || {})[k]).forEach(c => { if (!r.gastos.includes(c)) r.gastos.push(c); }));
-      // Otras cuentas de inventario de la misma familia que la de tránsito (mismos primeros dígitos) se suman solas al rol de inventarios
-      try { if (r.inventario.length) impFamiliaInv(cfg).forEach(c => { if (!impCtaEn(c, r.inventario)) r.inventario.push(c); }); } catch (e) { }
+      // El rol de importaciones en tránsito (costo de la importación) queda solo con las cuentas indicadas; las cuentas de inventario van aparte (inv_final)
       return r;
     }
     // Palabras que ayudan a reconocer, en el detalle de un pago por anticipo, de qué concepto es
