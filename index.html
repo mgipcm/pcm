@@ -14727,7 +14727,7 @@ ${cont.innerHTML}
       ['restr', 'Se indagó si existen restricciones al efectivo (garantías, endosos, avales) y se obtuvo el soporte para la revelación', 'NIC 7 párr. 48', 'AA-12']
     ];
     const CB_ESTADOS = [['pendiente', 'Pendiente'], ['cumple', 'Cumple'], ['nocumple', 'No cumple'], ['noaplica', 'No aplica']];
-    const cbE = { cliente: '', anio: '', visita: 'final', corte: '', cuentas: [], config: {}, programa: [], plantilla: null, analisis: null, tab: 'libros', det: null, act: null, cargaId: 0, tmp: null };
+    const cbE = { cliente: '', anio: '', visita: 'final', corte: '', cuentas: [], config: {}, programa: [], plantilla: null, analisis: null, tab: 'libros', det: null, act: null, org: null, cargaId: 0, tmp: null };
     const $cb = id => document.getElementById(id);
     const cbN = v => { const x = arrNum(v); return Number.isFinite(x) ? x : 0; };
     const cbFmt = n => { const v = r2f(n); return v === 0 ? '–' : formatoNumeroAnexo(v); };
@@ -14759,7 +14759,7 @@ ${cont.innerHTML}
       if (id !== cbE.cargaId) return;
       if (r1.error) cbMsg(/does not exist|schema cache/i.test(r1.error.message || '') ? 'Falta la tabla conciliaciones_datos en Supabase.' : 'No se pudo cargar: ' + (r1.error.message || r1.error), 'text-red-600 font-bold'); else cbMsg('');
       const d = r1.data;
-      if (d) { cbE.cuentas = Array.isArray(d.cuentas) ? d.cuentas : []; cbE.config = d.config || {}; cbE.programa = Array.isArray(d.programa) ? d.programa : []; cbE.corte = d.corte || ''; cbE.act = { por: d.actualizado_por, en: d.updated_at }; }
+      if (d) { cbE.cuentas = Array.isArray(d.cuentas) ? d.cuentas : []; cbE.config = d.config || {}; cbE.programa = Array.isArray(d.programa) ? d.programa : []; cbE.corte = d.corte || ''; cbE.act = { por: d.actualizado_por, en: d.updated_at }; cbE.org = { origen: d.origen, estado_revision: d.estado_revision, revisado_por: d.revisado_por, revisado_at: d.revisado_at }; } else cbE.org = null;
       if (!cbE.corte) cbE.corte = vis === 'final' ? anio + '-12-31' : anio + '-09-30';
       cbE.analisis = (r2.data && r2.data[0]) || null;
       cbE.crit = (r4 && !r4.error && r4.data) ? r4.data : null; cbE.draft = borradorAnt || cbDraftLocal() || cbDraftDesde(cbE.crit);
@@ -14771,8 +14771,17 @@ ${cont.innerHTML}
     function cbSync() {
       const f = $cb('cb-fecha'); if (f) f.value = cbE.corte || '';
       const a = $cb('cb-auditor'); if (a) a.value = respPersona(cbE.config.resp) || nombreUsuarioActivo() || '';
-      { const sl = $cb('cb-sello'); if (sl) sl.innerHTML = cbE.act && cbE.act.por === 'Claude' ? '<span class="pill-origen rev ic-claude">Procesado por Claude, sujeto a modificaciones en caso de existir</span>' : ''; }
+      { const sl = $cb('cb-sello'); if (sl) { const e = estadoOrigen(cbE.org); sl.innerHTML = e ? '<div class="flex flex-wrap items-center gap-2">' + pillOrigen(cbE.org).replace('class="pill-origen', 'class="ic-claude pill-origen') + (e === 'procesado' || e === 'pendiente' ? '<button type="button" onclick="cbRatificar()" class="px-1 py-1.5 text-xs font-bold bg-transparent border-0 hover:underline transition" style="color:#449964">Ratificar</button>' : '') + '</div>' : ''; } }
       const u = $cb('cb-actualizado'); if (u) u.value = cbE.act && cbE.act.por ? (cbE.act.por === 'Claude' ? nombreMostrado('Claude') + ' · Procesado por Claude, sujeto a modificaciones en caso de existir' : cbE.act.por) : '';
+    }
+    async function cbRatificar() {
+      const quien = nombreUsuarioActivo();
+      if (!quien) { alert('Ingresa con tu usuario para marcar el trabajo como revisado.'); return; }
+      const cambios = { estado_revision: 'revisado', revisado_por: quien, revisado_at: new Date().toISOString() };
+      const { error } = await supabaseClient.from('conciliaciones_datos').update(cambios).eq('cliente_id', cbE.cliente).eq('anio', Number(cbE.anio)).eq('visita', cbE.visita);
+      if (error) { alert('No se pudo marcar como revisado: ' + (error.message || error)); return; }
+      Object.assign(cbE.org, cambios); cbSync();
+      try { registrarActividad('Revisó trabajo de Claude', 'Resumen de conciliaciones', { cliente: cbE.cliente, anio: String(cbE.anio) }); } catch (e) { }
     }
     function cbCambiarCorte(v) { cbE.corte = v; cbGuardar(); cbRender(); }
     function cbGuardar() {
@@ -14781,8 +14790,12 @@ ${cont.innerHTML}
       cbE.tmp = setTimeout(async () => {
         if (!snap.cliente_id) return;
         const quien = nombreUsuarioActivo() || null;
-        const { error } = await supabaseClient.from('conciliaciones_datos').upsert({ ...snap, actualizado_por: quien, updated_at: new Date().toISOString() }, { onConflict: 'cliente_id,anio,visita' });
+        // Si una persona cambia algo que preparó Claude, queda anotado como "Modificado por"
+        const marca = {};
+        if (quien && cbE.org && cbE.org.origen === 'claude' && cbE.org.estado_revision !== 'modificado') { marca.estado_revision = 'modificado'; marca.revisado_por = quien; marca.revisado_at = new Date().toISOString(); }
+        const { error } = await supabaseClient.from('conciliaciones_datos').upsert({ ...snap, ...marca, actualizado_por: quien, updated_at: new Date().toISOString() }, { onConflict: 'cliente_id,anio,visita' });
         if (error) { cbMsg('No se guardó: ' + (error.message || error), 'text-red-600 font-bold'); return; }
+        if (marca.estado_revision) Object.assign(cbE.org, marca);
         cbE.act = { por: quien, en: new Date().toISOString() }; cbSync(); cbMsg('Guardado ✓');
       }, 700);
     }
