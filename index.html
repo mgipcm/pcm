@@ -17926,7 +17926,8 @@ ${cont.innerHTML}
         c.innerHTML = m; return;
       }
       const R = kcCalcular(), dc = (v, hay) => !hay ? '<span class="text-slate-400">–</span>' : '<span class="' + (Math.abs(v) > 1 ? 'text-red-600' : 'text-emerald-700') + ' font-bold">' + F(v) + '</span>';
-      let h = info + '<div class="flex flex-wrap items-center gap-2 mb-2"><button type="button" onclick="kcDescargar()" class="ml-auto px-1 py-1.5 text-xs font-bold bg-transparent border-0 hover:underline transition" style="color:#449964">⬇ Descargar (Excel)</button></div>';
+      const kcCl = (kcE.actK && kcE.actK.por === 'Claude') || (kcE.actM && kcE.actM.por === 'Claude');
+      let h = info + '<div class="flex flex-wrap items-center gap-2 mb-2">' + (kcCl ? '<span class="pill-origen rev ic-claude">Procesado por Claude, sujeto a modificaciones en caso de existir</span>' : '') + '<button type="button" onclick="kcDescargar()" class="ml-auto px-1 py-1.5 text-xs font-bold bg-transparent border-0 hover:underline transition" style="color:#449964">⬇ Descargar (Excel)</button></div>';
       h += '<div class="font-bold text-slate-800 mb-1 text-xs">A. Entradas por mes <span class="font-normal text-slate-500">(Diferencia = mayor − kárdex; clic en un mes ' + IC_OJO + ')</span></div><div class="overflow-x-auto border border-slate-200 rounded-xl"><table class="w-full text-[11px] border-collapse min-w-[640px]"><thead><tr><th class="' + TH + ' text-left">Mes</th><th class="' + TH + ' text-right">Entradas del mayor</th><th class="' + TH + ' text-right">Entradas del kárdex</th><th class="' + TH + ' text-right">Diferencia</th><th class="' + TH + ' text-right">Liquidaciones de importación (informativo)</th></tr></thead><tbody>';
       R.filas.forEach(m => {
         const ab = kcE.abierto === m.ym;
@@ -18149,7 +18150,8 @@ ${cont.innerHTML}
         fila(impLkTab('Liquidaciones de importación', 'liq'), liq.length > 0, liq.length ? liq.length + ' importaciones' : 'Aún no leídas') +
         fila(impLkTab('Liquidaciones → Importaciones (mayor contable)', 'cruce'), nLin > 0, nLin ? nLin + ' líneas del mayor ubicadas en las importaciones' : 'Aún no hay cruce') +
         '</tbody></table></div></div>';
-      c.innerHTML = pcBarraPedido('venta', mvE.cliente, mvE.anio, mvE.visita, 'Aquí se sube todo en un solo pedido: el mayor contable, las cuentas de inventario y de tránsito, las cuentas de costo de ventas, el kárdex del cliente y las liquidaciones de importación (si el cliente importa). Claude lo lee junto y las demás pestañas leen de aquí. Cuando el pedido pase a "hecho", presiona F5.') + estado;
+      const sello = (mvE.act && mvE.act.por === 'Claude') || (mvE.karAct && mvE.karAct.por === 'Claude') ? '<div class="mt-3">'+'<span class="pill-origen rev ic-claude">Procesado por Claude, sujeto a modificaciones en caso de existir</span>'+'</div>' : '';
+      c.innerHTML = sello + pcBarraPedido('venta', mvE.cliente, mvE.anio, mvE.visita, 'Aquí se sube todo en un solo pedido: el mayor contable, las cuentas de inventario y de tránsito, las cuentas de costo de ventas, el kárdex del cliente y las liquidaciones de importación (si el cliente importa). Claude lo lee junto y las demás pestañas leen de aquí. Cuando el pedido pase a "hecho", presiona F5.') + estado;
     }
 
     // ===== Movimiento de la cuenta de importaciones en tránsito (mismo formato; sale de los asientos del mayor guardados en Importaciones) =====
@@ -18440,6 +18442,7 @@ ${cont.innerHTML}
       const L = impEstado.imports, Cx = impEstado.cruce;
       return `<div class="m-2 p-3 bg-white border border-slate-200 rounded-xl space-y-1 text-xs text-slate-700"><div class="text-[13px] font-semibold text-slate-800">La información de Importaciones se lee desde el pedido de Ingreso de información</div>
         <p class="text-slate-600">${texto || 'Liquidaciones, mayor contable y kárdex se piden juntos en un solo pedido, en ' + impLkIng('Ingreso de información') + '. Aquí no se sube nada: si aún no hay pedido, hazlo allí.'}</p>
+        ${impEstado.act && impEstado.act.por === 'Claude' ? '<div><span class="pill-origen rev ic-claude">Procesado por Claude, sujeto a modificaciones en caso de existir</span></div>' : ''}
         <p class="text-slate-500">${L.length ? L.length + ' importaciones leídas' : 'Aún no hay liquidaciones leídas'} · ${Cx ? 'mayor contable leído' : 'mayor contable pendiente'}. Cuando el pedido pase a "hecho", presiona F5.</p></div>`;
     }
     function impHtmlLiq() {
