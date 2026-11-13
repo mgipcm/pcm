@@ -4681,7 +4681,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       'AA:bancos': ['Conciliación bancaria', 'Estado de cuenta', 'Confirmación bancaria', 'Firmas autorizadas', 'Otro'],
       'AA:caja': ['Acta de arqueo de caja', 'Detalle de fondos y caja chica', 'Documento de soporte', 'Otro'],
       'AA:equivalentes': ['Certificado o póliza de inversión', 'Estado de cuenta', 'Confirmación de la institución', 'Detalle de equivalentes de efectivo', 'Otro'],
-      'AF:venta': ['Mayor contable completo', 'Mayor contable de inventarios', 'Balance de comprobación', 'Otro'],
+      'AF:venta': ['Mayor contable completo', 'Mayor contable de inventarios', 'Balance de comprobación', 'Kárdex (movimiento por producto)', 'Otro'],
       'AF:costo_ventas': ['Mayor contable completo', 'Mayor contable de costo de ventas', 'Balance de comprobación', 'Otro'],
       'AF:kardex': ['Kárdex (movimiento por producto)', 'Kárdex (saldos por producto)', 'Balance de comprobación', 'Otro'],
       'AF:import': ['Liquidación de importación (PDF)', 'Liquidación de importación (Excel)', 'Declaración aduanera (DAI / DAU)', 'Factura del proveedor', 'Mayor contable completo', 'Otro'],
@@ -4691,8 +4691,8 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       AB: ['Certificado o póliza de inversión', 'Estado de cuenta', 'Confirmación bancaria', 'Detalle o anexo de inversiones', 'Otro'],
       AS: ['Certificado o póliza de inversión', 'Estado de cuenta', 'Confirmación bancaria', 'Detalle o anexo de inversiones', 'Otro']
     };
-    const PC_HOJAS = { caja: 'Caja', bancos: 'Bancos', equivalentes: 'Equivalentes de efectivo', venta: 'Inventario para la venta y importaciones en tránsito', costo_ventas: 'Costo de ventas → salidas', kardex: 'Movimiento de kárdex', import: 'Importaciones (liquidaciones)' };
-    const PC_HOJAS_SUM = { AA: [['caja', 'Caja'], ['bancos', 'Bancos'], ['equivalentes', 'Equivalentes de efectivo']], AF: [['venta', 'Inventario para la venta y importaciones en tránsito'], ['costo_ventas', 'Costo de ventas → salidas'], ['kardex', 'Movimiento de kárdex'], ['import', 'Importaciones (liquidaciones)']] };
+    const PC_HOJAS = { caja: 'Caja', bancos: 'Bancos', equivalentes: 'Equivalentes de efectivo', venta: 'Inventario para la venta, importaciones en tránsito y kárdex', costo_ventas: 'Costo de ventas → salidas', kardex: 'Movimiento de kárdex', import: 'Importaciones (liquidaciones)' };
+    const PC_HOJAS_SUM = { AA: [['caja', 'Caja'], ['bancos', 'Bancos'], ['equivalentes', 'Equivalentes de efectivo']], AF: [['venta', 'Inventario para la venta, importaciones en tránsito y kárdex'], ['costo_ventas', 'Costo de ventas → salidas'], ['import', 'Importaciones (liquidaciones)']] };
     function pcNombreHoja(h) { return PC_HOJAS[h] || h || ''; }
     const PC_TODO = 'Todo en un archivo (todos los documentos juntos)';
     function pcEtiquetas(sumaria, hoja) {
@@ -4747,7 +4747,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       const et = pcEtiquetas(sum, valorAnalisis('pc-hoja')).filter(x => x !== 'Otro');
       const todo = pcEtiquetasElegidas.includes(PC_TODO);
       if (sum === 'AF' && valorAnalisis('pc-hoja') === 'venta') {
-        const nom = { 'Mayor contable completo': 'Mayor contable completo', 'Mayor contable de inventarios': 'Mayor contable de inventarios e importaciones', 'Balance de comprobación': 'Balance de comprobación (subir desde sumarias)' };
+        const nom = { 'Mayor contable completo': 'Mayor contable completo', 'Mayor contable de inventarios': 'Mayor contable de inventarios e importaciones', 'Balance de comprobación': 'Balance de comprobación (subir desde sumarias)', 'Kárdex (movimiento por producto)': 'Kárdex del cliente: movimiento por producto (Excel, CSV o PDF)' };
         el.innerHTML = '<div class="font-bold">Qué subir:</div>' + et.filter(x => x !== PC_TODO).map((x, i) => '<div>' + (i + 1) + ') ' + ((todo || pcEtiquetasElegidas.includes(x)) ? '<span class="text-emerald-700">✓ ' : '<span class="text-slate-500">') + escapeHtml(nom[x] || x) + '</span></div>').join('');
         return;
       }
@@ -5320,7 +5320,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
     // Barra fija para enviar un pedido a Claude desde la propia pantalla (cuando ya hay datos y se quiere actualizar)
     function pcBarraPedido(hoja, cli, anio, vis, texto) {
       if (!cli) return '';
-      const T = { venta: ['Movimiento del inventario e importaciones en tránsito: todo se pide a Claude', 'Pedir a Claude (mayor contable + cuentas de inventario y de tránsito)'], costo_ventas: ['Costo de ventas: todo se pide a Claude', 'Pedir a Claude (mayor contable + cuentas de costo de ventas)'], kardex: ['Kárdex: todo se pide a Claude', 'Pedir a Claude (kárdex)'] }[hoja] || ['Todo se pide a Claude', 'Pedir a Claude'];
+      const T = { venta: ['Movimiento del inventario, importaciones en tránsito y kárdex: todo se pide a Claude', 'Pedir a Claude (mayor contable + cuentas de inventario y de tránsito + kárdex)'], costo_ventas: ['Costo de ventas: todo se pide a Claude', 'Pedir a Claude (mayor contable + cuentas de costo de ventas)'], kardex: ['Kárdex: todo se pide a Claude', 'Pedir a Claude (kárdex)'] }[hoja] || ['Todo se pide a Claude', 'Pedir a Claude'];
       return '<div class="mt-3 p-3 bg-white border border-slate-200 rounded-xl space-y-2 text-xs text-slate-700"><div class="text-[13px] font-semibold text-slate-800 ic-claude ic-tomate">' + T[0] + '</div><p class="text-slate-600">' + escapeHtml(texto) + '</p><div class="flex flex-wrap items-center gap-2"><button type="button" onclick="pcIrAPedido(\'AF\', \'' + escapeHtml(cli) + '\', \'' + escapeHtml(anio) + '\', \'' + escapeHtml(vis) + '\', \'' + hoja + '\')" class="px-3 py-1.5 rounded-lg text-xs transition bg-slate-200 text-slate-900 hover:bg-slate-300 font-semibold ic-claude">' + T[1] + '</button></div></div>';
     }
     function pcHtmlAviso(sumaria, cli, anio, vis, hoja) {
@@ -17912,7 +17912,7 @@ ${cont.innerHTML}
       h += '<tr class="border-t-2 border-slate-300 bg-slate-50 font-bold"><td class="' + TD + '">Total</td><td class="' + TD + ' text-right">' + F(R.tM) + '</td><td class="' + TD + ' text-right">' + F(R.tK) + '</td><td class="' + TD + ' text-right">' + dc(R.dif, true) + '</td><td class="' + TD + ' text-right">' + (R.hayL ? F(R.tL) : '') + '</td></tr></tbody></table></div>';
       h += '<div class="font-bold text-slate-800 mt-4 mb-1 text-xs">B. Cuadre del movimiento: mayor contable contra kárdex <span class="font-normal text-slate-500">(Diferencia = mayor − kárdex)</span></div><div class="overflow-x-auto border border-slate-200 rounded-xl"><table class="w-full text-[11px] border-collapse min-w-[520px]"><thead><tr><th class="' + TH + ' text-left">Concepto</th><th class="' + TH + ' text-right">Mayor contable (pestaña i)</th><th class="' + TH + ' text-right">Kárdex (pestaña iv)</th><th class="' + TH + ' text-right">Diferencia</th></tr></thead><tbody>' +
         R.cuadre.map(x => '<tr class="border-t border-slate-100' + (x.k === 'compras' ? ' bg-amber-50' : '') + '"><td class="' + TD + '">' + escapeHtml(x.t) + '</td><td class="' + TD + ' text-right">' + F(x.may) + '</td><td class="' + TD + ' text-right">' + F(x.kar) + '</td><td class="' + TD + ' text-right">' + dc(x.dif, true) + '</td></tr>').join('') + '</tbody></table></div>';
-      c.innerHTML = pcBarraPedido('kardex', kcE.cliente, kcE.anio, kcE.visita, 'Para actualizar el kárdex, envía el archivo desde aquí. El mayor contable se envía desde la pestaña i.') + h;
+      c.innerHTML = '<p class="mt-3 text-[11px] text-slate-500">El kárdex y el mayor contable se envían juntos en un solo pedido desde la pestaña i.</p>' + h;
     }
     async function kcDescargar() {
       if (!window.ExcelJS) { alert('No se pudo cargar el generador de Excel. Revisa tu conexión a internet.'); return; }
@@ -18093,7 +18093,7 @@ ${cont.innerHTML}
         if (mvE.ver && mvE.ver.i === i) h += mvHtmlPartidas(x, mvE.ver.k);
       });
       h += '<tr class="bg-slate-50 font-bold"><td class="px-2 py-1.5">Total</td>' + MV_COLS.map(([k]) => '<td class="px-2 py-1.5 text-right">' + formatoNumeroAnexo(tot[k]) + '</td>').join('') + '<td class="px-2 py-1.5 text-right">' + (hayLibTot ? formatoNumeroAnexo(tot.saldo_libros) : '') + '</td><td class="px-2 py-1.5 text-right">' + celdaDif(difTot, hayLibTot) + '</td><td></td></tr></tbody></table></div>';
-      c.innerHTML = pcBarraPedido('venta', mvE.cliente, mvE.anio, mvE.visita, 'Para armar o actualizar el movimiento del inventario y el de importaciones en tránsito, envía el mayor contable, las cuentas de inventario y, si el cliente importa, la cuenta de importaciones en tránsito. Las liquidaciones se envían desde Importaciones.') + h + mvHtmlTransito() + mvHtmlKardex();
+      c.innerHTML = pcBarraPedido('venta', mvE.cliente, mvE.anio, mvE.visita, 'Para armar o actualizar el movimiento del inventario y el de importaciones en tránsito, envía el mayor contable, las cuentas de inventario, el kárdex del cliente y, si el cliente importa, la cuenta de importaciones en tránsito. Todo va en un solo pedido y Claude lo lee junto. Las liquidaciones se envían desde Importaciones.') + h + mvHtmlTransito() + mvHtmlKardex();
     }
 
     // ===== Movimiento de la cuenta de importaciones en tránsito (mismo formato; sale de los asientos del mayor guardados en Importaciones) =====
@@ -18187,12 +18187,12 @@ ${cont.innerHTML}
       const TH = 'px-2 py-2 text-[11px] font-bold text-slate-700 bg-slate-100 border-b border-slate-300', fm = formatoNumeroAnexo, P = mvE.kar || [];
       const pill = mvE.karAct && mvE.karAct.por === 'Claude' ? '<span class="pill-origen rev ic-claude">Procesado por Claude, sujeto a modificaciones en caso de existir</span>' : (mvE.karAct && mvE.karAct.por ? '<span class="text-[11px] text-slate-500">Actualizado por ' + escapeHtml(mvE.karAct.por) + '</span>' : '');
       const cab = '<div class="mt-6 mb-2 flex flex-wrap items-center gap-2">' + pill + '<span class="text-[13px] font-semibold text-slate-800">Movimiento del kárdex</span>' + (P.length ? '<button type="button" onclick="mvKarDescargar()" class="ml-auto px-1 py-1.5 text-xs font-bold bg-transparent border-0 hover:underline transition" style="color:#449964">⬇ Descargar Excel</button>' : '') + '</div>';
-      if (!P.length) return cab + '<div class="border border-slate-200 rounded-xl">' + pcHtmlAviso('AF', mvE.cliente, mvE.anio, mvE.visita, 'kardex') + '</div>';
+      if (!P.length) return cab + '<div class="p-4 border border-dashed border-slate-300 rounded-xl text-xs text-slate-600">Aún no hay kárdex. Súbelo en el mismo pedido de arriba (punto 4, Kárdex del cliente: movimiento por producto) y Claude lo lee junto con el mayor.</div>';
       const hayMay = (mvE.cuentas || []).length > 0, K = {}, M = {};
       MV_KAR_COLS.forEach(([k]) => { K[k] = mvKarTot(P, k); M[k] = hayMay ? mvKarTot(mvE.cuentas, k) : null; });
       const nDif = P.filter(x => Math.abs(mvDif(x)) > 0.005).length;
       const dcol = v => Math.abs(v) > 1 ? 'text-red-600' : 'text-emerald-700';
-      let h = cab + pcBarraPedido('kardex', mvE.cliente, mvE.anio, mvE.visita, 'Para armar o actualizar el movimiento del kárdex, envía el kárdex del cliente (Excel, CSV, PDF u otro).');
+      let h = cab;
       h += '<div class="overflow-x-auto border border-slate-200 rounded-xl mt-2"><table class="w-full text-[11px] leading-tight border-collapse min-w-[900px]"><thead><tr><th class="' + TH + ' text-left"></th>' + MV_KAR_COLS.map(([k, n]) => '<th class="' + TH + ' text-right">' + n + '</th>').join('') + '</tr></thead><tbody>';
       h += '<tr class="border-b border-slate-100"><td class="px-2 py-1 font-semibold">Kárdex (' + P.length + ' productos)</td>' + MV_KAR_COLS.map(([k]) => {
         const ab = mvE.verKar === k;
