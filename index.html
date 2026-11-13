@@ -5321,7 +5321,38 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
     function pcBarraPedido(hoja, cli, anio, vis, texto) {
       if (!cli) return '';
       const T = { venta: ['Ingreso de información: todo se pide a Claude', 'Pedir a Claude (mayor contable + cuentas de inventario, tránsito y costo de ventas + kárdex + liquidaciones)'], costo_ventas: ['Costo de ventas: todo se pide a Claude', 'Pedir a Claude (mayor contable + cuentas de costo de ventas)'], kardex: ['Kárdex: todo se pide a Claude', 'Pedir a Claude (kárdex)'] }[hoja] || ['Todo se pide a Claude', 'Pedir a Claude'];
-      return '<div class="mt-3 p-3 bg-white border border-slate-200 rounded-xl space-y-2 text-xs text-slate-700"><div class="text-[13px] font-semibold text-slate-800 ic-claude ic-tomate">' + T[0] + '</div><p class="text-slate-600">' + escapeHtml(texto) + '</p><div class="flex flex-wrap items-center gap-2"><button type="button" onclick="pcIrAPedido(\'AF\', \'' + escapeHtml(cli) + '\', \'' + escapeHtml(anio) + '\', \'' + escapeHtml(vis) + '\', \'' + hoja + '\')" class="px-3 py-1.5 rounded-lg text-xs transition bg-slate-200 text-slate-900 hover:bg-slate-300 font-semibold ic-claude">' + T[1] + '</button></div></div>';
+      return '<div class="mt-3 p-3 bg-white border border-slate-200 rounded-xl space-y-2 text-xs text-slate-700"><div class="text-[13px] font-semibold text-slate-800 ic-claude ic-tomate">' + T[0] + '</div><p class="text-slate-600">' + escapeHtml(texto) + '</p><div class="flex flex-wrap items-center gap-2"><button type="button" onclick="pcIrAPedido(\'AF\', \'' + escapeHtml(cli) + '\', \'' + escapeHtml(anio) + '\', \'' + escapeHtml(vis) + '\', \'' + hoja + '\')" class="px-3 py-1.5 rounded-lg text-xs transition bg-slate-200 text-slate-900 hover:bg-slate-300 font-semibold ic-claude">' + T[1] + '</button>' + (hoja === 'venta' ? '<button type="button" onclick="pcReprocesarPedido(\'' + escapeHtml(cli) + '\', \'' + escapeHtml(anio) + '\', \'' + escapeHtml(vis) + '\', \'' + hoja + '\')" class="px-1 py-1.5 text-xs font-bold bg-transparent border-0 hover:underline transition" style="color:#449964" title="Crea un pedido nuevo con los mismos archivos y cuentas del último pedido">↻ Pedir de nuevo a Claude (mismos archivos)</button>' : '') + '</div>' + (hoja === 'venta' ? '<p class="text-[11px] text-slate-500">«Pedir de nuevo» hace que Claude vuelva a leer los archivos (por ejemplo, si cambió algo en los datos). Para solo recalcular con lo ya leído use «↻ Recalcular» en cada pestaña.</p>' : '') + '</div>';
+    }
+    // Repite el último pedido de la hoja con los mismos archivos y cuentas (los archivos se copian, no se vuelven a subir)
+    async function pcReprocesarPedido(cli, anio, vis, hoja) {
+      if (!usuarioActivo || !nombreUsuarioActivo()) { alert('Ingresa con tu usuario para solicitar.'); return; }
+      try {
+        const { data: pe, error: e0 } = await supabaseClient.from('pedidos_claude').select('*').eq('cliente_id', cli).eq('anio', Number(anio)).eq('visita', vis || 'final').eq('sumaria', 'AF').eq('hoja', hoja).in('estado', ['solicitado', 'autorizado', 'hecho']).order('created_at', { ascending: false }).limit(1);
+        if (e0) { alert('No se pudo revisar el último pedido: ' + (e0.message || e0)); return; }
+        const ant = pe && pe[0];
+        if (!ant) { alert('Aún no hay un pedido anterior de este cliente y año. Haga el primer pedido con el botón «Pedir a Claude».'); return; }
+        if (ant.estado !== 'hecho') { alert('Ya hay un pedido en curso (' + (ant.estado === 'solicitado' ? 'esperando autorización' : 'autorizado, Claude lo está trabajando') + '). Espere a que termine antes de pedir de nuevo.'); return; }
+        const { data: ar } = await supabaseClient.from('pedidos_claude_archivos').select('nombre, ruta, tamano, tipo, etiqueta').eq('pedido_id', ant.id).is('eliminado_at', null);
+        if (!ar || !ar.length) { alert('Los archivos del último pedido ya fueron eliminados (se guardan 3 días). Haga un pedido nuevo con «Pedir a Claude» y súbalos otra vez.'); return; }
+        if (!await confirmarApp('Se creará un pedido nuevo con los mismos ' + ar.length + ' archivo(s) y las mismas cuentas del último pedido.\n\nQuedará esperando la autorización del Socio o Supervisor, y Claude volverá a leer todo. ¿Continuar?')) return;
+        const fila = { cliente_id: ant.cliente_id, anio: ant.anio, visita: ant.visita, sumaria: ant.sumaria, hoja: ant.hoja, carpeta: null, nota: ant.nota, doc_confirmada_por: nombreUsuarioActivo(), doc_confirmada_at: new Date().toISOString(), solicitado_por: nombreUsuarioActivo(), solicitado_email: usuarioActivo.email || null };
+        const { data: ins, error } = await supabaseClient.from('pedidos_claude').insert([fila]).select('id').single();
+        if (error) { alert('No se pudo enviar: ' + (error.message || error)); return; }
+        const falla = [];
+        for (const a of ar) {
+          const nueva = ins.id + '/' + Date.now() + '_' + a.nombre.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^A-Za-z0-9._-]+/g, '_');
+          const { error: ec } = await supabaseClient.storage.from('pedidos-claude').copy(a.ruta, nueva);
+          if (ec) { falla.push(a.nombre + ' (' + (ec.message || ec) + ')'); continue; }
+          const { error: ea } = await supabaseClient.from('pedidos_claude_archivos').insert([{ pedido_id: ins.id, nombre: a.nombre, ruta: nueva, tamano: a.tamano, tipo: a.tipo, subido_por: nombreUsuarioActivo(), etiqueta: a.etiqueta }]);
+          if (ea) falla.push(a.nombre + ' (' + (ea.message || ea) + ')');
+        }
+        if (falla.length) { alert('El pedido se creó, pero no se pudieron copiar: ' + falla.join('; ') + '. Cancélelo en Pedidos y aprobaciones y haga el pedido de nuevo.'); cargarPedidosClaude(); return; }
+        try { await avisarPedidoCorreo(ins.id, 'solicitado'); } catch (e) { }
+        registrarActividad('Pidió de nuevo a Claude (mismos archivos)', fila.sumaria + ' · ' + fila.visita, { cliente: fila.cliente_id, anio: String(fila.anio) });
+        cargarPedidosClaude();
+        alert('Pedido enviado con los mismos ' + ar.length + ' archivo(s). Quedó en «Pedidos y aprobaciones» esperando la autorización del Socio o Supervisor.');
+        try { pcRefrescarAvisos(); } catch (e) { }
+      } catch (e) { alert('No se pudo enviar el pedido: ' + (e.message || e)); }
     }
     function pcHtmlAviso(sumaria, cli, anio, vis, hoja) {
       setTimeout(pcRefrescarAvisos, 0);
