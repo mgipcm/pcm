@@ -18632,9 +18632,9 @@ ${(im.aprendidos || []).length ? `<p class="text-xs text-slate-600 bg-slate-50 b
           <div class="overflow-x-auto"><table class="text-[11px] leading-tight border-collapse" style="min-width:34rem"><tbody>
           ${fila('Salidas de tránsito del Movimiento (créditos que no son reversión)', impR2(sal))}
           <tr class="border-b border-slate-100 cursor-pointer hover:bg-slate-50" onclick="impRevTog('D')"><td class="px-2 py-1.5"><span class="inline-block w-3">${RA.D ? '▾' : '▸'}</span> Menos: reversiones de salidas (débitos que anulan una liquidación) <span class="text-slate-400">· clic para ver las ${lstD.length} partidas</span></td><td class="px-2 py-1.5 text-right whitespace-nowrap">${impF(-impR2(revD))}</td></tr>${detRev(lstD, 'D')}
-          ${fila('Salidas netas de tránsito según el Movimiento', mayorSal, false, true)}
-          ${fila('Costo total de las liquidaciones (hoja 1)', impR2(tL))}
-          <tr class="border-b border-slate-100"><td class="px-2 py-1.5 font-bold">Diferencia (liquidaciones menos salidas netas)</td><td class="px-2 py-1.5 text-right font-bold whitespace-nowrap ${colD}">${impF(dTot)}</td></tr>
+          ${fila('Salidas netas de tránsito según el Movimiento (Literal A)', mayorSal, false, true)}
+          ${fila('Costo total de las liquidaciones (hoja 1) (Literal B)', impR2(tL))}
+          <tr class="border-b border-slate-100"><td class="px-2 py-1.5 font-bold">Diferencia (Literal B menos Literal A: liquidaciones menos salidas netas)</td><td class="px-2 py-1.5 text-right font-bold whitespace-nowrap ${colD}">${impF(dTot)}</td></tr>
           <tr><td colspan="2" class="px-2 pt-2 pb-1 text-slate-500 font-semibold">A qué se debe la diferencia</td></tr>
           ${fila('Liquidaciones sin ninguna salida ubicada en el mayor (' + sinSal.length + ' importaciones)', r1)}
           ${fila('Diferencias de valor en las importaciones ubicadas (liquidación menos salida)', r2)}
