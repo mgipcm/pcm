@@ -18031,7 +18031,7 @@ ${cont.innerHTML}
       ksE.cargado = true; ksPintar();
     }
     // Nombre de cada tipo de asiento del costo de ventas (se deduce de la descripción del mayor)
-    function ksTipoMayor(p) { const d = String(p.desc || ''); if (/reversi[oó]n/i.test(d) && /ord\.? ?prod/i.test(d)) return 'Reversión de comprobante de inventario (orden de producción)'; if (/dev\.? en ventas|devoluci[oó]n/i.test(d)) return 'Ingreso por devolución en ventas (crédito al costo)'; if (/costo de venta/i.test(d)) return 'Salida de inventario = costo'; return p.tipo || 'Sin clasificar'; }
+    function ksTipoMayor(p) { const d = String(p.desc || ''); if (/reversi[oó]n/i.test(d) && /ord\.? ?prod/i.test(d)) return 'Reversión de comprobante de inventario (orden de producción)'; if (/dev\.? en ventas|devoluci[oó]n/i.test(d)) return 'Ingreso por devolución en ventas (crédito al costo)'; if (/anulaci[oó]n/i.test(d) && /costo de venta/i.test(d)) return 'Anulación de costo de venta (facturas anuladas)'; if (/costo de venta/i.test(d)) return 'Costo de venta (facturas)'; return p.tipo || 'Sin clasificar'; }
     function ksTipoKar(p) { return String(p.desc || 'Sin descripción').replace(/\s*del mes.*$/i, '').trim() || 'Sin descripción'; }
     // Busca el menor grupo de conceptos (del mayor suman, del kárdex restan) que da la diferencia
     function ksExplicar(cm, ck, dif) {
