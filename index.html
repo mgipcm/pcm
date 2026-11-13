@@ -17935,7 +17935,7 @@ ${cont.innerHTML}
       if (!kcE.cargado) { c.innerHTML = '<p class="text-xs text-slate-500 p-4">Cargando…</p>'; return; }
       if (kcE.error) { c.innerHTML = '<p class="text-xs text-red-600 font-bold p-4">No se pudo cargar: ' + escapeHtml(kcE.error) + '</p>'; return; }
       const F = formatoNumeroAnexo, TH = 'px-2 py-2 text-[11px] font-bold text-slate-700 bg-slate-100 border-b border-slate-300', TD = 'px-2 py-1';
-      const info = '<div class="text-[11px] text-slate-500 mb-3"><b>Objetivo:</b> comprobar que lo que entró al inventario según el mayor contable (Movimiento del inventario) coincide, mes a mes, con las entradas del kárdex. Como referencia se muestran las liquidaciones de importación del mes. Haz clic en un mes para ver su detalle.</div>';
+      const info = '<div class="text-[11px] text-slate-500 mb-3">Como referencia se muestran las liquidaciones de importación del mes. Haz clic en un mes para ver su detalle.</div>';
       if (!kcE.mov.length || !kcE.prod.length) {
         let m = info + '<div class="p-4 border border-dashed border-slate-300 rounded-xl text-xs text-slate-600 space-y-2"><p class="font-bold text-slate-700">Faltan datos para este cruce:</p><ul class="list-disc pl-5">' + (!kcE.mov.length ? '<li>El Movimiento del inventario con el mayor contable.</li>' : '') + (!kcE.prod.length ? '<li>El Kárdex del cliente.</li>' : '') + '</ul><p>Envíalos en un solo pedido desde ' + impLkIng('Ingreso de información') + ' y, cuando Claude termine, vuelve aquí.</p></div>';
         c.innerHTML = m; return;
