@@ -17901,10 +17901,10 @@ ${cont.innerHTML}
     }
 
     // ===== AF Inventarios › Inventario para la venta › v) Kárdex (entradas) → Compras/Liquidaciones de importación =====
-    const kcE = { cargaId: 0, cliente: '', anio: '', visita: '', prod: [], mov: [], liq: [], cargado: false, error: '', abierto: '', actK: null, actM: null };
+    const kcE = { abiertoC: '', cargaId: 0, cliente: '', anio: '', visita: '', prod: [], mov: [], liq: [], cargado: false, error: '', abierto: '', actK: null, actM: null };
     async function kcCargar() {
       const cli = $im('im-cliente').value, anio = $im('im-anio').value, vis = $im('im-visita').value;
-      Object.assign(kcE, { cliente: cli, anio, visita: vis, prod: [], mov: [], liq: [], cargado: false, error: '', abierto: '', actK: null, actM: null });
+      Object.assign(kcE, { cliente: cli, anio, visita: vis, prod: [], mov: [], liq: [], cargado: false, error: '', abierto: '', abiertoC: '', actK: null, actM: null });
       if (!cli) { kcPintar(); return; }
       const id = ++kcE.cargaId;
       const q = h => supabaseClient.from('inventario_movimiento').select('cuentas, updated_at, actualizado_por').eq('cliente_id', cli).eq('anio', Number(anio)).eq('visita', vis).eq('hoja', h).maybeSingle();
@@ -17925,7 +17925,46 @@ ${cont.innerHTML}
       const tM = r2f(filas.reduce((t, m) => t + m.may, 0)), tK = r2f(filas.reduce((t, m) => t + m.kar, 0)), tL = r2f(filas.reduce((t, m) => t + m.liq, 0));
       const col = [['saldo_inicial', 'Saldo inicial'], ['compras', 'Compras/Importaciones (entradas)'], ['salidas', 'Ventas (salidas)'], ['ajustes', 'Ajustes'], ['reclasificaciones', 'Reclasificaciones'], ['otros', 'Otros'], ['saldo_final', 'Saldo final']];
       const cuadre = col.map(([k, t]) => { const a = r2f(kcE.mov.reduce((s, c) => s + (MV_MOV.includes(k) ? mvVal(c, k) : mvN(c[k])), 0)), b = r2f(kcE.prod.reduce((s, c) => s + (MV_MOV.includes(k) ? mvVal(c, k) : mvN(c[k])), 0)); return { k, t, may: a, kar: b, dif: r2f(a - b) }; });
+      // Análisis de cada diferencia: conceptos del mayor y del kárdex, y qué concepto la explica
+      const concMay = d => { let t = String(d || '').replace(/^Comprobante de Inventario\s*N[º°o]?\s*\d+\s*/i, '').trim(); if (/^Doc:/i.test(t)) return 'Ingreso por documento (compra o importación)'; if (/costo de venta/i.test(t)) return 'Costo de ventas (facturas, neto de anulaciones)'; if (/^Reversi/i.test(t)) return 'Reversión de comprobante de inventario (orden de producción)'; t = t.split(/\s\d{4,}/)[0].trim(); return t.slice(0, 80) || 'Sin descripción'; };
+      const concKar = d => String(d || '').split(' - ')[0].trim().slice(0, 80) || 'Sin descripción';
+      const agr = (lista, k, fn) => { const o = {}; lista.forEach(c => (Array.isArray(c.partidas) ? c.partidas : []).forEach(p => { if (!p || p.col !== k) return; const t = fn(p.desc), r = (o[t] = o[t] || { t, n: 0, v: 0 }); const mm = /^(\d+)\s*(asientos|movimientos)/i.exec(String(p.ref || '')); r.n += mm ? Number(mm[1]) : 1; r.v += Number(p.valor) || 0; })); return Object.values(o).map(r => ({ ...r, v: r2f(r.v) })).sort((a, b) => Math.abs(b.v) - Math.abs(a.v)); };
+      cuadre.forEach(x => {
+        if (['saldo_inicial', 'saldo_final'].includes(x.k)) return;
+        x.cm = agr(kcE.mov, x.k, concMay); x.ck = agr(kcE.prod, x.k, concKar);
+        if (Math.abs(x.dif) <= 1) { x.menor = true; return; }
+        // busca el menor grupo de conceptos (del mayor suman, del kárdex restan) que dé la diferencia
+        const it = [...x.cm.map(c => ({ lado: 'may', t: c.t, n: c.n, v: c.v })), ...x.ck.map(c => ({ lado: 'kar', t: c.t, n: c.n, v: -c.v }))].filter(c => Math.abs(c.v) >= 0.5).slice(0, 30);
+        let mejor = null;
+        const prueba = grupo => { const sm = r2f(grupo.reduce((a, c) => a + c.v, 0)); if (Math.abs(sm - x.dif) <= 1) { const mag = grupo.reduce((a, c) => a + Math.abs(c.v), 0); if (!mejor || grupo.length < mejor.g.length || (grupo.length === mejor.g.length && mag < mejor.mag)) mejor = { g: grupo, mag }; } };
+        for (let i = 0; i < it.length; i++) { prueba([it[i]]); for (let j = i + 1; j < it.length; j++) { prueba([it[i], it[j]]); if (it.length <= 14) for (let l = j + 1; l < it.length; l++) prueba([it[i], it[j], it[l]]); } }
+        x.exp = mejor ? mejor.g : null;
+      });
+      // ¿el mismo concepto aparece en la otra fuente, pero en otra fila?
+      const pal = t => String(t).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').split(/[^a-z]+/).filter(w => w.length >= 6 && !['ingreso', 'egreso', 'inventario', 'movimiento', 'asiento', 'comprobante', 'documento', 'compra', 'importacion', 'cliente', 'bodegas', 'factura', 'ventas'].includes(w));
+      cuadre.forEach(x => { x.rel = []; (x.exp || []).forEach(c => { const pc = pal(c.t); if (!pc.length) return; cuadre.forEach(y => { if (y === x || !y.cm) return; (c.lado === 'may' ? y.ck : y.cm).forEach(o => { if (pal(o.t).some(w => pc.includes(w))) { let g = x.rel.find(r => r.t === c.t && r.fila === y.t); if (!g) x.rel.push(g = { t: c.t, lado: c.lado, fila: y.t, otros: [] }); g.otros.push({ t: o.t, v: o.v }); } }); }); }); });
+      const sumDifCols = r2f(cuadre.filter(x => !['saldo_final'].includes(x.k)).reduce((a, x) => a + x.dif, 0));
+      cuadre.forEach(x => { if (x.k === 'saldo_final') x.sumDif = sumDifCols; });
+      // ¿dos columnas con diferencia de signo contrario y casi igual? (mismo movimiento clasificado distinto)
+      const cruz = []; const cd = cuadre.filter(x => ['compras', 'salidas', 'ajustes', 'reclasificaciones', 'otros'].includes(x.k) && Math.abs(x.dif) > 1);
+      for (let i = 0; i < cd.length; i++) for (let j = i + 1; j < cd.length; j++) { const a = cd[i], b = cd[j]; if (a.dif * b.dif < 0 && Math.abs(a.dif + b.dif) <= Math.max(1, 0.01 * Math.max(Math.abs(a.dif), Math.abs(b.dif)))) cruz.push({ a: a.k, b: b.k, ta: a.t, tb: b.t, dif: r2f(a.dif + b.dif) }); }
+      cuadre.forEach(x => { x.cruz = cruz.filter(c => c.a === x.k || c.b === x.k).map(c => ({ otra: c.a === x.k ? c.tb : c.ta, resto: c.dif })); });
       return { filas, tM, tK, tL, dif: r2f(tM - tK), cuadre, hayM: kcE.mov.length > 0, hayK: kcE.prod.length > 0, hayL: kcE.liq.length > 0 };
+    }
+    function kcAbrirC(k) { kcE.abiertoC = kcE.abiertoC === k ? '' : k; kcPintar(); }
+    function kcHtmlAnalisis(x, F, TH, TD) {
+      const e = escapeHtml;
+      let h = '<div class="space-y-2 text-[11px] text-slate-700">';
+      if (x.k === 'saldo_inicial') return h + '<p>El saldo de apertura no tiene movimientos que lo expliquen. La diferencia viene de cómo estaba el saldo al 1 de enero en el mayor y en el kárdex; revisa el saldo inicial por cuenta y por producto.</p></div>';
+      if (x.k === 'saldo_final') return h + '<p>El saldo final cambia por las diferencias de arriba: sumadas dan <b>' + F(x.sumDif) + '</b>' + (Math.abs(r2f(x.dif - x.sumDif)) > 1 ? ' y quedan ' + F(r2f(x.dif - x.sumDif)) + ' sin explicar' : ' (cuadra con la diferencia del saldo final)') + '. Si se explican las filas anteriores, esta fila queda explicada.</p></div>';
+      if (x.menor) return h + '<p>La diferencia es menor a 1: se considera redondeo.</p></div>';
+      if (x.exp && x.exp.length) {
+        h += '<p class="font-semibold text-slate-800">La diferencia de ' + F(x.dif) + ' se explica por:</p><ul class="list-disc pl-5">' + x.exp.map(c => '<li><b>' + e(c.t) + '</b> (' + c.n + ' movimiento(s), ' + F(Math.abs(c.v)) + '): ' + (c.lado === 'may' ? 'está en el mayor contable y no aparece en el kárdex en esta fila.' : 'está en el kárdex y no aparece en el mayor contable en esta fila.') + '</li>').join('') + '</ul>';
+      } else h += '<p>No se encontró un concepto, o una combinación pequeña de conceptos, que explique la diferencia de ' + F(x.dif) + '. Revisa el detalle de abajo.</p>';
+      if ((x.rel || []).length) h += '<ul class="list-disc pl-5 text-slate-600">' + x.rel.map(r => '<li>«' + e(r.t) + '» del ' + (r.lado === 'may' ? 'mayor' : 'kárdex') + ' aparece en el ' + (r.lado === 'may' ? 'kárdex' : 'mayor') + ' en la fila «' + e(r.fila) + '»: ' + r.otros.map(o => '«' + e(o.t) + '» (' + F(o.v) + ')').join(', ') + '. Por eso no cuadra fila por fila.</li>').join('') + '</ul>';
+      (x.cruz || []).forEach(c => { h += '<p class="text-amber-800">Esta diferencia es casi igual y de signo contrario a la de «' + e(c.otra) + '»' + (Math.abs(c.resto) > 0.005 ? ' (la suma de ambas es ' + F(c.resto) + ')' : '') + ': es probable que sea un mismo movimiento clasificado en filas distintas, por ejemplo las devoluciones en ventas (el mayor las suma como entrada y el kárdex las resta de las ventas). Mira «' + e(c.otra) + '» para completar el análisis.</p>'; });
+      const tabla = (tit, lista) => '<div><div class="font-bold text-slate-700 mb-1">' + tit + '</div><div class="max-h-64 overflow-auto border border-slate-200 rounded-lg bg-white"><table class="w-full text-[11px] border-collapse"><thead><tr class="sticky top-0"><th class="' + TH + ' text-left">Concepto</th><th class="' + TH + ' text-right">Movimientos</th><th class="' + TH + ' text-right">Valor</th></tr></thead><tbody>' + (lista.length ? lista.slice(0, 25).map(c => '<tr class="border-t border-slate-100"><td class="' + TD + '">' + e(c.t) + '</td><td class="' + TD + ' text-right">' + c.n + '</td><td class="' + TD + ' text-right">' + F(c.v) + '</td></tr>').join('') + (lista.length > 25 ? '<tr><td class="' + TD + ' text-slate-400" colspan="3">… y ' + (lista.length - 25) + ' concepto(s) más</td></tr>' : '') : '<tr><td class="' + TD + ' text-slate-400" colspan="3">Sin movimientos en esta fila.</td></tr>') + '</tbody></table></div></div>';
+      return h + '<div class="grid lg:grid-cols-2 gap-3">' + tabla('Mayor contable: movimientos por concepto', x.cm || []) + tabla('Kárdex: movimientos por tipo', x.ck || []) + '</div></div>';
     }
     function kcAbrir(ym) { kcE.abierto = kcE.abierto === ym ? '' : ym; kcPintar(); }
     function kcPintar() {
@@ -17958,7 +17997,7 @@ ${cont.innerHTML}
       });
       h += '<tr class="border-t-2 border-slate-300 bg-slate-50 font-bold"><td class="' + TD + '">Total</td><td class="' + TD + ' text-right">' + F(R.tM) + '</td><td class="' + TD + ' text-right">' + F(R.tK) + '</td><td class="' + TD + ' text-right">' + dc(R.dif, true) + '</td><td class="' + TD + ' text-right">' + (R.hayL ? F(R.tL) : '') + '</td></tr></tbody></table></div>';
       h += '<div class="font-bold text-slate-800 mt-4 mb-1 text-xs">Cuadre del movimiento: mayor contable contra kárdex <span class="font-normal text-slate-500">(Diferencia = mayor − kárdex; el mayor sale del ' + impLkMov('Movimiento del inventario') + ')</span></div><div class="overflow-x-auto border border-slate-200 rounded-xl"><table class="w-full text-[11px] border-collapse min-w-[520px]"><thead><tr><th class="' + TH + ' text-left">Concepto</th><th class="' + TH + ' text-right">Mayor contable</th><th class="' + TH + ' text-right">Kárdex</th><th class="' + TH + ' text-right">Diferencia</th></tr></thead><tbody>' +
-        R.cuadre.map(x => '<tr class="border-t border-slate-100' + (x.k === 'compras' ? ' bg-amber-50' : '') + '"><td class="' + TD + '">' + escapeHtml(x.t) + '</td><td class="' + TD + ' text-right">' + F(x.may) + '</td><td class="' + TD + ' text-right">' + F(x.kar) + '</td><td class="' + TD + ' text-right">' + dc(x.dif, true) + '</td></tr>').join('') + '</tbody></table></div>';
+        R.cuadre.map(x => { const hayD = Math.abs(x.dif) > 0.005, ab = kcE.abiertoC === x.k; return '<tr' + (hayD ? ' onclick="kcAbrirC(\'' + x.k + '\')" ' : ' ') + 'class="border-t border-slate-100' + (x.k === 'compras' ? ' bg-amber-50' : '') + (hayD ? ' cursor-pointer hover:bg-slate-50' : '') + (ab ? ' bg-slate-100' : '') + '"><td class="' + TD + '">' + (hayD ? (ab ? '▾ ' : '▸ ') : '') + escapeHtml(x.t) + '</td><td class="' + TD + ' text-right">' + F(x.may) + '</td><td class="' + TD + ' text-right">' + F(x.kar) + '</td><td class="' + TD + ' text-right">' + dc(x.dif, true) + '</td></tr>' + (ab && hayD ? '<tr><td colspan="4" class="p-2 bg-slate-50">' + kcHtmlAnalisis(x, F, TH, TD) + '</td></tr>' : ''); }).join('') + '</tbody></table></div>';
       c.innerHTML = '<p class="mt-3 text-[11px] text-slate-500">El kárdex y el mayor contable se envían juntos en un solo pedido desde ' + impLkIng('Ingreso de información') + '.</p>' + h;
     }
     async function kcDescargar() {
