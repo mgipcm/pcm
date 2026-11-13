@@ -5320,7 +5320,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
     // Barra fija para enviar un pedido a Claude desde la propia pantalla (cuando ya hay datos y se quiere actualizar)
     function pcBarraPedido(hoja, cli, anio, vis, texto) {
       if (!cli) return '';
-      const T = { venta: ['Movimiento del inventario y de importaciones en tránsito: todo se pide a Claude', 'Pedir a Claude (mayor contable + cuentas de inventario y de tránsito)'], costo_ventas: ['Costo de ventas: todo se pide a Claude', 'Pedir a Claude (mayor contable + cuentas de costo de ventas)'], kardex: ['Kárdex: todo se pide a Claude', 'Pedir a Claude (kárdex)'] }[hoja] || ['Todo se pide a Claude', 'Pedir a Claude'];
+      const T = { venta: ['Movimiento del inventario e importaciones en tránsito: todo se pide a Claude', 'Pedir a Claude (mayor contable + cuentas de inventario y de tránsito)'], costo_ventas: ['Costo de ventas: todo se pide a Claude', 'Pedir a Claude (mayor contable + cuentas de costo de ventas)'], kardex: ['Kárdex: todo se pide a Claude', 'Pedir a Claude (kárdex)'] }[hoja] || ['Todo se pide a Claude', 'Pedir a Claude'];
       return '<div class="mt-3 p-3 bg-white border border-slate-200 rounded-xl space-y-2 text-xs text-slate-700"><div class="text-[13px] font-semibold text-slate-800 ic-claude ic-tomate">' + T[0] + '</div><p class="text-slate-600">' + escapeHtml(texto) + '</p><div class="flex flex-wrap items-center gap-2"><button type="button" onclick="pcIrAPedido(\'AF\', \'' + escapeHtml(cli) + '\', \'' + escapeHtml(anio) + '\', \'' + escapeHtml(vis) + '\', \'' + hoja + '\')" class="px-3 py-1.5 rounded-lg text-xs transition bg-slate-200 text-slate-900 hover:bg-slate-300 font-semibold ic-claude">' + T[1] + '</button></div></div>';
     }
     function pcHtmlAviso(sumaria, cli, anio, vis, hoja) {
@@ -17792,7 +17792,7 @@ ${cont.innerHTML}
 
     // ===== AF Inventarios: hojas (Inventario para la venta, Materia prima, Producción en proceso, Importaciones) =====
     const IV_HOJAS = [['venta', 'Inventario para la venta'], ['materia', 'Materia prima'], ['proceso', 'Producción en proceso'], ['import', 'Importaciones']];
-    const IV_VENTA_BOTONES = [['mov', 'i) Movimiento del inventario y de importaciones en tránsito'], ['impcompras', 'ii) Compras/Liquidaciones de importación → Entradas (mayor contable)'], ['salidas', 'iii) Costo de ventas → Salidas (mayor contable)'], ['kmov', 'iv) Movimiento de kárdex (entradas y salidas)'], ['kcompras', 'v) Kárdex (entradas) → Compras/Liquidaciones de importación'], ['ksalidas', 'vi) Kárdex (salidas) → Costo de ventas']];
+    const IV_VENTA_BOTONES = [['mov', 'i) Movimiento del inventario, importaciones en tránsito y kárdex'], ['impcompras', 'ii) Compras/Liquidaciones de importación → Entradas (mayor contable)'], ['salidas', 'iii) Costo de ventas → Salidas (mayor contable)'], ['kcompras', 'iv) Kárdex (entradas) → Compras/Liquidaciones de importación'], ['ksalidas', 'v) Kárdex (salidas) → Costo de ventas']];
     const ivE = { hoja: 'venta', btn: 'mov' };
     function ivPintarHojas() {
       const btn = (on, clic, n, extra) => '<button type="button" onclick="' + clic + '" style="padding:8px 18px;font-size:13px;cursor:pointer;background:' + (on ? '#e5e5e1' : 'transparent') + ';color:' + (on ? '#0f172a' : '#64748b') + ';font-weight:' + (on ? '700' : '500') + ';border:0;border-bottom:3px solid ' + (on ? '#1e293b' : 'transparent') + ';margin-bottom:-1px;border-radius:6px 6px 0 0">' + n + (extra || '') + '</button>';
@@ -17802,14 +17802,14 @@ ${cont.innerHTML}
       const t = $im('im-titulo'), st = $im('im-subtitulo'), nom = (IV_HOJAS.find(x => x[0] === ivE.hoja) || [])[1] || '';
       if (t) t.textContent = '2. Inventarios – ' + nom;
       if (st) st.textContent = ivE.hoja === 'import' ? 'Pasa las liquidaciones de importación (PDF o Excel) a una tabla con controles automáticos y las cruza con el mayor contable del cliente: asientos, fechas, conceptos y hallazgos'
-        : ivE.hoja === 'venta' ? (ivE.btn === 'impcompras' ? 'Compras/Liquidaciones de importación contra las entradas del mayor contable: sube liquidaciones (PDF, ZIP, Excel) y el mayor' : 'Inventario para la venta: movimiento del inventario y de importaciones en tránsito, y cruces con importaciones, compras, salidas y costo de ventas')
+        : ivE.hoja === 'venta' ? (ivE.btn === 'impcompras' ? 'Compras/Liquidaciones de importación contra las entradas del mayor contable: sube liquidaciones (PDF, ZIP, Excel) y el mayor' : 'Inventario para la venta: movimiento del inventario, importaciones en tránsito y kárdex, y cruces con importaciones, compras, salidas y costo de ventas')
         : ivE.hoja === 'materia' ? 'Materia prima (hoja en desarrollo)' : 'Producción en proceso (hoja en desarrollo)';
       const otras = $im('im-otras'), esp = $im('im-espacio'), av = $im('im-aviso'), imp = ivE.hoja === 'import', emb = ivE.hoja === 'venta' && ivE.btn === 'impcompras';
       if (otras) {
         otras.classList.toggle('hidden', imp);
         if (!imp) {
           if (ivE.hoja === 'venta') otras.innerHTML = '<div class="border-t border-slate-300 mt-3 mb-2"></div><div class="flex flex-wrap gap-1 p-1.5 bg-white border border-slate-200 rounded-2xl">' + IV_VENTA_BOTONES.map(([k, n]) => '<button type="button" onclick="ivIrBoton(\'' + k + '\')" class="px-3 py-1.5 text-xs transition rounded-lg ' + (ivE.btn === k ? 'bg-slate-200 text-slate-900 font-semibold' : 'text-slate-600 hover:bg-slate-100') + '">' + n + '</button>').join('') + '</div>' +
-            (ivE.btn === 'mov' ? '<div id="mv-cont" class="mt-3"></div>' : ivE.btn === 'salidas' ? '<div id="cv-cont" class="mt-3"></div>' : ivE.btn === 'kmov' ? '<div id="kx-cont" class="mt-3"></div>' : ivE.btn === 'kcompras' ? '<div id="kc-cont" class="mt-3"></div>' : emb ? '<div class="mt-2 text-[11px] text-slate-500">Pide a Claude, en un solo pedido, la lectura de las liquidaciones y el cruce con el mayor contable.</div>' : '<div class="border border-dashed border-slate-300 rounded-xl p-8 mt-3 text-center text-sm text-slate-500"><div class="font-bold text-slate-700 mb-1">' + escapeHtml((IV_VENTA_BOTONES.find(x => x[0] === ivE.btn) || [])[1] || '') + '</div>Esta herramienta está en desarrollo. La iremos construyendo en los siguientes pasos.</div>');
+            (ivE.btn === 'mov' ? '<div id="mv-cont" class="mt-3"></div>' : ivE.btn === 'salidas' ? '<div id="cv-cont" class="mt-3"></div>' : ivE.btn === 'kcompras' ? '<div id="kc-cont" class="mt-3"></div>' : emb ? '<div class="mt-2 text-[11px] text-slate-500">Pide a Claude, en un solo pedido, la lectura de las liquidaciones y el cruce con el mayor contable.</div>' : '<div class="border border-dashed border-slate-300 rounded-xl p-8 mt-3 text-center text-sm text-slate-500"><div class="font-bold text-slate-700 mb-1">' + escapeHtml((IV_VENTA_BOTONES.find(x => x[0] === ivE.btn) || [])[1] || '') + '</div>Esta herramienta está en desarrollo. La iremos construyendo en los siguientes pasos.</div>');
           else otras.innerHTML = '<div class="border border-dashed border-slate-300 rounded-xl p-8 text-center text-sm text-slate-500"><div class="font-bold text-slate-700 mb-1">' + escapeHtml(nom) + '</div>Esta hoja está en desarrollo.</div>';
         }
       }
@@ -17822,7 +17822,6 @@ ${cont.innerHTML}
       else if (!emb) { if (av) av.classList.add('hidden'); if (esp) esp.classList.add('hidden'); }
       if (!imp && ivE.hoja === 'venta' && ivE.btn === 'salidas') { const hayCambio = cvE.cliente !== $im('im-cliente').value || cvE.anio !== $im('im-anio').value || cvE.visita !== $im('im-visita').value; if (hayCambio || !cvE.cargado) cvCargar(); else cvPintar(); }
       if (!imp && ivE.hoja === 'venta' && ivE.btn === 'kcompras') { const hayCambio = kcE.cliente !== $im('im-cliente').value || kcE.anio !== $im('im-anio').value || kcE.visita !== $im('im-visita').value; if (hayCambio || !kcE.cargado) kcCargar(); else kcPintar(); }
-      if (!imp && ivE.hoja === 'venta' && ivE.btn === 'kmov') { const hayCambio = kxE.cliente !== $im('im-cliente').value || kxE.anio !== $im('im-anio').value || kxE.visita !== $im('im-visita').value; if (hayCambio || !kxE.cargado) kxCargar(); else kxPintar(); }
       if (!imp && ivE.hoja === 'venta' && ivE.btn === 'mov') { const hayCambio = mvE.cliente !== $im('im-cliente').value || mvE.anio !== $im('im-anio').value || mvE.visita !== $im('im-visita').value; if (hayCambio || !mvE.cargado) mvCargar(); else mvPintar(); }
     }
 
@@ -18003,113 +18002,6 @@ ${cont.innerHTML}
     }
 
 
-    // ===== AF Inventarios › Inventario para la venta › iv) Movimiento de kárdex (por producto) =====
-    const kxE = { cargaId: 0, cliente: '', anio: '', visita: '', prod: [], mov: [], act: null, cargado: false, error: '', ver: null, q: '', soloDif: false, pag: 0, tmp: null };
-    const KX_POR_PAG = 100;
-    async function kxCargar() {
-      const cli = $im('im-cliente').value, anio = $im('im-anio').value, vis = $im('im-visita').value;
-      Object.assign(kxE, { cliente: cli, anio, visita: vis, prod: [], mov: [], act: null, cargado: false, error: '', ver: null, pag: 0 });
-      if (!cli) { kxPintar(); return; }
-      const id = ++kxE.cargaId;
-      const q = h => supabaseClient.from('inventario_movimiento').select('*').eq('cliente_id', cli).eq('anio', Number(anio)).eq('visita', vis).eq('hoja', h).maybeSingle();
-      const [a, b] = await Promise.all([q('kardex'), q('venta')]);
-      if (id !== kxE.cargaId) return;
-      if (a.data) { kxE.prod = Array.isArray(a.data.cuentas) ? a.data.cuentas : []; kxE.act = { por: a.data.actualizado_por, en: a.data.updated_at }; }
-      if (b.data) kxE.mov = Array.isArray(b.data.cuentas) ? b.data.cuentas : [];
-      kxE.cargado = true; kxE.error = a.error ? (a.error.message || String(a.error)) : '';
-      kxPintar();
-    }
-    const kxTot = k => r2f(kxE.prod.reduce((t, x) => t + (MV_MOV.includes(k) ? mvVal(x, k) : mvN(x[k])), 0));
-    function kxFiltrados() {
-      const q = kxE.q.trim().toLowerCase();
-      const r = []; kxE.prod.forEach((x, i) => { if (q && !((x.codigo || '') + ' ' + (x.cuenta || '')).toLowerCase().includes(q)) return; if (kxE.soloDif && Math.abs(mvDif(x)) <= 0.005) return; r.push(i); });
-      return r;
-    }
-    function kxPintar() {
-      if (typeof ivE === 'undefined' || ivE.hoja !== 'venta' || ivE.btn !== 'kmov') return;
-      const c = document.getElementById('kx-cont'); if (!c) return;
-      if (!kxE.cliente) { c.innerHTML = '<p class="text-xs text-slate-500 border border-dashed border-slate-300 rounded-xl p-4">Selecciona el cliente para comenzar.</p>'; return; }
-      if (!kxE.cargado) { c.innerHTML = '<p class="text-xs text-slate-500 p-4">Cargando…</p>'; return; }
-      if (kxE.error) { c.innerHTML = '<p class="text-xs text-red-600 font-bold p-4">No se pudo cargar: ' + escapeHtml(kxE.error) + '</p>'; return; }
-      if (!kxE.prod.length) { c.innerHTML = '<div class="border border-slate-200 rounded-xl">' + pcHtmlAviso('AF', kxE.cliente, kxE.anio, kxE.visita, 'kardex') + '</div>'; return; }
-      const TH = 'px-2 py-2 text-[11px] font-bold text-slate-700 bg-slate-100 border-b border-slate-300', fm = formatoNumeroAnexo;
-      const lista = kxFiltrados(), pags = Math.max(1, Math.ceil(lista.length / KX_POR_PAG)); if (kxE.pag >= pags) kxE.pag = pags - 1;
-      const vis = lista.slice(kxE.pag * KX_POR_PAG, (kxE.pag + 1) * KX_POR_PAG);
-      const nDif = kxE.prod.filter(x => Math.abs(mvDif(x)) > 0.005).length;
-      let h = '<div class="flex flex-wrap items-center gap-2 mt-4 mb-2">' + (kxE.act && kxE.act.por === 'Claude' ? '<span class="pill-origen rev ic-claude">Procesado por Claude, sujeto a modificaciones en caso de existir</span>' : (kxE.act && kxE.act.por ? '<span class="text-[11px] text-slate-500">Actualizado por ' + escapeHtml(kxE.act.por) + '</span>' : '')) + '<span id="kx-msg" class="text-[11px] text-slate-500"></span><button type="button" onclick="kxDescargar()" class="ml-auto px-1 py-1.5 text-xs font-bold bg-transparent border-0 hover:underline transition" style="color:#449964">⬇ Descargar Excel</button></div>';
-      // Comparación con el movimiento del inventario según el mayor (pestaña i)
-      const hayMov = kxE.mov.length > 0, movTot = k => r2f(kxE.mov.reduce((t, x) => t + (MV_MOV.includes(k) ? mvVal(x, k) : mvN(x[k])), 0));
-      h += '<div class="border border-slate-200 rounded-xl overflow-hidden mb-3"><div class="px-3 py-2 bg-slate-50 text-[11px] font-bold text-slate-700">Kárdex contra el movimiento del inventario según el mayor (pestaña i)</div><table class="w-full text-[11px] border-collapse"><thead><tr><th class="' + TH + ' text-left">Concepto</th><th class="' + TH + ' text-right">Kárdex</th><th class="' + TH + ' text-right">Mayor contable (i)</th><th class="' + TH + ' text-right">Diferencia (kárdex − mayor)</th></tr></thead><tbody>';
-      MV_COLS.forEach(([k, n]) => { const a = kxTot(k), b = hayMov ? movTot(k) : null, d = hayMov ? r2f(a - b) : null; h += '<tr class="border-t border-slate-100"><td class="px-2 py-1">' + n + '</td><td class="px-2 py-1 text-right">' + fm(a) + '</td><td class="px-2 py-1 text-right">' + (hayMov ? fm(b) : '<span class="text-slate-400">–</span>') + '</td><td class="px-2 py-1 text-right font-bold ' + (d === null ? '' : Math.abs(d) > 1 ? 'text-red-600' : 'text-emerald-700') + '">' + (d === null ? '–' : fm(d)) + '</td></tr>'; });
-      h += '</tbody></table>' + (hayMov ? '' : '<div class="px-3 py-2 text-[11px] text-slate-500">Aún no hay movimiento del mayor (pestaña i) para comparar.</div>') + '<div class="px-3 py-2 text-[11px] text-slate-600 border-t border-slate-100">' + kxE.prod.length + ' productos en el kárdex' + (nDif ? ' · <b class="text-red-600">' + nDif + ' con diferencia entre el movimiento y el saldo final</b>' : ' · todos cuadran internamente') + '.</div></div>';
-      h += '<div class="flex flex-wrap items-center gap-3 mb-2"><input type="text" value="' + escapeHtml(kxE.q) + '" oninput="kxE.q = this.value; kxE.pag = 0; kxPintar(); const e = document.getElementById(\'kx-q\'); if (e) { e.focus(); e.setSelectionRange(e.value.length, e.value.length); }" id="kx-q" placeholder="Buscar producto o código…" class="p-1.5 border border-slate-300 rounded text-[11px] w-64 outline-none bg-white"><label class="text-[11px] text-slate-600 flex items-center gap-1"><input type="checkbox" ' + (kxE.soloDif ? 'checked' : '') + ' onchange="kxE.soloDif = this.checked; kxE.pag = 0; kxPintar()"> Solo productos con diferencia</label><span class="text-[11px] text-slate-500">' + lista.length + ' productos</span>' + (pags > 1 ? '<span class="ml-auto text-[11px]"><button type="button" ' + (kxE.pag <= 0 ? 'disabled' : '') + ' onclick="kxE.pag--; kxPintar()" class="px-2 py-1 border border-slate-300 rounded bg-white disabled:opacity-40">◀</button> Página ' + (kxE.pag + 1) + ' de ' + pags + ' <button type="button" ' + (kxE.pag >= pags - 1 ? 'disabled' : '') + ' onclick="kxE.pag++; kxPintar()" class="px-2 py-1 border border-slate-300 rounded bg-white disabled:opacity-40">▶</button></span>' : '') + '</div>';
-      h += '<div class="overflow-x-auto border border-slate-200 rounded-xl"><table class="w-full text-[11px] leading-tight border-collapse min-w-[1100px]"><thead><tr><th class="' + TH + ' text-left">Código</th><th class="' + TH + ' text-left">Producto</th>' + MV_COLS.map(([k, n]) => '<th class="' + TH + ' text-right">' + n + '</th>').join('') + '<th class="' + TH + ' text-right" title="Saldo inicial + movimientos − Saldo final. Debe ser cero">Diferencia</th></tr></thead><tbody>';
-      vis.forEach(i => {
-        const x = kxE.prod[i], dm = mvDif(x);
-        h += '<tr class="border-b border-slate-100 align-top"><td class="px-2 py-1 whitespace-nowrap">' + escapeHtml(x.codigo || '') + '</td><td class="px-2 py-1">' + escapeHtml(x.cuenta || '') + (x.nota ? '<div class="text-[10px] text-slate-500">' + escapeHtml(x.nota) + '</div>' : '') + '</td>' +
-          MV_COLS.map(([k]) => {
-            if (MV_MOV.includes(k) && mvTienePartidas(x)) {
-              const n = mvPartidasIdx(x, k).length, v = mvVal(x, k), ab = kxE.ver && kxE.ver.i === i && kxE.ver.k === k;
-              if (!n) return '<td class="px-2 py-1 text-right text-slate-500">' + fm(v) + '</td>';
-              return '<td class="px-1 py-1"><button type="button" onclick="kxVer(' + i + ', \'' + k + '\')" class="w-full text-right p-1 rounded font-bold ' + (ab ? 'bg-indigo-100 text-indigo-900' : 'text-indigo-700 hover:bg-indigo-50') + '" style="text-decoration:underline dotted" title="Clic para ver el detalle">' + (ab ? '▴ ' : '▾ ') + fm(v) + '</button></td>';
-            }
-            return '<td class="px-2 py-1 text-right">' + fm(MV_MOV.includes(k) ? mvVal(x, k) : mvN(x[k])) + '</td>';
-          }).join('') + '<td class="px-2 py-1 text-right font-bold ' + (Math.abs(dm) > 0.005 ? 'text-red-600' : 'text-emerald-700') + '">' + fm(dm) + '</td></tr>';
-        if (kxE.ver && kxE.ver.i === i) h += kxHtmlPartidas(x, kxE.ver.k);
-      });
-      h += '<tr class="bg-slate-50 font-bold"><td class="px-2 py-1.5" colspan="2">Total de todos los productos</td>' + MV_COLS.map(([k]) => '<td class="px-2 py-1.5 text-right">' + fm(kxTot(k)) + '</td>').join('') + '<td class="px-2 py-1.5 text-right">' + fm(r2f(kxE.prod.reduce((t, x) => t + mvDif(x), 0))) + '</td></tr></tbody></table></div>';
-      h += '<div class="mt-2 text-[11px] text-slate-500">Aumentos con signo positivo y disminuciones (ventas, bajas) con signo negativo. Haz clic en una cifra de movimiento para ver el detalle y reclasificarlo. Diferencia = Saldo inicial + movimientos − Saldo final.</div>';
-      c.innerHTML = pcBarraPedido('kardex', kxE.cliente, kxE.anio, kxE.visita, 'Para armar o actualizar el movimiento de kárdex, envía el kárdex del cliente (Excel, CSV, PDF u otro).') + h;
-    }
-    function kxVer(i, k) { kxE.ver = (kxE.ver && kxE.ver.i === i && kxE.ver.k === k) ? null : { i, k }; kxPintar(); }
-    function kxHtmlPartidas(x, k) {
-      const lista = mvPartidasIdx(x, k), nomK = kk => (MV_COLS.find(c => c[0] === kk) || [kk, kk])[1], i = kxE.ver.i, fm = formatoNumeroAnexo;
-      const sum = r2f(lista.reduce((a, o) => a + mvN(o.p.valor), 0));
-      let t = '<tr class="bg-indigo-50/60"><td colspan="' + (MV_COLS.length + 3) + '" class="px-3 py-2"><div style="position:sticky;left:8px;width:min(100%, calc(100vw - 6rem))"><div class="flex items-center justify-between gap-3 mb-1"><span class="text-[11px] font-bold text-indigo-900">' + escapeHtml(nomK(k)) + ' · ' + escapeHtml((x.codigo ? x.codigo + ' ' : '') + (x.cuenta || '')) + ' — ' + lista.length + (lista.length === 1 ? ' partida' : ' partidas') + '</span><button type="button" onclick="kxVer(' + i + ', \'' + k + '\')" class="px-3 py-1 text-[11px] font-bold text-slate-700 bg-white border border-slate-400 rounded-lg hover:bg-slate-100">✕ Cerrar</button></div>';
-      t += '<div class="max-h-80 overflow-auto border border-slate-200 rounded-lg bg-white"><table class="w-full text-[11px] leading-tight border-collapse"><thead><tr class="bg-slate-100 text-slate-700"><th class="px-2 py-1 text-left font-bold">Fecha</th><th class="px-2 py-1 text-left font-bold">Documento</th><th class="px-2 py-1 text-left font-bold">Descripción</th><th class="px-2 py-1 text-right font-bold">Valor</th><th class="px-2 py-1 text-left font-bold">Reclasificar a</th></tr></thead><tbody>';
-      lista.forEach(({ p, ix }) => {
-        const v = mvN(p.valor);
-        t += '<tr class="border-t border-slate-100 align-top"><td class="px-2 py-1 whitespace-nowrap">' + (mvEsResumen(p) ? escapeHtml(String(p.fecha || '').slice(0, 7)) : mvFechaCorta(p.fecha)) + '</td><td class="px-2 py-1 whitespace-nowrap">' + escapeHtml(p.ref || '') + '</td><td class="px-2 py-1">' + escapeHtml(p.desc || '') + '</td><td class="px-2 py-1 text-right whitespace-nowrap ' + (v < 0 ? 'text-rose-700' : '') + '">' + fm(v) + '</td><td class="px-2 py-1 whitespace-nowrap"><select onchange="kxMover(' + i + ', ' + ix + ', this.value)" class="p-0.5 border border-slate-300 rounded text-[11px] bg-white outline-none">' + MV_MOV.map(kk => '<option value="' + kk + '"' + (kk === p.col ? ' selected' : '') + '>' + (kk === p.col ? '✓ ' : '') + nomK(kk) + '</option>').join('') + '</select>' + (p.antes ? ' <span class="text-[10px] text-amber-700 font-bold">(antes: ' + escapeHtml(nomK(p.antes)) + (p.movido_por ? ' · ' + escapeHtml(p.movido_por) : '') + ')</span>' : '') + '</td></tr>';
-      });
-      t += '<tr class="border-t-2 border-slate-300 bg-slate-50 font-bold"><td class="px-2 py-1" colspan="3">Total de las partidas</td><td class="px-2 py-1 text-right">' + fm(sum) + '</td><td></td></tr></tbody></table></div></div></td></tr>';
-      return t;
-    }
-    function kxMover(i, ix, nuevo) {
-      const x = kxE.prod[i], p = x && x.partidas && x.partidas[ix]; if (!p || !MV_MOV.includes(nuevo) || p.col === nuevo) return;
-      const antes = p.col, kAb = kxE.ver && kxE.ver.k;
-      if (p.antes === undefined) p.antes = antes; if (nuevo === p.antes) delete p.antes;
-      p.col = nuevo; p.movido_por = nombreUsuarioActivo() || ''; p.movido_en = new Date().toISOString();
-      mvSincronizar(x);
-      if (kAb && !mvPartidasIdx(x, kAb).length) kxE.ver = null;
-      kxGuardar(); kxPintar();
-    }
-    function kxGuardar() {
-      clearTimeout(kxE.tmp);
-      const snap = { cliente_id: kxE.cliente, anio: Number(kxE.anio), visita: kxE.visita, hoja: 'kardex', cuentas: kxE.prod, corte: (($im('im-fecha') || {}).value) || null };
-      const m = document.getElementById('kx-msg'); if (m) m.textContent = 'Guardando…';
-      kxE.tmp = setTimeout(async () => {
-        const quien = nombreUsuarioActivo() || null;
-        const { error } = await supabaseClient.from('inventario_movimiento').upsert({ ...snap, actualizado_por: quien, updated_at: new Date().toISOString() }, { onConflict: 'cliente_id,anio,visita,hoja' });
-        const m2 = document.getElementById('kx-msg');
-        if (error) { if (m2) { m2.textContent = 'No se guardó: ' + (error.message || error); m2.className = 'text-[11px] text-red-600 font-bold'; } return; }
-        kxE.act = { por: quien, en: new Date().toISOString() }; if (m2) m2.textContent = 'Guardado ✓';
-      }, 700);
-    }
-    async function kxDescargar() {
-      const cab = ['Código', 'Producto', ...MV_COLS.map(c => c[1]), 'Diferencia'];
-      const filas = kxE.prod.map(x => [x.codigo || '', x.cuenta || '', ...MV_COLS.map(([k]) => MV_MOV.includes(k) ? mvVal(x, k) : mvN(x[k])), mvDif(x)]);
-      const hayMov = kxE.mov.length > 0, movTot = k => r2f(kxE.mov.reduce((t, x) => t + (MV_MOV.includes(k) ? mvVal(x, k) : mvN(x[k])), 0));
-      const comp = [['Concepto', 'Kárdex', 'Mayor contable (i)', 'Diferencia (kárdex − mayor)'], ...MV_COLS.map(([k, n]) => [n, kxTot(k), hayMov ? movTot(k) : '', hayMov ? r2f(kxTot(k) - movTot(k)) : ''])];
-      const par = [['Código', 'Producto', 'Concepto', 'Fecha', 'Documento', 'Descripción', 'Valor']];
-      kxE.prod.forEach(x => (Array.isArray(x.partidas) ? x.partidas : []).forEach(p => par.push([x.codigo || '', x.cuenta || '', (MV_COLS.find(c => c[0] === p.col) || [0, p.col])[1], p.fecha || '', p.ref || '', p.desc || '', mvN(p.valor)])));
-      const info = 'Cliente: ' + ((typeof impNombreCliente === 'function' && impNombreCliente()) || '') + ' · Año ' + kxE.anio + ' · Visita ' + kxE.visita;
-      const hojas = [{ nombre: 'Kárdex vs mayor', aoa: comp, anchos: [{ wch: 36 }, { wch: 18 }, { wch: 20 }, { wch: 26 }], op: { titulo: 'Movimiento de kárdex contra el movimiento del mayor contable', info } },
-        { nombre: 'Movimiento por producto', aoa: [cab, ...filas], anchos: [{ wch: 16 }, { wch: 46 }, ...MV_COLS.map(() => ({ wch: 18 })), { wch: 14 }], op: { titulo: 'Movimiento de kárdex por producto', info, totales: MV_COLS.map((c, i) => i + 2).concat([MV_COLS.length + 2]) } },
-        { nombre: 'Detalle', aoa: par, anchos: [{ wch: 16 }, { wch: 40 }, { wch: 30 }, { wch: 12 }, { wch: 20 }, { wch: 60 }, { wch: 16 }], op: { titulo: 'Detalle del movimiento por producto', info, fecha: [3], totales: [6] } }];
-      const cli = (typeof impNombreCliente === 'function' && impNombreCliente()) || 'cliente';
-      try { await arrXlsxConFormato(hojas, cli, 'Kardex_' + String(cli).replace(/[^A-Za-z0-9]+/g, '_').slice(0, 30) + '_' + kxE.anio + '.xlsx'); } catch (e) { alert('No se pudo armar el Excel: ' + (e.message || e)); }
-    }
-
     // ===== AF Inventarios › Inventario para la venta › i) Movimiento del inventario =====
     const MV_COLS = [['saldo_inicial', 'Saldo inicial'], ['compras', 'Compras/Importaciones (entradas)'], ['salidas', 'Ventas (salidas)'], ['ajustes', 'Ajustes'], ['reclasificaciones', 'Reclasificaciones'], ['otros', 'Otros'], ['saldo_final', 'Saldo final']];
     const MV_MOV = ['compras', 'salidas', 'ajustes', 'reclasificaciones', 'otros'];
@@ -18123,15 +18015,17 @@ ${cont.innerHTML}
     function mvDifLibros(x) { return r2f(mvN(x.saldo_final) - mvN(x.saldo_libros)); }
     async function mvCargar() {
       const cli = $im('im-cliente').value, anio = $im('im-anio').value, vis = $im('im-visita').value;
-      Object.assign(mvE, { cliente: cli, anio, visita: vis, cuentas: [], act: null, cargado: false, ver: null });
+      Object.assign(mvE, { cliente: cli, anio, visita: vis, cuentas: [], act: null, cargado: false, ver: null, kar: [], karAct: null, verKar: null, verKarP: null });
       if (!cli) { mvPintar(); return; }
       const id = ++mvE.cargaId;
-      const [{ data, error }, rb, ri] = await Promise.all([
+      const [{ data, error }, rb, ri, rk] = await Promise.all([
         supabaseClient.from('inventario_movimiento').select('*').eq('cliente_id', cli).eq('anio', Number(anio)).eq('visita', vis).eq('hoja', 'venta').maybeSingle(),
         supabaseClient.from('balance_comprobacion').select('codigo, saldo').eq('cliente_id', cli).eq('anio', Number(anio)).eq('visita', vis).eq('sumaria', 'AF').limit(5000),
-        supabaseClient.from('importaciones_datos').select('cruce, config').eq('cliente_id', cli).eq('anio', Number(anio)).eq('visita', vis).maybeSingle()
+        supabaseClient.from('importaciones_datos').select('cruce, config').eq('cliente_id', cli).eq('anio', Number(anio)).eq('visita', vis).maybeSingle(),
+        supabaseClient.from('inventario_movimiento').select('*').eq('cliente_id', cli).eq('anio', Number(anio)).eq('visita', vis).eq('hoja', 'kardex').maybeSingle()
       ]);
       if (id !== mvE.cargaId) return;
+      if (rk && rk.data) { mvE.kar = Array.isArray(rk.data.cuentas) ? rk.data.cuentas : []; mvE.karAct = { por: rk.data.actualizado_por, en: rk.data.updated_at }; }
       mvE.imp = (ri && ri.data) || null; mvE.trBal = null; mvE.verTr = null;
       if (data) { mvE.cuentas = Array.isArray(data.cuentas) ? data.cuentas : []; mvE.act = { por: data.actualizado_por, en: data.updated_at }; }
       // "Según libros": saldo de cada cuenta en el balance de comprobación (sumaria AF), por código
@@ -18146,7 +18040,7 @@ ${cont.innerHTML}
       if (!mvE.cliente) { c.innerHTML = '<p class="text-xs text-slate-500 border border-dashed border-slate-300 rounded-xl p-4">Selecciona el cliente para comenzar.</p>'; return; }
       if (!mvE.cargado) { c.innerHTML = '<p class="text-xs text-slate-500 p-4">Cargando…</p>'; return; }
       if (mvE.error) { c.innerHTML = '<p class="text-xs text-red-600 font-bold p-4">No se pudo cargar: ' + escapeHtml(/does not exist|schema cache/i.test(mvE.error) ? 'falta la tabla inventario_movimiento en Supabase.' : mvE.error) + '</p>'; return; }
-      if (!mvE.cuentas.length) { c.innerHTML = '<div class="border border-slate-200 rounded-xl">' + pcHtmlAviso('AF', mvE.cliente, mvE.anio, mvE.visita, 'venta') + '</div>' + mvHtmlTransito(); return; }
+      if (!mvE.cuentas.length) { c.innerHTML = '<div class="border border-slate-200 rounded-xl">' + pcHtmlAviso('AF', mvE.cliente, mvE.anio, mvE.visita, 'venta') + '</div>' + mvHtmlTransito() + mvHtmlKardex(); return; }
       const TH = 'px-2 py-2 text-[11px] font-bold text-slate-700 bg-slate-100 border-b border-slate-300', IN = 'w-full p-1 border border-slate-300 rounded text-[11px] text-right outline-none focus:ring-2 focus:ring-indigo-500 bg-white';
       const tot = {}; [...MV_COLS.map(c => c[0])].forEach(k => { tot[k] = r2f(mvE.cuentas.reduce((a, x) => a + (MV_MOV.includes(k) ? mvVal(x, k) : mvN(x[k])), 0)); });
       tot.saldo_libros = r2f(mvE.cuentas.reduce((a, x) => a + mvN(x.saldo_libros), 0));
@@ -18170,7 +18064,7 @@ ${cont.innerHTML}
         if (mvE.ver && mvE.ver.i === i) h += mvHtmlPartidas(x, mvE.ver.k);
       });
       h += '<tr class="bg-slate-50 font-bold"><td class="px-2 py-1.5">Total</td>' + MV_COLS.map(([k]) => '<td class="px-2 py-1.5 text-right">' + formatoNumeroAnexo(tot[k]) + '</td>').join('') + '<td class="px-2 py-1.5 text-right">' + (hayLibTot ? formatoNumeroAnexo(tot.saldo_libros) : '') + '</td><td class="px-2 py-1.5 text-right">' + celdaDif(difTot, hayLibTot) + '</td><td></td></tr></tbody></table></div>';
-      c.innerHTML = pcBarraPedido('venta', mvE.cliente, mvE.anio, mvE.visita, 'Para armar o actualizar el movimiento del inventario y el de importaciones en tránsito, envía el mayor contable, las cuentas de inventario y, si el cliente importa, la cuenta de importaciones en tránsito. Las liquidaciones se envían desde Importaciones.') + h + mvHtmlTransito();
+      c.innerHTML = pcBarraPedido('venta', mvE.cliente, mvE.anio, mvE.visita, 'Para armar o actualizar el movimiento del inventario y el de importaciones en tránsito, envía el mayor contable, las cuentas de inventario y, si el cliente importa, la cuenta de importaciones en tránsito. Las liquidaciones se envían desde Importaciones.') + h + mvHtmlTransito() + mvHtmlKardex();
     }
 
     // ===== Movimiento de la cuenta de importaciones en tránsito (mismo formato; sale de los asientos del mayor guardados en Importaciones) =====
@@ -18250,6 +18144,61 @@ ${cont.innerHTML}
       }
       h += '</tbody></table></div><p class="mt-2 text-[11px] text-slate-500">Sale de los asientos del mayor que pasan por la cuenta en tránsito. Entradas = débitos; salidas = créditos (liquidaciones y salidas hacia el inventario u otras cuentas). Las reversiones de entradas (créditos) cancelan entradas anteriores; las reversiones de salidas (débitos) cancelan liquidaciones anteriores. Haz clic en una cifra para ver sus partidas. El saldo inicial y el "Según libros" se toman de las sumarias o de lo escrito en Importaciones, pestaña 3.</p>';
       return h;
+    }
+    // ===== Movimiento del kárdex (mismo formato horizontal: saldo inicial, entradas, salidas, ajustes, otros, saldo final) =====
+    const MV_KAR_COLS = [['saldo_inicial', 'Saldo inicial'], ['compras', 'Entradas'], ['salidas', 'Salidas'], ['ajustes', 'Ajustes'], ['otros', 'Otros'], ['saldo_final', 'Saldo final']];
+    const MV_KAR_MOV = ['compras', 'salidas', 'ajustes', 'otros'];
+    // "Otros" junta otros y reclasificaciones, para que el kárdex y el mayor se comparen en las mismas columnas
+    const mvKarVal = (x, k) => k === 'otros' ? r2f(mvVal(x, 'otros') + mvVal(x, 'reclasificaciones')) : (MV_MOV.includes(k) ? mvVal(x, k) : mvN(x[k]));
+    const mvKarTot = (lista, k) => r2f((lista || []).reduce((t, x) => t + mvKarVal(x, k), 0));
+    const mvKarPart = (x, k) => (Array.isArray(x && x.partidas) ? x.partidas : []).filter(p => p && (k === 'otros' ? (p.col === 'otros' || p.col === 'reclasificaciones') : p.col === k));
+    function mvVerKar(k) { mvE.verKar = mvE.verKar === k ? null : k; mvE.verKarP = null; mvPintar(); }
+    function mvVerKarP(i) { mvE.verKarP = mvE.verKarP === i ? null : i; mvPintar(); }
+    function mvHtmlKardex() {
+      const TH = 'px-2 py-2 text-[11px] font-bold text-slate-700 bg-slate-100 border-b border-slate-300', fm = formatoNumeroAnexo, P = mvE.kar || [];
+      const pill = mvE.karAct && mvE.karAct.por === 'Claude' ? '<span class="pill-origen rev ic-claude">Procesado por Claude, sujeto a modificaciones en caso de existir</span>' : (mvE.karAct && mvE.karAct.por ? '<span class="text-[11px] text-slate-500">Actualizado por ' + escapeHtml(mvE.karAct.por) + '</span>' : '');
+      const cab = '<div class="mt-6 mb-2 flex flex-wrap items-center gap-2">' + pill + '<span class="text-[13px] font-semibold text-slate-800">Movimiento del kárdex</span>' + (P.length ? '<button type="button" onclick="mvKarDescargar()" class="ml-auto px-1 py-1.5 text-xs font-bold bg-transparent border-0 hover:underline transition" style="color:#449964">⬇ Descargar Excel</button>' : '') + '</div>';
+      if (!P.length) return cab + '<div class="border border-slate-200 rounded-xl">' + pcHtmlAviso('AF', mvE.cliente, mvE.anio, mvE.visita, 'kardex') + '</div>';
+      const hayMay = (mvE.cuentas || []).length > 0, K = {}, M = {};
+      MV_KAR_COLS.forEach(([k]) => { K[k] = mvKarTot(P, k); M[k] = hayMay ? mvKarTot(mvE.cuentas, k) : null; });
+      const nDif = P.filter(x => Math.abs(mvDif(x)) > 0.005).length;
+      const dcol = v => Math.abs(v) > 1 ? 'text-red-600' : 'text-emerald-700';
+      let h = cab + pcBarraPedido('kardex', mvE.cliente, mvE.anio, mvE.visita, 'Para armar o actualizar el movimiento del kárdex, envía el kárdex del cliente (Excel, CSV, PDF u otro).');
+      h += '<div class="overflow-x-auto border border-slate-200 rounded-xl mt-2"><table class="w-full text-[11px] leading-tight border-collapse min-w-[900px]"><thead><tr><th class="' + TH + ' text-left"></th>' + MV_KAR_COLS.map(([k, n]) => '<th class="' + TH + ' text-right">' + n + '</th>').join('') + '</tr></thead><tbody>';
+      h += '<tr class="border-b border-slate-100"><td class="px-2 py-1 font-semibold">Kárdex (' + P.length + ' productos)</td>' + MV_KAR_COLS.map(([k]) => {
+        const ab = mvE.verKar === k;
+        return '<td class="px-1 py-1"><button type="button" onclick="mvVerKar(\'' + k + '\')" class="w-full text-right p-1 rounded font-bold ' + (ab ? 'bg-indigo-100 text-indigo-900' : 'text-indigo-700 hover:bg-indigo-50') + '" style="text-decoration:underline dotted" title="Clic para ver esta cifra por producto">' + (ab ? '▴ ' : '▾ ') + fm(K[k]) + '</button></td>';
+      }).join('') + '</tr>';
+      if (mvE.verKar) {
+        const k = mvE.verKar, nomK = (MV_KAR_COLS.find(c => c[0] === k) || [k, k])[1], esMov = MV_KAR_MOV.includes(k);
+        const lista = P.map((x, i) => ({ x, i, v: mvKarVal(x, k) })).filter(o => Math.abs(o.v) > 0.005).sort((a, b) => Math.abs(b.v) - Math.abs(a.v));
+        let t = '<tr class="bg-indigo-50/60"><td colspan="' + (MV_KAR_COLS.length + 1) + '" class="px-3 py-2"><div style="position:sticky;left:8px;width:min(100%, calc(100vw - 6rem))"><div class="flex items-center justify-between gap-3 mb-1"><span class="text-[11px] font-bold text-indigo-900">' + escapeHtml(nomK) + ' del kárdex por producto — ' + lista.length + (lista.length === 1 ? ' producto' : ' productos') + '</span><button type="button" onclick="mvVerKar(\'' + k + '\')" class="px-3 py-1 text-[11px] font-bold text-slate-700 bg-white border border-slate-400 rounded-lg hover:bg-slate-100">✕ Cerrar</button></div>';
+        t += '<div class="max-h-96 overflow-auto border border-slate-200 rounded-lg bg-white"><table class="w-full text-[11px] leading-tight border-collapse"><thead><tr class="bg-slate-100 text-slate-700 sticky top-0"><th class="px-2 py-1 text-left font-bold">Código</th><th class="px-2 py-1 text-left font-bold">Producto</th><th class="px-2 py-1 text-right font-bold">' + escapeHtml(nomK) + '</th><th class="px-2 py-1 text-right font-bold" title="Saldo inicial + movimientos − Saldo final del producto. Debe ser cero">Diferencia del producto</th></tr></thead><tbody>';
+        lista.forEach(o => {
+          const pts = esMov ? mvKarPart(o.x, k) : [], ab = mvE.verKarP === o.i, dm = mvDif(o.x);
+          t += '<tr class="border-t border-slate-100 align-top ' + (pts.length ? 'cursor-pointer hover:bg-slate-50' : '') + '"' + (pts.length ? ' onclick="mvVerKarP(' + o.i + ')"' : '') + '><td class="px-2 py-1 whitespace-nowrap">' + (pts.length ? '<span class="inline-block w-3">' + (ab ? '▾' : '▸') + '</span> ' : '') + escapeHtml(o.x.codigo || '') + '</td><td class="px-2 py-1">' + escapeHtml(o.x.cuenta || '') + '</td><td class="px-2 py-1 text-right whitespace-nowrap ' + (o.v < 0 ? 'text-rose-700' : '') + '">' + fm(o.v) + '</td><td class="px-2 py-1 text-right whitespace-nowrap font-bold ' + (Math.abs(dm) > 0.005 ? 'text-red-600' : 'text-emerald-700') + '">' + fm(dm) + '</td></tr>';
+          if (ab && pts.length) t += '<tr><td colspan="4" class="px-3 py-2 bg-slate-50"><table class="w-full text-[11px] leading-tight border-collapse"><thead><tr class="bg-slate-100 text-slate-700"><th class="px-2 py-1 text-left font-bold">Fecha</th><th class="px-2 py-1 text-left font-bold">Documento</th><th class="px-2 py-1 text-left font-bold">Descripción</th><th class="px-2 py-1 text-right font-bold">Valor</th></tr></thead><tbody>' + pts.map(p => '<tr class="border-t border-slate-100 align-top"><td class="px-2 py-1 whitespace-nowrap">' + (mvEsResumen(p) ? escapeHtml(String(p.fecha || '').slice(0, 7)) : mvFechaCorta(p.fecha)) + '</td><td class="px-2 py-1 whitespace-nowrap">' + escapeHtml(p.ref || '') + '</td><td class="px-2 py-1">' + escapeHtml(p.desc || '') + '</td><td class="px-2 py-1 text-right whitespace-nowrap">' + fm(mvN(p.valor)) + '</td></tr>').join('') + '</tbody></table></td></tr>';
+        });
+        t += '<tr class="border-t-2 border-slate-300 bg-slate-50 font-bold"><td class="px-2 py-1" colspan="2">Total del kárdex</td><td class="px-2 py-1 text-right">' + fm(K[k]) + '</td><td></td></tr></tbody></table></div></div></td></tr>';
+        h += t;
+      }
+      h += '<tr class="border-b border-slate-100"><td class="px-2 py-1">Mayor contable (cuentas de inventario de la tabla de arriba)</td>' + MV_KAR_COLS.map(([k]) => '<td class="px-2 py-1 text-right">' + (hayMay ? fm(M[k]) : '<span class="text-slate-400">–</span>') + '</td>').join('') + '</tr>';
+      h += '<tr class="font-bold"><td class="px-2 py-1">Diferencia (kárdex − mayor)</td>' + MV_KAR_COLS.map(([k]) => { const d = hayMay ? r2f(K[k] - M[k]) : null; return '<td class="px-2 py-1 text-right ' + (d === null ? '' : dcol(d)) + '">' + (d === null ? '<span class="text-slate-400">–</span>' : fm(d)) + '</td>'; }).join('') + '</tr></tbody></table></div>';
+      h += '<p class="mt-2 text-[11px] text-slate-500">' + (hayMay ? '' : 'Aún no hay movimiento del mayor para comparar. ') + 'Entradas, salidas, ajustes y otros salen de la suma de los productos del kárdex; "Otros" incluye las reclasificaciones, igual que en el mayor. Aumentos con signo positivo y disminuciones (ventas, bajas) con signo negativo. ' + (nDif ? '<b class="text-red-600">' + nDif + ' de ' + P.length + ' productos tienen diferencia entre su movimiento y su saldo final</b> (se ven al abrir una cifra).' : 'Todos los productos cuadran entre su movimiento y su saldo final.') + ' Haz clic en una cifra para verla por producto, y en un producto para ver sus documentos.</p>';
+      return h;
+    }
+    async function mvKarDescargar() {
+      const P = mvE.kar || [], tk = k => mvKarTot(P, k), hayMay = (mvE.cuentas || []).length > 0;
+      const comp = [['Concepto', 'Kárdex', 'Mayor contable', 'Diferencia (kárdex − mayor)'], ...MV_KAR_COLS.map(([k, n]) => [n, tk(k), hayMay ? mvKarTot(mvE.cuentas, k) : '', hayMay ? r2f(tk(k) - mvKarTot(mvE.cuentas, k)) : ''])];
+      const filas = P.map(x => [x.codigo || '', x.cuenta || '', ...MV_KAR_COLS.map(([k]) => mvKarVal(x, k)), mvDif(x)]);
+      const par = [['Código', 'Producto', 'Concepto', 'Fecha', 'Documento', 'Descripción', 'Valor']];
+      P.forEach(x => (Array.isArray(x.partidas) ? x.partidas : []).forEach(p => par.push([x.codigo || '', x.cuenta || '', (MV_COLS.find(c => c[0] === p.col) || [0, p.col])[1], p.fecha || '', p.ref || '', p.desc || '', mvN(p.valor)])));
+      const info = 'Cliente: ' + ((typeof impNombreCliente === 'function' && impNombreCliente()) || '') + ' · Año ' + mvE.anio + ' · Visita ' + mvE.visita;
+      const hojas = [{ nombre: 'Kárdex vs mayor', aoa: comp, anchos: [{ wch: 24 }, { wch: 18 }, { wch: 18 }, { wch: 26 }], op: { titulo: 'Movimiento del kárdex contra el movimiento del mayor contable', info } },
+        { nombre: 'Movimiento por producto', aoa: [['Código', 'Producto', ...MV_KAR_COLS.map(c => c[1]), 'Diferencia'], ...filas], anchos: [{ wch: 16 }, { wch: 46 }, ...MV_KAR_COLS.map(() => ({ wch: 18 })), { wch: 14 }], op: { titulo: 'Movimiento del kárdex por producto', info, totales: MV_KAR_COLS.map((c, i) => i + 2).concat([MV_KAR_COLS.length + 2]) } },
+        { nombre: 'Detalle', aoa: par, anchos: [{ wch: 16 }, { wch: 40 }, { wch: 30 }, { wch: 12 }, { wch: 20 }, { wch: 60 }, { wch: 16 }], op: { titulo: 'Detalle del movimiento por producto', info, fecha: [3], totales: [6] } }];
+      const cli = (typeof impNombreCliente === 'function' && impNombreCliente()) || 'cliente';
+      try { await arrXlsxConFormato(hojas, cli, 'Kardex_' + String(cli).replace(/[^A-Za-z0-9]+/g, '_').slice(0, 30) + '_' + mvE.anio + '.xlsx'); } catch (e) { alert('No se pudo armar el Excel: ' + (e.message || e)); }
     }
     function mvPartidasIdx(x, k) { const r = []; (Array.isArray(x && x.partidas) ? x.partidas : []).forEach((p, ix) => { if (p && p.col === k) r.push({ p, ix }); }); return r; }
     function mvVer(i, k) { mvE.ver = (mvE.ver && mvE.ver.i === i && mvE.ver.k === k) ? null : { i, k }; mvPintar(); }
