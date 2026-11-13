@@ -5320,7 +5320,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
     // Barra fija para enviar un pedido a Claude desde la propia pantalla (cuando ya hay datos y se quiere actualizar)
     function pcBarraPedido(hoja, cli, anio, vis, texto) {
       if (!cli) return '';
-      const T = { venta: ['Movimiento del inventario, importaciones en tránsito y kárdex: todo se pide a Claude', 'Pedir a Claude (mayor contable + cuentas de inventario y de tránsito + kárdex + liquidaciones)'], costo_ventas: ['Costo de ventas: todo se pide a Claude', 'Pedir a Claude (mayor contable + cuentas de costo de ventas)'], kardex: ['Kárdex: todo se pide a Claude', 'Pedir a Claude (kárdex)'] }[hoja] || ['Todo se pide a Claude', 'Pedir a Claude'];
+      const T = { venta: ['Ingreso de información: todo se pide a Claude', 'Pedir a Claude (mayor contable + cuentas de inventario y de tránsito + kárdex + liquidaciones)'], costo_ventas: ['Costo de ventas: todo se pide a Claude', 'Pedir a Claude (mayor contable + cuentas de costo de ventas)'], kardex: ['Kárdex: todo se pide a Claude', 'Pedir a Claude (kárdex)'] }[hoja] || ['Todo se pide a Claude', 'Pedir a Claude'];
       return '<div class="mt-3 p-3 bg-white border border-slate-200 rounded-xl space-y-2 text-xs text-slate-700"><div class="text-[13px] font-semibold text-slate-800 ic-claude ic-tomate">' + T[0] + '</div><p class="text-slate-600">' + escapeHtml(texto) + '</p><div class="flex flex-wrap items-center gap-2"><button type="button" onclick="pcIrAPedido(\'AF\', \'' + escapeHtml(cli) + '\', \'' + escapeHtml(anio) + '\', \'' + escapeHtml(vis) + '\', \'' + hoja + '\')" class="px-3 py-1.5 rounded-lg text-xs transition bg-slate-200 text-slate-900 hover:bg-slate-300 font-semibold ic-claude">' + T[1] + '</button></div></div>';
     }
     function pcHtmlAviso(sumaria, cli, anio, vis, hoja) {
@@ -17821,8 +17821,8 @@ ${cont.innerHTML}
       };
       if (document.body) iniciar(); else document.addEventListener('DOMContentLoaded', iniciar);
     })();
-    const IV_VENTA_BOTONES = [['mov', 'i) Movimiento del inventario, importaciones en tránsito y kárdex'], ['impcompras', 'ii) Compras/Liquidaciones de importación → Entradas (mayor contable)'], ['salidas', 'iii) Costo de ventas → Salidas (mayor contable)'], ['kcompras', 'iv) Kárdex (entradas) → Compras/Liquidaciones de importación'], ['ksalidas', 'v) Kárdex (salidas) → Costo de ventas']];
-    const ivE = { hoja: 'venta', btn: 'mov' };
+    const IV_VENTA_BOTONES = [['ingreso', 'i) Ingreso de información'], ['mov', 'ii) Movimiento del inventario, importaciones en tránsito y kárdex'], ['impcompras', 'iii) Compras/Liquidaciones de importación → Entradas (mayor contable)'], ['salidas', 'iv) Costo de ventas → Salidas (mayor contable)'], ['kcompras', 'v) Kárdex (entradas) → Compras/Liquidaciones de importación'], ['ksalidas', 'vi) Kárdex (salidas) → Costo de ventas']];
+    const ivE = { hoja: 'venta', btn: 'ingreso' };
     function ivPintarHojas() {
       const btn = (on, clic, n, extra) => '<button type="button" onclick="' + clic + '" style="padding:8px 18px;font-size:13px;cursor:pointer;background:' + (on ? '#bdbdba' : 'transparent') + ';color:' + (on ? '#1f2937' : '#64748b') + ';font-weight:' + (on ? '700' : '500') + ';border:0;border-bottom:3px solid ' + (on ? '#1e293b' : 'transparent') + ';margin-bottom:-1px;border-radius:6px 6px 0 0">' + n + (extra || '') + '</button>';
       const h = $im('im-hojas'); if (!h) return;
@@ -17838,7 +17838,7 @@ ${cont.innerHTML}
         otras.classList.toggle('hidden', imp);
         if (!imp) {
           if (ivE.hoja === 'venta') otras.innerHTML = '<div class="border-t border-slate-300 mt-3 mb-2"></div><div class="flex flex-wrap gap-1 p-1.5 bg-white border border-slate-200 rounded-2xl">' + IV_VENTA_BOTONES.map(([k, n]) => '<button type="button" onclick="ivIrBoton(\'' + k + '\')" class="px-3 py-1.5 text-xs transition rounded-lg ' + (ivE.btn === k ? 'bg-slate-200 text-slate-900 font-semibold' : 'text-slate-600 hover:bg-slate-100') + '">' + n + '</button>').join('') + '</div>' +
-            (ivE.btn === 'mov' ? '<div id="mv-cont" class="mt-3"></div>' : ivE.btn === 'salidas' ? '<div id="cv-cont" class="mt-3"></div>' : ivE.btn === 'kcompras' ? '<div id="kc-cont" class="mt-3"></div>' : emb ? '<div class="mt-2 text-[11px] text-slate-500">Pide a Claude, en un solo pedido, la lectura de las liquidaciones y el cruce con el mayor contable.</div>' : '<div class="border border-dashed border-slate-300 rounded-xl p-8 mt-3 text-center text-sm text-slate-500"><div class="font-bold text-slate-700 mb-1">' + escapeHtml((IV_VENTA_BOTONES.find(x => x[0] === ivE.btn) || [])[1] || '') + '</div>Esta herramienta está en desarrollo. La iremos construyendo en los siguientes pasos.</div>');
+            (ivE.btn === 'ingreso' ? '<div id="ig-cont" class="mt-3"></div>' : ivE.btn === 'mov' ? '<div id="mv-cont" class="mt-3"></div>' : ivE.btn === 'salidas' ? '<div id="cv-cont" class="mt-3"></div>' : ivE.btn === 'kcompras' ? '<div id="kc-cont" class="mt-3"></div>' : emb ? '<div class="mt-2 text-[11px] text-slate-500">La lectura de las liquidaciones y el cruce con el mayor contable se piden en un solo pedido, en ' + impLkIng('Ingreso de información') + '.</div>' : '<div class="border border-dashed border-slate-300 rounded-xl p-8 mt-3 text-center text-sm text-slate-500"><div class="font-bold text-slate-700 mb-1">' + escapeHtml((IV_VENTA_BOTONES.find(x => x[0] === ivE.btn) || [])[1] || '') + '</div>Esta herramienta está en desarrollo. La iremos construyendo en los siguientes pasos.</div>');
           else otras.innerHTML = '<div class="border border-dashed border-slate-300 rounded-xl p-8 text-center text-sm text-slate-500"><div class="font-bold text-slate-700 mb-1">' + escapeHtml(nom) + '</div>Esta hoja está en desarrollo.</div>';
         }
       }
@@ -17851,7 +17851,7 @@ ${cont.innerHTML}
       else if (!emb) { if (av) av.classList.add('hidden'); if (esp) esp.classList.add('hidden'); }
       if (!imp && ivE.hoja === 'venta' && ivE.btn === 'salidas') { const hayCambio = cvE.cliente !== $im('im-cliente').value || cvE.anio !== $im('im-anio').value || cvE.visita !== $im('im-visita').value; if (hayCambio || !cvE.cargado) cvCargar(); else cvPintar(); }
       if (!imp && ivE.hoja === 'venta' && ivE.btn === 'kcompras') { const hayCambio = kcE.cliente !== $im('im-cliente').value || kcE.anio !== $im('im-anio').value || kcE.visita !== $im('im-visita').value; if (hayCambio || !kcE.cargado) kcCargar(); else kcPintar(); }
-      if (!imp && ivE.hoja === 'venta' && ivE.btn === 'mov') { const hayCambio = mvE.cliente !== $im('im-cliente').value || mvE.anio !== $im('im-anio').value || mvE.visita !== $im('im-visita').value; if (hayCambio || !mvE.cargado) mvCargar(); else mvPintar(); }
+      if (!imp && ivE.hoja === 'venta' && (ivE.btn === 'mov' || ivE.btn === 'ingreso')) { const hayCambio = mvE.cliente !== $im('im-cliente').value || mvE.anio !== $im('im-anio').value || mvE.visita !== $im('im-visita').value; if (hayCambio || !mvE.cargado) mvCargar(); else { mvPintar(); igPintar(); } }
     }
 
     // ===== AF Inventarios › Inventario para la venta › v) Kárdex (entradas) → Compras/Liquidaciones de importación =====
@@ -17889,14 +17889,14 @@ ${cont.innerHTML}
       if (!kcE.cargado) { c.innerHTML = '<p class="text-xs text-slate-500 p-4">Cargando…</p>'; return; }
       if (kcE.error) { c.innerHTML = '<p class="text-xs text-red-600 font-bold p-4">No se pudo cargar: ' + escapeHtml(kcE.error) + '</p>'; return; }
       const F = formatoNumeroAnexo, TH = 'px-2 py-2 text-[11px] font-bold text-slate-700 bg-slate-100 border-b border-slate-300', TD = 'px-2 py-1';
-      const info = '<div class="text-[11px] text-slate-500 mb-3"><b>Objetivo:</b> comprobar que lo que entró al inventario según el mayor contable (Movimiento del inventario, pestaña i) coincide, mes a mes, con las entradas del kárdex (pestaña i). Como referencia se muestran las liquidaciones de importación del mes. Haz clic en un mes para ver su detalle.</div>';
+      const info = '<div class="text-[11px] text-slate-500 mb-3"><b>Objetivo:</b> comprobar que lo que entró al inventario según el mayor contable (Movimiento del inventario) coincide, mes a mes, con las entradas del kárdex. Como referencia se muestran las liquidaciones de importación del mes. Haz clic en un mes para ver su detalle.</div>';
       if (!kcE.mov.length || !kcE.prod.length) {
-        let m = info + '<div class="p-4 border border-dashed border-slate-300 rounded-xl text-xs text-slate-600 space-y-2"><p class="font-bold text-slate-700">Faltan datos para este cruce:</p><ul class="list-disc pl-5">' + (!kcE.mov.length ? '<li>El Movimiento del inventario con el mayor contable (pestaña i).</li>' : '') + (!kcE.prod.length ? '<li>El Movimiento de kárdex (pestaña i).</li>' : '') + '</ul><p>Envía los archivos desde esas pestañas y, cuando Claude termine, vuelve aquí.</p></div>';
+        let m = info + '<div class="p-4 border border-dashed border-slate-300 rounded-xl text-xs text-slate-600 space-y-2"><p class="font-bold text-slate-700">Faltan datos para este cruce:</p><ul class="list-disc pl-5">' + (!kcE.mov.length ? '<li>El Movimiento del inventario con el mayor contable.</li>' : '') + (!kcE.prod.length ? '<li>El Kárdex del cliente.</li>' : '') + '</ul><p>Envíalos en un solo pedido desde ' + impLkIng('Ingreso de información') + ' y, cuando Claude termine, vuelve aquí.</p></div>';
         c.innerHTML = m; return;
       }
       const R = kcCalcular(), dc = (v, hay) => !hay ? '<span class="text-slate-400">–</span>' : '<span class="' + (Math.abs(v) > 1 ? 'text-red-600' : 'text-emerald-700') + ' font-bold">' + F(v) + '</span>';
       let h = info + '<div class="flex flex-wrap items-center gap-2 mb-2"><button type="button" onclick="kcDescargar()" class="ml-auto px-1 py-1.5 text-xs font-bold bg-transparent border-0 hover:underline transition" style="color:#449964">⬇ Descargar (Excel)</button></div>';
-      h += '<div class="font-bold text-slate-800 mb-1 text-xs">A. Entradas por mes <span class="font-normal text-slate-500">(Diferencia = mayor − kárdex; clic en un mes ' + IC_OJO + ')</span></div><div class="overflow-x-auto border border-slate-200 rounded-xl"><table class="w-full text-[11px] border-collapse min-w-[640px]"><thead><tr><th class="' + TH + ' text-left">Mes</th><th class="' + TH + ' text-right">Entradas del mayor (pestaña i)</th><th class="' + TH + ' text-right">Entradas del kárdex</th><th class="' + TH + ' text-right">Diferencia</th><th class="' + TH + ' text-right">Liquidaciones de importación (informativo)</th></tr></thead><tbody>';
+      h += '<div class="font-bold text-slate-800 mb-1 text-xs">A. Entradas por mes <span class="font-normal text-slate-500">(Diferencia = mayor − kárdex; clic en un mes ' + IC_OJO + ')</span></div><div class="overflow-x-auto border border-slate-200 rounded-xl"><table class="w-full text-[11px] border-collapse min-w-[640px]"><thead><tr><th class="' + TH + ' text-left">Mes</th><th class="' + TH + ' text-right">Entradas del mayor</th><th class="' + TH + ' text-right">Entradas del kárdex</th><th class="' + TH + ' text-right">Diferencia</th><th class="' + TH + ' text-right">Liquidaciones de importación (informativo)</th></tr></thead><tbody>';
       R.filas.forEach(m => {
         const ab = kcE.abierto === m.ym;
         h += '<tr onclick="kcAbrir(\'' + m.ym + '\')" class="border-t border-slate-100 cursor-pointer hover:bg-slate-50' + (ab ? ' bg-slate-100' : '') + '"><td class="' + TD + ' font-semibold">' + (ab ? '▾ ' : '▸ ') + escapeHtml(cvMes(m.ym)) + '</td><td class="' + TD + ' text-right">' + F(m.may) + '</td><td class="' + TD + ' text-right">' + F(m.kar) + '</td><td class="' + TD + ' text-right">' + dc(m.dif, true) + '</td><td class="' + TD + ' text-right text-slate-600">' + (m.liq ? F(m.liq) : '') + '</td></tr>';
@@ -17910,9 +17910,9 @@ ${cont.innerHTML}
         }
       });
       h += '<tr class="border-t-2 border-slate-300 bg-slate-50 font-bold"><td class="' + TD + '">Total</td><td class="' + TD + ' text-right">' + F(R.tM) + '</td><td class="' + TD + ' text-right">' + F(R.tK) + '</td><td class="' + TD + ' text-right">' + dc(R.dif, true) + '</td><td class="' + TD + ' text-right">' + (R.hayL ? F(R.tL) : '') + '</td></tr></tbody></table></div>';
-      h += '<div class="font-bold text-slate-800 mt-4 mb-1 text-xs">B. Cuadre del movimiento: mayor contable contra kárdex <span class="font-normal text-slate-500">(Diferencia = mayor − kárdex)</span></div><div class="overflow-x-auto border border-slate-200 rounded-xl"><table class="w-full text-[11px] border-collapse min-w-[520px]"><thead><tr><th class="' + TH + ' text-left">Concepto</th><th class="' + TH + ' text-right">Mayor contable (pestaña i)</th><th class="' + TH + ' text-right">Kárdex (pestaña i)</th><th class="' + TH + ' text-right">Diferencia</th></tr></thead><tbody>' +
+      h += '<div class="font-bold text-slate-800 mt-4 mb-1 text-xs">B. Cuadre del movimiento: mayor contable contra kárdex <span class="font-normal text-slate-500">(Diferencia = mayor − kárdex)</span></div><div class="overflow-x-auto border border-slate-200 rounded-xl"><table class="w-full text-[11px] border-collapse min-w-[520px]"><thead><tr><th class="' + TH + ' text-left">Concepto</th><th class="' + TH + ' text-right">Mayor contable</th><th class="' + TH + ' text-right">Kárdex</th><th class="' + TH + ' text-right">Diferencia</th></tr></thead><tbody>' +
         R.cuadre.map(x => '<tr class="border-t border-slate-100' + (x.k === 'compras' ? ' bg-amber-50' : '') + '"><td class="' + TD + '">' + escapeHtml(x.t) + '</td><td class="' + TD + ' text-right">' + F(x.may) + '</td><td class="' + TD + ' text-right">' + F(x.kar) + '</td><td class="' + TD + ' text-right">' + dc(x.dif, true) + '</td></tr>').join('') + '</tbody></table></div>';
-      c.innerHTML = '<p class="mt-3 text-[11px] text-slate-500">El kárdex y el mayor contable se envían juntos en un solo pedido desde la pestaña i.</p>' + h;
+      c.innerHTML = '<p class="mt-3 text-[11px] text-slate-500">El kárdex y el mayor contable se envían juntos en un solo pedido desde ' + impLkIng('Ingreso de información') + '.</p>' + h;
     }
     async function kcDescargar() {
       if (!window.ExcelJS) { alert('No se pudo cargar el generador de Excel. Revisa tu conexión a internet.'); return; }
@@ -17979,7 +17979,7 @@ ${cont.innerHTML}
       if (!cvE.cliente) { c.innerHTML = '<p class="text-xs text-slate-500 border border-dashed border-slate-300 rounded-xl p-4">Selecciona el cliente para comenzar.</p>'; return; }
       if (!cvE.cargado) { c.innerHTML = '<p class="text-xs text-slate-500 p-4">Cargando…</p>'; return; }
       if (cvE.error) { c.innerHTML = '<p class="text-xs text-red-600 font-bold p-4">No se pudo cargar: ' + escapeHtml(cvE.error) + '</p>'; return; }
-      const info = '<div class="text-[11px] text-slate-500 mb-3"><b>Objetivo:</b> comprobar que lo que salió del inventario por ventas coincide con el costo de ventas registrado en el mayor contable. <b>Cómo se hace:</b> con el mayor del pedido se arma, mes a mes, cada asiento de costo de ventas junto a su salida del inventario; luego el total se compara con el Movimiento del inventario (pestaña i) y con el balance. <b>Qué hacer:</b> haz clic en un mes para ver todos sus asientos.</div>';
+      const info = '<div class="text-[11px] text-slate-500 mb-3"><b>Objetivo:</b> comprobar que lo que salió del inventario por ventas coincide con el costo de ventas registrado en el mayor contable. <b>Cómo se hace:</b> con el mayor del pedido se arma, mes a mes, cada asiento de costo de ventas junto a su salida del inventario; luego el total se compara con el Movimiento del inventario y con el balance. <b>Qué hacer:</b> haz clic en un mes para ver todos sus asientos.</div>';
       if (!cvE.cv.length) { c.innerHTML = info + '<div class="border border-slate-200 rounded-xl">' + pcHtmlAviso('AF', cvE.cliente, cvE.anio, cvE.visita, 'costo_ventas') + '</div>'; return; }
       const R = cvCalcular(), TH = 'px-2 py-2 text-[11px] font-bold text-slate-700 bg-slate-100 border-b border-slate-300', TD = 'px-2 py-1', F = formatoNumeroAnexo;
       const dc = (v, hay) => !hay ? '<span class="text-slate-400">–</span>' : '<span class="' + (Math.abs(v) > 1 ? 'text-red-600' : 'text-emerald-700') + ' font-bold">' + F(v) + '</span>';
@@ -17995,7 +17995,7 @@ ${cont.innerHTML}
       h += '<tr class="border-t-2 border-slate-300 bg-slate-50 font-bold"><td class="' + TD + '">Total</td><td class="' + TD + ' text-right">' + F(R.tSal) + '</td><td class="' + TD + ' text-right">' + F(R.tCos) + '</td><td class="' + TD + ' text-right">' + dc(R.dif, true) + '</td><td class="' + TD + ' text-right text-slate-500">' + R.nAsientos + '</td></tr></tbody></table></div>';
       // B. Cruces
       h += '<div class="font-bold text-slate-800 mt-4 mb-1 text-xs">B. Cruces contra el movimiento y el balance</div><div class="grid md:grid-cols-2 gap-3">' +
-        '<div class="border border-slate-200 rounded-xl overflow-hidden"><table class="w-full text-[11px] border-collapse"><thead><tr><th class="' + TH + ' text-left" colspan="2">Salidas del inventario contra el Movimiento (pestaña i)</th></tr></thead><tbody>' +
+        '<div class="border border-slate-200 rounded-xl overflow-hidden"><table class="w-full text-[11px] border-collapse"><thead><tr><th class="' + TH + ' text-left" colspan="2">Salidas del inventario contra el Movimiento</th></tr></thead><tbody>' +
         '<tr class="border-t border-slate-100"><td class="' + TD + '">Salidas del cuadro</td><td class="' + TD + ' text-right">' + F(R.tSal) + '</td></tr>' +
         '<tr class="border-t border-slate-100"><td class="' + TD + '">Salidas del Movimiento del inventario</td><td class="' + TD + ' text-right">' + (R.hayMov ? F(R.movTot) : '<span class="text-slate-400">Sin movimiento</span>') + '</td></tr>' +
         '<tr class="border-t border-slate-200 bg-slate-50 font-bold"><td class="' + TD + '">Diferencia</td><td class="' + TD + ' text-right">' + dc(R.difMov, R.hayMov) + '</td></tr>' +
@@ -18050,7 +18050,7 @@ ${cont.innerHTML}
       const [{ data, error }, rb, ri, rk] = await Promise.all([
         supabaseClient.from('inventario_movimiento').select('*').eq('cliente_id', cli).eq('anio', Number(anio)).eq('visita', vis).eq('hoja', 'venta').maybeSingle(),
         supabaseClient.from('balance_comprobacion').select('codigo, saldo').eq('cliente_id', cli).eq('anio', Number(anio)).eq('visita', vis).eq('sumaria', 'AF').limit(5000),
-        supabaseClient.from('importaciones_datos').select('cruce, config').eq('cliente_id', cli).eq('anio', Number(anio)).eq('visita', vis).maybeSingle(),
+        supabaseClient.from('importaciones_datos').select('cruce, config, liquidaciones').eq('cliente_id', cli).eq('anio', Number(anio)).eq('visita', vis).maybeSingle(),
         supabaseClient.from('inventario_movimiento').select('*').eq('cliente_id', cli).eq('anio', Number(anio)).eq('visita', vis).eq('hoja', 'kardex').maybeSingle()
       ]);
       if (id !== mvE.cargaId) return;
@@ -18061,7 +18061,7 @@ ${cont.innerHTML}
       const bal = {}; ((rb && rb.data) || []).forEach(f => { bal[String(f.codigo || '').trim()] = Number(f.saldo); });
       mvE.cuentas.forEach(x => { const cod = String(x.codigo || '').trim(); if (cod && Number.isFinite(bal[cod])) x.saldo_libros = bal[cod]; });
       mvE.cargado = true; mvE.error = error ? (error.message || String(error)) : '';
-      mvPintar(); mvCargarBalTr(id);
+      mvPintar(); igPintar(); mvCargarBalTr(id);
     }
     function mvPintar() {
       if (typeof ivE === 'undefined' || ivE.hoja !== 'venta' || ivE.btn !== 'mov') return;
@@ -18069,7 +18069,7 @@ ${cont.innerHTML}
       if (!mvE.cliente) { c.innerHTML = '<p class="text-xs text-slate-500 border border-dashed border-slate-300 rounded-xl p-4">Selecciona el cliente para comenzar.</p>'; return; }
       if (!mvE.cargado) { c.innerHTML = '<p class="text-xs text-slate-500 p-4">Cargando…</p>'; return; }
       if (mvE.error) { c.innerHTML = '<p class="text-xs text-red-600 font-bold p-4">No se pudo cargar: ' + escapeHtml(/does not exist|schema cache/i.test(mvE.error) ? 'falta la tabla inventario_movimiento en Supabase.' : mvE.error) + '</p>'; return; }
-      if (!mvE.cuentas.length) { c.innerHTML = '<div class="border border-slate-200 rounded-xl">' + pcHtmlAviso('AF', mvE.cliente, mvE.anio, mvE.visita, 'venta') + '</div>' + ((mvE.kar || []).length ? '<div class="flex mt-2">' + mvBtnKarExcel() + '</div>' : '') + mvHtmlTransito() + mvHtmlKardex(); return; }
+      if (!mvE.cuentas.length) { c.innerHTML = '<p class="text-xs text-slate-500 border border-dashed border-slate-300 rounded-xl p-6 text-center">Aún no hay información. Haz el pedido en ' + impLkIng('Ingreso de información') + '.</p>' + ((mvE.kar || []).length ? '<div class="flex mt-2">' + mvBtnKarExcel() + '</div>' : '') + mvHtmlTransito() + mvHtmlKardex(); return; }
       const TH = 'px-2 py-2 text-[11px] font-bold text-slate-700 bg-slate-100 border-b border-slate-300', IN = 'w-full p-1 border border-slate-300 rounded text-[11px] text-right outline-none focus:ring-2 focus:ring-indigo-500 bg-white';
       const tot = {}; [...MV_COLS.map(c => c[0])].forEach(k => { tot[k] = r2f(mvE.cuentas.reduce((a, x) => a + (MV_MOV.includes(k) ? mvVal(x, k) : mvN(x[k])), 0)); });
       tot.saldo_libros = r2f(mvE.cuentas.reduce((a, x) => a + mvN(x.saldo_libros), 0));
@@ -18093,7 +18093,29 @@ ${cont.innerHTML}
         if (mvE.ver && mvE.ver.i === i) h += mvHtmlPartidas(x, mvE.ver.k);
       });
       h += '<tr class="bg-slate-50 font-bold"><td class="px-2 py-1.5">Total</td>' + MV_COLS.map(([k]) => '<td class="px-2 py-1.5 text-right">' + formatoNumeroAnexo(tot[k]) + '</td>').join('') + '<td class="px-2 py-1.5 text-right">' + (hayLibTot ? formatoNumeroAnexo(tot.saldo_libros) : '') + '</td><td class="px-2 py-1.5 text-right">' + celdaDif(difTot, hayLibTot) + '</td></tr></tbody></table></div>';
-      c.innerHTML = pcBarraPedido('venta', mvE.cliente, mvE.anio, mvE.visita, 'Para armar o actualizar el movimiento del inventario y el de importaciones en tránsito, envía el mayor contable, las cuentas de inventario, el kárdex del cliente y, si el cliente importa, la cuenta de importaciones en tránsito y las liquidaciones de importación. Todo va en un solo pedido y Claude lo lee junto; las demás pestañas leen de aquí.') + h + mvHtmlTransito() + mvHtmlKardex();
+      c.innerHTML = h + mvHtmlTransito() + mvHtmlKardex();
+    }
+
+    // ===== AF Inventarios › Inventario para la venta › i) Ingreso de información (un solo pedido para todo) =====
+    function igPintar() {
+      if (typeof ivE === 'undefined' || ivE.hoja !== 'venta' || ivE.btn !== 'ingreso') return;
+      const c = document.getElementById('ig-cont'); if (!c) return;
+      if (!mvE.cliente) { c.innerHTML = '<p class="text-xs text-slate-500 border border-dashed border-slate-300 rounded-xl p-4">Selecciona el cliente para comenzar.</p>'; return; }
+      if (!mvE.cargado) { c.innerHTML = '<p class="text-xs text-slate-500 p-4">Cargando…</p>'; return; }
+      if (mvE.error) { c.innerHTML = '<p class="text-xs text-red-600 font-bold p-4">No se pudo cargar: ' + escapeHtml(mvE.error) + '</p>'; return; }
+      const I = mvE.imp || {}, cr = I.cruce || {}, cf = I.config || {}, liq = (I.liquidaciones && Array.isArray(I.liquidaciones.imports)) ? I.liquidaciones.imports : [];
+      const nAs = Array.isArray(cr.asientos) ? cr.asientos.length : 0, nLin = Array.isArray(cr.lineas) ? cr.lineas.length : 0, nCta = (mvE.cuentas || []).length, nKar = (mvE.kar || []).length;
+      const fch = f => { const m = String(f || '').match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? m[3] + '/' + m[2] + '/' + m[1] : ''; };
+      const fila = (nombre, ok, det) => '<tr class="border-b border-slate-100"><td class="px-2 py-1.5 w-6 text-center">' + (ok ? '<span class="text-emerald-700 font-bold">✓</span>' : '<span class="text-slate-400">○</span>') + '</td><td class="px-2 py-1.5">' + nombre + '</td><td class="px-2 py-1.5 ' + (ok ? 'text-slate-700' : 'text-slate-400') + '">' + det + '</td></tr>';
+      const estado = '<div class="mt-3 p-3 bg-white border border-slate-200 rounded-xl text-xs text-slate-700"><div class="text-[13px] font-semibold text-slate-800 mb-1">Qué hay leído de este cliente, año y visita</div><div class="overflow-x-auto"><table class="text-[11px] leading-tight border-collapse w-full" style="min-width:34rem"><tbody>' +
+        fila('Mayor contable', !!cr.archivo, cr.archivo ? escapeHtml(cr.archivo) + (cr.fecha ? ' · leído el ' + fch(cr.fecha) : '') : 'Aún no leído') +
+        fila(impLkMov('Movimiento del inventario'), nCta > 0, nCta ? nCta + ' cuenta(s) de inventario' + (mvE.act && mvE.act.en ? ' · actualizado el ' + fch(mvE.act.en) : '') : 'Aún no leído') +
+        fila(impLkMov('Importaciones en tránsito'), !!(cf.transito && nAs), cf.transito && nAs ? 'Cuenta ' + escapeHtml(cf.transito) + ' · ' + nAs + ' asientos' : 'Aún no leído') +
+        fila(impLkMov('Kárdex'), nKar > 0, nKar ? nKar + ' producto(s)' + (mvE.karAct && mvE.karAct.en ? ' · actualizado el ' + fch(mvE.karAct.en) : '') : 'Aún no leído') +
+        fila(impLkTab('Liquidaciones de importación', 'liq'), liq.length > 0, liq.length ? liq.length + ' importaciones' : 'Aún no leídas') +
+        fila(impLkTab('Liquidaciones → Importaciones (mayor contable)', 'cruce'), nLin > 0, nLin ? nLin + ' líneas del mayor ubicadas en las importaciones' : 'Aún no hay cruce') +
+        '</tbody></table></div><p class="mt-2 text-slate-500">El costo de ventas se pide aparte, en su propia pestaña, porque usa otras cuentas.</p></div>';
+      c.innerHTML = pcBarraPedido('venta', mvE.cliente, mvE.anio, mvE.visita, 'Aquí se sube todo en un solo pedido: el mayor contable, las cuentas de inventario y de tránsito, el kárdex del cliente y las liquidaciones de importación (si el cliente importa). Claude lo lee junto y las demás pestañas leen de aquí. Cuando el pedido pase a "hecho", presiona F5.') + estado;
     }
 
     // ===== Movimiento de la cuenta de importaciones en tránsito (mismo formato; sale de los asientos del mayor guardados en Importaciones) =====
@@ -18151,11 +18173,11 @@ ${cont.innerHTML}
       const TH = 'px-2 py-2 text-[11px] font-bold text-slate-700 bg-slate-100 border-b border-slate-300';
       const cab = '<div class="mt-6 mb-2 text-[13px] font-semibold text-slate-800">Movimiento de la cuenta de importaciones en tránsito</div>';
       const x = mvTrCuenta();
-      if (!x) return cab + '<div class="p-4 border border-dashed border-slate-300 rounded-xl text-xs text-slate-600">Aún no están los asientos de la cuenta de importaciones en tránsito. Haz un pedido a Claude con el mayor contable e indica la cuenta de importaciones en tránsito (campo opcional del pedido); cuando termine, el movimiento aparecerá aquí con sus partidas.</div>';
+      if (!x) return cab + '<div class="p-4 border border-dashed border-slate-300 rounded-xl text-xs text-slate-600">Aún no están los asientos de la cuenta de importaciones en tránsito. Haz el pedido en ' + impLkIng('Ingreso de información') + ' con el mayor contable e indica la cuenta de importaciones en tránsito (campo opcional del pedido); cuando termine, el movimiento aparecerá aquí con sus partidas.</div>';
       const hayLib = x.saldo_libros !== null && x.saldo_libros !== undefined, dif = hayLib ? r2f(x.saldo_final - x.saldo_libros) : 0;
       const celdaDif = hayLib ? '<span class="' + (Math.abs(dif) > 1 ? 'text-red-600' : 'text-emerald-700') + '">' + formatoNumeroAnexo(dif) + '</span>' : '<span class="text-slate-400">–</span>';
-      let h = cab + '<div class="overflow-x-auto border border-slate-200 rounded-xl"><table class="w-full text-[11px] leading-tight border-collapse min-w-[1000px]"><thead><tr><th class="' + TH + ' text-left">Cuenta</th>' + MV_TR_COLS.map(k => '<th class="' + TH + ' text-right">' + MV_TR_NOM[k] + '</th>').join('') + '<th class="' + TH + ' text-right" title="Saldo de la sumaria (balance de comprobación) o el escrito en Importaciones, pestaña 3">Según libros</th><th class="' + TH + ' text-right" title="Saldo final − Según libros. Debe ser cero">Diferencia</th></tr></thead><tbody>';
-      h += '<tr class="border-b border-slate-100 align-top"><td class="px-2 py-1">' + escapeHtml((x.codigo ? x.codigo + ' ' : '') + x.cuenta) + (x.siConocido ? '' : '<div class="text-[10px] text-amber-700 font-bold mt-0.5">Falta el saldo inicial: escríbelo en Importaciones, pestaña 3.</div>') + '</td>' +
+      let h = cab + '<div class="overflow-x-auto border border-slate-200 rounded-xl"><table class="w-full text-[11px] leading-tight border-collapse min-w-[1000px]"><thead><tr><th class="' + TH + ' text-left">Cuenta</th>' + MV_TR_COLS.map(k => '<th class="' + TH + ' text-right">' + MV_TR_NOM[k] + '</th>').join('') + '<th class="' + TH + ' text-right" title="Saldo de la sumaria (balance de comprobación) o el escrito en Importaciones (Importaciones en tránsito → Inventario)">Según libros</th><th class="' + TH + ' text-right" title="Saldo final − Según libros. Debe ser cero">Diferencia</th></tr></thead><tbody>';
+      h += '<tr class="border-b border-slate-100 align-top"><td class="px-2 py-1">' + escapeHtml((x.codigo ? x.codigo + ' ' : '') + x.cuenta) + (x.siConocido ? '' : '<div class="text-[10px] text-amber-700 font-bold mt-0.5">Falta el saldo inicial: escríbelo en Importaciones en tránsito → Inventario.</div>') + '</td>' +
         MV_TR_COLS.map(k => {
           if (MV_TR_MOV.includes(k)) {
             const n = x.partidas.filter(p => p.col === k).length, v = x[k], ab = mvE.verTr === k;
@@ -18171,7 +18193,7 @@ ${cont.innerHTML}
           lista.map(p => '<tr class="border-t border-slate-100 align-top"><td class="px-2 py-1 whitespace-nowrap">' + mvFechaCorta(p.fecha) + '</td><td class="px-2 py-1 whitespace-nowrap">' + escapeHtml(p.ref) + '</td><td class="px-2 py-1">' + escapeHtml(p.desc) + '</td><td class="px-2 py-1 text-slate-600">' + escapeHtml(p.contra) + '</td><td class="px-2 py-1 text-right whitespace-nowrap ' + (p.valor < 0 ? 'text-rose-700' : '') + '">' + formatoNumeroAnexo(p.valor) + '</td></tr>').join('') +
           '<tr class="border-t-2 border-slate-300 bg-slate-50 font-bold"><td class="px-2 py-1" colspan="4">Total de las partidas</td><td class="px-2 py-1 text-right">' + formatoNumeroAnexo(sum) + '</td></tr></tbody></table></div></div></td></tr>';
       }
-      h += '</tbody></table></div><p class="mt-2 text-[11px] text-slate-500">Sale de los asientos del mayor que pasan por la cuenta en tránsito. Entradas = débitos; salidas = créditos (liquidaciones y salidas hacia el inventario u otras cuentas). Las reversiones de entradas (créditos) cancelan entradas anteriores; las reversiones de salidas (débitos) cancelan liquidaciones anteriores. Haz clic en una cifra para ver sus partidas. El saldo inicial y el "Según libros" se toman de las sumarias o de lo escrito en Importaciones, pestaña 3.</p>';
+      h += '</tbody></table></div><p class="mt-2 text-[11px] text-slate-500">Sale de los asientos del mayor que pasan por la cuenta en tránsito. Entradas = débitos; salidas = créditos (liquidaciones y salidas hacia el inventario u otras cuentas). Las reversiones de entradas (créditos) cancelan entradas anteriores; las reversiones de salidas (débitos) cancelan liquidaciones anteriores. Haz clic en una cifra para ver sus partidas. El saldo inicial y el "Según libros" se toman de las sumarias o de lo escrito en Importaciones en tránsito → Inventario.</p>';
       return h;
     }
     // ===== Movimiento del kárdex (mismo formato horizontal: saldo inicial, entradas, salidas, ajustes, otros, saldo final) =====
@@ -18187,7 +18209,7 @@ ${cont.innerHTML}
     function mvHtmlKardex() {
       const TH = 'px-2 py-2 text-[11px] font-bold text-slate-700 bg-slate-100 border-b border-slate-300', fm = formatoNumeroAnexo, P = mvE.kar || [];
       const cab = '<div class="mt-6 mb-2 flex flex-wrap items-center gap-2"><span class="text-[13px] font-semibold text-slate-800">Movimiento del kárdex</span>' + '</div>';
-      if (!P.length) return cab + '<div class="p-4 border border-dashed border-slate-300 rounded-xl text-xs text-slate-600">Aún no hay kárdex. Súbelo en el mismo pedido de arriba (punto 4, Kárdex del cliente: movimiento por producto) y Claude lo lee junto con el mayor.</div>';
+      if (!P.length) return cab + '<div class="p-4 border border-dashed border-slate-300 rounded-xl text-xs text-slate-600">Aún no hay kárdex. Súbelo en el mismo pedido, en ' + impLkIng('Ingreso de información') + ' (Kárdex del cliente: movimiento por producto), y Claude lo lee junto con el mayor.</div>';
       const K = {}; MV_KAR_COLS.forEach(([k]) => { K[k] = mvKarTot(P, k); });
       const hayLib = (mvE.cuentas || []).some(mvHayLibros), libros = r2f((mvE.cuentas || []).reduce((t, x) => t + mvN(x.saldo_libros), 0)), difLib = hayLib ? r2f(K.saldo_final - libros) : null;
       const nDif = P.filter(x => Math.abs(mvDif(x)) > 0.005).length;
@@ -18211,7 +18233,7 @@ ${cont.innerHTML}
         h += t;
       }
       h += '</tbody></table></div>';
-      h += '<p class="mt-2 text-[11px] text-slate-500">' + (hayLib ? '' : 'Aún no hay balance de comprobación para comparar el saldo final. ') + 'Entradas, salidas, ajustes y otros salen de la suma de los productos del kárdex; "Otros" incluye las reclasificaciones. "Según libros" es el saldo del balance de las cuentas de inventario de la tabla de arriba; las demás comparaciones (entradas contra compras y salidas contra costo de ventas) se hacen en las otras pestañas. Aumentos con signo positivo y disminuciones (ventas, bajas) con signo negativo. ' + (nDif ? '<b class="text-red-600">' + nDif + ' de ' + P.length + ' productos tienen diferencia entre su movimiento y su saldo final</b> (se ven al abrir una cifra).' : 'Todos los productos cuadran entre su movimiento y su saldo final.') + ' Haz clic en una cifra para verla por producto, y en un producto para ver sus documentos.</p>';
+      h += '<p class="mt-2 text-[11px] text-slate-500">' + (hayLib ? '' : 'Aún no hay balance de comprobación para comparar el saldo final. ') + 'Entradas, salidas, ajustes y otros salen de la suma de los productos del kárdex; "Otros" incluye las reclasificaciones. "Según libros" es el saldo del balance de las cuentas de inventario de la tabla de arriba; las demás comparaciones (entradas contra compras y salidas contra costo de ventas) se hacen en las otras pestañas de este mismo rubro. Aumentos con signo positivo y disminuciones (ventas, bajas) con signo negativo. ' + (nDif ? '<b class="text-red-600">' + nDif + ' de ' + P.length + ' productos tienen diferencia entre su movimiento y su saldo final</b> (se ven al abrir una cifra).' : 'Todos los productos cuadran entre su movimiento y su saldo final.') + ' Haz clic en una cifra para verla por producto, y en un producto para ver sus documentos.</p>';
       return h;
     }
     async function mvKarDescargar() {
@@ -18334,8 +18356,16 @@ ${cont.innerHTML}
     const IC_OJO = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="#449964" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;position:relative;top:-1px"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>';
     function impIrMov() { ivE.hoja = 'venta'; ivE.btn = 'mov'; ivPintarHojas(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
     const impLk = (txt, id, tab) => '<a href="#" onclick="impIrA(\'' + id + '\', ' + (tab ? '\'' + tab + '\'' : 'null') + '); return false" class="underline text-indigo-700 font-semibold" title="Ver los datos de ' + txt + '">' + txt + ' ' + IC_OJO + '</a>';
-    const impLkTab = (txt, tab) => '<a href="#" onclick="impTab(\'' + tab + '\'); window.scrollTo({ top: 0, behavior: \'smooth\' }); return false" class="underline text-indigo-700 font-semibold" title="Ver ' + txt + '">' + txt + ' ' + IC_OJO + '</a>';
-    const impLkMov = txt => '<a href="#" onclick="impIrMov(); return false" class="underline text-indigo-700 font-semibold" title="Ver el Movimiento del inventario">' + txt + ' ' + IC_OJO + '</a>';
+    const OJO_A = (txt, clic, tit) => '<a href="#" onclick="' + clic + ' return false" class="underline text-indigo-700 font-semibold" title="' + tit + '">' + txt + ' ' + IC_OJO + '</a>';
+    function impIrTab(tab) {
+      if (ivE.hoja === 'import' || (ivE.hoja === 'venta' && ivE.btn === 'impcompras')) impTab(tab);
+      else { ivE.hoja = 'venta'; ivE.btn = 'impcompras'; impEstado.tab = tab; ivPintarHojas(); }
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+    function impIrIngreso() { ivE.hoja = 'venta'; ivE.btn = 'ingreso'; ivPintarHojas(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+    const impLkTab = (txt, tab) => OJO_A(txt, "impIrTab('" + tab + "');", 'Ver ' + txt);
+    const impLkIng = txt => OJO_A(txt, 'impIrIngreso();', 'Ir a Ingreso de información');
+    const impLkMov = txt => OJO_A(txt, 'impIrMov();', 'Ver ' + txt);
     function impRender() {
       IMP_TABS.forEach(([t]) => { const b = $im('im-tab-' + t); if (b) b.className = 'px-3 py-1.5 text-xs transition rounded-lg ' + (impEstado.tab === t ? 'bg-slate-200 text-slate-900 font-semibold' : 'text-slate-600 hover:bg-slate-100 font-medium'); });
       const p = $im('im-panel'); if (!p) return;
@@ -18374,8 +18404,8 @@ ${cont.innerHTML}
     }
     function impBarraPedido(texto) {
       const L = impEstado.imports, Cx = impEstado.cruce;
-      return `<div class="m-2 p-3 bg-white border border-slate-200 rounded-xl space-y-1 text-xs text-slate-700"><div class="text-[13px] font-semibold text-slate-800">La información de Importaciones se lee desde el pedido de la pestaña i</div>
-        <p class="text-slate-600">${texto || 'Liquidaciones, mayor contable y kárdex se piden juntos en un solo pedido, en ' + impLkMov('pestaña i (Movimiento del inventario, importaciones en tránsito y kárdex)') + '. Aquí no se sube nada: si aún no hay pedido, hazlo allí.'}</p>
+      return `<div class="m-2 p-3 bg-white border border-slate-200 rounded-xl space-y-1 text-xs text-slate-700"><div class="text-[13px] font-semibold text-slate-800">La información de Importaciones se lee desde el pedido de Ingreso de información</div>
+        <p class="text-slate-600">${texto || 'Liquidaciones, mayor contable y kárdex se piden juntos en un solo pedido, en ' + impLkIng('Ingreso de información') + '. Aquí no se sube nada: si aún no hay pedido, hazlo allí.'}</p>
         <p class="text-slate-500">${L.length ? L.length + ' importaciones leídas' : 'Aún no hay liquidaciones leídas'} · ${Cx ? 'mayor contable leído' : 'mayor contable pendiente'}. Cuando el pedido pase a "hecho", presiona F5.</p></div>`;
     }
     function impHtmlLiq() {
@@ -18384,7 +18414,7 @@ ${cont.innerHTML}
       const barra = impBarraPedido();
       const proc = '<div id="im-proc" class="px-3 py-2 space-y-1"></div>';
       let dupH = ''; try { const D = impDuplicadasLiq(); if (D.length) dupH = '<div class="m-2 p-3 bg-white border border-red-200 rounded-xl text-xs text-slate-700 space-y-1"><div class="text-[13px] font-semibold text-red-600">Posibles liquidaciones repetidas</div>' + D.map(x => '<p>' + impE(x) + '</p>').join('') + '</div>'; } catch (e) { }
-      if (!L.length) return barra + proc + '<p class="p-6 text-xs text-slate-400 text-center">Aún no hay información: haz el pedido en la pestaña i.</p>';
+      if (!L.length) return barra + proc + '<p class="p-6 text-xs text-slate-400 text-center">Aún no hay información: haz el pedido en ' + impLkIng('Ingreso de información') + '.</p>';
       const th = (t, c) => `<th class="px-2 py-1 border-b border-slate-200 whitespace-nowrap ${c || 'text-right'}">${t}</th>`;
       const G = impEstado.gr = impEstado.gr || {};
       const GRP = [
@@ -18428,7 +18458,7 @@ ${cont.innerHTML}
       if (!fin) t2 = 'Sin gasto financiero en esta liquidación.';
       else if (im.fin_cap === 'si') t2 = `Gasto financiero de ${F(fin)} que se capitaliza. Solo corresponde si el inventario es un activo apto, es decir, que necesita un periodo sustancial para estar listo para la venta (NIC 23.5 y 23.8); en caso contrario es gasto.`;
       else t2 = `Gasto financiero de ${F(fin)} que se lleva al gasto del periodo (NIC 23). Los intereses por financiar el pago al proveedor no forman parte del costo normal del inventario: verifica que no estén capitalizados en las cuentas de inventario. Está sumado en el costo total de la liquidación, así que una diferencia contra el mayor por este valor es esperada.`;
-      const t3 = iva ? `IVA de ${F(iva)}: no es costo (NIC 2.11). Debe estar en la cuenta de IVA como crédito tributario; si no fuera recuperable, pasaría al costo. Se compara aparte en la pestaña 2.` : 'Esta liquidación no muestra IVA.';
+      const t3 = iva ? `IVA de ${F(iva)}: no es costo (NIC 2.11). Debe estar en la cuenta de IVA como crédito tributario; si no fuera recuperable, pasaría al costo. Se compara aparte en Liquidaciones → Importaciones.` : 'Esta liquidación no muestra IVA.';
       return [['ISD', 'bg-violet-50 border-violet-200 text-violet-900', t1], ['Gasto financiero (NIC 23)', 'bg-violet-50 border-violet-200 text-violet-900', t2], ['IVA (no es costo)', 'bg-amber-50 border-amber-200 text-amber-900', t3]];
     }
     function impHtmlDetalle(im) {
@@ -18541,10 +18571,10 @@ ${(im.aprendidos || []).length ? `<p class="text-xs text-slate-600 bg-slate-50 b
     }
     function impHtmlCruce() {
       const imp = impEstado.imports, C = impEstado.cruce, M = impEstado.mayor, cfg = impEstado.cfg;
-      if (!imp.length) return '<p class="p-6 text-xs text-slate-400 text-center">Aún no hay liquidaciones leídas: haz el pedido en la pestaña i.</p>';
+      if (!imp.length) return '<p class="p-6 text-xs text-slate-400 text-center">Aún no hay liquidaciones leídas: haz el pedido en ' + impLkIng('Ingreso de información') + '.</p>';
       const nombres = IMP_ROLES.filter(([k]) => k !== 'inv_final').map(([k, t]) => `<label class="flex flex-col gap-1 text-xs text-slate-600"><span>${t}</span><input type="text" value="${impE(cfg.roles[k] || '')}" placeholder="Códigos separados por coma" onchange="impEditarRol('${k}', this.value)" class="${impIn} w-full"></label>`).join('');
       let h = `<div class="p-3 space-y-3 text-xs text-slate-700">`;
-      if (!C) h += '<p class="p-6 text-xs text-slate-400 text-center">Aún no hay lectura del mayor: haz el pedido en la pestaña i.</p>';
+      if (!C) h += '<p class="p-6 text-xs text-slate-400 text-center">Aún no hay lectura del mayor: haz el pedido en ' + impLkIng('Ingreso de información') + '.</p>';
       h += `<div class="p-4 bg-white border border-slate-200 rounded-xl space-y-2"><div class="text-[13px] font-semibold text-slate-800">A. Cuentas del mayor que usa este cliente</div>
         <p class="text-slate-500">Cada cliente codifica distinto. Escribe los códigos de cuenta de cada concepto (puedes usar un asterisco al final para incluir todas las cuentas que empiezan igual). Al terminar de leer el mayor, las cuentas se sugieren solas por su nombre.</p>
         ${impAvisoCuentas(cfg)}
@@ -18558,7 +18588,7 @@ ${(im.aprendidos || []).length ? `<p class="text-xs text-slate-600 bg-slate-50 b
     }
     function impAlias() {
       const t = impEstado.imports.map(im => `${im.id}: ${(im.aliases || []).join(', ')}`).join('\n');
-      alert('Nombres con los que se busca cada importación en el detalle del mayor.\nPuedes editarlos en la pestaña 1, dentro de cada importación.\n\n' + t);
+      alert('Nombres con los que se busca cada importación en el detalle del mayor.\nPuedes editarlos en Liquidaciones de importación, dentro de cada importación.\n\n' + t);
     }
     // Comparación por mes: mes de la liquidación contra mes en que se registró en el mayor (se despliega con un clic)
     function impRevTog(k) { const A = impEstado.revAb = impEstado.revAb || {}; A[k] = !A[k]; impRender(); }
@@ -18574,7 +18604,7 @@ ${(im.aprendidos || []).length ? `<p class="text-xs text-slate-600 bg-slate-50 b
       const meses = new Set(); imports.forEach(im => { meses.add(mesLiq[im.id]); Object.keys(reg[im.id] || {}).forEach(m => meses.add(m)); });
       const lista = [...meses].sort(), A = impEstado.mesAb = impEstado.mesAb || {};
       const corteOk = d => !cfg.corte || !d || String(d) <= cfg.corte;
-      let tL = 0, tR = 0, h = `<div id="imp-cr-B" class="p-4 bg-white border border-slate-200 rounded-xl space-y-2"><div class="text-[13px] font-semibold text-slate-800">B. Liquidaciones contra importaciones por mes</div>
+      let tL = 0, tR = 0, h = `<div id="imp-cr-B" class="p-4 bg-white border border-slate-200 rounded-xl space-y-2"><div class="text-[13px] font-semibold text-slate-800">Liquidaciones contra importaciones por mes</div>
         <p class="text-slate-500">Cada liquidación se ubica en el mes de su fecha y lo que salió de importaciones en tránsito (crédito en el mayor), en el mes en que se asentó. Si una liquidación se registró en otro mes, la diferencia de un mes se compensa con la del otro. Haz clic en un mes para ver el detalle por importación.</p>
         <div class="overflow-x-auto"><table class="w-full text-[11px] leading-tight border-collapse"><thead class="bg-slate-50 text-slate-600"><tr>${th('Mes', 'text-left')}${th('Importaciones liquidadas')}${th('Costo total liquidaciones')}${th('Salida de tránsito en el mes (crédito)')}${th('Dif.')}${th('Estado', 'text-center')}</tr></thead><tbody>`;
       lista.forEach(m => {
@@ -18612,7 +18642,7 @@ ${(im.aprendidos || []).length ? `<p class="text-xs text-slate-600 bg-slate-50 b
         const dTot = impR2(impR2(tL) - mayorSal), r1 = impR2(impR2(tL) - LP), r2 = impR2(LP - impR2(tR)), r3 = impR2(mayorSal - impR2(tR));
         const fila = (t, v, neg, neg2) => `<tr class="border-b border-slate-100"><td class="px-2 py-1.5 ${neg2 ? 'font-bold' : ''}">${t}</td><td class="px-2 py-1.5 text-right whitespace-nowrap ${neg2 ? 'font-bold' : ''}">${impF(v)}</td></tr>`;
         const colD = Math.abs(dTot) <= tol ? 'text-emerald-700' : 'text-red-600';
-        ctl = `<div id="imp-cr-C" class="p-4 bg-white border border-slate-200 rounded-xl space-y-2"><div class="text-[13px] font-semibold text-slate-800">C. Costo de las liquidaciones contra las salidas de tránsito del Movimiento de la cuenta (${impLkMov('pestaña i de Inventario para la venta')})</div>
+        ctl = `<div id="imp-cr-C" class="p-4 bg-white border border-slate-200 rounded-xl space-y-2"><div class="text-[13px] font-semibold text-slate-800">Costo de las liquidaciones contra las salidas de tránsito del Movimiento de la cuenta (${impLkMov('Movimiento del inventario')})</div>
           <p class="text-slate-500">Cruza el costo total de las liquidaciones con lo que salió de la cuenta en tránsito según su Movimiento. Los créditos de reversión (${impF(impR2(revC))}) cancelan entradas anteriores y no son salidas. <a href="#" onclick="impRevTog('C'); return false" class="font-semibold" style="color:#449964">${RA.C ? 'Ocultar' : 'Ver'} las ${lstC.length} partidas</a></p>${RA.C ? `<div class="max-h-72 overflow-auto border border-slate-200 rounded-lg bg-white"><table class="w-full text-[11px] leading-tight border-collapse"><thead class="bg-slate-100 text-slate-700"><tr><th class="px-2 py-1 text-left">Fecha</th><th class="px-2 py-1 text-left">Comprobante</th><th class="px-2 py-1 text-left">Detalle</th><th class="px-2 py-1 text-right">Valor</th></tr></thead><tbody>${lstC.slice().sort((x, y) => String(x.d).localeCompare(String(y.d))).map(x => `<tr class="border-t border-slate-100 align-top"><td class="px-2 py-1 whitespace-nowrap">${impE(x.d)}</td><td class="px-2 py-1 whitespace-nowrap">${impE(x.ref)}</td><td class="px-2 py-1">${impE(x.det)}</td><td class="px-2 py-1 text-right whitespace-nowrap">${impF(impR2(x.v))}</td></tr>`).join('')}</tbody></table></div>` : ''}
           <div class="overflow-x-auto"><table class="text-[11px] leading-tight border-collapse" style="min-width:34rem"><tbody>
           ${fila('Salidas de tránsito del Movimiento (créditos que no son reversión)', impR2(sal))}
@@ -18682,13 +18712,13 @@ ${(im.aprendidos || []).length ? `<p class="text-xs text-slate-600 bg-slate-50 b
         const cruce = await impLeerMayor(M, impEstado.imports, (paso, p, n) => { pr.textContent = `Paso ${paso}: leyendo el mayor ${Math.round((p || 0) * 100)}%${n ? ' (' + Number(n).toLocaleString('en-US') + ' líneas)' : ''}…`; });
         impEstado.cruce = cruce; impEstado.aliasCambio = false; impGuardar('liquidaciones'); impSugerirRoles(); impReclasificar();
         impGuardar('cruce'); impGuardar('config'); impRender();
-        const e = $im('im-prog'); if (e) e.textContent = `Listo: ${cruce.lineas.length} líneas y ${cruce.asientos.length} asientos de importaciones.${cruce.aprendio ? ' Se aprendieron nombres nuevos del mayor (ábrelos en la pestaña 1).' : ''}${cruce.aviso ? ' ' + cruce.aviso : ''}`;
+        const e = $im('im-prog'); if (e) e.textContent = `Listo: ${cruce.lineas.length} líneas y ${cruce.asientos.length} asientos de importaciones.${cruce.aprendio ? ' Se aprendieron nombres nuevos del mayor (ábrelos en Liquidaciones de importación).' : ''}${cruce.aviso ? ' ' + cruce.aviso : ''}`;
       } catch (e) { pr.textContent = ''; alert(e.message || e); b.disabled = false; }
     }
 
     // ---------- 3. Diario contable ----------
     function impHtmlDiario() {
-      const C = impEstado.cruce; if (!C) return '<p class="p-6 text-xs text-slate-400 text-center">Aún no hay cruce: pídelo a Claude en la pestaña 1.</p>';
+      const C = impEstado.cruce; if (!C) return '<p class="p-6 text-xs text-slate-400 text-center">Aún no hay cruce: haz el pedido en ' + impLkIng('Ingreso de información') + '.</p>';
       const D = impEstado.diario, ims = impEstado.imports.map(x => x.id);
       const idsDe = a => { const s = new Set(); C.lineas.forEach(l => { if (l.k === a.k) (l.ids || []).forEach(x => s.add(x)); }); return [...s]; };
       let lista = C.asientos.map(a => ({ a, ids: idsDe(a) }));
@@ -18847,7 +18877,7 @@ ${(im.aprendidos || []).length ? `<p class="text-xs text-slate-600 bg-slate-50 b
     }
     function impHtmlResumen() {
       if (!impEstado.cliente) return '<p class="p-4 text-xs text-slate-500">Selecciona el cliente.</p>';
-      if (!impEstado.cl) return '<p class="p-6 text-xs text-slate-400 text-center">Este resumen aparece cuando Claude termine el pedido con el mayor contable (pestaña 1).</p>';
+      if (!impEstado.cl) return '<p class="p-6 text-xs text-slate-400 text-center">Este resumen aparece cuando Claude termine el pedido con el mayor contable (' + impLkIng('Ingreso de información') + ').</p>';
       const M = impEstado.mov; if (!M || M.llave !== impEstado.cliente + '|' + impEstado.anio + '|' + impEstado.visita) setTimeout(impCargarMov, 0);
       const Z = impResumenCalc(); if (!Z) return '<p class="p-6 text-xs text-slate-400 text-center">Aún no hay cruce con el mayor.</p>';
       const th = 'px-2 py-1.5 text-[11px] font-bold text-slate-700 bg-slate-100 border-b border-slate-300 whitespace-nowrap', td = 'px-2 py-1 text-right', F = impF;
@@ -18858,7 +18888,7 @@ ${(im.aprendidos || []).length ? `<p class="text-xs text-slate-600 bg-slate-50 b
       h += '<div><div class="font-bold text-slate-800 mb-1">A. Por importación</div><div class="overflow-x-auto border border-slate-200 rounded-lg"><table class="w-full text-[11px] border-collapse min-w-[900px]"><thead><tr><th class="' + th + ' text-left">Importación</th><th class="' + th + ' text-left">Proveedor</th><th class="' + th + ' text-right">Costo total de la liquidación</th><th class="' + th + ' text-right">Entradas al inventario (mayor)</th><th class="' + th + ' text-right">Diferencia</th><th class="' + th + ' text-right">Gastos de importación en resultados</th><th class="' + th + ' text-right">Diferencia no explicada</th><th class="' + th + ' text-right">ISD provisionado (pasivo)</th><th class="' + th + ' text-left">Estado</th></tr></thead><tbody>';
       Z.filas.forEach(x => { h += '<tr class="border-t border-slate-100"><td class="px-2 py-1 font-semibold">' + impE(x.id) + '</td><td class="px-2 py-1">' + impE(x.proveedor) + '</td><td class="' + td + ' font-semibold">' + F(x.baseLiq) + '</td><td class="' + td + '">' + F(x.inv) + '</td><td class="' + td + (Math.abs(x.difBruta) > Z.tol ? ' text-red-600' : '') + '">' + F(x.difBruta) + '</td><td class="' + td + (x.cap ? ' text-red-600 font-semibold' : '') + '">' + F(x.cap) + '</td><td class="' + td + (Math.abs(x.dif) > Z.tol ? ' text-red-600 font-semibold' : '') + '">' + F(x.dif) + '</td><td class="' + td + '">' + F(x.prov) + '</td><td class="px-2 py-1">' + pill(x.est) + '</td></tr>'; });
       h += '</tbody><tfoot class="bg-slate-50 font-semibold"><tr><td class="px-2 py-1 text-left" colspan="2">Total</td>' + ['baseLiq', 'inv', 'difBruta', 'cap', 'dif', 'prov'].map(k => '<td class="' + td + '">' + F(sum(k)) + '</td>').join('') + '<td></td></tr></tfoot></table></div></div>';
-      h += '<p class="text-[11px] text-slate-500">Lectura: el costo total de la liquidación (producto y todos sus gastos) se compara con lo que entró al inventario. La diferencia se explica, en lo posible, con los gastos de importación llevados a resultados; lo que queda sin explicar hay que buscarlo en los asientos (pestaña 2, "A qué se debe la diferencia").</p>';
+      h += '<p class="text-[11px] text-slate-500">Lectura: el costo total de la liquidación (producto y todos sus gastos) se compara con lo que entró al inventario. La diferencia se explica, en lo posible, con los gastos de importación llevados a resultados; lo que queda sin explicar hay que buscarlo en los asientos (' + impLkTab('Liquidaciones → Importaciones (mayor contable)', 'cruce') + ', «A qué se debe la diferencia»).</p>';
       if (Z.compartido || Z.posterior) h += '<p class="text-[11px] text-amber-700">' + (Z.compartido ? 'Gastos de pagos conjuntos de varias importaciones, no asignados: ' + F(Z.compartido) + '. ' : '') + (Z.posterior ? 'Gastos registrados después del corte (no incluidos arriba): ' + F(Z.posterior) + '.' : '') + '</p>';
       h += '<div><div class="font-bold text-slate-800 mb-1">B. Gastos de importación registrados en resultados, por cuenta</div>';
       if (!Z.cuentas.length) h += '<p class="text-[11px] text-slate-500">No se identificaron gastos de importación en cuentas de resultados.</p>';
@@ -18884,7 +18914,7 @@ ${(im.aprendidos || []).length ? `<p class="text-xs text-slate-600 bg-slate-50 b
       inv = inv.filter(c => !impCtaEn(c, tr));
       // Cuentas de inventario elegidas por el auditor en el pedido de Movimiento del inventario
       impFamiliaInv(cfg).forEach(c => { if (!impCtaEn(c, tr) && !impCtaEn(c, inv)) inv.push(c); });
-      // Cuentas de inventario escritas por el auditor en la pestaña 3 (se suman a las anteriores)
+      // Cuentas de inventario escritas por el auditor en Importaciones en tránsito → Inventario (se suman a las anteriores)
       impListaCtas(cfg.invcods).forEach(c => { if (!impCtaEn(c, tr) && !impCtaEn(c, inv)) inv.push(c); });
       return { tr, inv };
     }
@@ -18973,8 +19003,8 @@ ${(im.aprendidos || []).length ? `<p class="text-xs text-slate-600 bg-slate-50 b
     function impSiTog(k) { const A = impEstado.siAb = impEstado.siAb || {}; A[k] = !A[k]; impRender(); }
     function impHtmlTransito() {
       const C = impEstado.cruce, cfg = impEstado.cfg;
-      const barraP = impBarraPedido('Para ver las salidas de la cuenta en tránsito y lo que entró al inventario, el mayor contable completo del cliente se lee desde el pedido de la pestaña i. Claude lee todos los asientos de esa cuenta.');
-      if (!C) return barraP + '<p class="p-6 text-xs text-slate-400 text-center">Aún no hay lectura del mayor: haz el pedido en la pestaña i.</p>';
+      const barraP = impBarraPedido('Para ver las salidas de la cuenta en tránsito y lo que entró al inventario, el mayor contable completo del cliente se lee desde el pedido de ' + impLkIng('Ingreso de información') + '. Claude lee todos los asientos de esa cuenta.');
+      if (!C) return barraP + '<p class="p-6 text-xs text-slate-400 text-center">Aún no hay lectura del mayor: haz el pedido en ' + impLkIng('Ingreso de información') + '.</p>';
       if (!impEstado.mov || impEstado.mov.llave !== impEstado.cliente + '|' + impEstado.anio + '|' + impEstado.visita) setTimeout(impCargarMov, 0);
       const T = impSalInvCalc(), th = (t, c) => `<th class="px-2 py-1 border-b border-slate-200 whitespace-nowrap ${c || 'text-right'}">${t}</th>`;
       const tol = Number(cfg.tol) >= 0 ? Number(cfg.tol) : 1, SA = impEstado.siAb = impEstado.siAb || {};
@@ -18993,8 +19023,8 @@ ${(im.aprendidos || []).length ? `<p class="text-xs text-slate-600 bg-slate-50 b
         const fue = Math.abs(f.dif) > tol ? f.dst.slice(0, 2).map(x => impE(x.nombre || x.tipo) + ' ' + impF(x.valor)).join('; ') : '';
         return `<tr class="border-t border-slate-100 align-top"><td class="px-2 py-1 whitespace-nowrap">${impE(f.d)}</td><td class="px-2 py-1 whitespace-nowrap">${impE((f.tk + ' ' + f.num).trim())}</td><td class="px-2 py-1">${impE(f.det)}</td><td class="px-2 py-1 text-right whitespace-nowrap">${impF(f.salida)}</td><td class="px-2 py-1 text-right whitespace-nowrap">${impF(f.ent)}</td><td class="px-2 py-1 text-right whitespace-nowrap ${col(f.dif)}">${impF(f.dif)}</td><td class="px-2 py-1">${fue}</td></tr>`;
       }).join('')}<tr class="border-t-2 border-slate-300 bg-slate-50 font-bold"><td class="px-2 py-1" colspan="3">Total (${lista.length} asientos)</td><td class="px-2 py-1 text-right">${impF(impR2(lista.reduce((t, f) => t + f.salida, 0)))}</td><td class="px-2 py-1 text-right">${impF(impR2(lista.reduce((t, f) => t + f.ent, 0)))}</td><td class="px-2 py-1 text-right">${impF(impR2(lista.reduce((t, f) => t + f.dif, 0)))}</td><td></td></tr></tbody></table></div>`;
-      h += `<div id="imp-tr-A" class="p-4 bg-white border border-slate-200 rounded-xl space-y-2"><div class="text-[13px] font-semibold text-slate-800">A. Salidas de importaciones en tránsito y lo que entró al inventario, por mes</div>
-        <p class="text-slate-500">Cuenta en tránsito: ${impE(T.tr.map(nm).join('; '))}. Cuentas de inventario: ${impE(T.inv.map(nm).join('; ') || 'no indicadas (se toman del pedido de Movimiento del inventario)')}. <b>Revisa que sean las correctas.</b> Sale de tránsito = créditos de la cuenta que no son reversión, menos las reversiones de salidas (débitos); es la misma regla de las ${impLk('salidas netas de la pestaña 2','imp-cr-C','cruce')}. Entra al inventario = lo debitado en las cuentas de inventario en el mismo asiento. Haz clic en un mes para ver sus asientos.</p>
+      h += `<div id="imp-tr-A" class="p-4 bg-white border border-slate-200 rounded-xl space-y-2"><div class="text-[13px] font-semibold text-slate-800">Salidas de importaciones en tránsito y lo que entró al inventario, por mes</div>
+        <p class="text-slate-500">Cuenta en tránsito: ${impE(T.tr.map(nm).join('; '))}. Cuentas de inventario: ${impE(T.inv.map(nm).join('; ') || 'no indicadas (se toman del pedido de Movimiento del inventario)')}. <b>Revisa que sean las correctas.</b> Sale de tránsito = créditos de la cuenta que no son reversión, menos las reversiones de salidas (débitos); es la misma regla de las ${impLk('costo de las liquidaciones contra las salidas de tránsito','imp-cr-C','cruce')}. Entra al inventario = lo debitado en las cuentas de inventario en el mismo asiento. Haz clic en un mes para ver sus asientos.</p>
         <div class="overflow-x-auto"><table class="w-full text-[11px] leading-tight border-collapse"><thead class="bg-slate-50 text-slate-600"><tr>${th('Mes', 'text-left')}${th('Asientos')}${th('Sale de tránsito')}${th('Entra al inventario')}${th('Diferencia')}</tr></thead><tbody>`;
       T.meses.forEach(o => {
         const ab = !!SA['m' + o.m], d = impR2(o.salida - o.ent);
@@ -19002,11 +19032,11 @@ ${(im.aprendidos || []).length ? `<p class="text-xs text-slate-600 bg-slate-50 b
         if (ab) h += `<tr><td colspan="5" class="px-3 py-2 bg-slate-50">${tablaAs(o.filas)}</td></tr>`;
       });
       h += `</tbody><tfoot class="bg-slate-50 font-semibold"><tr><td class="px-2 py-1 text-left">Total del año</td><td class="px-2 text-right">${T.filas.length}</td><td class="px-2 text-right">${impF(T.salidaNeta)}</td><td class="px-2 text-right">${impF(T.entNeta)}</td><td class="px-2 text-right ${col(impR2(T.salidaNeta - T.entNeta))}">${impF(impR2(T.salidaNeta - T.entNeta))}</td></tr></tfoot></table></div>
-        <p class="text-slate-400">Los meses con reversión muestran valores negativos: la reversión de una salida resta de lo que salió de tránsito y de lo que entró al inventario. La diferencia es lo que salió de tránsito y no fue a inventario (ver ${impLk('cuadro B','imp-tr-B')}).</p></div>`;
+        <p class="text-slate-400">Los meses con reversión muestran valores negativos: la reversión de una salida resta de lo que salió de tránsito y de lo que entró al inventario. La diferencia es lo que salió de tránsito y no fue a inventario (ver ${impLk('A dónde fue lo que salió de tránsito','imp-tr-B')}).</p></div>`;
       // B. A dónde fue lo que salió de tránsito
       const filaB = (k, t, v, items, n) => { const ab = !!SA[k]; return `<tr class="border-b border-slate-100 ${items && items.length ? 'cursor-pointer hover:bg-slate-50' : ''}" ${items && items.length ? `onclick="impSiTog('${k}')"` : ''}><td class="px-2 py-1.5">${items && items.length ? `<span class="inline-block w-3">${ab ? '▾' : '▸'}</span> ` : ''}${t}${items && items.length ? ` <span class="text-slate-500 whitespace-nowrap" title="Ver las ${items.length} partidas">${IC_OJO} ${items.length}</span>` : ''}</td><td class="px-2 text-right whitespace-nowrap">${impF(v)}</td></tr>` + (ab && items ? `<tr><td colspan="2" class="px-3 py-2 bg-slate-50"><div class="max-h-72 overflow-auto border border-slate-200 rounded-lg bg-white"><table class="w-full text-[11px] leading-tight border-collapse"><thead class="bg-slate-100 text-slate-700"><tr>${th('Fecha', 'text-left')}${th('Comprobante', 'text-left')}${th('Detalle', 'text-left')}${th('Valor')}</tr></thead><tbody>${items.slice().sort((x, y) => String(x.d).localeCompare(String(y.d))).map(x => `<tr class="border-t border-slate-100 align-top"><td class="px-2 py-1 whitespace-nowrap">${impE(x.d)}</td><td class="px-2 py-1 whitespace-nowrap">${impE(x.ref)}</td><td class="px-2 py-1">${impE(x.det)}</td><td class="px-2 py-1 text-right whitespace-nowrap">${impF(x.v)}</td></tr>`).join('')}</tbody></table></div></td></tr>` : ''); };
       const totInv = impR2(T.invCta.reduce((t, x) => t + x.valor, 0)), totDst = impR2(T.dest.reduce((t, x) => t + x.valor, 0)), difB = impR2(T.salidaNeta - totInv - totDst);
-      h += `<div id="imp-tr-B" class="p-4 bg-white border border-slate-200 rounded-xl space-y-2"><div class="text-[13px] font-semibold text-slate-800">B. A dónde fue lo que salió de tránsito</div>
+      h += `<div id="imp-tr-B" class="p-4 bg-white border border-slate-200 rounded-xl space-y-2"><div class="text-[13px] font-semibold text-slate-800">A dónde fue lo que salió de tránsito</div>
         <p class="text-slate-500">Reparte la salida neta de tránsito entre las cuentas de inventario que la recibieron y los demás destinos de cada asiento. Haz clic en una fila para ver sus partidas.</p>
         <div class="overflow-x-auto"><table class="text-[11px] leading-tight border-collapse" style="min-width:34rem"><tbody>
         <tr><td colspan="2" class="px-2 pt-1 pb-1 text-slate-500 font-semibold">Entró al inventario</td></tr>
@@ -19015,25 +19045,25 @@ ${(im.aprendidos || []).length ? `<p class="text-xs text-slate-600 bg-slate-50 b
         <tr><td colspan="2" class="px-2 pt-2 pb-1 text-slate-500 font-semibold">No entró al inventario (otros destinos)</td></tr>
         ${T.dest.length ? T.dest.map((x, i) => filaB('d' + i, impE(x.tipo) + (x.cod ? ' · ' + impE(nm(x.cod)) : ''), x.valor, x.items)).join('') : '<tr><td colspan="2" class="px-2 py-1 text-slate-400">Todo lo que salió de tránsito entró al inventario.</td></tr>'}
         <tr class="border-b border-slate-200 font-semibold bg-slate-50"><td class="px-2 py-1.5">Total que no entró al inventario</td><td class="px-2 text-right">${impF(totDst)}</td></tr>
-        <tr class="border-b border-slate-100 font-bold"><td class="px-2 py-1.5">Salida neta de tránsito (igual al total del ${impLk('cuadro A','imp-tr-A')})</td><td class="px-2 text-right">${impF(T.salidaNeta)}</td></tr>
+        <tr class="border-b border-slate-100 font-bold"><td class="px-2 py-1.5">Salida neta de tránsito (igual al total de ${impLk('Salidas de tránsito por mes','imp-tr-A')})</td><td class="px-2 text-right">${impF(T.salidaNeta)}</td></tr>
         <tr><td class="px-2 py-1.5 font-bold">Diferencia (debe ser cero)</td><td class="px-2 text-right font-bold ${col(difB)}">${impF(difB)}</td></tr>
         </tbody></table></div></div>`;
       // D. Cuadro con el Movimiento del inventario: compras/importaciones (entradas) contra lo que sale de tránsito
       const RE = impEntradasCalc(), ok = RE && impEstado.mov && impEstado.mov.hay && (impEstado.mov.cuentas || []).length;
-      h += `<div class="p-4 bg-white border border-slate-200 rounded-xl space-y-2"><div class="text-[13px] font-semibold text-slate-800">C. Compras/Importaciones del Movimiento del inventario (${impLkMov('pestaña i')}) contra lo que entró al inventario desde tránsito</div>`;
-      if (!ok) h += `<p class="text-slate-500">Sube el Movimiento del inventario (${impLkMov('pestaña i')} de Inventarios) para ver este cuadro.</p>`;
+      h += `<div class="p-4 bg-white border border-slate-200 rounded-xl space-y-2"><div class="text-[13px] font-semibold text-slate-800">Compras/Importaciones del ${impLkMov('Movimiento del inventario')} contra lo que entró al inventario desde tránsito</div>`;
+      if (!ok) h += `<p class="text-slate-500">Haz el pedido en ${impLkIng('Ingreso de información')} para ver este cuadro.</p>`;
       else {
         const numT = {}; T.filas.forEach(f => { numT[String(f.num)] = f; });
         const movRef = {}, otrosTipo = {}; let totMov = 0, desdeTr = 0, noTr = 0;
         RE.filas.forEach(f => { const r = String(f.ref || ''); totMov = impR2(totMov + f.valor); if (numT[r]) { desdeTr = impR2(desdeTr + f.valor); movRef[r] = impR2((movRef[r] || 0) + f.valor); } else { noTr = impR2(noTr + f.valor); const t = f.tipo === 'Importación' || f.tipo === 'Varias importaciones' ? 'Importaciones sin pasar por la cuenta en tránsito' : f.tipo; otrosTipo[t] = impR2((otrosTipo[t] || 0) + f.valor); } });
         const sinMov = T.filas.filter(f => f.ent > cfg.tol && Math.abs((movRef[String(f.num)] || 0) - f.ent) > cfg.tol);
         const revEnt = impR2(T.entTot - T.entNeta), difTr = impR2(T.entTot - desdeTr);
-        h += `<p class="text-slate-500">Cruza el total de la columna Compras/Importaciones (entradas) del Movimiento con lo que sale de la cuenta en tránsito hacia el inventario (${impLk('cuadro A','imp-tr-A')}). Se unen por número de comprobante.</p>
+        h += `<p class="text-slate-500">Cruza el total de la columna Compras/Importaciones (entradas) del Movimiento con lo que sale de la cuenta en tránsito hacia el inventario (${impLk('Salidas de tránsito por mes','imp-tr-A')}). Se unen por número de comprobante.</p>
           <div class="overflow-x-auto"><table class="text-[11px] leading-tight border-collapse"><tbody>
           <tr class="border-b border-slate-100"><td class="px-2 py-1">Entradas del Movimiento que vienen de la cuenta en tránsito</td><td class="px-2 text-right">${impF(desdeTr)}</td></tr>
           ${Object.keys(otrosTipo).sort((x, y) => otrosTipo[y] - otrosTipo[x]).map(t => `<tr class="border-b border-slate-100"><td class="px-2 py-1">Otras entradas: ${impE(t)}</td><td class="px-2 text-right">${impF(otrosTipo[t])}</td></tr>`).join('')}
           <tr class="border-b border-slate-100 font-semibold"><td class="px-2 py-1">Total Compras/Importaciones del Movimiento</td><td class="px-2 text-right">${impF(totMov)}</td></tr>
-          <tr class="border-b border-slate-100"><td class="px-2 py-1">Entró al inventario desde la cuenta en tránsito, neto (total de la columna «Entra al inventario» del ${impLk('cuadro A','imp-tr-A')}, arriba)</td><td class="px-2 text-right">${impF(T.entNeta)}</td></tr>
+          <tr class="border-b border-slate-100"><td class="px-2 py-1">Entró al inventario desde la cuenta en tránsito, neto (total de la columna «Entra al inventario» de ${impLk('Salidas de tránsito por mes','imp-tr-A')}, arriba)</td><td class="px-2 text-right">${impF(T.entNeta)}</td></tr>
           ${(() => { const lr = T.filas.filter(f => Math.abs(f.ent) > 0.005 && f.ent < 0), ab = !!SA.revEnt; return `<tr class="border-b border-slate-100 ${lr.length ? 'cursor-pointer hover:bg-slate-50' : ''}" ${lr.length ? `onclick="impSiTog('revEnt')"` : ''}><td class="px-2 py-1">${lr.length ? `<span class="inline-block w-3">${ab ? '▾' : '▸'}</span> ` : ''}Más: reversiones de esas entradas (el Movimiento no las resta de Compras/Importaciones)${lr.length ? ` <span class="text-slate-500 whitespace-nowrap" title="Ver los ${lr.length} asientos">${IC_OJO} ${lr.length}</span>` : ''}</td><td class="px-2 text-right">${impF(revEnt)}</td></tr>` + (ab && lr.length ? `<tr><td colspan="2" class="px-3 py-2 bg-slate-50">${tablaAs(lr)}</td></tr>` : ''); })()}
           <tr class="border-b border-slate-100 font-semibold"><td class="px-2 py-1">Entró al inventario desde la cuenta en tránsito, sin restar reversiones</td><td class="px-2 text-right">${impF(T.entTot)}</td></tr>
           <tr class="border-b border-slate-100 font-semibold"><td class="px-2 py-1">Diferencia (tránsito sin restar reversiones menos lo que el Movimiento tiene de esos comprobantes)</td><td class="px-2 text-right ${Math.abs(difTr) > cfg.tol ? 'text-red-600' : 'text-emerald-700'}">${impF(difTr)}</td></tr></tbody></table></div>`;
@@ -19041,8 +19071,8 @@ ${(im.aprendidos || []).length ? `<p class="text-xs text-slate-600 bg-slate-50 b
       }
       h += `</div>`;
       // E. Informativo: liquidación contra inventario por importación
-      h += `<div class="p-4 bg-white border border-slate-200 rounded-xl space-y-2"><div class="text-[13px] font-semibold text-slate-800">D. Informativo: liquidación contra entradas al inventario (Movimiento del inventario, pestaña i)</div>`;
-      if (!ok) h += `<p class="text-slate-500">Sube el Movimiento del inventario (${impLkMov('pestaña i')} de Inventarios) para ver esta comparación. Es solo informativa: las liquidaciones son manuales y pueden no incluir todo.</p>`;
+      h += `<div class="p-4 bg-white border border-slate-200 rounded-xl space-y-2"><div class="text-[13px] font-semibold text-slate-800">Informativo: liquidación contra entradas al inventario (Movimiento del inventario)</div>`;
+      if (!ok) h += `<p class="text-slate-500">Haz el pedido en ${impLkIng('Ingreso de información')} para ver esta comparación. Es solo informativa: las liquidaciones son manuales y pueden no incluir todo.</p>`;
       else {
         const rows = RE.porImp.filter(x => x.liq || x.may);
         h += `<p class="text-slate-500">Solo informativo, sin estado de revisión: compara el total de cada liquidación con lo que entró al inventario con su nombre en el Movimiento.</p><div class="overflow-x-auto"><table class="w-full text-[11px] leading-tight border-collapse"><thead class="bg-slate-50 text-slate-600"><tr>${th('Importación', 'text-left')}${th('Liquidación')}${th('Entrada al inventario')}${th('Diferencia')}</tr></thead><tbody>${rows.map(x => `<tr class="border-b border-slate-100"><td class="px-2 py-1 text-left font-semibold">${impE(x.id)}</td><td class="px-2 text-right">${impF(x.liq)}</td><td class="px-2 text-right">${impF(x.may)}</td><td class="px-2 text-right">${impF(x.dif)}</td></tr>`).join('')}</tbody><tfoot class="bg-slate-50 font-semibold"><tr><td class="px-2 py-1 text-left">Total</td><td class="px-2 text-right">${impF(impR2(rows.reduce((t, x) => t + x.liq, 0)))}</td><td class="px-2 text-right">${impF(impR2(rows.reduce((t, x) => t + x.may, 0)))}</td><td class="px-2 text-right">${impF(impR2(rows.reduce((t, x) => t + x.dif, 0)))}</td></tr></tfoot></table></div>`;
