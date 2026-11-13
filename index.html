@@ -10,7 +10,7 @@
     // Paleta MGI Guerra: azul corporativo (reemplaza al indigo) y turquesa
     tailwind.config = {
       theme: { extend: {
-        fontFamily: { sans: ['Arial', 'Helvetica', 'Liberation Sans', 'sans-serif'] },
+        fontFamily: { sans: ['FlechaGrande', 'Arial', 'Helvetica', 'Liberation Sans', 'sans-serif'] },
         colors: {
         indigo: { 50:'#f6f6f6',100:'#ececec',200:'#dcdcdd',300:'#c6c7c8',400:'#aeaeae',500:'#8f9092',600:'#6f7173',700:'#58595b',800:'#434446',900:'#2d2e30' },
         teal: { 50:'#f6f6f6',100:'#ececec',200:'#dcdcdd',300:'#c6c7c8',400:'#aeaeae',500:'#8f9092',600:'#6f7173',700:'#58595b',800:'#434446',900:'#2d2e30' },
@@ -36,8 +36,10 @@
       font-style: normal;
       font-display: swap;
     }
-    body, button, input, select, textarea, table { font-family: Arial, Helvetica, 'Liberation Sans', sans-serif; }
-    body .font-mono { font-family: Arial, Helvetica, 'Liberation Sans', sans-serif; font-variant-numeric: tabular-nums; }
+    /* Flechas de desplegar (▸ ▾ ▴ ◂) al doble de tamaño en toda la aplicación */
+    @font-face { font-family: 'FlechaGrande'; src: local('Segoe UI Symbol'), local('Apple Symbols'), local('Arial Unicode MS'), local('DejaVu Sans'), local('Noto Sans Symbols2'); size-adjust: 200%; unicode-range: U+25B4, U+25B8, U+25BE, U+25C2; }
+    body, button, input, select, textarea, table { font-family: 'FlechaGrande', Arial, Helvetica, 'Liberation Sans', sans-serif; }
+    body .font-mono { font-family: 'FlechaGrande', Arial, Helvetica, 'Liberation Sans', sans-serif; font-variant-numeric: tabular-nums; }
 
     :root { --mgi-blue:#005cab; --mgi-teal:#00929f; --mgi-navy:#0b2c4d; }
     html body #nav-tablero { background:#ffffff !important; border:0 !important; width:auto !important; display:inline-flex !important; padding:6px 12px !important; border-radius:10px; }
