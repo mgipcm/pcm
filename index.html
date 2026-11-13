@@ -17839,7 +17839,7 @@ ${cont.innerHTML}
 
 
     // ===== AF Inventarios: hojas (Inventario para la venta, Materia prima, Producción en proceso, Importaciones) =====
-    const IV_HOJAS = [['venta', 'Inventario para la venta'], ['materia', 'Materia prima'], ['proceso', 'Producción en proceso'], ['import', 'Importaciones']];
+    const IV_HOJAS = [['venta', 'Inventario para la venta'], ['materia', 'Materia prima'], ['proceso', 'Producción en proceso'], ['import', 'Importaciones'], ['voucheo', 'Revisión de documentación (voucheo)']];
     // Flechas de desplegar: todas se dibujan como triángulos del mismo tamaño (no dependen de la letra del navegador) y la de lo abierto (▾) va en naranja
     (function () {
       const GL = /[▸▾▴◂]/, FORMA = { '▸': 'polygon(0 0,100% 50%,0 100%)', '▾': 'polygon(0 0,100% 0,50% 100%)', '▴': 'polygon(50% 0,100% 100%,0 100%)', '◂': 'polygon(100% 0,0 50%,100% 100%)' };
@@ -17880,6 +17880,7 @@ ${cont.innerHTML}
       if (t) t.textContent = '2. Inventarios – ' + nom;
       if (st) st.textContent = ivE.hoja === 'import' ? 'Pasa las liquidaciones de importación (PDF o Excel) a una tabla con controles automáticos y las cruza con el mayor contable del cliente: asientos, fechas, conceptos y hallazgos'
         : ivE.hoja === 'venta' ? (ivE.btn === 'impcompras' ? 'Compras/Liquidaciones de importación contra las entradas del mayor contable: sube liquidaciones (PDF, ZIP, Excel) y el mayor' : 'Inventario para la venta: movimiento del inventario, importaciones en tránsito y kárdex, y cruces con importaciones, compras, salidas y costo de ventas')
+        : ivE.hoja === 'voucheo' ? 'Revisión de documentación (voucheo): de lo registrado en los libros al documento que lo respalda, con muestra automática por monto, concepto y riesgo, o manual'
         : ivE.hoja === 'materia' ? 'Materia prima (hoja en desarrollo)' : 'Producción en proceso (hoja en desarrollo)';
       const otras = $im('im-otras'), esp = $im('im-espacio'), av = $im('im-aviso'), imp = ivE.hoja === 'import', emb = ivE.hoja === 'venta' && ivE.btn === 'impcompras';
       if (otras) {
@@ -17887,6 +17888,7 @@ ${cont.innerHTML}
         if (!imp) {
           if (ivE.hoja === 'venta') otras.innerHTML = '<div class="border-t border-slate-300 mt-3 mb-2"></div><div class="flex flex-wrap gap-1 p-1.5 bg-white border border-slate-200 rounded-2xl">' + IV_VENTA_BOTONES.map(([k, n]) => '<button type="button" onclick="ivIrBoton(\'' + k + '\')" class="px-3 py-1.5 text-xs transition rounded-lg ' + (ivE.btn === k ? 'bg-slate-200 text-slate-900 font-semibold' : 'text-slate-600 hover:bg-slate-100') + '">' + n + '</button>').join('') + '</div>' +
             (ivE.btn === 'ingreso' ? '<div id="ig-cont" class="mt-3"></div>' : ivE.btn === 'mov' ? '<div id="mv-cont" class="mt-3"></div>' : ivE.btn === 'salidas' ? '<div id="cv-cont" class="mt-3"></div>' : ivE.btn === 'kcompras' ? '<div id="kc-cont" class="mt-3"></div>' : ivE.btn === 'ksalidas' ? '<div id="ks-cont" class="mt-3"></div>' : emb ? '' : '<div class="border border-dashed border-slate-300 rounded-xl p-8 mt-3 text-center text-sm text-slate-500"><div class="font-bold text-slate-700 mb-1">' + escapeHtml((IV_VENTA_BOTONES.find(x => x[0] === ivE.btn) || [])[1] || '') + '</div>Esta herramienta está en desarrollo. La iremos construyendo en los siguientes pasos.</div>');
+          else if (ivE.hoja === 'voucheo') otras.innerHTML = '<div id="vc-cont" class="mt-3"></div>';
           else otras.innerHTML = '<div class="border border-dashed border-slate-300 rounded-xl p-8 text-center text-sm text-slate-500"><div class="font-bold text-slate-700 mb-1">' + escapeHtml(nom) + '</div>Esta hoja está en desarrollo.</div>';
         }
       }
@@ -17898,6 +17900,7 @@ ${cont.innerHTML}
       }
       else if (!emb) { if (av) av.classList.add('hidden'); if (esp) esp.classList.add('hidden'); }
       if (!imp && ivE.hoja === 'venta' && ivE.btn === 'salidas') { const hayCambio = cvE.cliente !== $im('im-cliente').value || cvE.anio !== $im('im-anio').value || cvE.visita !== $im('im-visita').value; if (hayCambio || !cvE.cargado) cvCargar(); else cvPintar(); }
+      if (!imp && ivE.hoja === 'voucheo') { const hayCambio = vcE.cliente !== $im('im-cliente').value || vcE.anio !== $im('im-anio').value || vcE.visita !== $im('im-visita').value; if (hayCambio || !vcE.cargado) vcCargar(); else vcPintar(); }
       if (!imp && ivE.hoja === 'venta' && ivE.btn === 'ksalidas') { const hayCambio = ksE.cliente !== $im('im-cliente').value || ksE.anio !== $im('im-anio').value || ksE.visita !== $im('im-visita').value; if (hayCambio || !ksE.cargado) ksCargar(); else ksPintar(); }
       if (!imp && ivE.hoja === 'venta' && ivE.btn === 'kcompras') { const hayCambio = kcE.cliente !== $im('im-cliente').value || kcE.anio !== $im('im-anio').value || kcE.visita !== $im('im-visita').value; if (hayCambio || !kcE.cargado) kcCargar(); else kcPintar(); }
       if (!imp && ivE.hoja === 'venta' && (ivE.btn === 'mov' || ivE.btn === 'ingreso')) { const hayCambio = mvE.cliente !== $im('im-cliente').value || mvE.anio !== $im('im-anio').value || mvE.visita !== $im('im-visita').value; if (hayCambio || !mvE.cargado) mvCargar(); else { mvPintar(); igPintar(); } }
@@ -18093,6 +18096,216 @@ ${cont.innerHTML}
         msg.textContent = (prueba ? 'Prueba enviada a tu correo.' : 'Comunicado enviado a ' + n + ' persona(s).'); msg.className = 'min-h-[1rem] text-[11px] text-emerald-700 font-bold';
         if (!prueba) { try { registrarActividad('Envió comunicado por correo', asunto + ' · ' + n + ' destinatario(s)', {}); } catch (e) { } }
       } catch (e) { err('No se pudo enviar: ' + (e.message || e)); }
+    }
+
+
+    // ===== AF Inventarios › Revisión de documentación (voucheo) =====
+    // Voucheo = ir de lo registrado en los libros al documento que lo respalda (existencia, ocurrencia y exactitud).
+    const VC_ATRIB = [
+      { k: 'factura', t: 'Factura del proveedor', ap: 'ambas' },
+      { k: 'aut', t: 'Autorización (SRI / aprobación)', ap: 'ambas' },
+      { k: 'oc', t: 'Orden de compra o contrato', ap: 'ambas' },
+      { k: 'dau', t: 'Declaración aduanera (DAI / DAU)', ap: 'imp' },
+      { k: 'liq', t: 'Liquidación de importación', ap: 'imp' },
+      { k: 'bod', t: 'Recepción en bodega', ap: 'ambas' },
+      { k: 'pago', t: 'Pago o transferencia', ap: 'ambas' },
+      { k: 'imps', t: 'Impuestos y retenciones (IVA, ISD, retención)', ap: 'ambas' },
+      { k: 'per', t: 'Fecha y período correctos', ap: 'ambas' }
+    ];
+    const VC_ESTADOS = { '': ['·', '#94a3b8', '#f1f5f9'], ok: ['✓', '#047857', '#d1fae5'], ex: ['✗', '#b91c1c', '#fee2e2'], na: ['N/A', '#64748b', '#e2e8f0'] };
+    const vcE = { cargaId: 0, cliente: '', anio: '', visita: '', cargado: false, error: '', mov: [], imp: null, cfg: { pct: 20, cuentas: null }, filas: [], org: null, act: null, docAbierto: '', tmp: null, filtro: '', nuevo: false };
+    async function vcCargar() {
+      const cli = $im('im-cliente').value, anio = $im('im-anio').value, vis = $im('im-visita').value;
+      Object.assign(vcE, { cliente: cli, anio, visita: vis, cargado: false, error: '', mov: [], imp: null, cfg: { pct: 20, cuentas: null }, filas: [], org: null, act: null, docAbierto: '', filtro: '', nuevo: false });
+      if (!cli) { vcPintar(); return; }
+      const id = ++vcE.cargaId;
+      const f = (t, sel) => supabaseClient.from(t).select(sel).eq('cliente_id', cli).eq('anio', Number(anio)).eq('visita', vis);
+      const [a, b, c] = await Promise.all([f('inventario_movimiento', 'cuentas').eq('hoja', 'venta').maybeSingle(), f('importaciones_datos', 'config, liquidaciones').maybeSingle(), f('voucheo_inventario', '*').maybeSingle()]);
+      if (id !== vcE.cargaId) return;
+      vcE.mov = a.data && Array.isArray(a.data.cuentas) ? a.data.cuentas : [];
+      vcE.imp = b.data || null;
+      if (c.data) { vcE.cfg = { pct: 20, cuentas: null, ...(c.data.config || {}) }; vcE.filas = Array.isArray(c.data.filas) ? c.data.filas : []; vcE.org = { origen: c.data.origen, estado_revision: c.data.estado_revision, revisado_por: c.data.revisado_por, revisado_at: c.data.revisado_at }; vcE.act = { por: c.data.actualizado_por, en: c.data.updated_at }; }
+      vcE.error = c.error ? (/does not exist|schema cache/i.test(c.error.message || '') ? 'Falta la tabla voucheo_inventario en Supabase.' : (c.error.message || String(c.error))) : '';
+      vcE.cargado = true; vcPintar();
+    }
+    function vcGuardar() {
+      clearTimeout(vcE.tmp); const m = document.getElementById('vc-msg'); if (m) { m.textContent = 'Guardando…'; m.style.color = '#64748b'; }
+      const snap = { cliente_id: vcE.cliente, anio: Number(vcE.anio), visita: vcE.visita, config: vcE.cfg, filas: vcE.filas };
+      vcE.tmp = setTimeout(async () => {
+        if (!snap.cliente_id) return;
+        const quien = nombreUsuarioActivo() || null;
+        const { error } = await supabaseClient.from('voucheo_inventario').upsert({ ...snap, actualizado_por: quien, updated_at: new Date().toISOString() }, { onConflict: 'cliente_id,anio,visita' });
+        const m2 = document.getElementById('vc-msg');
+        if (error) { if (m2) { m2.textContent = 'No se guardó: ' + (error.message || error); m2.style.color = '#b91c1c'; } return; }
+        vcE.act = { por: quien, en: new Date().toISOString() };
+        if (m2) { m2.textContent = 'Guardado ✓'; m2.style.color = '#047857'; }
+      }, 600);
+    }
+    function vcCorte() { const c = vcE.imp && vcE.imp.config && vcE.imp.config.corte; return c || (vcE.visita === 'final' ? vcE.anio + '-12-31' : vcE.anio + '-09-30'); }
+    // Población: las adiciones (compras) de las cuentas de inventario del Movimiento del inventario, asiento por asiento
+    function vcPoblacion() {
+      const sel = vcE.cfg.cuentas, liqs = (vcE.imp && vcE.imp.liquidaciones && Array.isArray(vcE.imp.liquidaciones.imports)) ? vcE.imp.liquidaciones.imports : [];
+      const claves = liqs.map(im => ({ id: im.id, k: [...new Set([im.id, ...(Array.isArray(im.aliases) ? im.aliases : [])].map(x => impNorm(x)).filter(x => x.length >= 4))] }));
+      const pop = [];
+      vcE.mov.forEach(c => {
+        const cod = String(c.codigo || '');
+        if (Array.isArray(sel) && !sel.includes(cod)) return;
+        (Array.isArray(c.partidas) ? c.partidas : []).forEach(p => {
+          if (!p || p.col !== 'compras') return;
+          const v = Number(p.valor) || 0; if (v <= 0) return;
+          const txt = impNorm((p.desc || '') + ' ' + (p.ref || '')), m = claves.find(x => x.k.some(k => txt.includes(k)));
+          pop.push({ id: cod + '|' + (p.ref || '') + '|' + (p.fecha || '') + '|' + v.toFixed(2) + '|' + String(p.desc || '').slice(0, 24), cuenta: cod, cuentaN: (cod ? cod + ' ' : '') + (c.cuenta || ''), fecha: p.fecha || '', ref: p.ref || '', desc: String(p.desc || ''), valor: v, tipo: m ? 'imp' : 'loc', imp: m ? m.id : '' });
+        });
+      });
+      return pop;
+    }
+    function vcBase() { return r2f(vcPoblacion().reduce((t, x) => t + x.valor, 0)); }
+    function vcArmarAuto() {
+      const pop = vcPoblacion(), base = r2f(pop.reduce((t, x) => t + x.valor, 0)), pct = Number(vcE.cfg.pct) || 0, meta = r2f(base * pct / 100), corte = vcCorte();
+      const manuales = vcE.filas.filter(f => f.fuente === 'manual'), ids = new Set(manuales.map(f => f.id));
+      let cub = r2f(manuales.reduce((t, f) => t + (Number(f.valor) || 0), 0));
+      const dCorte = f => { const a = Date.parse(f), b = Date.parse(corte); return (isNaN(a) || isNaN(b)) ? 9999 : (b - a) / 86400000; };
+      const marcar = x => { const m = []; if (dCorte(x.fecha) <= 15) m.push('Cerca del corte'); if (/reversi|ajuste|manual|correcci|anula/i.test(x.desc)) m.push('Concepto inusual'); if (base && x.valor >= 0.05 * base) m.push('Monto alto'); return m; };
+      const cand = pop.filter(x => !ids.has(x.id)).map(x => ({ x, m: marcar(x) }));
+      const orden = [...cand.filter(c => c.m.some(t => t !== 'Monto alto')).sort((a, b) => b.x.valor - a.x.valor), ...cand.filter(c => !c.m.some(t => t !== 'Monto alto')).sort((a, b) => b.x.valor - a.x.valor)];
+      const auto = [];
+      for (const c of orden) { if (cub >= meta) break; auto.push({ id: c.x.id, fuente: 'auto', motivo: c.m.length ? c.m.join(', ') : 'Monto', fecha: c.x.fecha, ref: c.x.ref, desc: c.x.desc, cuenta: c.x.cuentaN, valor: c.x.valor, tipo: c.x.tipo, imp: c.x.imp, rev: {}, nota: '', docs: [] }); cub = r2f(cub + c.x.valor); }
+      // conserva lo que el auditor ya trabajó en una partida automática que sigue seleccionada
+      const previas = {}; vcE.filas.filter(f => f.fuente === 'auto').forEach(f => { previas[f.id] = f; });
+      vcE.filas = [...manuales, ...auto.map(a => previas[a.id] ? { ...a, rev: previas[a.id].rev || {}, nota: previas[a.id].nota || '', docs: previas[a.id].docs || [], tipo: previas[a.id].tipo || a.tipo } : a)];
+      // las automáticas anteriores con documentos o marcas no se pierden aunque ya no entren en la muestra
+      vcE.filas.sort((a, b) => String(a.fecha).localeCompare(String(b.fecha)));
+      vcGuardar(); vcPintar();
+    }
+    async function vcLimpiarAuto() {
+      const n = vcE.filas.filter(f => f.fuente === 'auto' && !(f.docs && f.docs.length) && !Object.values(f.rev || {}).some(Boolean)).length;
+      if (!await confirmarApp('Se quitan ' + n + ' partida(s) automáticas que todavía no tienen marcas ni documentos. Las que ya tienen trabajo se conservan. ¿Continuar?')) return;
+      vcE.filas = vcE.filas.filter(f => f.fuente !== 'auto' || (f.docs && f.docs.length) || Object.values(f.rev || {}).some(Boolean));
+      vcGuardar(); vcPintar();
+    }
+    function vcCambiarPct(v) { const n = Number(String(v).replace(',', '.')); if (!(n >= 0 && n <= 100)) { vcPintar(); return; } vcE.cfg.pct = n; vcGuardar(); vcPintar(); }
+    function vcCambiarCuenta(cod, on) {
+      const todas = vcE.mov.map(c => String(c.codigo || ''));
+      let sel = Array.isArray(vcE.cfg.cuentas) ? [...vcE.cfg.cuentas] : [...todas];
+      sel = on ? [...new Set([...sel, cod])] : sel.filter(x => x !== cod);
+      vcE.cfg.cuentas = sel.length === todas.length ? null : sel; vcGuardar(); vcPintar();
+    }
+    function vcAgregar(id) {
+      const x = vcPoblacion().find(p => p.id === id); if (!x || vcE.filas.some(f => f.id === id)) return;
+      vcE.filas.push({ id: x.id, fuente: 'manual', motivo: 'Elegida por el auditor', fecha: x.fecha, ref: x.ref, desc: x.desc, cuenta: x.cuentaN, valor: x.valor, tipo: x.tipo, imp: x.imp, rev: {}, nota: '', docs: [] });
+      vcE.filas.sort((a, b) => String(a.fecha).localeCompare(String(b.fecha))); vcE.filtro = ''; vcGuardar(); vcPintar();
+    }
+    function vcAgregarLibre() {
+      const g = i => (document.getElementById(i) || {}).value || '';
+      const fecha = g('vc-nf'), ref = g('vc-nr').trim(), desc = g('vc-nd').trim(), valor = Number(String(g('vc-nv')).replace(/,/g, '.'));
+      if (!fecha || !desc || !(valor > 0)) { alert('Para agregar una partida que no está en el mayor indica la fecha, la descripción y un valor mayor que cero.'); return; }
+      vcE.filas.push({ id: 'm' + Date.now(), fuente: 'manual', motivo: 'Agregada por el auditor', fecha, ref, desc, cuenta: '', valor: r2f(valor), tipo: g('vc-nt') === 'imp' ? 'imp' : 'loc', imp: '', rev: {}, nota: '', docs: [] });
+      vcE.filas.sort((a, b) => String(a.fecha).localeCompare(String(b.fecha))); vcE.nuevo = false; vcGuardar(); vcPintar();
+    }
+    async function vcQuitar(id) {
+      const f = vcE.filas.find(x => x.id === id); if (!f) return;
+      const conDocs = f.docs && f.docs.length;
+      if (!await confirmarApp('¿Quitar esta partida de la muestra?' + (conDocs ? '\n\nTiene ' + f.docs.length + ' documento(s) subido(s); también se borrarán.' : ''))) return;
+      if (conDocs) { try { await supabaseClient.storage.from('voucheo').remove(f.docs.map(d => d.ruta)); } catch (e) { } }
+      vcE.filas = vcE.filas.filter(x => x.id !== id); vcGuardar(); vcPintar();
+    }
+    function vcCiclo(id, k) {
+      const f = vcE.filas.find(x => x.id === id); if (!f) return; f.rev = f.rev || {};
+      const sig = { '': 'ok', ok: 'ex', ex: 'na', na: '' }; f.rev[k] = sig[f.rev[k] || ''] || '';
+      vcGuardar(); vcPintar();
+    }
+    function vcTipo(id, v) { const f = vcE.filas.find(x => x.id === id); if (!f) return; f.tipo = v === 'imp' ? 'imp' : 'loc'; vcGuardar(); vcPintar(); }
+    function vcNota(id, v) { const f = vcE.filas.find(x => x.id === id); if (!f) return; f.nota = v; vcGuardar(); }
+    function vcResultado(f) {
+      const ap = VC_ATRIB.filter(a => a.ap === 'ambas' || f.tipo === 'imp'), v = ap.map(a => (f.rev || {})[a.k] || '');
+      if (v.includes('ex')) return 'ex'; if (v.every(x => x === 'ok' || x === 'na') && v.some(x => x === 'ok')) return 'ok'; return '';
+    }
+    function vcDocs(id) { vcE.docAbierto = vcE.docAbierto === id ? '' : id; vcPintar(); }
+    async function vcSubir(id, input) {
+      const f = vcE.filas.find(x => x.id === id), archivos = [...(input.files || [])]; if (!f || !archivos.length) return;
+      const m = document.getElementById('vc-msg'); const aviso = t => { if (m) { m.textContent = t; m.style.color = '#64748b'; } };
+      const limpio = t => String(t).normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^A-Za-z0-9._-]+/g, '_');
+      for (const a of archivos) {
+        if (a.size > 52428800) { alert('"' + a.name + '" pesa más de 50 MB. Sube una versión más liviana.'); continue; }
+        aviso('Subiendo ' + a.name + '…');
+        const ruta = vcE.cliente + '/' + vcE.anio + '_' + vcE.visita + '/' + limpio(id).slice(0, 60) + '/' + Date.now() + '_' + limpio(a.name);
+        const { error } = await supabaseClient.storage.from('voucheo').upload(ruta, a, { contentType: a.type || 'application/octet-stream' });
+        if (error) { alert('No se pudo subir "' + a.name + '": ' + (error.message || error)); continue; }
+        f.docs = f.docs || []; f.docs.push({ nombre: a.name, ruta, tamano: a.size, tipo: a.type || '', por: nombreUsuarioActivo() || '', en: new Date().toISOString() });
+      }
+      input.value = ''; vcGuardar(); vcPintar();
+    }
+    async function vcVerDoc(id, i) {
+      const f = vcE.filas.find(x => x.id === id), d = f && f.docs && f.docs[i]; if (!d) return;
+      const { data, error } = await supabaseClient.storage.from('voucheo').createSignedUrl(d.ruta, 120, { download: d.nombre });
+      if (error || !data) { alert('No se pudo abrir el documento: ' + ((error && error.message) || 'sin acceso')); return; }
+      window.open(data.signedUrl, '_blank');
+    }
+    async function vcBorrarDoc(id, i) {
+      const f = vcE.filas.find(x => x.id === id), d = f && f.docs && f.docs[i]; if (!d) return;
+      if (!await confirmarApp('¿Borrar el documento "' + d.nombre + '"? No se puede deshacer.')) return;
+      try { await supabaseClient.storage.from('voucheo').remove([d.ruta]); } catch (e) { }
+      f.docs.splice(i, 1); vcGuardar(); vcPintar();
+    }
+    function vcFiltro(v) { vcE.filtro = v; vcPintar(); const el = document.getElementById('vc-filtro'); if (el) { el.focus(); el.setSelectionRange(v.length, v.length); } }
+    function vcPintar() {
+      if (typeof ivE === 'undefined' || ivE.hoja !== 'voucheo') return;
+      const c = document.getElementById('vc-cont'); if (!c) return;
+      if (!vcE.cliente) { c.innerHTML = '<p class="text-xs text-slate-500 border border-dashed border-slate-300 rounded-xl p-4">Selecciona el cliente para comenzar.</p>'; return; }
+      if (!vcE.cargado) { c.innerHTML = '<p class="text-xs text-slate-500 p-4">Cargando…</p>'; return; }
+      if (vcE.error) { c.innerHTML = '<p class="text-xs text-red-600 font-bold p-4">No se pudo cargar: ' + escapeHtml(vcE.error) + '</p>'; return; }
+      const F = formatoNumeroAnexo, e = escapeHtml, TH = 'px-2 py-2 text-[11px] font-bold text-slate-700 bg-slate-100 border-b border-slate-300 align-bottom', TD = 'px-2 py-1 align-top';
+      const lkIng = impLkIng('Ingreso de información'), lkMov = impLkMov('Movimiento del inventario');
+      let h = '<div class="text-[11px] text-slate-500 mb-3">El voucheo va de lo registrado en los libros al documento que lo respalda: prueba que la partida existe, es del período y está bien registrada. La población son las adiciones (compras e importaciones) del ' + lkMov + '. ' + (vcE.mov.length ? '' : 'Aún no hay movimiento: haz el pedido en ' + lkIng + '.') + '</div>';
+      if (!vcE.mov.length) { c.innerHTML = h; return; }
+      const pop = vcPoblacion(), base = r2f(pop.reduce((t, x) => t + x.valor, 0)), pct = Number(vcE.cfg.pct) || 0, meta = r2f(base * pct / 100);
+      const cub = r2f(vcE.filas.reduce((t, f) => t + (Number(f.valor) || 0), 0)), cubPct = base ? r2f(cub * 100 / base) : 0;
+      const sel = Array.isArray(vcE.cfg.cuentas) ? vcE.cfg.cuentas : null;
+      // 1. Cómo se arma la muestra
+      h += '<div class="p-3 bg-white border border-slate-200 rounded-xl space-y-3 text-xs text-slate-700"><div class="text-[13px] font-semibold text-slate-800">Muestra</div>' +
+        '<div><div class="font-bold text-slate-600 mb-1">Cuentas a revisar <span class="font-normal text-slate-500">(por ejemplo, materia prima o producto terminado)</span></div><div class="flex flex-wrap gap-x-5 gap-y-1">' + vcE.mov.map(cu => { const cod = String(cu.codigo || ''); return '<label class="flex items-center gap-1.5"><input type="checkbox" ' + (!sel || sel.includes(cod) ? 'checked' : '') + ' onchange="vcCambiarCuenta(\'' + e(cod).replace(/'/g, '') + '\', this.checked)"> ' + e((cod ? cod + ' ' : '') + (cu.cuenta || '')) + '</label>'; }).join('') + '</div></div>' +
+        '<div class="flex flex-wrap items-end gap-4"><label class="flex flex-col gap-1 text-slate-600"><span>Porcentaje del valor de las adiciones a revisar</span><span><input type="text" inputmode="decimal" value="' + pct + '" onchange="vcCambiarPct(this.value)" class="w-20 p-1.5 border border-slate-300 rounded text-right outline-none focus:ring-2 focus:ring-indigo-500"> %</span></label>' +
+        '<button type="button" onclick="vcArmarAuto()" class="px-1 py-1.5 text-xs font-bold bg-transparent border-0 hover:underline transition" style="color:#449964">↻ Armar muestra automática</button>' +
+        '<button type="button" onclick="vcLimpiarAuto()" class="px-1 py-1.5 text-xs font-bold bg-transparent border-0 hover:underline transition" style="color:#449964">Quitar las automáticas sin trabajo</button></div>' +
+        '<div class="grid sm:grid-cols-4 gap-2"><div class="p-2 bg-slate-50 rounded-lg"><div class="text-[10px] text-slate-500">Adiciones de las cuentas elegidas</div><div class="font-bold">' + F(base) + '</div><div class="text-[10px] text-slate-500">' + pop.length + ' asiento(s)</div></div>' +
+        '<div class="p-2 bg-slate-50 rounded-lg"><div class="text-[10px] text-slate-500">Meta (' + pct + ' %)</div><div class="font-bold">' + F(meta) + '</div></div>' +
+        '<div class="p-2 bg-slate-50 rounded-lg"><div class="text-[10px] text-slate-500">Cubierto por la muestra</div><div class="font-bold">' + F(cub) + '</div><div class="text-[10px] text-slate-500">' + vcE.filas.length + ' partida(s)</div></div>' +
+        '<div class="p-2 rounded-lg" style="background:' + (cub >= meta && meta > 0 ? '#d1fae5' : '#fef3c7') + '"><div class="text-[10px] text-slate-500">% de las adiciones cubierto</div><div class="font-bold">' + cubPct + ' %</div></div></div>' +
+        '<p class="text-[11px] text-slate-500">La selección automática se hace con reglas, no es un muestreo estadístico: primero las partidas cercanas al corte o con conceptos inusuales (reversión, ajuste, anulación), y luego las de mayor monto, hasta llegar al porcentaje. El auditor puede quitar partidas o agregar otras, y la columna «Por qué» dice el motivo de cada una.</p></div>';
+      // 2. Agregar manualmente
+      const filtro = (vcE.filtro || '').toLowerCase(), enMuestra = new Set(vcE.filas.map(f => f.id));
+      const cands = pop.filter(x => !enMuestra.has(x.id) && (!filtro || (x.ref + ' ' + x.desc + ' ' + x.fecha + ' ' + x.valor).toLowerCase().includes(filtro))).sort((a, b) => b.valor - a.valor).slice(0, 60);
+      h += '<div class="mt-3 p-3 bg-white border border-slate-200 rounded-xl space-y-2 text-xs text-slate-700"><div class="text-[13px] font-semibold text-slate-800">Agregar partidas a mano</div>' +
+        '<div class="flex flex-wrap items-center gap-2"><input id="vc-filtro" type="text" value="' + e(vcE.filtro) + '" oninput="vcFiltro(this.value)" placeholder="Buscar en las adiciones: referencia, descripción, fecha o valor" class="flex-1 min-w-[260px] p-1.5 border border-slate-300 rounded outline-none focus:ring-2 focus:ring-indigo-500">' +
+        '<button type="button" onclick="vcE.nuevo = !vcE.nuevo; vcPintar()" class="px-1 py-1.5 text-xs font-bold bg-transparent border-0 hover:underline transition" style="color:#449964">+ Partida que no está en el mayor</button></div>' +
+        (vcE.nuevo ? '<div class="flex flex-wrap items-end gap-2 p-2 bg-slate-50 rounded-lg"><label class="flex flex-col gap-1">Fecha<input id="vc-nf" type="date" class="p-1.5 border border-slate-300 rounded"></label><label class="flex flex-col gap-1">Referencia<input id="vc-nr" type="text" class="p-1.5 border border-slate-300 rounded w-32"></label><label class="flex flex-col gap-1 flex-1 min-w-[200px]">Descripción<input id="vc-nd" type="text" class="p-1.5 border border-slate-300 rounded"></label><label class="flex flex-col gap-1">Valor<input id="vc-nv" type="text" inputmode="decimal" class="p-1.5 border border-slate-300 rounded w-28 text-right"></label><label class="flex flex-col gap-1">Tipo<select id="vc-nt" class="p-1.5 border border-slate-300 rounded"><option value="loc">Compra local</option><option value="imp">Importación</option></select></label><button type="button" onclick="vcAgregarLibre()" class="px-3 py-1.5 rounded-lg text-xs font-bold text-white" style="background:#449964">Agregar</button></div>' : '') +
+        (filtro || cands.length ? '<div class="max-h-48 overflow-auto border border-slate-200 rounded-lg"><table class="w-full text-[11px] border-collapse"><tbody>' + (cands.length ? cands.map(x => '<tr class="border-t border-slate-100 hover:bg-slate-50"><td class="' + TD + ' whitespace-nowrap">' + mvFechaCorta(x.fecha) + '</td><td class="' + TD + ' whitespace-nowrap">' + e(x.ref) + '</td><td class="' + TD + '">' + e(x.desc.slice(0, 110)) + '</td><td class="' + TD + ' text-right whitespace-nowrap">' + F(x.valor) + '</td><td class="' + TD + '"><button type="button" onclick="vcAgregar(\'' + e(x.id).replace(/\\/g, '\\\\').replace(/'/g, "\\'") + '\')" class="font-bold hover:underline" style="color:#449964">+ Agregar</button></td></tr>').join('') : '<tr><td class="' + TD + ' text-slate-400">Sin coincidencias.</td></tr>') + '</tbody></table></div>' : '') + '</div>';
+      // 3. Tabla horizontal de revisión
+      const sello = estadoOrigen(vcE.org) ? pillOrigen(vcE.org).replace('class="pill-origen', 'class="ic-claude pill-origen') : '';
+      h += '<div class="flex flex-wrap items-center gap-2 mt-4 mb-2">' + sello + '<span id="vc-msg" class="text-[11px] text-slate-500"></span></div>';
+      h += '<div class="font-bold text-slate-800 mb-1 text-xs">Partidas a revisar <span class="font-normal text-slate-500">(clic en cada casilla: · pendiente, ✓ sin excepción, ✗ con excepción, N/A no aplica)</span></div>';
+      if (!vcE.filas.length) { h += '<p class="p-4 text-xs text-slate-500 border border-dashed border-slate-300 rounded-xl text-center">Aún no hay partidas. Usa «Armar muestra automática» o agrégalas a mano.</p>'; c.innerHTML = h; return; }
+      h += '<div class="overflow-x-auto border border-slate-200 rounded-xl"><table class="w-full text-[11px] border-collapse" style="min-width:1500px"><thead><tr><th class="' + TH + ' text-left">Fecha</th><th class="' + TH + ' text-left">Referencia</th><th class="' + TH + ' text-left">Descripción</th><th class="' + TH + ' text-right">Valor</th><th class="' + TH + ' text-left">Tipo</th>' +
+        VC_ATRIB.map(a => '<th class="' + TH + ' text-center" style="max-width:96px" title="' + e(a.t) + '">' + e(a.t) + '</th>').join('') + '<th class="' + TH + ' text-center">Resultado</th><th class="' + TH + ' text-left">Comentario</th><th class="' + TH + ' text-center">Soporte</th><th class="' + TH + '"></th></tr></thead><tbody>';
+      vcE.filas.forEach(f => {
+        const res = vcResultado(f), idq = e(f.id).replace(/\\/g, '\\\\').replace(/'/g, "\\'"), nd = f.docs ? f.docs.length : 0;
+        h += '<tr class="border-t border-slate-100"><td class="' + TD + ' whitespace-nowrap">' + mvFechaCorta(f.fecha) + '</td><td class="' + TD + ' whitespace-nowrap">' + e(f.ref) + '</td><td class="' + TD + '" style="min-width:240px"><div>' + e(String(f.desc).slice(0, 140)) + '</div><div class="text-[10px] text-slate-400">' + (f.fuente === 'auto' ? 'Por qué: ' : '') + e(f.motivo || '') + (f.imp ? ' · Importación ' + e(f.imp) : '') + '</div></td><td class="' + TD + ' text-right whitespace-nowrap">' + F(f.valor) + '</td>' +
+          '<td class="' + TD + '"><select onchange="vcTipo(\'' + idq + '\', this.value)" class="p-1 border border-slate-300 rounded text-[11px]"><option value="loc"' + (f.tipo !== 'imp' ? ' selected' : '') + '>Compra local</option><option value="imp"' + (f.tipo === 'imp' ? ' selected' : '') + '>Importación</option></select></td>' +
+          VC_ATRIB.map(a => { if (a.ap === 'imp' && f.tipo !== 'imp') return '<td class="' + TD + ' text-center text-slate-300">—</td>'; const v = (f.rev || {})[a.k] || '', st = VC_ESTADOS[v]; return '<td class="' + TD + ' text-center"><button type="button" onclick="vcCiclo(\'' + idq + '\', \'' + a.k + '\')" title="' + e(a.t) + '" style="min-width:38px;padding:3px 6px;border-radius:6px;font-weight:700;color:' + st[1] + ';background:' + st[2] + '">' + st[0] + '</button></td>'; }).join('') +
+          '<td class="' + TD + ' text-center font-bold" style="color:' + (res === 'ok' ? '#047857' : (res === 'ex' ? '#b91c1c' : '#94a3b8')) + '">' + (res === 'ok' ? 'Sin excepción' : (res === 'ex' ? 'Con excepción' : 'Pendiente')) + '</td>' +
+          '<td class="' + TD + '"><input type="text" value="' + e(f.nota || '') + '" onchange="vcNota(\'' + idq + '\', this.value)" class="w-44 p-1 border border-slate-300 rounded text-[11px]" placeholder="Comentario"></td>' +
+          '<td class="' + TD + ' text-center"><button type="button" onclick="vcDocs(\'' + idq + '\')" class="font-bold hover:underline whitespace-nowrap" style="color:#449964">' + (vcE.docAbierto === f.id ? '▾ ' : '▸ ') + '📎 ' + nd + '</button></td>' +
+          '<td class="' + TD + '"><button type="button" onclick="vcQuitar(\'' + idq + '\')" class="text-slate-400 hover:text-red-600" title="Quitar de la muestra">✕</button></td></tr>';
+        if (vcE.docAbierto === f.id) h += '<tr><td colspan="' + (5 + VC_ATRIB.length + 4) + '" class="p-2 bg-slate-50"><div class="space-y-2 text-[11px]"><div class="font-bold text-slate-700">Documentos de soporte (facturas, declaraciones, comprobantes de pago, fotos, PDF)</div>' +
+          (nd ? '<ul class="space-y-1">' + f.docs.map((d, i) => '<li class="flex flex-wrap items-center gap-2"><button type="button" onclick="vcVerDoc(\'' + idq + '\', ' + i + ')" class="underline font-semibold" style="color:#005cab">' + e(d.nombre) + '</button><span class="text-slate-400">' + (d.tamano ? Math.round(d.tamano / 1024) + ' KB' : '') + (d.por ? ' · ' + e(d.por) : '') + '</span><button type="button" onclick="vcBorrarDoc(\'' + idq + '\', ' + i + ')" class="text-slate-400 hover:text-red-600" title="Borrar">✕</button></li>').join('') + '</ul>' : '<p class="text-slate-500">Aún no hay documentos.</p>') +
+          '<label class="inline-block px-3 py-1.5 rounded-lg text-xs font-bold text-white cursor-pointer" style="background:#449964">Subir documentos<input type="file" multiple accept=".pdf,.jpg,.jpeg,.png,.webp,.xlsx,.xls,.csv,.txt" class="hidden" onchange="vcSubir(\'' + idq + '\', this)"></label></div></td></tr>';
+      });
+      h += '</tbody></table></div>';
+      // 4. Resumen
+      const tot = (fn) => r2f(vcE.filas.filter(fn).reduce((t, f) => t + (Number(f.valor) || 0), 0));
+      const nOk = vcE.filas.filter(f => vcResultado(f) === 'ok').length, nEx = vcE.filas.filter(f => vcResultado(f) === 'ex').length, nPe = vcE.filas.length - nOk - nEx;
+      h += '<div class="mt-3 grid sm:grid-cols-4 gap-2 text-xs"><div class="p-2 bg-slate-50 rounded-lg"><div class="text-[10px] text-slate-500">Partidas</div><div class="font-bold">' + vcE.filas.length + '</div></div><div class="p-2 rounded-lg" style="background:#d1fae5"><div class="text-[10px] text-slate-500">Sin excepción</div><div class="font-bold">' + nOk + ' · ' + F(tot(f => vcResultado(f) === 'ok')) + '</div></div><div class="p-2 rounded-lg" style="background:#fee2e2"><div class="text-[10px] text-slate-500">Con excepción</div><div class="font-bold">' + nEx + ' · ' + F(tot(f => vcResultado(f) === 'ex')) + '</div></div><div class="p-2 bg-slate-50 rounded-lg"><div class="text-[10px] text-slate-500">Pendientes</div><div class="font-bold">' + nPe + ' · ' + F(tot(f => !vcResultado(f))) + '</div></div></div>';
+      c.innerHTML = h;
     }
 
     // ===== AF Inventarios › Inventario para la venta › vi) Kárdex (salidas) → Costo de ventas =====
