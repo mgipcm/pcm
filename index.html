@@ -18189,7 +18189,7 @@ ${cont.innerHTML}
         const contra = Object.keys(otras).map(k => ({ k, v: otras[k] })).filter(o => Math.abs(o.v) > 0.005).sort((x, y) => Math.abs(y.v) - Math.abs(x.v)).slice(0, 3).map(o => o.k.trim() + ' (' + formatoNumeroAnexo(o.v) + ')').join(' · ');
         propias.forEach(l => {
           const d = Number(l[2]) || 0, h = Number(l[3]) || 0, v = r2f(d - h); if (Math.abs(v) < 0.005) return;
-          const det = String(l[4] || '').trim(), rev = /revers|anula/i.test(det);
+          const det = String(l[4] || '').trim(), rev = IMP_REV_RE.test(det);
           partidas.push({ col: rev ? 'otros' : (v > 0 ? 'compras' : 'salidas'), fecha: a.d || '', ref: ((a.tk || '') + ' ' + (a.num || '')).trim(), desc: det.slice(0, 220), contra, valor: v });
         });
       });
@@ -18610,10 +18610,15 @@ ${(im.aprendidos || []).length ? `<p class="text-xs text-slate-600 bg-slate-50 b
       // Control: salidas de tránsito según el mayor (todas) contra las que se pudieron ubicar en una importación
       let ctl = '';
       try {
-        const trc = impListaCtas((cfg.roles || {}).inventario); let sal = 0, rev = 0;
-        ((C && C.asientos) || []).forEach(a => (a.l || []).forEach(l => { if (!trc.length || !impCtaEn(String(l[0]), trc)) return; if (corteOk(a.d)) { const d = Number(l[2]) || 0, hh = Number(l[3]) || 0; const esR = IMP_REV_RE.test(String(l[4] || '')); if (hh > 0 && !esR) sal += hh; else if (d > 0 && esR) rev += d; } }));
-        const mayorSal = impR2(sal - rev), difSin = impR2(mayorSal - tR);
-        ctl = `<p class="mt-2 text-[11px] ${Math.abs(difSin) <= tol ? 'text-emerald-700' : 'text-amber-700'}"><b>Control:</b> salidas de tránsito según el mayor (créditos menos reversiones) ${impF(mayorSal)}; ubicadas en una importación ${impF(impR2(tR))}; ${difSin >= 0 ? 'sin ubicar en ninguna importación' : 'de más contra el mayor (revisar pagos que agrupan varias importaciones)'} ${impF(Math.abs(difSin))}.</p>`;
+        const trc = impListaCtas((cfg.roles || {}).inventario); let sal = 0, revD = 0, revC = 0;
+        ((C && C.asientos) || []).forEach(a => (a.l || []).forEach(l => { if (!trc.length || !impCtaEn(String(l[0]), trc)) return; if (!corteOk(a.d)) return; const d = Number(l[2]) || 0, hh = Number(l[3]) || 0, esR = IMP_REV_RE.test(String(l[4] || '')); if (hh > 0) { if (esR) revC += hh; else sal += hh; } else if (d > 0 && esR) revD += d; }));
+        const mayorSal = impR2(sal - revD), difSin = impR2(mayorSal - tR);
+        ctl = `<div class="mt-2 p-3 rounded-lg border ${Math.abs(difSin) <= tol ? 'border-emerald-200 bg-emerald-50' : 'border-amber-200 bg-amber-50'} text-[11px] text-slate-700 space-y-0.5"><div class="font-semibold text-slate-800">Cuadre con el movimiento de la cuenta en tránsito (hoja i de Inventarios)</div>
+          <div>Salidas de tránsito (créditos que no son reversión): <b>${impF(impR2(sal))}</b></div>
+          <div>Menos reversiones de salidas (débitos que anulan una liquidación): <b>${impF(impR2(revD))}</b></div>
+          <div>Salidas netas según el mayor: <b>${impF(mayorSal)}</b> · Ubicadas en una importación: <b>${impF(impR2(tR))}</b> · ${difSin >= 0 ? 'Sin ubicar en ninguna importación' : 'De más contra el mayor (revisar pagos que agrupan varias importaciones)'}: <b>${impF(Math.abs(difSin))}</b></div>
+          <div>Costo total de las liquidaciones: <b>${impF(impR2(tL))}</b> · Diferencia contra las salidas netas: <b>${impF(impR2(tL - mayorSal))}</b></div>
+          <div class="text-slate-500">Los créditos de reversión (${impF(impR2(revC))}) cancelan entradas anteriores y no son salidas: forman parte de "Reversiones y anulaciones" del movimiento.</div></div>`;
       } catch (e) { }
       h += `</tbody><tfoot class="bg-slate-50 font-semibold"><tr><td class="px-2 py-1 text-left">Total del año</td><td></td><td class="px-2 text-right">${impF(impR2(tL))}</td><td class="px-2 text-right">${impF(impR2(tR))}</td><td class="px-2 text-right">${impF(impR2(tL - tR))}</td><td></td></tr></tfoot></table></div>${ctl}</div>`;
       return h;
