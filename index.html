@@ -18082,7 +18082,7 @@ ${cont.innerHTML}
       const [{ data, error }, rb, ri, rk, rc] = await Promise.all([
         supabaseClient.from('inventario_movimiento').select('*').eq('cliente_id', cli).eq('anio', Number(anio)).eq('visita', vis).eq('hoja', 'venta').maybeSingle(),
         supabaseClient.from('balance_comprobacion').select('codigo, saldo').eq('cliente_id', cli).eq('anio', Number(anio)).eq('visita', vis).eq('sumaria', 'AF').limit(5000),
-        supabaseClient.from('importaciones_datos').select('cruce, config, liquidaciones').eq('cliente_id', cli).eq('anio', Number(anio)).eq('visita', vis).maybeSingle(),
+        supabaseClient.from('importaciones_datos').select('cruce, config, liquidaciones, origen, estado_revision, revisado_por, revisado_at').eq('cliente_id', cli).eq('anio', Number(anio)).eq('visita', vis).maybeSingle(),
         supabaseClient.from('inventario_movimiento').select('*').eq('cliente_id', cli).eq('anio', Number(anio)).eq('visita', vis).eq('hoja', 'kardex').maybeSingle(),
         supabaseClient.from('inventario_movimiento').select('cuentas, actualizado_por, updated_at').eq('cliente_id', cli).eq('anio', Number(anio)).eq('visita', vis).eq('hoja', 'costo_ventas').maybeSingle()
       ]);
@@ -18150,7 +18150,7 @@ ${cont.innerHTML}
         fila(impLkTab('Liquidaciones de importación', 'liq'), liq.length > 0, liq.length ? liq.length + ' importaciones' : 'Aún no leídas') +
         fila(impLkTab('Liquidaciones → Importaciones (mayor contable)', 'cruce'), nLin > 0, nLin ? nLin + ' líneas del mayor ubicadas en las importaciones' : 'Aún no hay cruce') +
         '</tbody></table></div></div>';
-      const sello = (mvE.act && mvE.act.por === 'Claude') || (mvE.karAct && mvE.karAct.por === 'Claude') ? '<div class="mt-3">'+'<span class="pill-origen rev ic-claude">Procesado por Claude, sujeto a modificaciones en caso de existir</span>'+'</div>' : '';
+      const sello = (mvE.act && mvE.act.por === 'Claude') || (mvE.karAct && mvE.karAct.por === 'Claude') || estadoOrigen(mvE.imp) === 'procesado' ? '<div class="mt-3">'+'<span class="pill-origen rev ic-claude">Procesado por Claude, sujeto a modificaciones en caso de existir</span>'+'</div>' : '';
       c.innerHTML = sello + pcBarraPedido('venta', mvE.cliente, mvE.anio, mvE.visita, 'Aquí se sube todo en un solo pedido: el mayor contable, las cuentas de inventario y de tránsito, las cuentas de costo de ventas, el kárdex del cliente y las liquidaciones de importación (si el cliente importa). Claude lo lee junto y las demás pestañas leen de aquí. Cuando el pedido pase a "hecho", presiona F5.') + estado;
     }
 
@@ -18355,8 +18355,8 @@ ${cont.innerHTML}
         impEstado.cruce = data.cruce && data.cruce.lineas ? data.cruce : null;
         const c = data.config || {}; impEstado.cfg = { roles: c.roles || {}, tol: c.tol !== undefined ? c.tol : 1, corte: c.corte || '', kw: c.kw || {}, resp: respPersona(c.resp), transito: c.transito || '', invcods: c.invcods || '', trsi: c.trsi !== undefined ? c.trsi : '', trsf: c.trsf !== undefined ? c.trsf : '', mdeb: c.mdeb !== undefined ? c.mdeb : '', mhab: c.mhab !== undefined ? c.mhab : '' };
         impEstado.hall = { notas: (data.hallazgos || {}).notas || {}, manuales: (data.hallazgos || {}).manuales || [] };
-        impEstado.act = { por: data.actualizado_por, en: data.updated_at };
-      } else impEstado.act = null;
+        impEstado.act = { por: data.actualizado_por, en: data.updated_at }; impEstado.org = { origen: data.origen, estado_revision: data.estado_revision, revisado_por: data.revisado_por, revisado_at: data.revisado_at };
+      } else { impEstado.act = null; impEstado.org = null; }
       if (!impEstado.cfg.corte) impEstado.cfg.corte = (vis === 'final' ? anio + '-12-31' : anio + '-09-30');
       impEstado.cargando = false; impEstado.cargado = true;
       impReclasificar(); impSyncCabecera(); impRender(); ivPintarHojas();
@@ -18442,7 +18442,7 @@ ${cont.innerHTML}
       const L = impEstado.imports, Cx = impEstado.cruce;
       return `<div class="m-2 p-3 bg-white border border-slate-200 rounded-xl space-y-1 text-xs text-slate-700"><div class="text-[13px] font-semibold text-slate-800">La información de Importaciones se lee desde el pedido de Ingreso de información</div>
         <p class="text-slate-600">${texto || 'Liquidaciones, mayor contable y kárdex se piden juntos en un solo pedido, en ' + impLkIng('Ingreso de información') + '. Aquí no se sube nada: si aún no hay pedido, hazlo allí.'}</p>
-        ${impEstado.act && impEstado.act.por === 'Claude' ? '<div><span class="pill-origen rev ic-claude">Procesado por Claude, sujeto a modificaciones en caso de existir</span></div>' : ''}
+        ${estadoOrigen(impEstado.org) ? '<div>' + pillOrigen(impEstado.org).replace('class="pill-origen', 'class="ic-claude pill-origen') + '</div>' : ''}
         <p class="text-slate-500">${L.length ? L.length + ' importaciones leídas' : 'Aún no hay liquidaciones leídas'} · ${Cx ? 'mayor contable leído' : 'mayor contable pendiente'}. Cuando el pedido pase a "hecho", presiona F5.</p></div>`;
     }
     function impHtmlLiq() {
