@@ -18154,6 +18154,7 @@ ${cont.innerHTML}
           if (!p || p.col !== 'compras') return;
           const v = Number(p.valor) || 0; if (v <= 0) return;
           const txt = impNorm((p.desc || '') + ' ' + (p.ref || '')), m = claves.find(x => x.k.some(k => txt.includes(k)));
+          if ((vcE.cfg.tipo === 'imp' && !m) || (vcE.cfg.tipo === 'loc' && m)) return;
           pop.push({ id: cod + '|' + (p.ref || '') + '|' + (p.fecha || '') + '|' + v.toFixed(2) + '|' + String(p.desc || '').slice(0, 24), cuenta: cod, cuentaN: (cod ? cod + ' ' : '') + (c.cuenta || ''), fecha: p.fecha || '', ref: p.ref || '', desc: String(p.desc || ''), valor: v, tipo: m ? 'imp' : 'loc', imp: m ? m.id : '' });
         });
       });
@@ -18192,6 +18193,7 @@ ${cont.innerHTML}
       vcGuardar(); vcPintar();
     }
     function vcCambiarPct(v) { const n = Number(String(v).replace(',', '.')); if (!(n >= 0 && n <= 100)) { vcPintar(); return; } vcE.cfg.pct = n; vcGuardar(); vcPintar(); }
+    function vcCambiarTipo(v) { vcE.cfg.tipo = (v === 'imp' || v === 'loc') ? v : 'todas'; vcGuardar(); vcPintar(); }
     function vcCambiarCuenta(cod, on) {
       const todas = vcE.mov.map(c => String(c.codigo || ''));
       let sel = Array.isArray(vcE.cfg.cuentas) ? [...vcE.cfg.cuentas] : [...todas];
@@ -18272,14 +18274,14 @@ ${cont.innerHTML}
       // 1. Cómo se arma la muestra
       h += '<div class="p-3 bg-white border border-slate-200 rounded-xl space-y-3 text-xs text-slate-700"><div class="text-[13px] font-semibold text-slate-800">Muestra</div>' +
         '<div><div class="font-bold text-slate-600 mb-1">Cuentas a revisar <span class="font-normal text-slate-500">(por ejemplo, materia prima o producto terminado)</span></div><div class="flex flex-wrap gap-x-5 gap-y-1">' + vcE.mov.map(cu => { const cod = String(cu.codigo || ''); return '<label class="flex items-center gap-1.5"><input type="checkbox" ' + (!sel || sel.includes(cod) ? 'checked' : '') + ' onchange="vcCambiarCuenta(\'' + e(cod).replace(/'/g, '') + '\', this.checked)"> ' + e((cod ? cod + ' ' : '') + (cu.cuenta || '')) + '</label>'; }).join('') + '</div></div>' +
-        '<div class="flex flex-wrap items-end gap-4"><label class="flex flex-col gap-1 text-slate-600"><span>Porcentaje del valor de las adiciones a revisar</span><span><input type="text" inputmode="decimal" value="' + pct + '" onchange="vcCambiarPct(this.value)" class="w-20 p-1.5 border border-slate-300 rounded text-right outline-none focus:ring-2 focus:ring-indigo-500"> %</span></label>' +
+        '<div class="flex flex-wrap items-end gap-4"><label class="flex flex-col gap-1 text-slate-600"><span>Tipo de adición</span><select onchange="vcCambiarTipo(this.value)" class="p-1.5 border border-slate-300 rounded"><option value="todas"' + (!vcE.cfg.tipo || vcE.cfg.tipo === 'todas' ? ' selected' : '') + '>Todas (importaciones y compras locales)</option><option value="imp"' + (vcE.cfg.tipo === 'imp' ? ' selected' : '') + '>Solo importaciones</option><option value="loc"' + (vcE.cfg.tipo === 'loc' ? ' selected' : '') + '>Solo compras locales</option></select></label><label class="flex flex-col gap-1 text-slate-600"><span>Porcentaje del valor de las adiciones a revisar</span><span><input type="text" inputmode="decimal" value="' + pct + '" onchange="vcCambiarPct(this.value)" class="w-20 p-1.5 border border-slate-300 rounded text-right outline-none focus:ring-2 focus:ring-indigo-500"> %</span></label>' +
         '<button type="button" onclick="vcArmarAuto()" class="px-1 py-1.5 text-xs font-bold bg-transparent border-0 hover:underline transition" style="color:#449964">↻ Armar muestra automática</button>' +
         '<button type="button" onclick="vcLimpiarAuto()" class="px-1 py-1.5 text-xs font-bold bg-transparent border-0 hover:underline transition" style="color:#449964">Quitar las automáticas sin trabajo</button></div>' +
         '<div class="grid sm:grid-cols-4 gap-2"><div class="p-2 bg-slate-50 rounded-lg"><div class="text-[10px] text-slate-500">Adiciones de las cuentas elegidas</div><div class="font-bold">' + F(base) + '</div><div class="text-[10px] text-slate-500">' + pop.length + ' asiento(s)</div></div>' +
         '<div class="p-2 bg-slate-50 rounded-lg"><div class="text-[10px] text-slate-500">Meta (' + pct + ' %)</div><div class="font-bold">' + F(meta) + '</div></div>' +
         '<div class="p-2 bg-slate-50 rounded-lg"><div class="text-[10px] text-slate-500">Cubierto por la muestra</div><div class="font-bold">' + F(cub) + '</div><div class="text-[10px] text-slate-500">' + vcE.filas.length + ' partida(s)</div></div>' +
         '<div class="p-2 rounded-lg" style="background:' + (cub >= meta && meta > 0 ? '#d1fae5' : '#fef3c7') + '"><div class="text-[10px] text-slate-500">% de las adiciones cubierto</div><div class="font-bold">' + cubPct + ' %</div></div></div>' +
-        '<p class="text-[11px] text-slate-500">La selección automática se hace con reglas, no es un muestreo estadístico: primero las partidas cercanas al corte o con conceptos inusuales (reversión, ajuste, anulación), y luego las de mayor monto, hasta llegar al porcentaje. El auditor puede quitar partidas o agregar otras, y la columna «Por qué» dice el motivo de cada una.</p></div>';
+        '<p class="text-[11px] text-slate-500">Una adición se considera importación cuando su descripción o referencia contiene el número de alguna importación cargada en la hoja Importaciones; el resto son compras locales. El auditor puede corregir el tipo en cada partida. Las cuentas que marques arriba definen si revisas materia prima, producto terminado u otras.</p><p class="text-[11px] text-slate-500">La selección automática se hace con reglas, no es un muestreo estadístico: primero las partidas cercanas al corte o con conceptos inusuales (reversión, ajuste, anulación), y luego las de mayor monto, hasta llegar al porcentaje. El auditor puede quitar partidas o agregar otras, y la columna «Por qué» dice el motivo de cada una.</p></div>';
       // 2. Agregar manualmente
       const filtro = (vcE.filtro || '').toLowerCase(), enMuestra = new Set(vcE.filas.map(f => f.id));
       const cands = pop.filter(x => !enMuestra.has(x.id) && (!filtro || (x.ref + ' ' + x.desc + ' ' + x.fecha + ' ' + x.valor).toLowerCase().includes(filtro))).sort((a, b) => b.valor - a.valor).slice(0, 60);
