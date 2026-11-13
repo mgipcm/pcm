@@ -18611,6 +18611,7 @@ ${(im.aprendidos || []).length ? `<p class="text-xs text-slate-600 bg-slate-50 b
       if (!imp.length) return '<p class="p-6 text-xs text-slate-400 text-center">Aún no hay liquidaciones leídas: haz el pedido en ' + impLkIng('Ingreso de información') + '.</p>';
       const nombres = IMP_ROLES.filter(([k]) => k !== 'inv_final').map(([k, t]) => `<label class="flex flex-col gap-1 text-xs text-slate-600"><span>${t}</span><input type="text" value="${impE(cfg.roles[k] || '')}" placeholder="Códigos separados por coma" onchange="impEditarRol('${k}', this.value)" class="${impIn} w-full"></label>`).join('');
       let h = `<div class="p-3 space-y-3 text-xs text-slate-700">`;
+      if (estadoOrigen(impEstado.org)) h += '<div>' + pillOrigen(impEstado.org).replace('class="pill-origen', 'class="ic-claude pill-origen') + '</div>';
       if (!C) h += '<p class="p-6 text-xs text-slate-400 text-center">Aún no hay lectura del mayor: haz el pedido en ' + impLkIng('Ingreso de información') + '.</p>';
       h += `<div class="p-4 bg-white border border-slate-200 rounded-xl space-y-2"><div class="text-[13px] font-semibold text-slate-800">A. Cuentas del mayor que usa este cliente</div>
         <p class="text-slate-500">Cada cliente codifica distinto. Escribe los códigos de cuenta de cada concepto (puedes usar un asterisco al final para incluir todas las cuentas que empiezan igual). Al terminar de leer el mayor, las cuentas se sugieren solas por su nombre.</p>
