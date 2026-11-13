@@ -17884,7 +17884,7 @@ ${cont.innerHTML}
         otras.classList.toggle('hidden', imp);
         if (!imp) {
           if (ivE.hoja === 'venta') otras.innerHTML = '<div class="border-t border-slate-300 mt-3 mb-2"></div><div class="flex flex-wrap gap-1 p-1.5 bg-white border border-slate-200 rounded-2xl">' + IV_VENTA_BOTONES.map(([k, n]) => '<button type="button" onclick="ivIrBoton(\'' + k + '\')" class="px-3 py-1.5 text-xs transition rounded-lg ' + (ivE.btn === k ? 'bg-slate-200 text-slate-900 font-semibold' : 'text-slate-600 hover:bg-slate-100') + '">' + n + '</button>').join('') + '</div>' +
-            (ivE.btn === 'ingreso' ? '<div id="ig-cont" class="mt-3"></div>' : ivE.btn === 'mov' ? '<div id="mv-cont" class="mt-3"></div>' : ivE.btn === 'salidas' ? '<div id="cv-cont" class="mt-3"></div>' : ivE.btn === 'kcompras' ? '<div id="kc-cont" class="mt-3"></div>' : emb ? '' : '<div class="border border-dashed border-slate-300 rounded-xl p-8 mt-3 text-center text-sm text-slate-500"><div class="font-bold text-slate-700 mb-1">' + escapeHtml((IV_VENTA_BOTONES.find(x => x[0] === ivE.btn) || [])[1] || '') + '</div>Esta herramienta está en desarrollo. La iremos construyendo en los siguientes pasos.</div>');
+            (ivE.btn === 'ingreso' ? '<div id="ig-cont" class="mt-3"></div>' : ivE.btn === 'mov' ? '<div id="mv-cont" class="mt-3"></div>' : ivE.btn === 'salidas' ? '<div id="cv-cont" class="mt-3"></div>' : ivE.btn === 'kcompras' ? '<div id="kc-cont" class="mt-3"></div>' : ivE.btn === 'ksalidas' ? '<div id="ks-cont" class="mt-3"></div>' : emb ? '' : '<div class="border border-dashed border-slate-300 rounded-xl p-8 mt-3 text-center text-sm text-slate-500"><div class="font-bold text-slate-700 mb-1">' + escapeHtml((IV_VENTA_BOTONES.find(x => x[0] === ivE.btn) || [])[1] || '') + '</div>Esta herramienta está en desarrollo. La iremos construyendo en los siguientes pasos.</div>');
           else otras.innerHTML = '<div class="border border-dashed border-slate-300 rounded-xl p-8 text-center text-sm text-slate-500"><div class="font-bold text-slate-700 mb-1">' + escapeHtml(nom) + '</div>Esta hoja está en desarrollo.</div>';
         }
       }
@@ -17896,6 +17896,7 @@ ${cont.innerHTML}
       }
       else if (!emb) { if (av) av.classList.add('hidden'); if (esp) esp.classList.add('hidden'); }
       if (!imp && ivE.hoja === 'venta' && ivE.btn === 'salidas') { const hayCambio = cvE.cliente !== $im('im-cliente').value || cvE.anio !== $im('im-anio').value || cvE.visita !== $im('im-visita').value; if (hayCambio || !cvE.cargado) cvCargar(); else cvPintar(); }
+      if (!imp && ivE.hoja === 'venta' && ivE.btn === 'ksalidas') { const hayCambio = ksE.cliente !== $im('im-cliente').value || ksE.anio !== $im('im-anio').value || ksE.visita !== $im('im-visita').value; if (hayCambio || !ksE.cargado) ksCargar(); else ksPintar(); }
       if (!imp && ivE.hoja === 'venta' && ivE.btn === 'kcompras') { const hayCambio = kcE.cliente !== $im('im-cliente').value || kcE.anio !== $im('im-anio').value || kcE.visita !== $im('im-visita').value; if (hayCambio || !kcE.cargado) kcCargar(); else kcPintar(); }
       if (!imp && ivE.hoja === 'venta' && (ivE.btn === 'mov' || ivE.btn === 'ingreso')) { const hayCambio = mvE.cliente !== $im('im-cliente').value || mvE.anio !== $im('im-anio').value || mvE.visita !== $im('im-visita').value; if (hayCambio || !mvE.cargado) mvCargar(); else { mvPintar(); igPintar(); } }
     }
@@ -18011,6 +18012,95 @@ ${cont.innerHTML}
         { nombre: 'Detalle', aoa: det, anchos: [{ wch: 14 }, { wch: 10 }, { wch: 12 }, { wch: 26 }, { wch: 70 }, { wch: 16 }], op: { titulo: 'Detalle por mes', info, fecha: [2], totales: [5] } }];
       const cli = (typeof impNombreCliente === 'function' && impNombreCliente()) || 'cliente';
       try { await arrXlsxConFormato(hojas, cli, 'Kardex_entradas_vs_Compras_' + String(cli).replace(/[^A-Za-z0-9]+/g, '_').slice(0, 30) + '_' + kcE.anio + '.xlsx'); } catch (e) { alert('No se pudo armar el Excel: ' + (e.message || e)); }
+    }
+
+
+    // ===== AF Inventarios › Inventario para la venta › vi) Kárdex (salidas) → Costo de ventas =====
+    const ksE = { abierto: '', abiertoC: '', cargaId: 0, cliente: '', anio: '', visita: '', cargado: false, kar: [], cv: [], actK: null, actC: null, error: '' };
+    async function ksCargar() {
+      const cli = $im('im-cliente').value, anio = $im('im-anio').value, vis = $im('im-visita').value;
+      Object.assign(ksE, { abierto: '', abiertoC: '', cliente: cli, anio, visita: vis, cargado: false, kar: [], cv: [], actK: null, actC: null, error: '' });
+      if (!cli) { ksPintar(); return; }
+      const id = ++ksE.cargaId;
+      const q = h => supabaseClient.from('inventario_movimiento').select('cuentas, updated_at, actualizado_por').eq('cliente_id', cli).eq('anio', Number(anio)).eq('visita', vis).eq('hoja', h).maybeSingle();
+      const [a, b] = await Promise.all([q('kardex'), q('costo_ventas')]);
+      if (id !== ksE.cargaId) return;
+      ksE.kar = a.data && Array.isArray(a.data.cuentas) ? a.data.cuentas : []; ksE.actK = a.data ? { por: a.data.actualizado_por, en: a.data.updated_at } : null;
+      ksE.cv = b.data && Array.isArray(b.data.cuentas) ? b.data.cuentas : []; ksE.actC = b.data ? { por: b.data.actualizado_por, en: b.data.updated_at } : null;
+      ksE.error = a.error ? (a.error.message || String(a.error)) : '';
+      ksE.cargado = true; ksPintar();
+    }
+    // Nombre de cada tipo de asiento del costo de ventas (se deduce de la descripción del mayor)
+    function ksTipoMayor(p) { const d = String(p.desc || ''); if (/reversi[oó]n/i.test(d) && /ord\.? ?prod/i.test(d)) return 'Reversión de comprobante de inventario (orden de producción)'; if (/dev\.? en ventas|devoluci[oó]n/i.test(d)) return 'Ingreso por devolución en ventas (crédito al costo)'; if (/costo de venta/i.test(d)) return 'Salida de inventario = costo'; return p.tipo || 'Sin clasificar'; }
+    function ksTipoKar(p) { return String(p.desc || 'Sin descripción').replace(/\s*del mes.*$/i, '').trim() || 'Sin descripción'; }
+    // Busca el menor grupo de conceptos (del mayor suman, del kárdex restan) que da la diferencia
+    function ksExplicar(cm, ck, dif) {
+      const it = [...cm.map(c => ({ lado: 'may', t: c.t, n: c.n, v: c.v })), ...ck.map(c => ({ lado: 'kar', t: c.t, n: c.n, v: -c.v }))].filter(c => Math.abs(c.v) >= 0.5).slice(0, 30);
+      let mejor = null;
+      const prueba = g => { const sm = r2f(g.reduce((a, c) => a + c.v, 0)); if (Math.abs(sm - dif) <= 1) { const mag = g.reduce((a, c) => a + Math.abs(c.v), 0); if (!mejor || g.length < mejor.g.length || (g.length === mejor.g.length && mag < mejor.mag)) mejor = { g, mag }; } };
+      for (let i = 0; i < it.length; i++) { prueba([it[i]]); for (let j = i + 1; j < it.length; j++) { prueba([it[i], it[j]]); if (it.length <= 14) for (let l = j + 1; l < it.length; l++) prueba([it[i], it[j], it[l]]); } }
+      return mejor ? mejor.g : null;
+    }
+    function ksCalcular() {
+      const ymDe = p => /^\d{4}-\d{2}$/.test(String(p.col || '')) ? p.col : (String(p.fecha || '').slice(0, 7) || 'sin');
+      const meses = {}, M = ym => (meses[ym] = meses[ym] || { ym, kar: 0, cos: 0, tk: {}, tm: {} });
+      const suma = (o, t, n, v) => { const r = (o[t] = o[t] || { t, n: 0, v: 0 }); r.n += n; r.v += v; };
+      const nDe = p => { const mm = /^(\d+)\s*(asientos|movimientos)/i.exec(String(p.ref || '')); return mm ? Number(mm[1]) : 1; };
+      ksE.kar.forEach(x => (Array.isArray(x.partidas) ? x.partidas : []).forEach(p => { if (!p || p.col !== 'salidas') return; const m = M(String(p.fecha || '').slice(0, 7) || 'sin'), v = -(Number(p.valor) || 0); m.kar += v; suma(m.tk, ksTipoKar(p), nDe(p), v); }));
+      ksE.cv.forEach(c => (Array.isArray(c.partidas) ? c.partidas : []).forEach(p => { if (!p) return; const m = M(ymDe(p)), v = Number(p.valor) || 0; m.cos += v; suma(m.tm, ksTipoMayor(p), nDe(p), v); }));
+      const lista = o => Object.values(o).map(r => ({ ...r, v: r2f(r.v) })).sort((a, b) => Math.abs(b.v) - Math.abs(a.v));
+      const filas = Object.values(meses).sort((a, b) => a.ym.localeCompare(b.ym)).map(m => { const ck = lista(m.tk), cm = lista(m.tm), dif = r2f(m.cos - m.kar); const x = { k: m.ym, t: cvMes(m.ym), may: r2f(m.cos), kar: r2f(m.kar), dif, cm, ck }; if (Math.abs(dif) <= 1) x.menor = true; else x.exp = ksExplicar(cm, ck, dif); return x; });
+      const tK = r2f(filas.reduce((t, m) => t + m.kar, 0)), tC = r2f(filas.reduce((t, m) => t + m.may, 0));
+      const tot = {}, totK = {}; filas.forEach(f => { f.cm.forEach(c => suma(tot, c.t, c.n, c.v)); f.ck.forEach(c => suma(totK, c.t, c.n, c.v)); });
+      const cm = lista(tot), ck = lista(totK), dif = r2f(tC - tK), T = { k: 'total', t: 'Total', may: tC, kar: tK, dif, cm, ck }; if (Math.abs(dif) <= 1) T.menor = true; else T.exp = ksExplicar(cm, ck, dif);
+      return { filas, T, hayK: ksE.kar.length > 0, hayC: ksE.cv.length > 0 };
+    }
+    function ksAbrir(ym) { ksE.abierto = ksE.abierto === ym ? '' : ym; ksPintar(); }
+    function ksAbrirC() { ksE.abiertoC = ksE.abiertoC ? '' : 'total'; ksPintar(); }
+    function ksPintar() {
+      if (typeof ivE === 'undefined' || ivE.hoja !== 'venta' || ivE.btn !== 'ksalidas') return;
+      const c = document.getElementById('ks-cont'); if (!c) return;
+      if (!ksE.cliente) { c.innerHTML = '<p class="text-xs text-slate-500 border border-dashed border-slate-300 rounded-xl p-4">Selecciona el cliente para comenzar.</p>'; return; }
+      if (!ksE.cargado) { c.innerHTML = '<p class="text-xs text-slate-500 p-4">Cargando…</p>'; return; }
+      if (ksE.error) { c.innerHTML = '<p class="text-xs text-red-600 font-bold p-4">No se pudo cargar: ' + escapeHtml(ksE.error) + '</p>'; return; }
+      const F = formatoNumeroAnexo, TH = 'px-2 py-2 text-[11px] font-bold text-slate-700 bg-slate-100 border-b border-slate-300', TD = 'px-2 py-1';
+      const lkCv = OJO_A('Costo de ventas → Salidas', "ivIrBoton('salidas'); window.scrollTo({ top: 0, behavior: 'smooth' });", 'Ver el costo de ventas');
+      const info = '<div class="text-[11px] text-slate-500 mb-3">El kárdex y el mayor contable se envían juntos en un solo pedido desde ' + impLkIng('Ingreso de información') + '.<br>Las salidas del kárdex (ventas, netas de anulaciones y devoluciones) se comparan mes a mes con el costo de ventas del mayor contable (' + lkCv + '). Haz clic en un mes para ver su detalle.</div>';
+      if (!ksE.kar.length || !ksE.cv.length) {
+        c.innerHTML = info + '<div class="p-4 border border-dashed border-slate-300 rounded-xl text-xs text-slate-600 space-y-2"><p class="font-bold text-slate-700">Faltan datos para este cruce:</p><ul class="list-disc pl-5">' + (!ksE.kar.length ? '<li>El Kárdex del cliente.</li>' : '') + (!ksE.cv.length ? '<li>El costo de ventas del mayor contable (indica las cuentas de costo de ventas al hacer el pedido).</li>' : '') + '</ul><p>Envíalos en un solo pedido desde ' + impLkIng('Ingreso de información') + ' y, cuando Claude termine, vuelve aquí.</p></div>'; return;
+      }
+      const R = ksCalcular(), dc = v => '<span class="' + (Math.abs(v) > 1 ? 'text-red-600' : 'text-emerald-700') + ' font-bold">' + F(v) + '</span>';
+      const sello = (ksE.actK && ksE.actK.por === 'Claude') || (ksE.actC && ksE.actC.por === 'Claude');
+      let h = info + '<div class="flex flex-wrap items-center gap-2 mb-2">' + (sello ? '<span class="pill-origen rev ic-claude">Procesado por Claude, sujeto a modificaciones en caso de existir</span>' : '') + '<button type="button" onclick="ksDescargar()" class="ml-auto px-1 py-1.5 text-xs font-bold bg-transparent border-0 hover:underline transition" style="color:#449964">⬇ Descargar (Excel)</button></div>';
+      h += '<div class="font-bold text-slate-800 mb-1 text-xs">Salidas por mes <span class="font-normal text-slate-500">(Diferencia = costo de ventas del mayor − salidas del kárdex; clic en un mes ' + IC_OJO + ')</span></div><div class="overflow-x-auto border border-slate-200 rounded-xl"><table class="w-full text-[11px] border-collapse min-w-[560px]"><thead><tr><th class="' + TH + ' text-left">Mes</th><th class="' + TH + ' text-right">Salidas del kárdex</th><th class="' + TH + ' text-right">Costo de ventas del mayor</th><th class="' + TH + ' text-right">Diferencia</th></tr></thead><tbody>';
+      R.filas.forEach(m => {
+        const ab = ksE.abierto === m.k;
+        h += '<tr onclick="ksAbrir(\'' + m.k + '\')" class="border-t border-slate-100 cursor-pointer hover:bg-slate-50' + (ab ? ' bg-slate-100' : '') + '"><td class="' + TD + ' font-semibold">' + (ab ? '▾ ' : '▸ ') + escapeHtml(m.t) + '</td><td class="' + TD + ' text-right">' + F(m.kar) + '</td><td class="' + TD + ' text-right">' + F(m.may) + '</td><td class="' + TD + ' text-right">' + dc(m.dif) + '</td></tr>';
+        if (ab) h += '<tr><td colspan="4" class="p-2 bg-slate-50">' + ksHtmlDetalle(m, F, TH, TD) + '</td></tr>';
+      });
+      h += '<tr class="border-t-2 border-slate-300 bg-slate-50 font-bold"><td class="' + TD + '">Total</td><td class="' + TD + ' text-right">' + F(R.T.kar) + '</td><td class="' + TD + ' text-right">' + F(R.T.may) + '</td><td class="' + TD + ' text-right">' + dc(R.T.dif) + '</td></tr></tbody></table></div>';
+      const abC = !!ksE.abiertoC, hayD = Math.abs(R.T.dif) > 0.005;
+      h += '<div class="font-bold text-slate-800 mt-4 mb-1 text-xs">Cuadre del año: kárdex contra costo de ventas del mayor <span class="font-normal text-slate-500">(Diferencia = mayor − kárdex)</span></div><div class="overflow-x-auto border border-slate-200 rounded-xl"><table class="w-full text-[11px] border-collapse min-w-[520px]"><thead><tr><th class="' + TH + ' text-left">Concepto</th><th class="' + TH + ' text-right">Valor</th></tr></thead><tbody>' +
+        '<tr class="border-t border-slate-100"><td class="' + TD + '">Salidas del kárdex (netas de anulaciones y devoluciones)</td><td class="' + TD + ' text-right">' + F(R.T.kar) + '</td></tr>' +
+        '<tr class="border-t border-slate-100"><td class="' + TD + '">Costo de ventas del mayor contable</td><td class="' + TD + ' text-right">' + F(R.T.may) + '</td></tr>' +
+        '<tr' + (hayD ? ' onclick="ksAbrirC()"' : '') + ' class="border-t border-slate-200 bg-slate-50 font-bold' + (hayD ? ' cursor-pointer hover:bg-slate-100' : '') + '"><td class="' + TD + '">' + (hayD ? (abC ? '▾ ' : '▸ ') : '') + 'Diferencia</td><td class="' + TD + ' text-right">' + dc(R.T.dif) + '</td></tr>' +
+        (abC && hayD ? '<tr><td colspan="2" class="p-2 bg-slate-50">' + kcHtmlAnalisis(R.T, F, TH, TD) + '</td></tr>' : '') + '</tbody></table></div>';
+      c.innerHTML = h;
+    }
+    // Detalle de un mes: qué explica su diferencia y los tipos de movimiento de cada lado
+    function ksHtmlDetalle(m, F, TH, TD) {
+      const x = { ...m, k: 'mes', cruz: [], rel: [] };
+      return kcHtmlAnalisis(x, F, TH, TD);
+    }
+    async function ksDescargar() {
+      if (!window.ExcelJS) { alert('No se pudo cargar el generador de Excel. Revisa tu conexión a internet.'); return; }
+      const R = ksCalcular(), info = [['Año evaluado', ksE.anio], ['Visita', ksE.visita === 'final' ? 'Final' : 'Preliminar'], ['Preparado por', (typeof nombreUsuarioActivo === 'function' && nombreUsuarioActivo()) || '']];
+      const aoa = [['Mes', 'Salidas del kárdex', 'Costo de ventas del mayor', 'Diferencia (mayor − kárdex)'], ...R.filas.map(m => [m.t, m.kar, m.may, m.dif]), ['Total', R.T.kar, R.T.may, R.T.dif]];
+      const cm = [['Origen', 'Concepto', 'Movimientos', 'Valor'], ...R.T.cm.map(c => ['Mayor contable', c.t, c.n, c.v]), ...R.T.ck.map(c => ['Kárdex', c.t, c.n, c.v])];
+      const hojas = [{ nombre: 'Salidas por mes', aoa, anchos: [{ wch: 16 }, { wch: 24 }, { wch: 28 }, { wch: 28 }], op: { titulo: 'Kárdex (salidas) → Costo de ventas', info, totales: [1, 2, 3] } },
+        { nombre: 'Conceptos', aoa: cm, anchos: [{ wch: 16 }, { wch: 60 }, { wch: 14 }, { wch: 18 }], op: { titulo: 'Conceptos del año: mayor contable y kárdex', info, totales: [3] } }];
+      const cli = (typeof impNombreCliente === 'function' && impNombreCliente()) || 'cliente';
+      try { await arrXlsxConFormato(hojas, cli, 'Kardex_salidas_vs_Costo_de_ventas_' + String(cli).replace(/[^A-Za-z0-9]+/g, '_').slice(0, 30) + '_' + ksE.anio + '.xlsx'); } catch (e) { alert('No se pudo armar el Excel: ' + (e.message || e)); }
     }
 
     // ===== AF Inventarios › Inventario para la venta › iii) Costo de ventas vs Salidas (mayor contable) =====
