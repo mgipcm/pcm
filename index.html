@@ -3782,7 +3782,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       const html = '<div style="font-size:18px;font-weight:700;color:#1e293b;margin-bottom:6px">AA Efectivo y equivalentes de efectivo</div>' +
         '<div style="display:flex;flex-wrap:wrap;gap:2px;border-bottom:1px solid #b8b8b3">' + hojas.map(([k, n]) => {
           const on = k === actual;
-          return '<button type="button" onclick="irHojaAA(\'' + k + '\')" style="padding:8px 18px;font-size:13px;cursor:pointer;background:' + (on ? '#e5e5e1' : 'transparent') + ';color:' + (on ? '#0f172a' : '#64748b') + ';font-weight:' + (on ? '700' : '500') + ';border:0;border-bottom:3px solid ' + (on ? '#1e293b' : 'transparent') + ';margin-bottom:-1px;border-radius:6px 6px 0 0">' + n + (k === 'caja' ? ' <span style="font-size:9px;opacity:.7">pronto</span>' : '') + '</button>';
+          return '<button type="button" onclick="irHojaAA(\'' + k + '\')" style="padding:8px 18px;font-size:13px;cursor:pointer;background:' + (on ? '#475569' : 'transparent') + ';color:' + (on ? '#ffffff' : '#64748b') + ';font-weight:' + (on ? '700' : '500') + ';border:0;border-bottom:3px solid ' + (on ? '#1e293b' : 'transparent') + ';margin-bottom:-1px;border-radius:6px 6px 0 0">' + n + (k === 'caja' ? ' <span style="font-size:9px;opacity:.7">pronto</span>' : '') + '</button>';
         }).join('') + '</div>';
       const cb = document.getElementById('cb-hojas'); if (cb) cb.innerHTML = html;
       const an = document.getElementById('an-hojas'); if (an) { an.innerHTML = html; an.classList.toggle('hidden', !esEq()); }
@@ -17824,7 +17824,7 @@ ${cont.innerHTML}
     const IV_VENTA_BOTONES = [['mov', 'i) Movimiento del inventario, importaciones en tránsito y kárdex'], ['impcompras', 'ii) Compras/Liquidaciones de importación → Entradas (mayor contable)'], ['salidas', 'iii) Costo de ventas → Salidas (mayor contable)'], ['kcompras', 'iv) Kárdex (entradas) → Compras/Liquidaciones de importación'], ['ksalidas', 'v) Kárdex (salidas) → Costo de ventas']];
     const ivE = { hoja: 'venta', btn: 'mov' };
     function ivPintarHojas() {
-      const btn = (on, clic, n, extra) => '<button type="button" onclick="' + clic + '" style="padding:8px 18px;font-size:13px;cursor:pointer;background:' + (on ? '#e5e5e1' : 'transparent') + ';color:' + (on ? '#0f172a' : '#64748b') + ';font-weight:' + (on ? '700' : '500') + ';border:0;border-bottom:3px solid ' + (on ? '#1e293b' : 'transparent') + ';margin-bottom:-1px;border-radius:6px 6px 0 0">' + n + (extra || '') + '</button>';
+      const btn = (on, clic, n, extra) => '<button type="button" onclick="' + clic + '" style="padding:8px 18px;font-size:13px;cursor:pointer;background:' + (on ? '#475569' : 'transparent') + ';color:' + (on ? '#ffffff' : '#64748b') + ';font-weight:' + (on ? '700' : '500') + ';border:0;border-bottom:3px solid ' + (on ? '#1e293b' : 'transparent') + ';margin-bottom:-1px;border-radius:6px 6px 0 0">' + n + (extra || '') + '</button>';
       const h = $im('im-hojas'); if (!h) return;
       h.innerHTML = '<div style="font-size:18px;font-weight:700;color:#1e293b;margin-bottom:6px">AF Inventarios</div><div style="display:flex;flex-wrap:wrap;gap:2px;border-bottom:1px solid #b8b8b3">' +
         IV_HOJAS.map(([k, n]) => btn(k === ivE.hoja, "ivIrHoja('" + k + "')", n, (k === 'materia' || k === 'proceso') ? ' <span style="font-size:9px;opacity:.7">pronto</span>' : '')).join('') + '</div>';
