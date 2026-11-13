@@ -1185,9 +1185,9 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
             <label class="flex items-start gap-2 mt-2 text-[11px] text-slate-600"><input type="checkbox" id="pc-confirma" class="mt-0.5"><span>Confirmo que esta documentación es completa y adecuada para realizar el análisis solicitado.</span></label>
           </div>
           <div id="pc-ctas-cv-caja" class="hidden">
-            <label class="block text-xs font-semibold text-slate-600 mb-1">Cuentas de costo de ventas (obligatorio)</label>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">Cuentas de costo de ventas (opcional)</label>
             <input type="text" id="pc-ctas-cv" placeholder="Códigos contables separados por coma. Ej. 5101xxxxx, 5101yyyyy" class="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs sm:text-sm outline-none">
-            <p class="mt-1 text-[11px] text-slate-400">Indica los códigos de las cuentas de costo de ventas. Claude armará, mes a mes, el costo de esas cuentas con el mayor contable, para cruzarlo con las salidas del inventario.</p>
+            <p class="mt-1 text-[11px] text-slate-400">Si el mayor trae el costo de ventas, indica los códigos de esas cuentas. Con el mismo mayor, Claude armará mes a mes el costo de esas cuentas, para cruzarlo con las salidas del inventario.</p>
           </div>
           <div id="pc-ctas-caja" class="hidden">
             <label class="block text-xs font-semibold text-slate-600 mb-1">Cuentas del inventario para la venta (obligatorio)</label>
@@ -4637,7 +4637,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       if (archivos.some((f, i) => !pcEtiquetasElegidas[i])) return err('Elige el tipo de cada archivo (conciliación, estado de cuenta, etc.).');
       if (!document.getElementById('pc-confirma').checked) return err('Marca la confirmación de que la documentación es completa y adecuada.');
       if (confirmado !== true) { pcResumenAntesDeEnviar(archivos); return; }
-      const fila = { cliente_id: v('pc-cliente'), anio: Number(v('pc-anio')), visita: v('pc-visita') || 'final', sumaria: v('pc-sumaria'), hoja: PC_HOJAS_SUM[v('pc-sumaria')] ? v('pc-hoja') : null, carpeta: null, nota: ((v('pc-sumaria') === 'AF' && v('pc-hoja') === 'costo_ventas' && v('pc-ctas-cv').trim() ? 'CUENTAS DE COSTO DE VENTAS (elegidas por el auditor): ' + v('pc-ctas-cv').trim() + '. ' : '') + (v('pc-sumaria') === 'AF' && v('pc-hoja') === 'venta' && v('pc-ctas-inv').trim() ? 'CUENTAS DE INVENTARIO PARA LA VENTA (elegidas por el auditor): ' + v('pc-ctas-inv').trim() + '. ' : '') + (v('pc-sumaria') === 'AF' && v('pc-hoja') === 'venta' && v('pc-ctas-tr').trim() ? 'CUENTA DE IMPORTACIONES EN TRANSITO (elegida por el auditor): ' + v('pc-ctas-tr').trim() + '. ' : '') + (v('pc-nota') || '')).trim() || null, doc_confirmada_por: nombreUsuarioActivo(), doc_confirmada_at: new Date().toISOString(), solicitado_por: nombreUsuarioActivo(), solicitado_email: usuarioActivo.email || null };
+      const fila = { cliente_id: v('pc-cliente'), anio: Number(v('pc-anio')), visita: v('pc-visita') || 'final', sumaria: v('pc-sumaria'), hoja: PC_HOJAS_SUM[v('pc-sumaria')] ? v('pc-hoja') : null, carpeta: null, nota: ((v('pc-sumaria') === 'AF' && ['venta', 'costo_ventas'].includes(v('pc-hoja')) && v('pc-ctas-cv').trim() ? 'CUENTAS DE COSTO DE VENTAS (elegidas por el auditor): ' + v('pc-ctas-cv').trim() + '. ' : '') + (v('pc-sumaria') === 'AF' && v('pc-hoja') === 'venta' && v('pc-ctas-inv').trim() ? 'CUENTAS DE INVENTARIO PARA LA VENTA (elegidas por el auditor): ' + v('pc-ctas-inv').trim() + '. ' : '') + (v('pc-sumaria') === 'AF' && v('pc-hoja') === 'venta' && v('pc-ctas-tr').trim() ? 'CUENTA DE IMPORTACIONES EN TRANSITO (elegida por el auditor): ' + v('pc-ctas-tr').trim() + '. ' : '') + (v('pc-nota') || '')).trim() || null, doc_confirmada_por: nombreUsuarioActivo(), doc_confirmada_at: new Date().toISOString(), solicitado_por: nombreUsuarioActivo(), solicitado_email: usuarioActivo.email || null };
       const { data: ins, error } = await supabaseClient.from('pedidos_claude').insert([fila]).select('id').single();
       if (error) return err('No se pudo enviar: ' + (error.message || error));
       msg.textContent = 'Subiendo ' + archivos.length + ' archivo(s)…'; msg.className = 'text-[11px] min-h-[1rem] text-slate-500';
@@ -4692,7 +4692,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       AS: ['Certificado o póliza de inversión', 'Estado de cuenta', 'Confirmación bancaria', 'Detalle o anexo de inversiones', 'Otro']
     };
     const PC_HOJAS = { caja: 'Caja', bancos: 'Bancos', equivalentes: 'Equivalentes de efectivo', venta: 'Inventario para la venta, importaciones en tránsito y kárdex', costo_ventas: 'Costo de ventas → salidas', kardex: 'Movimiento de kárdex', import: 'Importaciones (liquidaciones)' };
-    const PC_HOJAS_SUM = { AA: [['caja', 'Caja'], ['bancos', 'Bancos'], ['equivalentes', 'Equivalentes de efectivo']], AF: [['venta', 'Inventario para la venta, importaciones en tránsito y kárdex'], ['costo_ventas', 'Costo de ventas → salidas']] };
+    const PC_HOJAS_SUM = { AA: [['caja', 'Caja'], ['bancos', 'Bancos'], ['equivalentes', 'Equivalentes de efectivo']], AF: [['venta', 'Inventario para la venta, importaciones en tránsito y kárdex']] };
     function pcNombreHoja(h) { return PC_HOJAS[h] || h || ''; }
     const PC_TODO = 'Todo en un archivo (todos los documentos juntos)';
     function pcEtiquetas(sumaria, hoja) {
@@ -4704,7 +4704,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       const caja = document.getElementById('pc-hoja-caja'), sum = valorAnalisis('pc-sumaria'), esAA = !!PC_HOJAS_SUM[sum];
       if (caja) caja.classList.toggle('hidden', !esAA);
       const cc = document.getElementById('pc-ctas-caja'); if (cc) cc.classList.toggle('hidden', !(sum === 'AF' && valorAnalisis('pc-hoja') === 'venta'));
-      { const cv2 = document.getElementById('pc-ctas-cv-caja'); if (cv2) cv2.classList.toggle('hidden', !(sum === 'AF' && valorAnalisis('pc-hoja') === 'costo_ventas')); }
+      { const cv2 = document.getElementById('pc-ctas-cv-caja'); if (cv2) cv2.classList.toggle('hidden', !(sum === 'AF' && ['venta', 'costo_ventas'].includes(valorAnalisis('pc-hoja')))); }
       const h = document.getElementById('pc-hoja');
       if (h) {
         if (esAA) {
@@ -4733,7 +4733,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       const r = reglas.find(x => x[0].test(nombre) && et.includes(x[1])); return r ? r[1] : '';
     }
     function pcArchivosElegidos() {
-      { const cv3 = document.getElementById('pc-ctas-cv-caja'); if (cv3) cv3.classList.toggle('hidden', !(valorAnalisis('pc-sumaria') === 'AF' && valorAnalisis('pc-hoja') === 'costo_ventas')); }
+      { const cv3 = document.getElementById('pc-ctas-cv-caja'); if (cv3) cv3.classList.toggle('hidden', !(valorAnalisis('pc-sumaria') === 'AF' && ['venta', 'costo_ventas'].includes(valorAnalisis('pc-hoja')))); }
       { const cc2 = document.getElementById('pc-ctas-caja'); if (cc2) cc2.classList.toggle('hidden', !(valorAnalisis('pc-sumaria') === 'AF' && valorAnalisis('pc-hoja') === 'venta')); }
       const fs = pcArchivosSel, et = pcEtiquetas(valorAnalisis('pc-sumaria'), valorAnalisis('pc-hoja')), prev = pcEtiquetasElegidas;
       pcEtiquetasElegidas = fs.map((f, i) => (et.includes(prev[i]) ? prev[i] : pcEtiquetaSugerida(f.name, et)));
@@ -5320,7 +5320,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
     // Barra fija para enviar un pedido a Claude desde la propia pantalla (cuando ya hay datos y se quiere actualizar)
     function pcBarraPedido(hoja, cli, anio, vis, texto) {
       if (!cli) return '';
-      const T = { venta: ['Ingreso de información: todo se pide a Claude', 'Pedir a Claude (mayor contable + cuentas de inventario y de tránsito + kárdex + liquidaciones)'], costo_ventas: ['Costo de ventas: todo se pide a Claude', 'Pedir a Claude (mayor contable + cuentas de costo de ventas)'], kardex: ['Kárdex: todo se pide a Claude', 'Pedir a Claude (kárdex)'] }[hoja] || ['Todo se pide a Claude', 'Pedir a Claude'];
+      const T = { venta: ['Ingreso de información: todo se pide a Claude', 'Pedir a Claude (mayor contable + cuentas de inventario, tránsito y costo de ventas + kárdex + liquidaciones)'], costo_ventas: ['Costo de ventas: todo se pide a Claude', 'Pedir a Claude (mayor contable + cuentas de costo de ventas)'], kardex: ['Kárdex: todo se pide a Claude', 'Pedir a Claude (kárdex)'] }[hoja] || ['Todo se pide a Claude', 'Pedir a Claude'];
       return '<div class="mt-3 p-3 bg-white border border-slate-200 rounded-xl space-y-2 text-xs text-slate-700"><div class="text-[13px] font-semibold text-slate-800 ic-claude ic-tomate">' + T[0] + '</div><p class="text-slate-600">' + escapeHtml(texto) + '</p><div class="flex flex-wrap items-center gap-2"><button type="button" onclick="pcIrAPedido(\'AF\', \'' + escapeHtml(cli) + '\', \'' + escapeHtml(anio) + '\', \'' + escapeHtml(vis) + '\', \'' + hoja + '\')" class="px-3 py-1.5 rounded-lg text-xs transition bg-slate-200 text-slate-900 hover:bg-slate-300 font-semibold ic-claude">' + T[1] + '</button></div></div>';
     }
     function pcHtmlAviso(sumaria, cli, anio, vis, hoja) {
@@ -17980,7 +17980,7 @@ ${cont.innerHTML}
       if (!cvE.cargado) { c.innerHTML = '<p class="text-xs text-slate-500 p-4">Cargando…</p>'; return; }
       if (cvE.error) { c.innerHTML = '<p class="text-xs text-red-600 font-bold p-4">No se pudo cargar: ' + escapeHtml(cvE.error) + '</p>'; return; }
       const info = '<div class="text-[11px] text-slate-500 mb-3"><b>Objetivo:</b> comprobar que lo que salió del inventario por ventas coincide con el costo de ventas registrado en el mayor contable. <b>Cómo se hace:</b> con el mayor del pedido se arma, mes a mes, cada asiento de costo de ventas junto a su salida del inventario; luego el total se compara con el Movimiento del inventario y con el balance. <b>Qué hacer:</b> haz clic en un mes para ver todos sus asientos.</div>';
-      if (!cvE.cv.length) { c.innerHTML = info + '<div class="border border-slate-200 rounded-xl">' + pcHtmlAviso('AF', cvE.cliente, cvE.anio, cvE.visita, 'costo_ventas') + '</div>'; return; }
+      if (!cvE.cv.length) { c.innerHTML = info + '<p class="text-xs text-slate-500 border border-dashed border-slate-300 rounded-xl p-6 text-center">Aún no hay costo de ventas leído. Haz el pedido en ' + impLkIng('Ingreso de información') + ' e indica las cuentas de costo de ventas.</p>'; return; }
       const R = cvCalcular(), TH = 'px-2 py-2 text-[11px] font-bold text-slate-700 bg-slate-100 border-b border-slate-300', TD = 'px-2 py-1', F = formatoNumeroAnexo;
       const dc = (v, hay) => !hay ? '<span class="text-slate-400">–</span>' : '<span class="' + (Math.abs(v) > 1 ? 'text-red-600' : 'text-emerald-700') + ' font-bold">' + F(v) + '</span>';
       let h = info + '<div class="flex flex-wrap items-center gap-2 mt-4 mb-2">' + (cvE.act && cvE.act.por === 'Claude' ? '<span class="pill-origen rev ic-claude">Procesado por Claude, sujeto a modificaciones en caso de existir</span>' : (cvE.act && cvE.act.por ? '<span class="text-[11px] text-slate-500">Actualizado por ' + escapeHtml(cvE.act.por) + '</span>' : '')) + '<button type="button" onclick="cvDescargar()" class="ml-auto px-1 py-1.5 text-xs font-bold bg-transparent border-0 hover:underline transition" style="color:#449964">⬇ Descargar en Excel</button></div>';
@@ -18014,7 +18014,7 @@ ${cont.innerHTML}
           '<tr class="border-t-2 border-slate-300 bg-slate-50 font-bold"><td class="' + TD + '">Total</td><td class="' + TD + ' text-right">' + R.nAsientos + '</td><td class="' + TD + ' text-right">' + F(R.tSal) + '</td><td class="' + TD + ' text-right">' + F(R.tCos) + '</td><td class="' + TD + ' text-right">' + dc(R.dif, true) + '</td></tr></tbody></table></div>';
       }
       const notas = cvE.cv.filter(x => x.nota).map(x => '<p class="text-[11px] text-slate-600 mt-2"><b>' + escapeHtml((x.codigo ? x.codigo + ' ' : '') + (x.cuenta || '')) + ':</b> ' + escapeHtml(x.nota) + '</p>').join('');
-      c.innerHTML = pcBarraPedido('costo_ventas', cvE.cliente, cvE.anio, cvE.visita, 'Para armar o actualizar el costo de ventas, envía el mayor contable y las cuentas de costo de ventas.') + h + notas;
+      c.innerHTML = '<p class="mt-3 text-[11px] text-slate-500">El costo de ventas se lee del mismo pedido de ' + impLkIng('Ingreso de información') + ', con el mismo mayor contable.</p>' + h + notas;
     }
     async function cvDescargar() {
       if (!window.ExcelJS) { alert('No se pudo cargar el generador de Excel. Revisa tu conexión a internet.'); return; }
@@ -18044,17 +18044,19 @@ ${cont.innerHTML}
     function mvDifLibros(x) { return r2f(mvN(x.saldo_final) - mvN(x.saldo_libros)); }
     async function mvCargar() {
       const cli = $im('im-cliente').value, anio = $im('im-anio').value, vis = $im('im-visita').value;
-      Object.assign(mvE, { cliente: cli, anio, visita: vis, cuentas: [], act: null, cargado: false, ver: null, kar: [], karAct: null, verKar: null, verKarP: null });
+      Object.assign(mvE, { cliente: cli, anio, visita: vis, cuentas: [], act: null, cargado: false, ver: null, kar: [], karAct: null, cv: null, verKar: null, verKarP: null });
       if (!cli) { mvPintar(); return; }
       const id = ++mvE.cargaId;
-      const [{ data, error }, rb, ri, rk] = await Promise.all([
+      const [{ data, error }, rb, ri, rk, rc] = await Promise.all([
         supabaseClient.from('inventario_movimiento').select('*').eq('cliente_id', cli).eq('anio', Number(anio)).eq('visita', vis).eq('hoja', 'venta').maybeSingle(),
         supabaseClient.from('balance_comprobacion').select('codigo, saldo').eq('cliente_id', cli).eq('anio', Number(anio)).eq('visita', vis).eq('sumaria', 'AF').limit(5000),
         supabaseClient.from('importaciones_datos').select('cruce, config, liquidaciones').eq('cliente_id', cli).eq('anio', Number(anio)).eq('visita', vis).maybeSingle(),
-        supabaseClient.from('inventario_movimiento').select('*').eq('cliente_id', cli).eq('anio', Number(anio)).eq('visita', vis).eq('hoja', 'kardex').maybeSingle()
+        supabaseClient.from('inventario_movimiento').select('*').eq('cliente_id', cli).eq('anio', Number(anio)).eq('visita', vis).eq('hoja', 'kardex').maybeSingle(),
+        supabaseClient.from('inventario_movimiento').select('cuentas, actualizado_por, updated_at').eq('cliente_id', cli).eq('anio', Number(anio)).eq('visita', vis).eq('hoja', 'costo_ventas').maybeSingle()
       ]);
       if (id !== mvE.cargaId) return;
       if (rk && rk.data) { mvE.kar = Array.isArray(rk.data.cuentas) ? rk.data.cuentas : []; mvE.karAct = { por: rk.data.actualizado_por, en: rk.data.updated_at }; }
+      mvE.cv = (rc && rc.data && Array.isArray(rc.data.cuentas)) ? rc.data : null;
       mvE.imp = (ri && ri.data) || null; mvE.trBal = null; mvE.verTr = null;
       if (data) { mvE.cuentas = Array.isArray(data.cuentas) ? data.cuentas : []; mvE.act = { por: data.actualizado_por, en: data.updated_at }; }
       // "Según libros": saldo de cada cuenta en el balance de comprobación (sumaria AF), por código
@@ -18104,7 +18106,7 @@ ${cont.innerHTML}
       if (!mvE.cargado) { c.innerHTML = '<p class="text-xs text-slate-500 p-4">Cargando…</p>'; return; }
       if (mvE.error) { c.innerHTML = '<p class="text-xs text-red-600 font-bold p-4">No se pudo cargar: ' + escapeHtml(mvE.error) + '</p>'; return; }
       const I = mvE.imp || {}, cr = I.cruce || {}, cf = I.config || {}, liq = (I.liquidaciones && Array.isArray(I.liquidaciones.imports)) ? I.liquidaciones.imports : [];
-      const nAs = Array.isArray(cr.asientos) ? cr.asientos.length : 0, nLin = Array.isArray(cr.lineas) ? cr.lineas.length : 0, nCta = (mvE.cuentas || []).length, nKar = (mvE.kar || []).length;
+      const nAs = Array.isArray(cr.asientos) ? cr.asientos.length : 0, nLin = Array.isArray(cr.lineas) ? cr.lineas.length : 0, nCta = (mvE.cuentas || []).length, nKar = (mvE.kar || []).length, nCv = (mvE.cv && mvE.cv.cuentas || []).length;
       const fch = f => { const m = String(f || '').match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? m[3] + '/' + m[2] + '/' + m[1] : ''; };
       const fila = (nombre, ok, det) => '<tr class="border-b border-slate-100"><td class="px-2 py-1.5 w-6 text-center">' + (ok ? '<span class="text-emerald-700 font-bold">✓</span>' : '<span class="text-slate-400">○</span>') + '</td><td class="px-2 py-1.5">' + nombre + '</td><td class="px-2 py-1.5 ' + (ok ? 'text-slate-700' : 'text-slate-400') + '">' + det + '</td></tr>';
       const estado = '<div class="mt-3 p-3 bg-white border border-slate-200 rounded-xl text-xs text-slate-700"><div class="text-[13px] font-semibold text-slate-800 mb-1">Qué hay leído de este cliente, año y visita</div><div class="overflow-x-auto"><table class="text-[11px] leading-tight border-collapse w-full" style="min-width:34rem"><tbody>' +
@@ -18112,10 +18114,11 @@ ${cont.innerHTML}
         fila(impLkMov('Movimiento del inventario'), nCta > 0, nCta ? nCta + ' cuenta(s) de inventario' + (mvE.act && mvE.act.en ? ' · actualizado el ' + fch(mvE.act.en) : '') : 'Aún no leído') +
         fila(impLkMov('Importaciones en tránsito'), !!(cf.transito && nAs), cf.transito && nAs ? 'Cuenta ' + escapeHtml(cf.transito) + ' · ' + nAs + ' asientos' : 'Aún no leído') +
         fila(impLkMov('Kárdex'), nKar > 0, nKar ? nKar + ' producto(s)' + (mvE.karAct && mvE.karAct.en ? ' · actualizado el ' + fch(mvE.karAct.en) : '') : 'Aún no leído') +
+        fila(OJO_A('Costo de ventas → Salidas (mayor contable)', "ivIrBoton('salidas'); window.scrollTo({ top: 0, behavior: 'smooth' });", 'Ver el costo de ventas'), nCv > 0, nCv ? nCv + ' cuenta(s) de costo de ventas' + (mvE.cv && mvE.cv.updated_at ? ' · actualizado el ' + fch(mvE.cv.updated_at) : '') : 'Aún no leído (indica las cuentas de costo de ventas al hacer el pedido)') +
         fila(impLkTab('Liquidaciones de importación', 'liq'), liq.length > 0, liq.length ? liq.length + ' importaciones' : 'Aún no leídas') +
         fila(impLkTab('Liquidaciones → Importaciones (mayor contable)', 'cruce'), nLin > 0, nLin ? nLin + ' líneas del mayor ubicadas en las importaciones' : 'Aún no hay cruce') +
-        '</tbody></table></div><p class="mt-2 text-slate-500">El costo de ventas se pide aparte, en su propia pestaña, porque usa otras cuentas.</p></div>';
-      c.innerHTML = pcBarraPedido('venta', mvE.cliente, mvE.anio, mvE.visita, 'Aquí se sube todo en un solo pedido: el mayor contable, las cuentas de inventario y de tránsito, el kárdex del cliente y las liquidaciones de importación (si el cliente importa). Claude lo lee junto y las demás pestañas leen de aquí. Cuando el pedido pase a "hecho", presiona F5.') + estado;
+        '</tbody></table></div></div>';
+      c.innerHTML = pcBarraPedido('venta', mvE.cliente, mvE.anio, mvE.visita, 'Aquí se sube todo en un solo pedido: el mayor contable, las cuentas de inventario y de tránsito, las cuentas de costo de ventas, el kárdex del cliente y las liquidaciones de importación (si el cliente importa). Claude lo lee junto y las demás pestañas leen de aquí. Cuando el pedido pase a "hecho", presiona F5.') + estado;
     }
 
     // ===== Movimiento de la cuenta de importaciones en tránsito (mismo formato; sale de los asientos del mayor guardados en Importaciones) =====
