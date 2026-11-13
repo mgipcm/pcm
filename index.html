@@ -17216,17 +17216,21 @@ ${cont.innerHTML}
       });
       const conceptoPorRol = {}; IMP_CONCEPTOS.forEach(k => { if (k.rol) conceptoPorRol[k.rol] = k.k; });
       const LN = impAmpliarLineas(cruce, imports, cfg);
+      const liqTot = {}; imports.forEach(im => { liqTot[im.id] = impR2(impValoresLiq(im).total || 0); });
       LN.forEach(l => {
         const net0 = (Number(l.deb) || 0) - (Number(l.hab) || 0);
         let rol = null;
         for (const [r] of IMP_ROLES) if (roles[r].length && impCtaEn(l.cod, roles[r])) { rol = r; break; }
         if (!rol) return;
         // Importaciones en tránsito: se compara solo la salida (crédito); un débito cuenta únicamente si es la reversión de una salida
-        const net = rol === 'inventario' ? (Number(l.hab) || 0) - (/^reversi/i.test(l.met || '') ? (Number(l.deb) || 0) : 0) : net0;
+        const esRev = /^reversi/i.test(l.met || '') || /revers|anula/i.test(String(l.det || ''));
+        const net = rol === 'inventario' ? (Number(l.hab) || 0) - (esRev ? (Number(l.deb) || 0) : 0) : net0;
         const ids = (l.ids || []).filter(id => R[id]);
         if (!ids.length) return;
         const multi = (l.ids || []).length > 1;
         if (multi) { compartidas.push({ ...l, rol }); }
+        // Salida de tránsito que agrupa varias importaciones: si la suma de sus liquidaciones iguala el valor, cada una recibe su propio costo (así no se cuenta varias veces)
+        const asig = multi && rol === 'inventario' && net > 0 && Math.abs(ids.reduce((t, id) => t + (liqTot[id] || 0), 0) - net) <= Math.max(tol, 0.5) * ids.length;
         ids.forEach(id => {
           const cell = k => R[id].c[k];
           const fuera = corte && l.d && l.d > corte;
@@ -17239,9 +17243,10 @@ ${cont.innerHTML}
           if (!k) { return; }
           const x = cell(k);
           const pmAdd = v => { if (k === 'costo' && l.d) { const m = String(l.d).slice(0, 7); R[id].pm[m] = (R[id].pm[m] || 0) + v; } };
-          if (multi) { const vv = via ? (Number(l.deb) || 0) : Math.abs(net); x.comp += vv; pmAdd(vv); return; }
-          if (fuera) { x.post += net; return; }
-          if (via) { x.via += Number(l.deb) || 0; x.viaHab += Number(l.hab) || 0; pmAdd(Number(l.deb) || 0); } else { x.mayor += net; pmAdd(net); }
+          if (multi && !asig) { const vv = via ? (Number(l.deb) || 0) : Math.abs(net); x.comp += vv; pmAdd(vv); return; }
+          const netId = asig ? (liqTot[id] || 0) : net;
+          if (fuera) { x.post += netId; return; }
+          if (via) { x.via += Number(l.deb) || 0; x.viaHab += Number(l.hab) || 0; pmAdd(Number(l.deb) || 0); } else { x.mayor += netId; pmAdd(netId); }
           if (l.k) x.asientos.add(l.k); if (l.d) x.fechas.add(l.d); x.cuentas.add(l.cod);
         });
       });
@@ -18555,6 +18560,7 @@ ${(im.aprendidos || []).length ? `<p class="text-xs text-slate-600 bg-slate-50 b
       imports.forEach(im => { const co = cl.filas.find(x => x.id === im.id && x.k === 'costo') || {}; reg[im.id] = {}; Object.keys(co.pm || {}).forEach(m => { reg[im.id][m] = impR2(co.pm[m]); }); });
       const meses = new Set(); imports.forEach(im => { meses.add(mesLiq[im.id]); Object.keys(reg[im.id] || {}).forEach(m => meses.add(m)); });
       const lista = [...meses].sort(), A = impEstado.mesAb = impEstado.mesAb || {};
+      const corteOk = d => !cfg.corte || !d || String(d) <= cfg.corte;
       let tL = 0, tR = 0, h = `<div class="p-4 bg-white border border-slate-200 rounded-xl space-y-2"><div class="text-[13px] font-semibold text-slate-800">B. Liquidaciones contra importaciones por mes</div>
         <p class="text-slate-500">Cada liquidación se ubica en el mes de su fecha y lo que salió de importaciones en tránsito (crédito en el mayor), en el mes en que se asentó. Si una liquidación se registró en otro mes, la diferencia de un mes se compensa con la del otro. Haz clic en un mes para ver el detalle por importación.</p>
         <div class="overflow-x-auto"><table class="w-full text-[11px] leading-tight border-collapse"><thead class="bg-slate-50 text-slate-600"><tr>${th('Mes', 'text-left')}${th('Importaciones liquidadas')}${th('Costo total liquidaciones')}${th('Salida de tránsito en el mes (crédito)')}${th('Dif.')}${th('Estado', 'text-center')}</tr></thead><tbody>`;
@@ -18577,7 +18583,15 @@ ${(im.aprendidos || []).length ? `<p class="text-xs text-slate-600 bg-slate-50 b
           h += '</tbody></table></td></tr>';
         }
       });
-      h += `</tbody><tfoot class="bg-slate-50 font-semibold"><tr><td class="px-2 py-1 text-left">Total del año</td><td></td><td class="px-2 text-right">${impF(impR2(tL))}</td><td class="px-2 text-right">${impF(impR2(tR))}</td><td class="px-2 text-right">${impF(impR2(tL - tR))}</td><td></td></tr></tfoot></table></div></div>`;
+      // Control: salidas de tránsito según el mayor (todas) contra las que se pudieron ubicar en una importación
+      let ctl = '';
+      try {
+        const trc = impListaCtas((cfg.roles || {}).inventario); let sal = 0, rev = 0;
+        ((C && C.asientos) || []).forEach(a => (a.l || []).forEach(l => { if (!trc.length || !impCtaEn(String(l[0]), trc)) return; if (corteOk(a.d)) { const d = Number(l[2]) || 0, hh = Number(l[3]) || 0; if (hh > 0) sal += hh; else if (d > 0 && /revers|anula/i.test(String(l[4] || ''))) rev += d; } }));
+        const mayorSal = impR2(sal - rev), difSin = impR2(mayorSal - tR);
+        ctl = `<p class="mt-2 text-[11px] ${Math.abs(difSin) <= tol ? 'text-emerald-700' : 'text-amber-700'}"><b>Control:</b> salidas de tránsito según el mayor (créditos menos reversiones) ${impF(mayorSal)}; ubicadas en una importación ${impF(impR2(tR))}; ${difSin >= 0 ? 'sin ubicar en ninguna importación' : 'de más contra el mayor (revisar pagos que agrupan varias importaciones)'} ${impF(Math.abs(difSin))}.</p>`;
+      } catch (e) { }
+      h += `</tbody><tfoot class="bg-slate-50 font-semibold"><tr><td class="px-2 py-1 text-left">Total del año</td><td></td><td class="px-2 text-right">${impF(impR2(tL))}</td><td class="px-2 text-right">${impF(impR2(tR))}</td><td class="px-2 text-right">${impF(impR2(tL - tR))}</td><td></td></tr></tfoot></table></div>${ctl}</div>`;
       return h;
     }
     function impHtmlResultadoCruce() {
