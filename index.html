@@ -17204,6 +17204,8 @@ ${cont.innerHTML}
     function impListaCtas(txt) { return String(txt || '').split(/[,;\n\s]+/).map(s => s.trim()).filter(Boolean); }
     function impCtaEn(cod, lista) { cod = String(cod); return lista.some(p => p.endsWith('*') ? cod.startsWith(p.slice(0, -1)) : cod === p); }
 
+    // Palabras con que los sistemas contables marcan una reversión o anulación
+    const IMP_REV_RE = /revers|anula|extorno|contra.?asiento|correcci[oó]n|nota de cr[eé]dito/i;
     // Cruce: reparte las líneas del mayor por importación y concepto y las compara con la liquidación
     function impClasificar(cruce, imports, cfg) {
       const roles = impRolesDe(cfg);
@@ -17216,6 +17218,19 @@ ${cont.innerHTML}
       });
       const conceptoPorRol = {}; IMP_CONCEPTOS.forEach(k => { if (k.rol) conceptoPorRol[k.rol] = k.k; });
       const LN = impAmpliarLineas(cruce, imports, cfg);
+      const asPorK = {}; (cruce.asientos || []).forEach(a => { asPorK[a.k] = a; });
+      // Reversión por valor (aunque el detalle no la nombre): un crédito de tránsito que no entra al inventario y repite el valor de un débito anterior de la misma importación
+      const revVal = new Map();
+      try {
+        const invs = new Set([...roles.inv_final, ...impFamiliaInv(cfg)]), esT = c => roles.inventario.length && impCtaEn(String(c), roles.inventario);
+        const debs = LN.filter(l => esT(l.cod) && (Number(l.deb) || 0) > 0 && (l.ids || []).length === 1 && !IMP_REV_RE.test(String(l.det || ''))).sort((x, y) => String(x.d || '').localeCompare(String(y.d || '')));
+        const usado = new Set();
+        LN.filter(l => esT(l.cod) && (Number(l.hab) || 0) > 0 && (l.ids || []).length === 1 && !IMP_REV_RE.test(String(l.det || ''))).forEach(c => {
+          const a = asPorK[c.k]; if (!a || (a.l || []).some(x => invs.has(String(x[0])) && (Number(x[2]) || 0) > 0)) return;
+          const o = debs.find(d => !usado.has(d) && d.ids[0] === c.ids[0] && Math.abs((Number(d.deb) || 0) - (Number(c.hab) || 0)) <= tol && String(d.d || '') <= String(c.d || ''));
+          if (o) { usado.add(o); revVal.set(c, o); }
+        });
+      } catch (e) { }
       const asPorNum = {}; (cruce.asientos || []).forEach(a => { if (a.num) asPorNum[String(a.num)] = a; });
       const liqTot = {}; imports.forEach(im => { liqTot[im.id] = impR2(impValoresLiq(im).total || 0); });
       LN.forEach(l => {
@@ -17224,13 +17239,13 @@ ${cont.innerHTML}
         for (const [r] of IMP_ROLES) if (roles[r].length && impCtaEn(l.cod, roles[r])) { rol = r; break; }
         if (!rol) return;
         // Importaciones en tránsito: se compara solo la salida (crédito); un débito cuenta únicamente si es la reversión de una salida
-        const esRev = /^reversi/i.test(l.met || '') || /revers|anula|nota de cr[eé]dito/i.test(String(l.det || ''));
+        const vr = revVal.get(l), esRev = !!vr || /^reversi/i.test(l.met || '') || IMP_REV_RE.test(String(l.det || ''));
         // Importaciones en tránsito: solo cuenta como salida el crédito que no es reversión. Una reversión en crédito cancela un débito anterior (se explica aparte); una reversión en débito cancela una salida y la resta.
         const net = rol === 'inventario' ? (esRev ? -(Number(l.deb) || 0) : (Number(l.hab) || 0)) : net0;
         if (rol === 'inventario' && esRev && (Number(l.hab) || 0) > 0) {
-          const mo = /asiento\s+(\d+)/i.exec(String(l.det || '')), orig = mo ? asPorNum[mo[1]] : null;
+          const mo = /(?:asiento|diario|comprobante)\s*(?:n[°ºo.]*\s*)?(\d+)/i.exec(String(l.det || '')), orig = vr ? asPorK[vr.k] : (mo ? asPorNum[mo[1]] : null);
           const dOrig = orig ? (orig.l || []).filter(x => impCtaEn(String(x[0]), roles.inventario) && (Number(x[2]) || 0) > 0).reduce((t, x) => t + (Number(x[2]) || 0), 0) : 0;
-          (l.ids || []).filter(id => R[id]).forEach(id => R[id].revs.push({ m: String(l.d || '').slice(0, 7), v: impR2(Number(l.hab) || 0), asiento: mo ? mo[1] : '', fechaOrig: orig ? orig.d : '', debOrig: impR2(dOrig), hallado: !!orig }));
+          (l.ids || []).filter(id => R[id]).forEach(id => R[id].revs.push({ m: String(l.d || '').slice(0, 7), v: impR2(Number(l.hab) || 0), asiento: vr ? String(vr.num || vr.k) : (mo ? mo[1] : ''), porValor: !!vr, fechaOrig: orig ? orig.d : '', debOrig: impR2(dOrig), hallado: !!orig }));
         }
         const ids = (l.ids || []).filter(id => R[id]);
         if (!ids.length) return;
@@ -18586,7 +18601,7 @@ ${(im.aprendidos || []).length ? `<p class="text-xs text-slate-600 bg-slate-50 b
             else if (!esL) obs = 'Liquidación de ' + nm(mesLiq[im.id]) + ' registrada en ' + nm(m) + '.';
             else if (esL && Math.abs(rr) <= tol && lq) obs = 'Liquidada en este mes y sin registro en el mayor.';
             const rv = (((cl.filas.find(x => x.id === im.id && x.k === 'costo') || {}).revs) || []).filter(x => x.m === m);
-            if (rv.length) obs += (obs ? ' ' : '') + 'No se cuenta como salida: ' + rv.map(x => 'reversión de ' + impF(x.v) + (x.asiento ? ' del asiento ' + x.asiento : '') + (x.hallado ? ' (débito original del ' + x.fechaOrig + ' por ' + impF(x.debOrig) + ')' : ' (el asiento original no está en la lectura)')).join('; ') + '.';
+            if (rv.length) obs += (obs ? ' ' : '') + 'No se cuenta como salida: ' + rv.map(x => (x.porValor ? 'posible reversión (mismo valor que un débito anterior) de ' : 'reversión de ') + impF(x.v) + (x.asiento ? ' del asiento ' + x.asiento : '') + (x.hallado ? ' (débito original del ' + x.fechaOrig + ' por ' + impF(x.debOrig) + ')' : ' (el asiento original no está en la lectura)')).join('; ') + '.';
             h += `<tr class="border-b border-slate-100"><td class="px-2 py-0.5 text-left font-semibold">${impE(im.id)}</td><td class="px-2 text-left">${impE(im.fecha || '')}</td><td class="px-2 text-right">${esL ? impF(lq) : ''}</td><td class="px-2 text-right">${impF(rr)}</td><td class="px-2 text-right ${Math.abs(dd) > tol ? 'text-red-600 font-semibold' : ''}">${impF(dd)}</td><td class="px-2 text-left ${!esL || otros.length ? 'text-red-600' : ''}">${impE(obs)}</td></tr>`;
           });
           h += '</tbody></table></td></tr>';
@@ -18596,7 +18611,7 @@ ${(im.aprendidos || []).length ? `<p class="text-xs text-slate-600 bg-slate-50 b
       let ctl = '';
       try {
         const trc = impListaCtas((cfg.roles || {}).inventario); let sal = 0, rev = 0;
-        ((C && C.asientos) || []).forEach(a => (a.l || []).forEach(l => { if (!trc.length || !impCtaEn(String(l[0]), trc)) return; if (corteOk(a.d)) { const d = Number(l[2]) || 0, hh = Number(l[3]) || 0; const esR = /revers|anula|nota de cr[eé]dito/i.test(String(l[4] || '')); if (hh > 0 && !esR) sal += hh; else if (d > 0 && esR) rev += d; } }));
+        ((C && C.asientos) || []).forEach(a => (a.l || []).forEach(l => { if (!trc.length || !impCtaEn(String(l[0]), trc)) return; if (corteOk(a.d)) { const d = Number(l[2]) || 0, hh = Number(l[3]) || 0; const esR = IMP_REV_RE.test(String(l[4] || '')); if (hh > 0 && !esR) sal += hh; else if (d > 0 && esR) rev += d; } }));
         const mayorSal = impR2(sal - rev), difSin = impR2(mayorSal - tR);
         ctl = `<p class="mt-2 text-[11px] ${Math.abs(difSin) <= tol ? 'text-emerald-700' : 'text-amber-700'}"><b>Control:</b> salidas de tránsito según el mayor (créditos menos reversiones) ${impF(mayorSal)}; ubicadas en una importación ${impF(impR2(tR))}; ${difSin >= 0 ? 'sin ubicar en ninguna importación' : 'de más contra el mayor (revisar pagos que agrupan varias importaciones)'} ${impF(Math.abs(difSin))}.</p>`;
       } catch (e) { }
