@@ -17057,8 +17057,7 @@ ${cont.innerHTML}
     function impRolesDe(cfg) {
       const r = {}; IMP_ROLES.forEach(([k]) => { r[k] = impListaCtas(((cfg || {}).roles || {})[k]).slice(); });
       ['agente', 'manejo', 'seguro', 'flete_int', 'logistico', 'gasto_fin'].forEach(k => impListaCtas(((cfg || {}).roles || {})[k]).forEach(c => { if (!r.gastos.includes(c)) r.gastos.push(c); }));
-      // Las cuentas de inventario elegidas en el pedido (donde termina el costo al liquidar) se cuentan junto con tránsito para saber cuánto costo quedó registrado
-      try { if (r.inventario.length) impFamiliaInv(cfg).forEach(c => { if (!impCtaEn(c, r.inventario)) r.inventario.push(c); }); } catch (e) { }
+      // El costo registrado de una importación es lo que salió de tránsito (crédito); las cuentas de inventario no se suman, para no duplicar
       return r;
     }
     // Palabras que ayudan a reconocer, en el detalle de un pago por anticipo, de qué concepto es
@@ -17218,10 +17217,12 @@ ${cont.innerHTML}
       const conceptoPorRol = {}; IMP_CONCEPTOS.forEach(k => { if (k.rol) conceptoPorRol[k.rol] = k.k; });
       const LN = impAmpliarLineas(cruce, imports, cfg);
       LN.forEach(l => {
-        const net = (Number(l.deb) || 0) - (Number(l.hab) || 0);
+        const net0 = (Number(l.deb) || 0) - (Number(l.hab) || 0);
         let rol = null;
         for (const [r] of IMP_ROLES) if (roles[r].length && impCtaEn(l.cod, roles[r])) { rol = r; break; }
         if (!rol) return;
+        // Importaciones en tránsito: se compara solo la salida (crédito); un débito cuenta únicamente si es la reversión de una salida
+        const net = rol === 'inventario' ? (Number(l.hab) || 0) - (/^reversi/i.test(l.met || '') ? (Number(l.deb) || 0) : 0) : net0;
         const ids = (l.ids || []).filter(id => R[id]);
         if (!ids.length) return;
         const multi = (l.ids || []).length > 1;
@@ -17322,7 +17323,7 @@ ${cont.innerHTML}
         const cod = r[0], deb = Number(r[2]) || 0, hab = Number(r[3]) || 0; if (!enRol(cod) || have.has(key(a.k, cod, deb, hab))) return;
         const nl = { k: a.k, tk: a.tk, num: a.num, cod, deb, hab, d: a.d, det: r[4] || '', ids: [], met: '' }, monto = Math.max(deb, hab);
         const esIva = roles.iva.length && impCtaEn(cod, roles.iva), esInv = (roles.inventario.length && impCtaEn(cod, roles.inventario)) || (roles.inv_final.length && impCtaEn(cod, roles.inv_final));
-        let ids = []; if (deb > 0 && esIva) ids = buscar(monto, ['iva']); else if (deb > 0 && esInv) ids = buscar(monto, ['total', 'costo']);
+        let ids = []; if (deb > 0 && esIva) ids = buscar(monto, ['iva']); else if (hab > 0 && roles.inventario.length && impCtaEn(cod, roles.inventario)) ids = buscar(monto, ['total', 'costo']);
         if (ids.length === 1) { nl.ids = ids; nl.met = 'valor'; } else if (porAs[a.k] && porAs[a.k].size === 1) { nl.ids = [...porAs[a.k]]; nl.met = 'diario'; }
         nuevas.push(nl);
       }));
@@ -18555,8 +18556,8 @@ ${(im.aprendidos || []).length ? `<p class="text-xs text-slate-600 bg-slate-50 b
       const meses = new Set(); imports.forEach(im => { meses.add(mesLiq[im.id]); Object.keys(reg[im.id] || {}).forEach(m => meses.add(m)); });
       const lista = [...meses].sort(), A = impEstado.mesAb = impEstado.mesAb || {};
       let tL = 0, tR = 0, h = `<div class="p-4 bg-white border border-slate-200 rounded-xl space-y-2"><div class="text-[13px] font-semibold text-slate-800">B. Liquidaciones contra importaciones por mes</div>
-        <p class="text-slate-500">Cada liquidación se ubica en el mes de su fecha y lo registrado en el mayor, en el mes en que se asentó. Si una liquidación se registró en otro mes, la diferencia de un mes se compensa con la del otro. Haz clic en un mes para ver el detalle por importación.</p>
-        <div class="overflow-x-auto"><table class="w-full text-[11px] leading-tight border-collapse"><thead class="bg-slate-50 text-slate-600"><tr>${th('Mes', 'text-left')}${th('Importaciones liquidadas')}${th('Costo total liquidaciones')}${th('Registrado en el mes (mayor)')}${th('Dif.')}${th('Estado', 'text-center')}</tr></thead><tbody>`;
+        <p class="text-slate-500">Cada liquidación se ubica en el mes de su fecha y lo que salió de importaciones en tránsito (crédito en el mayor), en el mes en que se asentó. Si una liquidación se registró en otro mes, la diferencia de un mes se compensa con la del otro. Haz clic en un mes para ver el detalle por importación.</p>
+        <div class="overflow-x-auto"><table class="w-full text-[11px] leading-tight border-collapse"><thead class="bg-slate-50 text-slate-600"><tr>${th('Mes', 'text-left')}${th('Importaciones liquidadas')}${th('Costo total liquidaciones')}${th('Salida de tránsito en el mes (crédito)')}${th('Dif.')}${th('Estado', 'text-center')}</tr></thead><tbody>`;
       lista.forEach(m => {
         const ims = imports.filter(im => mesLiq[im.id] === m), L = impR2(ims.reduce((t, im) => t + liq[im.id], 0));
         const R = impR2(imports.reduce((t, im) => t + (((reg[im.id] || {})[m]) || 0), 0)), d = impR2(L - R); tL += L; tR += R;
