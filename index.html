@@ -18899,6 +18899,8 @@ ${(im.aprendidos || []).length ? `<p class="text-xs text-slate-600 bg-slate-50 b
       inv = inv.filter(c => !impCtaEn(c, tr));
       // Cuentas de inventario elegidas por el auditor en el pedido de Movimiento del inventario
       impFamiliaInv(cfg).forEach(c => { if (!impCtaEn(c, tr) && !impCtaEn(c, inv)) inv.push(c); });
+      // Cuentas de inventario escritas por el auditor en la pestaña 3 (se suman a las anteriores)
+      impListaCtas(cfg.invcods).forEach(c => { if (!impCtaEn(c, tr) && !impCtaEn(c, inv)) inv.push(c); });
       return { tr, inv };
     }
     function impTransitoCalc() {
@@ -18997,7 +18999,9 @@ ${(im.aprendidos || []).length ? `<p class="text-xs text-slate-600 bg-slate-50 b
       let h = barraP + `<div class="p-3 space-y-3 text-xs text-slate-700">`;
       h += `<div class="p-4 bg-white border border-slate-200 rounded-xl space-y-2"><div class="text-[13px] font-semibold text-slate-800">Cuenta de importaciones en tránsito</div>
         <p class="text-slate-500">Se reconoce sola por su nombre ("tránsito"). Si este cliente la llama distinto, escribe aquí su código (puedes separar varios con coma).</p>
-        <label class="flex flex-col gap-1 text-xs text-slate-600 max-w-md"><span>Código(s) de la cuenta de importaciones en tránsito</span><input type="text" value="${impE(cfg.transito || '')}" placeholder="${impE(((T && T.tr) || []).join(', ') || 'Códigos separados por coma')}" onchange="impEditarTransito(this.value)" class="${impIn} w-full"></label></div>`;
+        <label class="flex flex-col gap-1 text-xs text-slate-600 max-w-md"><span>Código(s) de la cuenta de importaciones en tránsito</span><input type="text" value="${impE(cfg.transito || '')}" placeholder="${impE(((T && T.tr) || []).join(', ') || 'Códigos separados por coma')}" onchange="impEditarTransito(this.value)" class="${impIn} w-full"></label>
+        <label class="flex flex-col gap-1 text-xs text-slate-600 max-w-2xl"><span>Código(s) de las cuentas de inventario que reciben lo que sale de tránsito</span><input type="text" value="${impE(cfg.invcods || '')}" placeholder="${impE(((T && T.inv) || []).join(', ') || 'Códigos separados por coma')}" onchange="impEditarInvCods(this.value)" class="${impIn} w-full"></label>
+        <p class="text-slate-400">Ya se toman las cuentas de inventario del pedido de Movimiento del inventario${(T && T.inv && T.inv.length) ? ' (' + impE(T.inv.join(', ')) + ')' : ''}. Si falta alguna, escríbela aquí y se suma. Puedes poner un prefijo con * al final (por ejemplo 1103*).</p></div>`;
       if (!T || T.sinCuenta) return h + `<p class="text-red-600 font-semibold">No se encontró la cuenta de importaciones en tránsito en el mayor leído. Escribe su código arriba.</p></div>`;
       const nm = c => (C.cuentas && C.cuentas[c]) ? c + ' ' + C.cuentas[c] : c;
       const tablaAs = lista => `<div class="max-h-72 overflow-auto border border-slate-200 rounded-lg bg-white"><table class="w-full text-[11px] leading-tight border-collapse"><thead class="bg-slate-100 text-slate-700"><tr>${th('Fecha', 'text-left')}${th('Comprobante', 'text-left')}${th('Detalle', 'text-left')}${th('Sale de tránsito')}${th('Entra al inventario')}${th('Diferencia')}${th('Fue a', 'text-left')}</tr></thead><tbody>${lista.map(f => {
@@ -19060,6 +19064,7 @@ ${(im.aprendidos || []).length ? `<p class="text-xs text-slate-600 bg-slate-50 b
       return h + '</div>';
     }
     function impEditarTrSaldo(k, v) { impEstado.cfg[k] = String(v || '').trim(); impGuardar('config'); impRender(); }
+    function impEditarInvCods(v) { impEstado.cfg.invcods = String(v || '').trim(); impGuardar('config'); impRender(); }
     function impEditarTransito(v) { impEstado.cfg.transito = String(v || '').trim(); impGuardar('config'); impRender(); }
 
     function impHtmlEntradas() {
