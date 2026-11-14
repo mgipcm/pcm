@@ -18481,6 +18481,7 @@ ${cont.innerHTML}
     function vcPintar() {
       if (typeof ivE === 'undefined' || ivE.hoja !== 'voucheo') return;
       const c = document.getElementById('vc-cont'); if (!c) return;
+      try { impFlechas(c.closest('section')); } catch (_) { }
       if (!vcE.cliente) { c.innerHTML = '<p class="text-xs text-slate-500 border border-dashed border-slate-300 rounded-xl p-4">Selecciona el cliente para comenzar.</p>'; return; }
       if (!vcE.cargado) { c.innerHTML = '<p class="text-xs text-slate-500 p-4">Cargando…</p>'; return; }
       if (vcE.error) { c.innerHTML = '<p class="text-xs text-red-600 font-bold p-4">No se pudo cargar: ' + escapeHtml(vcE.error) + '</p>'; return; }
@@ -19081,8 +19082,8 @@ ${cont.innerHTML}
       impFlechas();
     }
     // Flechas flotantes para desplazar a los lados las tablas anchas sin ir hasta el final de la página
-    function impFlechas() {
-      const sec = document.getElementById('sec-import'); if (!sec || document.getElementById('im-flechas')) return;
+    function impFlechas(secIn) {
+      const sec = secIn || document.getElementById('sec-import'); if (!sec || document.getElementById('im-flechas')) return;
       const d = document.createElement('div'); d.id = 'im-flechas'; d.style.cssText = 'position:fixed;right:14px;top:50%;transform:translateY(-50%);z-index:40;display:flex;flex-direction:column;gap:6px';
       const bt = (t, dir, tit) => `<button type="button" onclick="impDesplazar(${dir})" title="${tit}" style="width:34px;height:34px;border-radius:999px;background:#475569;color:#fff;font-size:18px;line-height:1;box-shadow:0 2px 6px rgba(0,0,0,.3);opacity:.9">${t}</button>`;
       d.innerHTML = bt('›', 1, 'Desplazar a la derecha') + bt('‹', -1, 'Desplazar a la izquierda');
@@ -19090,9 +19091,9 @@ ${cont.innerHTML}
     }
     function impDesplazar(dir) {
       const vh = window.innerHeight; let mejor = null, area = 0;
-      document.querySelectorAll('#im-panel .overflow-x-auto, #im-panel .overflow-auto').forEach(c => {
+      document.querySelectorAll('#im-panel .overflow-x-auto, #im-panel .overflow-auto, #vc-cont .overflow-x-auto').forEach(c => {
         if (c.scrollWidth <= c.clientWidth + 2) return;
-        const r = c.getBoundingClientRect(); const v = Math.min(r.bottom, vh) - Math.max(r.top, 0); if (v > area) { area = v; mejor = c; }
+        const r = c.getBoundingClientRect(); const v = Math.min(r.bottom, vh) - Math.max(r.top, 0); if (v > area || !mejor) { area = v; mejor = c; }
       });
       if (mejor) mejor.scrollBy({ left: dir * Math.max(300, mejor.clientWidth * 0.6), behavior: 'smooth' });
     }
