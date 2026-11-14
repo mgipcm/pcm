@@ -18045,7 +18045,7 @@ ${cont.innerHTML}
           '- **Importaciones:** lee las liquidaciones, las cruza con el mayor y explica las diferencias.',
           '- **Costo de ventas:** compara las salidas del inventario con el costo de ventas del mayor, mes a mes.',
           '- **Kárdex:** compara sus entradas contra las compras y sus salidas contra el costo de ventas, y analiza cada diferencia.',
-          '- **Revisión de documentación (voucheo):** arma una muestra de las adiciones del inventario, automática por monto, cercanía al corte y conceptos inusuales hasta el porcentaje que defina el auditor según el riesgo, o manual. Para cada partida se marca la documentación revisada (factura, declaración aduanera, recepción, IVA, ISD, fecha) y se suben los soportes en PDF o foto. Los soportes (PDF, fotos o Excel) se suben en cada partida, y con «Pedir a Claude que lea los soportes» Claude los compara con la partida y deja sus marcas con la evidencia (se ven con borde naranja, el auditor las ratifica o las cambia). Lo que Claude no puede comprobar lo deja pendiente.',
+          '- **Revisión de documentación (voucheo):** arma una muestra de las adiciones del inventario, automática por monto, cercanía al corte y conceptos inusuales hasta el porcentaje que defina el auditor según el riesgo, o manual. Para cada partida se marca la documentación revisada (factura, declaración aduanera, recepción, IVA, ISD) y se suben los soportes en PDF o foto. Los soportes (PDF, fotos o Excel) se suben en cada partida, y con «Pedir a Claude que lea los soportes» Claude los compara con la partida y deja sus marcas con la evidencia (se ven con borde naranja, el auditor las ratifica o las cambia). Lo que Claude no puede comprobar lo deja pendiente.',
           '',
           '## Qué está en desarrollo',
           '- **Inventarios, otras hojas:** materia prima y producción en proceso aparecen como pestañas, pero todavía no tienen contenido.',
@@ -18113,8 +18113,7 @@ ${cont.innerHTML}
       { k: 'dau', t: 'Declaración aduanera (DAI / DAU)', ap: 'imp' },
       { k: 'bod', t: 'Recepción en bodega', ap: 'ambas' },
       { k: 'iva', t: 'IVA', ap: 'ambas' },
-      { k: 'isd', t: 'ISD', ap: 'ambas' },
-      { k: 'per', t: 'Fecha y período correctos', ap: 'ambas' }
+      { k: 'isd', t: 'ISD', ap: 'ambas' }
     ];
     const VC_ESTADOS = { '': ['·', '#94a3b8', '#f1f5f9'], ok: ['✓', '#047857', '#d1fae5'], ex: ['✗', '#b91c1c', '#fee2e2'], na: ['N/A', '#64748b', '#e2e8f0'] };
     const vcE = { cargaId: 0, cliente: '', anio: '', visita: '', cargado: false, error: '', mov: [], imp: null, cfg: { pct: 20, cuentas: null }, filas: [], org: null, act: null, docAbierto: '', tmp: null, filtro: '', nuevo: false, claude: {}, ped: null, tPed: 0, concAbierto: '', concCols: false };
