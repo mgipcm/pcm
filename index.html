@@ -19208,7 +19208,7 @@ ${cont.innerHTML}
     function ivIrBoton(b) { ivE.btn = b; ivPintarHojas(); }
     // ===== AF Inventarios v2 (prueba): hoja "Inventario para la venta" › pestaña Programa =====
     const v2E = { cliente: '', anio: '', visita: '', procs: [], filas: {}, cargaId: 0, abiertos: {}, tab: 'programa', sv: null };
-    const V2_TABS = [['programa', 'Programa'], ['subir', 'Subir información']];
+    const V2_TABS = [['programa', 'Programa'], ['subir', 'Subir información'], ['resultado', 'Resultado del análisis – Claude']];
     function v2IrTab(t) { v2E.tab = t; v2Pintar(); }
     function v2Fmt(t) { return t ? new Date(t).toLocaleString('es-EC', { day: '2-digit', month: '2-digit', year: 'numeric', hour: 'numeric', minute: '2-digit' }) : ''; }
     async function abrirImport2() {
@@ -19219,7 +19219,7 @@ ${cont.innerHTML}
     }
     async function v2Cargar() {
       const cli = $im('v2-cliente').value, anio = $im('v2-anio').value, vis = $im('v2-visita').value;
-      Object.assign(v2E, { cliente: cli, anio, visita: vis, filas: {} });
+      Object.assign(v2E, { cliente: cli, anio, visita: vis, filas: {}, sv: null, res: null });
       const f = $im('v2-fecha'); if (f) f.value = vis === 'final' ? anio + '-12-31' : anio + '-09-30';
       const a = $im('v2-auditor'); if (a) a.value = (typeof nombreUsuarioActivo === 'function' ? nombreUsuarioActivo() : '') || '';
       const aviso = $im('v2-aviso'), esp = $im('v2-espacio');
@@ -19240,6 +19240,7 @@ ${cont.innerHTML}
       const u = $im('v2-actualizado'); u.value = ult ? nombreMostrado(ult.actualizado_por) : ''; u.title = ult ? 'Último cambio: ' + v2Fmt(ult.updated_at) : '';
       v2Pintar();
       v2SubirCargar();
+      v2ResCargar();
     }
     // Si la referencia no está tal cual en la base de normas (p. ej. "NIC 2.9 y 2.36"), la arma desde sus partes
     function v2ArmarChips(txt) {
@@ -19274,6 +19275,7 @@ ${cont.innerHTML}
       const tb = $im('v2-tabs');
       if (tb) tb.innerHTML = V2_TABS.map(([k, n]) => '<button type="button" onclick="v2IrTab(\'' + k + '\')" class="px-3 py-1.5 text-xs rounded-lg ' + (v2E.tab === k ? 'bg-indigo-50 text-indigo-700 font-bold' : 'text-slate-500 hover:bg-slate-50') + '">' + n + '</button>').join('');
       if (v2E.tab === 'subir') { v2SubirPintar(); return; }
+      if (v2E.tab === 'resultado') { v2ResPintar(); return; }
       const h = escapeHtml;
       const cuenta = (typeof catalogoCuentas !== 'undefined' && catalogoCuentas.find(k => k.sumaria === 'AF')) || null;
       const nombreSum = cuenta ? cuenta.cuenta : 'AF - Inventarios';
@@ -19354,6 +19356,59 @@ ${cont.innerHTML}
       const { data, error } = await supabaseClient.storage.from('pedidos-claude').createSignedUrl(a.ruta, 120, { download: a.nombre });
       if (error || !data) { $im('v2-estado').textContent = 'No se pudo descargar: ' + ((error || {}).message || ''); return; }
       const l = document.createElement('a'); l.href = data.signedUrl; l.download = a.nombre; document.body.appendChild(l); l.click(); l.remove();
+    }
+    // ----- Pestaña "Resultado del análisis – Claude": el informe se lee en pantalla, como un documento -----
+    async function v2ResCargar() {
+      const cli = v2E.cliente, anio = Number(v2E.anio), vis = v2E.visita;
+      v2E.resId = (v2E.resId || 0) + 1; const id = v2E.resId;
+      v2E.res = cli ? { cargado: false } : null;
+      if (!cli) return;
+      if (v2E.tab === 'resultado') v2ResPintar();
+      const r = await supabaseClient.from('v2_resultado').select('*').eq('cliente_id', cli).eq('anio', anio).eq('visita', vis).eq('sumaria', 'AF').eq('hoja', 'venta').maybeSingle();
+      if (id !== v2E.resId) return;
+      v2E.res = { cargado: true, error: r.error ? (r.error.message || String(r.error)) : '', data: r.data || null };
+      if (v2E.tab === 'resultado') v2ResPintar();
+    }
+    function v2ResHtml(bloques, conIds) {
+      const e = escapeHtml, fmt = s => e(s).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+      const esNum = s => { const t = String(s || '').replace(/\*\*/g, '').trim(); return /^[-+−]?\s*[\d.,]+\s*%?$/.test(t) && !/^\d{7,}$/.test(t); };
+      let h2n = 0;
+      return (bloques || []).map(b => {
+        if (!b || !b.t) return '';
+        if (b.t === 'h2') return '<h2 ' + (conIds ? 'id="v2r-' + (h2n++) + '" ' : '') + 'class="v2r-h2">' + fmt(b.x) + '</h2>';
+        if (b.t === 'h3') return '<h3 class="v2r-h3">' + fmt(b.x) + '</h3>';
+        if (b.t === 'p') return '<p class="v2r-p">' + fmt(b.x) + '</p>';
+        if (b.t === 'sello') return '<p class="v2r-sello"><span class="pill-origen rev ic-claude">' + fmt(b.x) + '</span></p>';
+        if (b.t === 'nota') return '<div class="v2r-nota' + (b.tono === 'alerta' ? ' v2r-alerta' : '') + '">' + fmt(b.x) + '</div>';
+        if (b.t === 'ul' || b.t === 'ol') return '<' + b.t + ' class="v2r-lista">' + (b.items || []).map(i => '<li>' + fmt(i) + '</li>').join('') + '</' + b.t + '>';
+        if (b.t === 'tabla') {
+          const cab = b.cab || [], fil = b.filas || [];
+          const num = cab.map((_, j) => fil.length && fil.filter(r => String(r[j] || '').trim() !== '').length > 0 && fil.every(r => String(r[j] || '').trim() === '' || esNum(r[j]) || /^(sin soporte|por confirmar|nuevo saldo)$/i.test(String(r[j]).replace(/\*\*/g, '').trim())));
+          return '<div class="v2r-tw"><table class="v2r-t"><thead><tr>' + cab.map((c, j) => '<th' + (num[j] ? ' class="n"' : '') + '>' + fmt(c) + '</th>').join('') + '</tr></thead><tbody>' +
+            fil.map((r, i) => '<tr' + (b.total && i === fil.length - 1 ? ' class="tot"' : '') + '>' + cab.map((_, j) => '<td' + (num[j] ? ' class="n"' : '') + '>' + fmt(r[j] == null ? '' : r[j]) + '</td>').join('') + '</tr>').join('') + '</tbody></table></div>';
+        }
+        return '';
+      }).join('');
+    }
+    const V2R_CSS = '.v2r{font-family:Georgia,"Times New Roman",serif;color:#1f2937;line-height:1.7;font-size:15px}.v2r-h1{font-size:26px;font-weight:700;line-height:1.25;margin:0 0 4px;font-family:system-ui,sans-serif}.v2r-meta{font:12px system-ui,sans-serif;color:#64748b;margin-bottom:14px}.v2r-h2{font:700 19px system-ui,sans-serif;margin:30px 0 8px;padding-top:6px;border-top:1px solid #e2e8f0;color:#111827}.v2r-h3{font:700 15px system-ui,sans-serif;margin:20px 0 6px;color:#1f2937}.v2r-p{margin:8px 0}.v2r-sello{margin:6px 0 14px}.v2r-lista{margin:8px 0 8px 22px}.v2r-lista li{margin:6px 0}ul.v2r-lista{list-style:disc}ol.v2r-lista{list-style:decimal}.v2r-nota{margin:12px 0;padding:10px 14px;border-left:3px solid #6366f1;background:#eef2ff;font-size:14px}.v2r-alerta{border-color:#d97706;background:#fffbeb}.v2r-tw{margin:12px 0;overflow-x:auto;border:1px solid #e2e8f0;border-radius:8px}.v2r-t{width:100%;border-collapse:collapse;font:13px/1.45 system-ui,sans-serif}.v2r-t th{background:#f1f5f9;text-align:left;font-weight:700;padding:8px 10px;border-bottom:1px solid #cbd5e1;white-space:nowrap}.v2r-t td{padding:7px 10px;border-top:1px solid #eef2f6;vertical-align:top}.v2r-t .n{text-align:right;white-space:nowrap}.v2r-t tr.tot td{font-weight:700;background:#f8fafc;border-top:2px solid #cbd5e1}';
+    function v2ResPintar() {
+      const c = $im('v2-panel'), R = v2E.res;
+      if (!v2E.cliente || !R) { c.innerHTML = '<p class="text-xs text-slate-500 p-4">Selecciona el cliente para comenzar.</p>'; return; }
+      if (!R.cargado) { c.innerHTML = '<p class="text-xs text-slate-500 p-4">Cargando…</p>'; return; }
+      if (R.error) { c.innerHTML = '<p class="text-xs text-red-600 font-bold p-4">No se pudo cargar: ' + escapeHtml(/does not exist|schema cache/i.test(R.error) ? 'falta la tabla v2_resultado en Supabase.' : R.error) + '</p>'; return; }
+      if (!R.data || !(R.data.bloques || []).length) { c.innerHTML = '<div class="p-8 text-center text-sm text-slate-600 space-y-2"><p>Aún no hay resultado del análisis para este cliente, año y visita.</p><p class="text-xs text-slate-500">Cuando Claude termine el pedido, su informe aparecerá aquí para leerlo en pantalla. Mientras tanto puede hacer o revisar el pedido en «Subir información».</p></div>'; return; }
+      const d = R.data, bl = d.bloques;
+      const toc = bl.filter(b => b.t === 'h2').map((b, i) => '<a href="#" onclick="v2ResIr(' + i + ');return false" class="block py-1 text-[12px] text-slate-600 hover:text-indigo-700 leading-snug">' + escapeHtml(b.x) + '</a>').join('');
+      c.innerHTML = '<style>' + V2R_CSS + '</style><div class="flex gap-0 bg-slate-50" style="height:80vh"><nav class="hidden lg:block w-64 shrink-0 overflow-y-auto border-r border-slate-200 bg-white p-4"><div class="text-[10px] font-bold uppercase tracking-wide text-slate-400 mb-2">Contenido</div>' + toc + '</nav>' +
+        '<div id="v2-res-scroll" class="flex-1 overflow-y-auto p-3 sm:p-6"><article class="v2r mx-auto bg-white border border-slate-200 rounded-xl shadow-sm px-5 sm:px-10 py-8" style="max-width:920px"><div class="flex justify-end gap-3 mb-2 font-sans text-xs"><button type="button" onclick="v2ResImprimir()" class="font-bold hover:underline" style="color:#449964;font-family:system-ui">⬇ Imprimir / guardar PDF</button></div><h1 class="v2r-h1">' + escapeHtml(d.titulo || 'Resultado del análisis') + '</h1><div class="v2r-meta">Elaborado por ' + escapeHtml(d.elaborado_por || 'Claude') + (d.elaborado_at ? ' · ' + v2Fmt(d.elaborado_at) : '') + '</div>' + v2ResHtml(bl, true) + '</article></div></div>';
+    }
+    function v2ResIr(i) { const el = document.getElementById('v2r-' + i), sc = document.getElementById('v2-res-scroll'); if (el && sc) sc.scrollTo({ top: el.offsetTop - 20, behavior: 'smooth' }); }
+    function v2ResImprimir() {
+      const R = v2E.res && v2E.res.data; if (!R) return;
+      const f = document.createElement('iframe'); f.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0'; document.body.appendChild(f);
+      const doc = f.contentWindow.document; doc.open();
+      doc.write('<!doctype html><html><head><meta charset="utf-8"><title>' + escapeHtml(R.titulo || 'Resultado del análisis') + '</title><style>body{margin:24px}' + V2R_CSS + '.v2r-sello{display:block}@media print{.v2r-tw{overflow:visible}}</style></head><body><article class="v2r"><h1 class="v2r-h1">' + escapeHtml(R.titulo || '') + '</h1>' + v2ResHtml(R.bloques, false) + '</article></body></html>');
+      doc.close(); setTimeout(() => { try { f.contentWindow.focus(); f.contentWindow.print(); } catch (e) { } setTimeout(() => f.remove(), 2000); }, 300);
     }
     async function v2Guardar(codigo, cambios) {
       const actual = v2E.filas[codigo] || {};
