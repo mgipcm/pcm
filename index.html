@@ -18629,18 +18629,13 @@ ${cont.innerHTML}
       return { B, V, tol };
     }
     function rsConclusion(D) {
-      const F = formatoNumeroAnexo, con = D.B.filter(b => !b.sin), sin = D.B.filter(b => b.sin);
-      const filas = con.flatMap(b => b.filas.map(f => ({ ...f, cod: b.cod }))), dif = filas.filter(f => !f.ok), ok = filas.length - dif.length;
+      const con = D.B.filter(b => !b.sin), sin = D.B.filter(b => b.sin);
+      const filas = con.flatMap(b => b.filas), dif = filas.filter(f => !f.ok);
       const t = [];
-      t.push('Se compararon ' + con.length + ' de ' + D.B.length + ' cruces: ' + filas.length + ' comparaciones, de las cuales ' + ok + ' cuadran y ' + dif.length + ' tienen una diferencia mayor a ' + D.tol + '.');
-      if (dif.length) {
-        const top = [...dif].sort((a, b) => Math.abs(b.dif) - Math.abs(a.dif)).slice(0, 4);
-        t.push('Las diferencias más importantes son: ' + top.map(f => f.cod + ') ' + f.concepto + ' (' + F(f.dif) + ')').join('; ') + '.');
-        if (dif.length > top.length) t.push('Hay ' + (dif.length - top.length) + ' diferencia(s) más en la tabla.');
-      } else if (filas.length) t.push('No se detectaron diferencias que requieran seguimiento en las comparaciones cargadas.');
-      if (sin.length) t.push('Quedan sin comparar: ' + sin.map(b => b.cod + ') ' + b.nota.replace(/\.$/, '')).join('; ') + '.');
+      t.push('Se resumieron ' + con.length + ' de ' + D.B.length + ' cruces (' + filas.length + ' comparaciones): ' + (filas.length - dif.length) + ' cuadran y ' + dif.length + ' presentan diferencias, que se analizaron y concilian en la pestaña de cada cruce.');
+      if (sin.length) t.push('Sin comparar por falta de datos: ' + sin.map(b => b.cod + ')').join(', ') + '.');
       if (D.V.n) t.push('Revisión de documentación: de ' + D.V.n + ' partidas de la muestra, ' + D.V.ok + ' sin excepción, ' + D.V.ex + ' con excepción y ' + D.V.pen + ' pendientes' + (D.V.claude ? '; hay marcas de Claude por ratificar' : '') + '.');
-      t.push('Esta conclusión se armó con reglas a partir de las cifras de las pestañas; el auditor debe ratificarla o reemplazarla en el recuadro de abajo.');
+      t.push('La conclusión final, con el criterio del auditor sobre estas diferencias, se escribe en el recuadro de al lado.');
       return t;
     }
     function rsPintar() {
@@ -18652,14 +18647,14 @@ ${cont.innerHTML}
       const D = rsE.D = rsCalcular(), concl = rsConclusion(D);
       let h = '<div class="text-[11px] text-slate-500 mb-3">Aquí solo se muestran los totales y las diferencias de las comparaciones ii) a vi); el análisis y la conciliación de cada una están en su pestaña. Si cambias algo allí, pulsa «Actualizar cifras».</div>';
       h += '<div class="flex flex-wrap items-center gap-2 mb-3"><button type="button" onclick="rsDescargar()" class="px-3 py-1.5 rounded-lg text-xs transition bg-slate-200 text-slate-900 hover:bg-slate-300 font-semibold">Descargar papel de trabajo en Excel</button><button type="button" onclick="rsCargar()" class="px-1 py-1.5 text-xs font-bold bg-transparent border-0 hover:underline" style="color:#449964">↻ Actualizar cifras</button><span id="rs-msg" class="text-[11px] text-slate-500"></span></div>';
-      h += '<div class="overflow-x-auto border border-slate-200 rounded-xl"><table class="w-full text-[11px] border-collapse" style="min-width:820px"><thead><tr><th class="' + TH + ' text-left">Comparación</th><th class="' + TH + ' text-right">Un lado</th><th class="' + TH + ' text-right">Otro lado</th><th class="' + TH + ' text-right">Diferencia</th><th class="' + TH + ' text-center">Resultado</th></tr></thead><tbody>';
+      h += '<div class="overflow-x-auto border border-slate-200 rounded-xl"><table class="w-full text-[11px] border-collapse" style="min-width:820px"><thead><tr><th class="' + TH + ' text-left">Comparación</th><th class="' + TH + ' text-right">Un lado</th><th class="' + TH + ' text-right">Otro lado</th><th class="' + TH + ' text-right">Diferencia</th><th class="' + TH + ' text-center">Estado</th></tr></thead><tbody>';
       D.B.forEach(b => {
         h += '<tr class="bg-slate-50 border-t border-slate-300"><td colspan="5" class="' + TD + ' font-bold text-slate-800">' + e(b.cod) + ') ' + e(b.titulo) + (b.nota ? ' <span class="font-normal text-amber-700">· ' + e(b.nota) + '</span>' : '') + '</td></tr>';
-        b.vista.forEach(f => { h += '<tr class="border-t border-slate-100 align-top' + (f.tot ? ' font-bold' : '') + '"><td class="' + TD + (f.sub ? ' pl-6' : '') + '">' + e(f.t) + '</td><td class="' + TD + ' text-right whitespace-nowrap">' + F(f.a) + '</td><td class="' + TD + ' text-right whitespace-nowrap">' + F(f.b) + '</td><td class="' + TD + ' text-right whitespace-nowrap font-bold" style="color:' + (f.ok ? '#047857' : '#dc2626') + '">' + F(f.dif) + '</td><td class="' + TD + ' text-center font-bold" style="color:' + (f.ok ? '#047857' : '#dc2626') + '">' + (f.ok ? 'Cuadra' : 'Con diferencia') + '</td></tr>'; });
+        b.vista.forEach(f => { h += '<tr class="border-t border-slate-100 align-top' + (f.tot ? ' font-bold' : '') + '"><td class="' + TD + (f.sub ? ' pl-6' : '') + '">' + e(f.t) + '</td><td class="' + TD + ' text-right whitespace-nowrap">' + F(f.a) + '</td><td class="' + TD + ' text-right whitespace-nowrap">' + F(f.b) + '</td><td class="' + TD + ' text-right whitespace-nowrap font-bold" style="color:' + (f.ok ? '#047857' : '#b45309') + '">' + F(f.dif) + '</td><td class="' + TD + ' text-center font-bold" style="color:' + (f.ok ? '#047857' : '#b45309') + '">' + (f.ok ? 'Cuadra' : 'Conciliada en su pestaña') + '</td></tr>'; });
       });
       h += '</tbody></table></div>';
-      h += '<div class="grid lg:grid-cols-2 gap-3 mt-3"><div class="p-3 bg-white border border-slate-200 rounded-xl space-y-1 text-xs text-slate-700"><div class="text-[13px] font-semibold text-slate-800 ic-claude ic-tomate">Conclusión preliminar</div>' + concl.map(t => '<p>' + e(t) + '</p>').join('') + '</div>';
-      h += '<div class="p-3 bg-white border border-slate-200 rounded-xl space-y-1 text-xs text-slate-700"><div class="text-[13px] font-semibold text-slate-800">Conclusión del auditor</div><textarea id="rs-aud" rows="8" oninput="rsGuardarAud(this.value)" placeholder="Escribe aquí tu conclusión sobre las diferencias y los procedimientos efectuados." class="w-full p-2 border border-slate-300 rounded-lg text-xs">' + e(rsE.concAud) + '</textarea>' + (rsE.act && rsE.act.por ? '<div class="text-[11px] text-slate-500">Último cambio: ' + e(nombreMostrado(rsE.act.por)) + '</div>' : '') + '</div></div>';
+      h += '<div class="grid lg:grid-cols-2 gap-3 mt-3"><div class="p-3 bg-white border border-slate-200 rounded-xl space-y-1 text-xs text-slate-700"><div class="text-[13px] font-semibold text-slate-800 ic-claude ic-tomate">Resumen para la conclusión</div>' + concl.map(t => '<p>' + e(t) + '</p>').join('') + '</div>';
+      h += '<div class="p-3 bg-white border border-slate-200 rounded-xl space-y-1 text-xs text-slate-700"><div class="text-[13px] font-semibold text-slate-800">Conclusión del auditor</div><textarea id="rs-aud" rows="8" oninput="rsGuardarAud(this.value)" placeholder="Escribe aquí tu conclusión y tu criterio sobre las diferencias conciliadas y los procedimientos efectuados." class="w-full p-2 border border-slate-300 rounded-lg text-xs">' + e(rsE.concAud) + '</textarea>' + (rsE.act && rsE.act.por ? '<div class="text-[11px] text-slate-500">Último cambio: ' + e(nombreMostrado(rsE.act.por)) + '</div>' : '') + '</div></div>';
       c.innerHTML = h;
     }
     async function rsDescargar() {
@@ -18667,9 +18662,9 @@ ${cont.innerHTML}
       const D = rsE.D || rsCalcular(), concl = rsConclusion(D);
       const info = [['Año evaluado', rsE.anio], ['Visita', rsE.visita === 'final' ? 'Final' : 'Preliminar'], ['Preparado por', (typeof nombreUsuarioActivo === 'function' && nombreUsuarioActivo()) || '']];
       const aoa = [['Cruce', 'Comparación', 'Un lado', 'Otro lado', 'Diferencia', 'Resultado']];
-      D.B.forEach(b => { if (b.nota) aoa.push([b.cod + ') ' + b.titulo, b.nota, '', '', '', 'Sin comparar']); b.vista.forEach(f => aoa.push([b.cod + ') ' + b.titulo, (f.sub ? '   ' : '') + f.t, f.a, f.b, f.dif, f.ok ? 'Cuadra' : 'Con diferencia'])); });
+      D.B.forEach(b => { if (b.nota) aoa.push([b.cod + ') ' + b.titulo, b.nota, '', '', '', 'Sin comparar']); b.vista.forEach(f => aoa.push([b.cod + ') ' + b.titulo, (f.sub ? '   ' : '') + f.t, f.a, f.b, f.dif, f.ok ? 'Cuadra' : 'Conciliada en su pestaña'])); });
       if (D.V.n) aoa.push([], ['Revisión de documentación (voucheo)', 'Partidas de la muestra', D.V.n, '', '', ''], ['', 'Sin excepción', D.V.ok, '', '', ''], ['', 'Con excepción', D.V.ex, '', '', ''], ['', 'Pendientes', D.V.pen, '', '', '']);
-      aoa.push([], ['Conclusión preliminar (armada con reglas)'], ...concl.map(t => [t]), [], ['Conclusión del auditor'], [rsE.concAud || '(sin conclusión escrita)']);
+      aoa.push([], ['Resumen para la conclusión'], ...concl.map(t => [t]), [], ['Conclusión del auditor'], [rsE.concAud || '(sin conclusión escrita)']);
       const hojas = [{ nombre: 'Resumen de diferencias', aoa, anchos: [{ wch: 44 }, { wch: 70 }, { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 16 }], op: { titulo: 'Resumen de diferencias y conclusión', info, totales: [] } }];
       const cli = (typeof impNombreCliente === 'function' && impNombreCliente()) || 'cliente';
       try { await arrXlsxConFormato(hojas, cli, 'Papel_de_trabajo_inventarios_' + String(cli).replace(/[^A-Za-z0-9]+/g, '_').slice(0, 30) + '_' + rsE.anio + '.xlsx'); } catch (x) { alert('No se pudo armar el Excel: ' + (x.message || x)); }
