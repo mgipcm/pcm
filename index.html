@@ -19234,10 +19234,18 @@ ${cont.innerHTML}
       if (p.error || r.error) { $im('v2-estado').textContent = 'No se pudo cargar: ' + ((p.error || r.error).message || ''); return; }
       $im('v2-estado').textContent = '';
       v2E.procs = p.data || []; v2E.filas = {};
+      v2E.procs.forEach(x => { if (!programasPlantilla.some(y => y.id === x.id)) programasPlantilla.push(x); });
       (r.data || []).forEach(x => { v2E.filas[x.codigo] = x; });
       const ult = (r.data || []).filter(x => x.actualizado_por).sort((x, y) => String(y.updated_at).localeCompare(String(x.updated_at)))[0];
       const u = $im('v2-actualizado'); u.value = ult ? nombreMostrado(ult.actualizado_por) : ''; u.title = ult ? 'Último cambio: ' + v2Fmt(ult.updated_at) : '';
       v2Pintar();
+    }
+    function v2Norma(p) {
+      const chips = normasDB().m[p.norma || ''];
+      if (!chips) return '<span style="color:#2b3a8c">' + escapeHtml(p.norma || '') + '</span>';
+      return chips.map((c, i) => c.k.length
+        ? '<button type="button" data-ntip="' + p.id + ',' + i + '" onclick="abrirNorma(' + p.id + ',' + i + ')" class="inline-block px-1.5 py-0.5 m-0.5 text-[11px] rounded border border-blue-200 bg-blue-50 text-blue-800 hover:bg-blue-100 cursor-pointer">' + escapeHtml(c.t) + '</button>'
+        : '<span class="inline-block px-1.5 py-0.5 m-0.5 text-[11px] text-slate-500">' + escapeHtml(c.t) + '</span>').join('');
     }
     function v2Pintar() {
       const h = escapeHtml;
@@ -19254,7 +19262,7 @@ ${cont.innerHTML}
         filas += `<tr class="align-top">
           <td class="p-3 border-r border-slate-200 font-semibold text-slate-700 whitespace-nowrap">${k}</td>
           <td class="p-3 border-r border-slate-200 text-slate-700 leading-relaxed text-[12px]">${h(p.procedimiento || '')}</td>
-          <td class="p-3 border-r border-slate-200 text-[12px]" style="color:#2b3a8c">${h(p.norma || '')}</td>
+          <td class="p-3 border-r border-slate-200 text-[12px]" >${v2Norma(p)}</td>
           <td class="p-3 border-r border-slate-200 whitespace-nowrap text-[12px]">${elab}</td>
           <td class="p-3 border-r border-slate-200 whitespace-nowrap text-[12px]">${rev}</td>
           <td class="p-3 text-[12px]">${pts || '<div class="text-slate-400">Sin papeles de trabajo</div>'}<label class="inline-block mt-1.5 text-[11px] text-slate-500 hover:underline cursor-pointer">＋ Adjuntar<input type="file" class="hidden" onchange="v2PtSubir('${k}',this)"></label></td>
