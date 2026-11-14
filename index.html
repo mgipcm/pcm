@@ -4013,7 +4013,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
         html += '<tr class="align-top' + (r.activo ? '' : ' opacity-50') + '">' +
           '<td class="p-2 border-r border-slate-200"><input type="text" value="' + escapeHtml(r.codigo || '') + '" onchange="guardarCampoPlantilla(' + r.id + ',\'codigo\',this.value)" class="w-full p-1 border border-slate-200 rounded outline-none bg-white"></td>' +
           '<td class="p-2 border-r border-slate-200"><input type="text" value="' + escapeHtml(r.tipo_procedimiento || '') + '" onchange="guardarCampoPlantilla(' + r.id + ',\'tipo_procedimiento\',this.value)" class="w-full p-1 border border-slate-200 rounded outline-none bg-white"></td>' +
-          '<td class="p-2 border-r border-slate-200"><textarea rows="3" onchange="guardarCampoPlantilla(' + r.id + ',\'procedimiento\',this.value)" class="w-full p-1 border border-slate-200 rounded outline-none bg-white leading-relaxed">' + escapeHtml(r.procedimiento || '') + '</textarea></td>' +
+          '<td class="p-2 border-r border-slate-200"><input type="text" value="' + escapeHtml(r.titulo || '') + '" placeholder="Título corto (ej. Revisión analítica)" onchange="guardarCampoPlantilla(' + r.id + ',\'titulo\',this.value)" class="w-full p-1 mb-1 border border-slate-200 rounded outline-none bg-white font-bold"><textarea rows="3" onchange="guardarCampoPlantilla(' + r.id + ',\'procedimiento\',this.value)" class="w-full p-1 border border-slate-200 rounded outline-none bg-white leading-relaxed">' + escapeHtml(r.procedimiento || '') + '</textarea></td>' +
           '<td class="p-2 border-r border-slate-200">' + celdaNorma(r) + '</td>' +
           '<td class="p-2 border-r border-slate-200"><select onchange="guardarCampoPlantilla(' + r.id + ',\'alcance\',this.value)" class="w-full p-1 border border-slate-200 rounded outline-none bg-white text-[11px]"><option value="Base"' + ((r.alcance || 'Base') === 'Base' ? ' selected' : '') + '>Base</option><option value="Solo riesgo alto"' + (r.alcance === 'Solo riesgo alto' ? ' selected' : '') + '>Solo riesgo alto</option></select></td>' +
           '<td class="p-2 border-r border-slate-200 text-[11px]">' + ['Gran dimensión', 'Mediana', 'Pequeña'].map(t => '<label class="flex items-center gap-1 whitespace-nowrap"><input type="checkbox" data-tam="' + r.id + '" value="' + t + '"' + (String(r.tamanos || '').includes(t) ? ' checked' : '') + ' onchange="guardarTamanoPlantilla(' + r.id + ')"> ' + t + '</label>').join('') + '</td>' +
@@ -4090,6 +4090,8 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       const marcados = Array.from(document.querySelectorAll('input[data-tam="' + id + '"]')).filter(x => x.checked).map(x => x.value);
       guardarCampoPlantilla(id, 'tamanos', marcados.length ? marcados.join(', ') : null);
     }
+    // Título corto del procedimiento (en negrilla, antes del texto) para que el auditor sepa de qué trata
+    function tituloProcHtml(x) { return x && x.titulo ? '<div class="font-bold text-slate-800 mb-0.5">' + escapeHtml(x.titulo) + '</div>' : ''; }
     async function guardarCampoPlantilla(id, campo, valor) {
       const est = document.getElementById('pg-estado');
       const r = programasPlantilla.find(x => x.id === id); if (!r) return;
@@ -4187,7 +4189,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       if (totalP && data.length < totalP) est.textContent = 'Se omitieron ' + (totalP - data.length) + ' procedimiento(s) que no corresponden por el tamaño de la empresa o el riesgo combinado (se definen en Sumarias).';
       if (!data || !data.length) { est.textContent = 'La plantilla no tiene procedimientos vigentes para ' + sums.join(' y ') + '.'; return; }
       if (!await confirmarApp('Se reemplazará el texto del procedimiento por ' + data.length + ' pasos de la plantilla (' + sums.join(' y ') + ').\n\n¿Quieres continuar?')) return;
-      document.getElementById('an-prog-procedimiento').value = data.map(r => (r.codigo ? r.codigo + '. ' : '') + (r.tipo_procedimiento ? '[' + r.tipo_procedimiento + '] ' : '') + r.procedimiento).join('\n\n');
+      document.getElementById('an-prog-procedimiento').value = data.map(r => (r.codigo ? r.codigo + '. ' : '') + (r.titulo ? r.titulo.toUpperCase() + '. ' : '') + (r.tipo_procedimiento ? '[' + r.tipo_procedimiento + '] ' : '') + r.procedimiento).join('\n\n');
       programarGuardadoPrograma();
     }
 
@@ -4302,7 +4304,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       let s = '<div class="p-4 text-sm text-slate-700">' + htmlContextoPrograma(invE.ctx, esEq() ? 'AA' : 'AB', invE.plantilla.length, invFilasPrograma().length, invE.verTodos, 'invVerTodosProg') + '<div class="flex flex-wrap items-center gap-2 mb-3"><span class="pill-origen rev">Hechos: ' + hechos + '</span><span class="pill-origen mod">Pendientes: ' + (filas.length - hechos) + '</span></div><div class="overflow-x-auto border border-slate-200 rounded-xl"><table class="w-full text-left text-sm border-collapse"><thead class="bg-slate-100 text-slate-600 text-xs font-bold border-b border-slate-200"><tr><th class="p-3 w-16">Código</th><th class="p-3 min-w-[360px]">Procedimiento</th><th class="p-3 min-w-[200px]">Dónde está hecho</th><th class="p-3 min-w-[220px]">Comentario</th><th class="p-3 w-40">Quién lo hizo</th><th class="p-3 min-w-[170px]">Verificaciones (pestaña 3)</th><th class="p-3 w-36">Estado</th></tr></thead><tbody>';
       filas.forEach(x => {
         const v = invVerifDeProc(x.codigo), col = v.abiertas ? 'text-amber-700' : 'text-emerald-700';
-        s += '<tr class="align-top border-b border-slate-100' + (x.noAplica.length ? ' opacity-60' : '') + '"><td class="p-3 font-semibold">' + escapeHtml(x.codigo) + '</td><td class="p-3"><div class="text-xs text-slate-400">' + escapeHtml(x.tipo_procedimiento || '') + '</div>' + escapeHtml(x.procedimiento || '') + (x.noAplica.length ? '<div class="text-xs text-amber-700 mt-1">Ya no aplica por ' + escapeHtml(x.noAplica.join(' y ')) + (x.estado === 'hecho' ? ' (estaba hecho)' : '') + '</div>' : '') + '</td>' +
+        s += '<tr class="align-top border-b border-slate-100' + (x.noAplica.length ? ' opacity-60' : '') + '"><td class="p-3 font-semibold">' + escapeHtml(x.codigo) + '</td><td class="p-3">' + tituloProcHtml(x) + '<div class="text-xs text-slate-400">' + escapeHtml(x.tipo_procedimiento || '') + '</div>' + escapeHtml(x.procedimiento || '') + (x.noAplica.length ? '<div class="text-xs text-amber-700 mt-1">Ya no aplica por ' + escapeHtml(x.noAplica.join(' y ')) + (x.estado === 'hecho' ? ' (estaba hecho)' : '') + '</div>' : '') + '</td>' +
           '<td class="p-3"><input type="text" value="' + escapeHtml(x.donde) + '" placeholder="Ej. Pestaña 1" onchange="invSetProg(\'' + x.k + '\', \'donde\', this.value)" class="w-full p-2 border border-slate-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500"></td>' +
           '<td class="p-3"><input type="text" value="' + escapeHtml(x.nota || '') + '" placeholder="Ej. Inmaterial, no se ajustó" onchange="invSetProg(\'' + x.k + '\', \'nota\', this.value)" class="w-full p-2 border border-slate-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500"></td>' +
           '<td class="p-3">' + htmlQuienProg(x, 'invSetProg', x.k, invRender) + '</td>' +
@@ -4337,7 +4339,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       s += '<div class="overflow-x-auto border border-slate-200 rounded-xl"><table class="w-full text-left text-xs border-collapse"><thead class="bg-slate-100 text-slate-600 font-bold border-b border-slate-200"><tr><th class="p-2 w-20">Programa</th><th class="p-2 min-w-[320px]">Procedimiento</th><th class="p-2 w-28">Estado</th><th class="p-2 min-w-[300px]">Verificaciones por resolver</th></tr></thead><tbody>';
       s += P.grupos.map(g => {
         const x = g.proc;
-        const proc = x ? '<div class="text-[11px] text-slate-400">' + escapeHtml(x.tipo_procedimiento || '') + '</div>' + escapeHtml(x.procedimiento || '') : '<span class="text-slate-400">—</span>';
+        const proc = x ? tituloProcHtml(x) + '<div class="text-[11px] text-slate-400">' + escapeHtml(x.tipo_procedimiento || '') + '</div>' + escapeHtml(x.procedimiento || '') : '<span class="text-slate-400">—</span>';
         const est = g.pendiente ? '<span class="text-amber-700 font-semibold">' + (x && x.estado === 'hecho' && x.otro ? 'Falta indicar auditor' : 'Pendiente') + '</span>' : '<span class="text-emerald-700 font-semibold">Hecho</span>';
         const ver = g.ver.length ? g.ver.map(v => '<div class="mb-1">• ' + escapeHtml(v.t) + ' <span class="text-amber-700">(' + escapeHtml(v.d || '') + ')</span> <span class="text-slate-400">· ' + v.tipo + '</span></div>').join('') : '<span class="text-emerald-700">Todas cerradas</span>';
         return '<tr class="border-b border-slate-100 align-top"><td class="p-2 font-semibold">' + escapeHtml(g.cod) + '</td><td class="p-2">' + proc + '</td><td class="p-2">' + est + '</td><td class="p-2">' + ver + '</td></tr>';
@@ -4437,7 +4439,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
     function arrIrVerif() { arrTab('verif'); }
     function arrIrPrograma() { arrTab('programa'); }
     async function arrCargarPlantilla() {
-      const { data, error } = await supabaseClient.from('programas_plantilla').select('sumaria, codigo, tipo_procedimiento, procedimiento, orden, alcance, tamanos').in('sumaria', Object.keys(ARR_PROG_SUMARIAS)).order('orden', { ascending: true });
+      const { data, error } = await supabaseClient.from('programas_plantilla').select('sumaria, codigo, titulo, tipo_procedimiento, procedimiento, orden, alcance, tamanos').in('sumaria', Object.keys(ARR_PROG_SUMARIAS)).order('orden', { ascending: true });
       ARR_PLANTILLA = error ? [] : (data || []);
       if (arrEstado.tab === 'programa') arrRender();
     }
@@ -4495,7 +4497,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
         const l = filas.filter(x => x.sumaria === s); if (!l.length) return;
         html += '<tr><td colspan="6" class="px-3 py-2 bg-slate-50 font-bold text-slate-700 border-y border-slate-200">' + escapeHtml(ARR_PROG_SUMARIAS[s]) + '</td></tr>';
         l.forEach(x => {
-          html += '<tr class="align-top border-b border-slate-100' + (x.noAplica.length ? ' opacity-60' : '') + '"><td class="p-3 font-semibold">' + escapeHtml(x.codigo) + '</td><td class="p-3"><div class="text-xs text-slate-400">' + escapeHtml(x.tipo_procedimiento || '') + '</div>' + escapeHtml(x.procedimiento || '') + (x.noAplica.length ? '<div class="text-xs text-amber-700 mt-1">Ya no aplica por ' + escapeHtml(x.noAplica.join(' y ')) + (x.estado === 'hecho' ? ' (estaba hecho)' : '') + '</div>' : '') + '</td>' +
+          html += '<tr class="align-top border-b border-slate-100' + (x.noAplica.length ? ' opacity-60' : '') + '"><td class="p-3 font-semibold">' + escapeHtml(x.codigo) + '</td><td class="p-3">' + tituloProcHtml(x) + '<div class="text-xs text-slate-400">' + escapeHtml(x.tipo_procedimiento || '') + '</div>' + escapeHtml(x.procedimiento || '') + (x.noAplica.length ? '<div class="text-xs text-amber-700 mt-1">Ya no aplica por ' + escapeHtml(x.noAplica.join(' y ')) + (x.estado === 'hecho' ? ' (estaba hecho)' : '') + '</div>' : '') + '</td>' +
             '<td class="p-3"><input type="text" value="' + escapeHtml(x.donde || '') + '" placeholder="Ej. Pestaña 7" onchange="arrProgSet(\'' + x.codigo + '\', \'donde\', this.value)" class="w-full p-2 border border-slate-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500"></td>' +
             '<td class="p-3">' + htmlQuienProg(x, 'arrProgSet', x.codigo, arrRender) + '</td>' +
             '<td class="p-3 text-xs">' + (() => { const v = arrVerifDeProcedimiento(x.codigo); if (!v.total) return '<span class="text-slate-400">Sin verificaciones</span>'; const col = v.abiertas ? 'text-amber-700' : 'text-emerald-700'; return '<button type="button" onclick="arrIrVerif()" class="underline ' + col + ' font-bold text-left" title="Ir a la pestaña 9">' + (v.abiertas ? v.abiertas + ' por resolver de ' + v.total : 'Todas cerradas (' + v.total + ')') + '</button>' + (x.estado !== 'hecho' && !v.abiertas ? '<div class="text-slate-500">Puedes marcarlo Hecho</div>' : '') + (x.estado === 'hecho' && v.abiertas ? '<div class="text-amber-700">Está Hecho pero tiene verificaciones abiertas</div>' : ''); })() + '</td>' +
@@ -14820,7 +14822,7 @@ ${cont.innerHTML}
       const [r1, r2, r3, r4] = await Promise.all([
         supabaseClient.from('conciliaciones_datos').select('*').eq('cliente_id', cli).eq('anio', Number(anio)).eq('visita', vis).maybeSingle(),
         supabaseClient.from('analisis_claude_cuentas').select('id, created_at, anio, visita, analisis, origen, estado_revision, revisado_por, revisado_at, pendientes, criterio_final, criterio_por, criterio_at').eq('cliente_id', cli).eq('cuenta', 'bancos').eq('anio', Number(anio)).order('created_at', { ascending: false }).limit(1),
-        cbE.plantilla ? Promise.resolve({ data: cbE.plantilla }) : supabaseClient.from('programas_plantilla').select('sumaria, codigo, tipo_procedimiento, procedimiento, orden, alcance, tamanos').eq('sumaria', 'AA').eq('hoja', 'bancos').order('orden', { ascending: true })
+        cbE.plantilla ? Promise.resolve({ data: cbE.plantilla }) : supabaseClient.from('programas_plantilla').select('sumaria, codigo, titulo, tipo_procedimiento, procedimiento, orden, alcance, tamanos').eq('sumaria', 'AA').eq('hoja', 'bancos').order('orden', { ascending: true })
         ,supabaseClient.from('criterio_auditor_cuentas').select('*').eq('cliente_id', cli).eq('anio', Number(anio)).eq('cuenta', 'bancos').eq('visita', vis).maybeSingle()
       ]);
       if (id !== cbE.cargaId) return;
@@ -15268,7 +15270,7 @@ ${cont.innerHTML}
       let h = '<div class="p-4 text-sm text-slate-700">' + htmlContextoPrograma(cbE.ctx, 'AA', cbE.plantilla.length, cbFilasPrograma().length, cbE.verTodos, 'cbVerTodosProg') + '<div class="flex flex-wrap items-center gap-2 mb-3"><span class="pill-origen rev">Hechos: ' + hechos + '</span><span class="pill-origen mod">Pendientes: ' + (filas.length - hechos) + '</span></div><div class="overflow-x-auto border border-slate-200 rounded-xl"><table class="w-full text-left text-sm border-collapse"><thead class="bg-slate-100 text-slate-600 text-xs font-bold border-b border-slate-200"><tr><th class="p-3 w-16">Código</th><th class="p-3 min-w-[360px]">Procedimiento</th><th class="p-3 min-w-[200px]">Dónde está hecho</th><th class="p-3 min-w-[220px]">Comentario</th><th class="p-3 w-40">Quién lo hizo</th><th class="p-3 min-w-[170px]">Verificaciones (pestaña 5)</th><th class="p-3 w-36">Estado</th></tr></thead><tbody>';
       filas.forEach(x => {
         const v = cbVerifDeProc(x.codigo), col = v.abiertas ? 'text-amber-700' : 'text-emerald-700';
-        h += '<tr class="align-top border-b border-slate-100' + (x.noAplica.length ? ' opacity-60' : '') + '"><td class="p-3 font-semibold">' + escapeHtml(x.codigo) + '</td><td class="p-3"><div class="text-xs text-slate-400">' + escapeHtml(x.tipo_procedimiento || '') + '</div>' + escapeHtml(x.procedimiento || '') + (x.noAplica.length ? '<div class="text-xs text-amber-700 mt-1">Ya no aplica por ' + escapeHtml(x.noAplica.join(' y ')) + (x.estado === 'hecho' ? ' (estaba hecho)' : '') + '</div>' : '') + '</td>' +
+        h += '<tr class="align-top border-b border-slate-100' + (x.noAplica.length ? ' opacity-60' : '') + '"><td class="p-3 font-semibold">' + escapeHtml(x.codigo) + '</td><td class="p-3">' + tituloProcHtml(x) + '<div class="text-xs text-slate-400">' + escapeHtml(x.tipo_procedimiento || '') + '</div>' + escapeHtml(x.procedimiento || '') + (x.noAplica.length ? '<div class="text-xs text-amber-700 mt-1">Ya no aplica por ' + escapeHtml(x.noAplica.join(' y ')) + (x.estado === 'hecho' ? ' (estaba hecho)' : '') + '</div>' : '') + '</td>' +
           '<td class="p-3"><input type="text" value="' + escapeHtml(x.donde) + '" placeholder="Ej. Pestaña 1" onchange="cbProgSet(\'' + x.k + '\', \'donde\', this.value)" class="w-full p-2 border border-slate-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500"></td>' +
           '<td class="p-3"><input type="text" value="' + escapeHtml(x.nota || '') + '" placeholder="Ej. Inmaterial, no se ajustó" onchange="cbProgSet(\'' + x.k + '\', \'nota\', this.value)" class="w-full p-2 border border-slate-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500"></td>' +
           '<td class="p-3">' + htmlQuienProg(x, 'cbProgSet', x.k, cbRender) + '</td>' +
@@ -15315,7 +15317,7 @@ ${cont.innerHTML}
       h += '<div class="overflow-x-auto border border-slate-200 rounded-xl"><table class="w-full text-left text-xs border-collapse"><thead class="bg-slate-100 text-slate-600 font-bold border-b border-slate-200"><tr><th class="p-2 w-20">Programa</th><th class="p-2 min-w-[320px]">Procedimiento</th><th class="p-2 w-28">Estado</th><th class="p-2 min-w-[300px]">Verificaciones por resolver</th></tr></thead><tbody>';
       h += P.grupos.map(g => {
         const x = g.proc;
-        const proc = x ? '<div class="text-[11px] text-slate-400">' + escapeHtml(x.tipo_procedimiento || '') + '</div>' + escapeHtml(x.procedimiento || '') : '<span class="text-slate-400">—</span>';
+        const proc = x ? tituloProcHtml(x) + '<div class="text-[11px] text-slate-400">' + escapeHtml(x.tipo_procedimiento || '') + '</div>' + escapeHtml(x.procedimiento || '') : '<span class="text-slate-400">—</span>';
         const est = g.pendiente ? '<span class="text-amber-700 font-semibold">' + (x && x.estado === 'hecho' && x.otro ? 'Falta indicar auditor' : 'Pendiente') + '</span>' : '<span class="text-emerald-700 font-semibold">Hecho</span>';
         const ver = g.ver.length ? g.ver.map(v => '<div class="mb-1">• ' + escapeHtml(v.t) + ' <span class="text-amber-700">(' + escapeHtml(v.d || '') + ')</span> <span class="text-slate-400">· ' + v.tipo + '</span></div>').join('') : '<span class="text-emerald-700">Todas cerradas</span>';
         return '<tr class="border-b border-slate-100 align-top"><td class="p-2 font-semibold">' + escapeHtml(g.cod) + '</td><td class="p-2">' + proc + '</td><td class="p-2">' + est + '</td><td class="p-2">' + ver + '</td></tr>';
@@ -19300,7 +19302,7 @@ ${cont.innerHTML}
         const rev = f.revisado_at ? `<div class="font-semibold text-emerald-700">✔ ${h(nombreMostrado(f.revisado_por) || '')}</div><div class="text-[10px] text-slate-400 mt-0.5">${v2Fmt(f.revisado_at)}</div><button type="button" onclick="v2Revisar('${k}',false)" class="text-[10px] text-slate-400 hover:underline mt-1">Quitar revisión</button>` : `<button type="button" onclick="v2Revisar('${k}',true)" class="px-2.5 py-1 text-[11px] font-semibold border border-slate-300 rounded-lg bg-white hover:bg-slate-50">Marcar revisado</button>`;
         filas += `<tr class="align-top">
           <td class="p-3 border-r border-slate-200 font-semibold text-slate-700 whitespace-nowrap">${k}</td>
-          <td class="p-3 border-r border-slate-200 text-slate-700 leading-relaxed text-[12px]">${h(p.procedimiento || '')}</td>
+          <td class="p-3 border-r border-slate-200 text-slate-700 leading-relaxed text-[12px]">${p.titulo ? `<div class="font-bold text-slate-800 mb-0.5 text-[13px]">${h(p.titulo)}</div>` : ''}${h(p.procedimiento || '')}</td>
           <td class="p-3 border-r border-slate-200 text-[12px]" >${v2Norma(p)}</td>
           <td class="p-3 border-r border-slate-200 whitespace-nowrap text-[12px]">${elab}${estH}</td>
           <td class="p-3 border-r border-slate-200 whitespace-nowrap text-[12px]">${rev}</td>
