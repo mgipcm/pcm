@@ -18563,10 +18563,10 @@ ${cont.innerHTML}
 
     // ===== AF Inventarios › Inventario para la venta › vii) Resumen de diferencias y conclusión =====
     // Junta las diferencias de las comparaciones ii) a vi) y la revisión de documentación; la conclusión preliminar se arma con reglas y el auditor escribe la suya.
-    const rsE = { cargaId: 0, cargando: false, cargado: false, cliente: '', anio: '', visita: '', concAud: '', act: null, tmp: null, D: null };
+    const rsE = { cargaId: 0, cargando: false, cargado: false, cliente: '', anio: '', visita: '', concAud: '', concClaude: '', act: null, tmp: null, D: null };
     async function rsCargar() {
       const cli = $im('im-cliente').value, anio = $im('im-anio').value, vis = $im('im-visita').value;
-      Object.assign(rsE, { cliente: cli, anio, visita: vis, cargado: false, cargando: !!cli, concAud: '', act: null, D: null });
+      Object.assign(rsE, { cliente: cli, anio, visita: vis, cargado: false, cargando: !!cli, concAud: '', concClaude: '', act: null, D: null });
       if (!cli) { rsPintar(); return; }
       const id = ++rsE.cargaId; rsPintar();
       try {
@@ -18580,9 +18580,9 @@ ${cont.innerHTML}
         await Promise.all(tareas);
         if (!(impEstado.cargado && impEstado.cliente === cli && impEstado.anio === anio && impEstado.visita === vis)) await impCargar();
         await impCargarMov();
-        const r = await supabaseClient.from('resumen_diferencias').select('conclusion_auditor, actualizado_por, updated_at').eq('cliente_id', cli).eq('anio', Number(anio)).eq('visita', vis).maybeSingle();
+        const r = await supabaseClient.from('resumen_diferencias').select('conclusion_auditor, conclusion_claude, actualizado_por, updated_at').eq('cliente_id', cli).eq('anio', Number(anio)).eq('visita', vis).maybeSingle();
         if (id !== rsE.cargaId) return;
-        if (r.data) { rsE.concAud = r.data.conclusion_auditor || ''; rsE.act = { por: r.data.actualizado_por, en: r.data.updated_at }; }
+        if (r.data) { rsE.concAud = r.data.conclusion_auditor || ''; rsE.concClaude = r.data.conclusion_claude || ''; rsE.act = { por: r.data.actualizado_por, en: r.data.updated_at }; }
       } catch (e) { console.error(e); }
       if (id !== rsE.cargaId) return;
       rsE.cargando = false; rsE.cargado = true; rsPintar();
@@ -18672,7 +18672,7 @@ ${cont.innerHTML}
         b.vista.forEach(f => { h += '<tr class="border-t border-slate-100 align-top' + (f.tot ? ' font-bold' : '') + '"><td class="' + TD + (f.sub ? ' pl-6' : '') + '">' + e(f.t) + '</td><td class="' + TD + ' text-right whitespace-nowrap">' + F(f.a) + '</td><td class="' + TD + ' text-right whitespace-nowrap">' + F(f.b) + '</td><td class="' + TD + ' text-right whitespace-nowrap font-bold" style="color:' + (f.ok ? '#047857' : '#b45309') + '">' + F(f.dif) + '</td><td class="' + TD + ' text-center font-bold" style="color:' + (f.ok ? '#047857' : '#b45309') + '">' + (f.ok ? 'Cuadra' : 'Conciliada en su pestaña') + '</td></tr>'; });
       });
       h += '</tbody></table></div>';
-      h += '<div class="grid lg:grid-cols-2 gap-3 mt-3"><div class="p-3 bg-white border border-slate-200 rounded-xl space-y-1 text-xs text-slate-700"><div class="text-[13px] font-semibold text-slate-800 ic-claude ic-tomate">Resumen para la conclusión</div>' + concl.map(t => '<p>' + e(t) + '</p>').join('') + '</div>';
+      h += '<div class="grid lg:grid-cols-2 gap-3 mt-3"><div class="p-3 bg-white border border-slate-200 rounded-xl space-y-1 text-xs text-slate-700"><div class="text-[13px] font-semibold text-slate-800 ic-claude ic-tomate">' + (rsE.concClaude ? 'Conclusión de Claude' : 'Resumen para la conclusión') + '</div>' + (rsE.concClaude ? String(rsE.concClaude).split(/\n+/).map(t => '<p>' + e(t) + '</p>').join('') + '<p class="text-[11px] text-slate-500">Procesado por Claude, sujeto a modificaciones en caso de existir.</p><div class="text-[11px] font-semibold text-slate-600 pt-1">Resumen de las cifras</div>' : '') + concl.map(t => '<p>' + e(t) + '</p>').join('') + '</div>';
       h += '<div class="p-3 bg-white border border-slate-200 rounded-xl space-y-1 text-xs text-slate-700"><div class="text-[13px] font-semibold text-slate-800">Conclusión del auditor</div><textarea id="rs-aud" rows="8" oninput="rsGuardarAud(this.value)" placeholder="Escribe aquí tu conclusión y tu criterio sobre las diferencias conciliadas y los procedimientos efectuados." class="w-full p-2 border border-slate-300 rounded-lg text-xs">' + e(rsE.concAud) + '</textarea>' + (rsE.act && rsE.act.por ? '<div class="text-[11px] text-slate-500">Último cambio: ' + e(nombreMostrado(rsE.act.por)) + '</div>' : '') + '</div></div>';
       c.innerHTML = h;
     }
@@ -18683,8 +18683,16 @@ ${cont.innerHTML}
       const aoa = [['Cruce', 'Comparación', 'Un lado', 'Otro lado', 'Diferencia', 'Resultado']];
       D.B.forEach(b => { if (b.nota) aoa.push([b.cod + ') ' + b.titulo, b.nota, '', '', '', 'Sin comparar']); b.vista.forEach(f => aoa.push([b.cod + ') ' + b.titulo, (f.sub ? '   ' : '') + f.t, f.a, f.b, f.dif, f.ok ? 'Cuadra' : 'Conciliada en su pestaña'])); });
       if (D.V.n) aoa.push([], ['Revisión de documentación (voucheo)', 'Partidas de la muestra', D.V.n, '', '', ''], ['', 'Sin excepción', D.V.ok, '', '', ''], ['', 'Con excepción', D.V.ex, '', '', ''], ['', 'Pendientes', D.V.pen, '', '', '']);
-      aoa.push([], ['Resumen para la conclusión'], ...concl.map(t => [t]), [], ['Conclusión del auditor'], [rsE.concAud || '(sin conclusión escrita)']);
+      aoa.push([], ['Conclusión de Claude (procesado por Claude, sujeto a modificaciones en caso de existir)'], ...(rsE.concClaude ? String(rsE.concClaude).split(/\n+/).map(t => [t]) : [['(Claude aún no ha escrito su conclusión; se genera con un pedido a Claude)']]), [], ['Resumen de las cifras'], ...concl.map(t => [t]), [], ['Conclusión del auditor'], [rsE.concAud || '(el auditor aún no ha escrito su conclusión)']);
       const hojas = [{ nombre: 'Resumen de diferencias', aoa, anchos: [{ wch: 44 }, { wch: 70 }, { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 16 }], op: { titulo: 'Resumen de diferencias y conclusión', info, totales: [] } }];
+      const mes = (nombre, tit, cab, fl) => hojas.push({ nombre, aoa: [cab, ...fl], anchos: cab.map((x, i) => ({ wch: i === 0 ? 24 : 20 })), op: { titulo: tit, info, totales: [] } });
+      try { if (mvE.cuentas.length) mes('ii Cuentas', 'Movimiento del inventario por cuenta', ['Cuenta', 'Saldo inicial', 'Movimientos', 'Saldo final', 'Diferencia', 'Según balance', 'Diferencia con balance'], mvE.cuentas.map(c => [((c.codigo ? c.codigo + ' ' : '') + (c.cuenta || '')).trim(), mvN(c.saldo_inicial), r2f(MV_MOV.reduce((a, k) => a + mvVal(c, k), 0)), mvN(c.saldo_final), mvDif(c), mvHayLibros(c) ? mvN(c.saldo_libros) : '', mvHayLibros(c) ? mvDifLibros(c) : ''])); } catch (x) { console.error(x); }
+      try { const X = impResumenCalc(); if (X) mes('iii Importaciones', 'Liquidaciones de importación vs mayor contable', ['Importación', 'Proveedor', 'Según liquidación', 'Según mayor', 'Diferencia'], X.filas.map(f => [f.id, f.proveedor, f.baseLiq, f.ajust, f.dif])); } catch (x) { console.error(x); }
+      try { if (cvE.cv.length) { const X = cvCalcular(); mes('iv Costo de ventas', 'Costo de ventas vs salidas', ['Mes', 'Salidas', 'Costo de ventas del mayor', 'Diferencia'], [...X.filas.map(m => [cvMes(m.ym), m.sal, m.cos, m.dif]), ['Total', X.tSal, X.tCos, X.dif]]); } } catch (x) { console.error(x); }
+      try { if (kcE.mov.length && kcE.prod.length) { const X = kcCalcular(); mes('v Kárdex entradas', 'Kárdex (entradas) vs compras del mayor', ['Mes', 'Mayor contable', 'Kárdex', 'Diferencia', 'Liquidaciones'], [...X.filas.map(m => [cvMes(m.ym), m.may, m.kar, m.dif, m.liq]), ['Total', X.tM, X.tK, X.dif, X.tL]]); } } catch (x) { console.error(x); }
+      try { if (ksE.kar.length && ksE.cv.length) { const X = ksCalcular(); mes('vi Kárdex salidas', 'Kárdex (salidas) vs costo de ventas', ['Mes', 'Salidas del kárdex', 'Costo de ventas del mayor', 'Diferencia'], [...X.filas.map(m => [m.t, m.kar, m.may, m.dif]), ['Total', X.T.kar, X.T.may, X.T.dif]]); } } catch (x) { console.error(x); }
+      try { if (vcE.cargado && vcE.cliente === rsE.cliente && vcE.filas.length) { const E = { ok: 'Sin excepción', ex: 'Con excepción', na: 'No aplica', '': 'Pendiente' }, TNx = { imp: 'Importación', loc: 'Compra local', dev: 'Devolución o reversión', bod: 'Transferencia entre bodegas' };
+        mes('Voucheo', 'Revisión de documentación (voucheo)', ['N.°', 'Tipo', 'Fecha', 'Referencia', 'Descripción', 'Valor', ...VC_ATRIB.map(a => a.t), 'Resultado', 'Comentario', 'Soportes'], vcE.filas.map(f => [f.k || '', TNx[f.tipo] || 'Compra local', f.fecha || '', f.ref || '', f.desc || '', Number(f.valor) || 0, ...VC_ATRIB.map(a => vcAplica(a, f) ? (E[vcVal(f, a.k)] || 'Pendiente') + (!(f.rev || {})[a.k] && vcDeClaude(f, a.k) ? ' (Claude)' : '') : '—'), vcResultado(f) === 'ok' ? 'Sin excepción' : vcResultado(f) === 'ex' ? 'Con excepción' : 'Pendiente', f.nota || '', (f.docs || []).length])); } } catch (x) { console.error(x); }
       const cli = (typeof impNombreCliente === 'function' && impNombreCliente()) || 'cliente';
       try { await arrXlsxConFormato(hojas, cli, 'Papel_de_trabajo_inventarios_' + String(cli).replace(/[^A-Za-z0-9]+/g, '_').slice(0, 30) + '_' + rsE.anio + '.xlsx'); } catch (x) { alert('No se pudo armar el Excel: ' + (x.message || x)); }
     }
@@ -19684,12 +19692,32 @@ ${(im.aprendidos || []).length ? `<p class="text-xs text-slate-600 bg-slate-50 b
         const ids = comp ? impBuscarIds(comp, p.desc).filter(id => L.some(im => im.id === id)) : [];
         filas.push({ cta: (c.codigo ? c.codigo + ' ' : '') + (c.cuenta || ''), cod: c.codigo || '', fecha: p.fecha || '', ref: p.ref || '', desc: p.desc || '', valor: impR2(Number(p.valor) || 0), ids, tipo: ids.length === 1 ? 'Importación' : ids.length > 1 ? 'Varias importaciones' : impTipoEntrada(p.desc), antes: p.antes || '' });
       }));
+      // Reversiones: la línea de reversión no trae la OC; se une con su ingreso original por número de documento (o por importe opuesto único)
+      filas.forEach(f => {
+        if (f.ids.length || !/reversi/i.test(f.desc) || !f.valor) return;
+        const nums = (String(f.desc) + ' ' + String(f.ref)).match(/\d{3,}/g) || [];
+        const opuestas = filas.filter(g => g !== f && g.ids.length === 1 && g.cta === f.cta && Math.abs(g.valor + f.valor) <= tol);
+        const porNum = opuestas.filter(g => nums.some(n => (String(g.desc) + ' ' + String(g.ref)).includes(n)));
+        const pool = porNum.length ? porNum : opuestas, unicas = new Set(pool.map(g => g.ids[0]));
+        const orig = pool.length && unicas.size === 1 ? pool[0] : null;
+        if (orig) { f.ids = orig.ids.slice(); f.tipo = 'Importación'; f.reversa = porNum.length ? 'número' : 'importe'; }
+      });
+      // OC mal digitada: una entrada sin importación identificada cuyo importe coincide con el de una sola liquidación que aún no tiene entrada
+      const conEntrada = new Set(filas.filter(f => f.ids.length === 1).map(f => f.ids[0]));
+      const dias = (a, b) => { const x = Date.parse(a), y = Date.parse(b); return Number.isFinite(x) && Number.isFinite(y) ? Math.abs(x - y) / 86400000 : 0; };
+      filas.forEach(f => {
+        if (f.ids.length || f.valor <= 0 || /Devoluci|Transferencia/.test(f.tipo)) return;
+        const cand = L.filter(im => !conEntrada.has(im.id) && Math.abs(impR2(impValoresLiq(im).total || 0) - f.valor) <= tol && impR2(impValoresLiq(im).total || 0) > 0 && dias(im.fecha, f.fecha) <= 150);
+        if (cand.length === 1) { f.ids = [cand[0].id]; f.tipo = 'Importación (OC mal digitada)'; f.ocMal = true; conEntrada.add(cand[0].id); }
+      });
       const porImp = L.map(im => {
         const mias = filas.filter(f => f.ids.length === 1 && f.ids[0] === im.id), comp2 = filas.filter(f => f.ids.length > 1 && f.ids.includes(im.id));
         const liq = impR2(impValoresLiq(im).total || 0), may = impR2(mias.reduce((t, f) => t + f.valor, 0)), dif = impR2(liq - may), cmp = impR2(comp2.reduce((t, f) => t + f.valor, 0));
         let est = 'Cuadra'; if (Math.abs(dif) > tol) est = !mias.length && !comp2.length ? 'Sin entrada en el mayor' : 'Revisar';
         if (!liq && !may) est = 'N/A';
         const corte = impEstado.cfg.corte, nota = [];
+        if (mias.some(f => f.ocMal)) nota.push('Una entrada se identificó por importe y fecha: el número de OC está mal digitado en el mayor (hallazgo a reportar).');
+        if (mias.some(f => f.reversa)) nota.push('Incluye reversión(es) unidas a su ingreso original, por ' + (mias.some(f => f.reversa === 'número') ? 'número de documento' : 'importe opuesto') + '.');
         if (est !== 'Cuadra' && est !== 'N/A') { if (!mias.length && im.fecha && corte && im.fecha > corte) nota.push('La importación es posterior al corte.'); if (cmp) nota.push('Hay entradas que nombran varias importaciones (' + formatoNumeroAnexo(cmp) + '), no se asignan.'); if (mias.length && dif > 0) nota.push('El mayor registra menos que la liquidación.'); if (mias.length && dif < 0) nota.push('El mayor registra más que la liquidación.'); }
         return { id: im.id, proveedor: im.proveedor || '', fecha: im.fecha || '', liq, may, dif, cmp, n: mias.length, est, nota: nota.join(' ') };
       });
