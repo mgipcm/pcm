@@ -19240,8 +19240,30 @@ ${cont.innerHTML}
       const u = $im('v2-actualizado'); u.value = ult ? nombreMostrado(ult.actualizado_por) : ''; u.title = ult ? 'Último cambio: ' + v2Fmt(ult.updated_at) : '';
       v2Pintar();
     }
+    // Si la referencia no está tal cual en la base de normas (p. ej. "NIC 2.9 y 2.36"), la arma desde sus partes
+    function v2ArmarChips(txt) {
+      const db = normasDB(), out = [];
+      String(txt || '').split(/\s*;\s*/).filter(Boolean).forEach(seg => {
+        const m = seg.match(/^(.*?\s\d+[A-Z]?)\.(\d.*)$/);
+        const base = m && db.p[m[1]] ? m[1] : null; const k = [];
+        if (base) {
+          const num = base.match(/(\d+[A-Z]?)$/)[1];
+          const quitar = x => x.trim().replace(new RegExp('^' + num + '\\.'), '');
+          const parrs = Object.keys(db.p[base]);
+          m[2].split(/\s+y\s+|\s*,\s*/).forEach(pz => {
+            const r = pz.split(/\s+a\s+/).map(quitar);
+            if (r.length === 2) { const i0 = parseInt(r[0], 10), i1 = parseInt(r[1], 10); parrs.forEach(q => { const n = parseInt(q, 10); if (n >= i0 && n <= i1) k.push(base + '|' + q); }); }
+            else if (parrs.includes(r[0])) k.push(base + '|' + r[0]);
+          });
+        }
+        out.push({ t: seg, k });
+      });
+      return out.some(c => c.k.length) ? out : null;
+    }
     function v2Norma(p) {
-      const chips = normasDB().m[p.norma || ''];
+      const db = normasDB();
+      if (p.norma && !db.m[p.norma]) { const c = v2ArmarChips(p.norma); if (c) db.m[p.norma] = c; }
+      const chips = db.m[p.norma || ''];
       if (!chips) return '<span style="color:#2b3a8c">' + escapeHtml(p.norma || '') + '</span>';
       return chips.map((c, i) => c.k.length
         ? '<button type="button" data-ntip="' + p.id + ',' + i + '" onclick="abrirNorma(' + p.id + ',' + i + ')" class="inline-block px-1.5 py-0.5 m-0.5 text-[11px] rounded border border-blue-200 bg-blue-50 text-blue-800 hover:bg-blue-100 cursor-pointer">' + escapeHtml(c.t) + '</button>'
