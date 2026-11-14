@@ -2173,6 +2173,52 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       </div>
     </section>
 
+    <section id="sec-import2" class="hidden bg-white rounded-2xl shadow-xl border border-slate-200 p-6 min-h-[92vh] space-y-5">
+      <div class="flex flex-wrap gap-1 p-1.5 bg-white border border-slate-200 rounded-2xl">
+        <button type="button" class="px-3 py-1.5 text-xs rounded-lg bg-indigo-600 text-white font-bold">Inventario para la venta</button>
+        <button type="button" disabled title="Pronto" class="px-3 py-1.5 text-xs rounded-lg text-slate-400 cursor-not-allowed">Materia prima (pronto)</button>
+        <button type="button" disabled title="Pronto" class="px-3 py-1.5 text-xs rounded-lg text-slate-400 cursor-not-allowed">Producción en proceso (pronto)</button>
+      </div>
+      <div class="border-b pb-4">
+        <h1 class="text-xl font-bold text-slate-800">2. Inventarios v2 <span class="text-[11px] font-semibold text-amber-600 border border-amber-300 rounded px-1.5 py-0.5 align-middle">PRUEBA</span></h1>
+        <p class="text-xs text-slate-500">Análisis guiado por el programa de auditoría: Claude elabora cada procedimiento y arma los papeles de trabajo; el auditor revisa.</p>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-4 xl:grid-cols-10 gap-4">
+        <div class="md:col-span-2 xl:col-span-2">
+          <label for="v2-cliente" class="block text-xs font-semibold text-slate-600 mb-1">Cliente</label>
+          <select id="v2-cliente" onchange="v2Cargar()" class="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs sm:text-sm focus:ring-2 focus:ring-indigo-500 outline-none"><option value="">-- Selecciona un Cliente --</option></select>
+        </div>
+        <div>
+          <label for="v2-anio" class="block text-xs font-semibold text-slate-600 mb-1">Año a Evaluar</label>
+          <select id="v2-anio" onchange="v2Cargar()" class="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs sm:text-sm focus:ring-2 focus:ring-indigo-500 outline-none"></select>
+        </div>
+        <div>
+          <label for="v2-visita" class="block text-xs font-semibold text-slate-600 mb-1">Visita</label>
+          <select id="v2-visita" onchange="v2Cargar()" class="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs sm:text-sm focus:ring-2 focus:ring-indigo-500 outline-none"><option value="preliminar">Visita preliminar</option><option value="final">Visita final</option></select>
+        </div>
+        <div>
+          <label for="v2-fecha" class="block text-xs font-semibold text-slate-600 mb-1">Fecha de corte</label>
+          <input type="date" id="v2-fecha" class="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs sm:text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+        </div>
+        <div class="md:col-span-2 xl:col-span-2">
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Auditor responsable</label>
+          <input type="text" id="v2-auditor" readonly tabindex="-1" placeholder="Sin identificar" class="w-full p-2 bg-slate-100 border border-slate-300 rounded-lg text-xs sm:text-sm text-slate-700 outline-none cursor-default">
+        </div>
+        <div class="md:col-span-2 xl:col-span-2">
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Actualizado por</label>
+          <input type="text" id="v2-actualizado" readonly tabindex="-1" placeholder="Sin cambios" class="w-full p-2 bg-slate-100 border border-slate-300 rounded-lg text-xs sm:text-sm text-slate-700 outline-none cursor-default">
+        </div>
+      </div>
+      <div class="flex flex-wrap items-center justify-between gap-2"><span id="v2-estado" class="text-[11px] text-slate-500"></span></div>
+      <p id="v2-aviso" class="text-xs text-slate-500 border border-dashed border-slate-300 rounded-xl p-4">Selecciona el cliente para comenzar.</p>
+      <div id="v2-espacio" class="hidden space-y-2">
+        <div class="flex flex-wrap gap-1 p-1.5 bg-white border border-slate-200 rounded-2xl">
+          <button type="button" class="px-3 py-1.5 text-xs rounded-lg bg-indigo-50 text-indigo-700 font-bold">Programa</button>
+        </div>
+        <div id="v2-panel" class="border border-slate-200 rounded-xl overflow-auto max-h-[78vh]"></div>
+      </div>
+    </section>
+
     <section id="sec-import" class="hidden bg-white rounded-2xl shadow-xl border border-slate-200 p-6 min-h-[92vh] space-y-5">
       <div id="im-hojas"></div>
       <div class="border-b pb-4">
@@ -3363,7 +3409,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       'claude-revisar': { cliente: 'cr-cliente', anio: 'cr-anio', visita: 'cr-visita' },
       'pedidos-claude': { cliente: 'pc-cliente', anio: 'pc-anio', visita: 'pc-visita' },
       contratos: { cliente: 'contr-cliente' }, flujo: { cliente: 'fl-cliente', anio: 'fl-anio' },
-      arrend: { cliente: 'ar-cliente', anio: 'ar-anio', visita: 'ar-visita' }, import: { cliente: 'im-cliente', anio: 'im-anio', visita: 'im-visita' }, concil: { cliente: 'cb-cliente', anio: 'cb-anio', visita: 'cb-visita' },
+      arrend: { cliente: 'ar-cliente', anio: 'ar-anio', visita: 'ar-visita' }, import: { cliente: 'im-cliente', anio: 'im-anio', visita: 'im-visita' }, import2: { cliente: 'v2-cliente', anio: 'v2-anio', visita: 'v2-visita' }, concil: { cliente: 'cb-cliente', anio: 'cb-anio', visita: 'cb-visita' },
       pce: { cliente: 'pce-cliente' }, reuniones: { cliente: 'reu-cliente' }, mayor: { cliente: 'my-cliente' },
       asignacion: { cliente: 'as-cliente', anio: 'as-anio', visita: 'as-visita' }
     };
@@ -3444,14 +3490,14 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       }
 
       const claveLinea = (seccion === 'analisis' && cuenta) ? (cuenta === 'equivalentes' ? 'concil' : 'cta:' + cuenta) : (seccion === 'aprobaciones-claude' ? 'pedidos-claude' : seccion);
-      if ((seccion === 'sumarias' || seccion === 'pendientes' || seccion === 'claude-revisar' || seccion === 'pedidos-claude' || seccion === 'aprobaciones-claude' || seccion === 'arrend' || seccion === 'import' || seccion === 'concil' || (seccion === 'analisis' && cuenta)) && !herramientaHabilitada(claveLinea)) { avisarEnDesarrollo(); return; }
+      if ((seccion === 'sumarias' || seccion === 'pendientes' || seccion === 'claude-revisar' || seccion === 'pedidos-claude' || seccion === 'aprobaciones-claude' || seccion === 'arrend' || seccion === 'import' || seccion === 'import2' || seccion === 'concil' || (seccion === 'analisis' && cuenta)) && !herramientaHabilitada(claveLinea)) { avisarEnDesarrollo(); return; }
       if (!herramientaHabilitada(seccion === 'aprobaciones-claude' ? 'pedidos-claude' : seccion)) {
         if (seccion === 'auditoria') seccion = 'desarrollo'; // pantalla principal: se muestra un aviso en vez de un mensaje emergente
         else { avisarEnDesarrollo(); return; }
       }
       if (!['clientes', 'usuarios', 'cuentas', 'habilitar', 'historial', 'medidor', 'programas'].includes(seccion)) guardarVista({ seccion: seccion, sub: sub || null, cuenta: cuenta || null });
 
-      const secciones = ['desarrollo', 'clientes', 'usuarios', 'cuentas', 'habilitar', 'historial', 'medidor', 'programas', 'sumarias', 'pendientes', 'claude-revisar', 'pedidos-claude', 'aprobaciones-claude', 'flujo', 'auditoria', 'analisis', 'visitas', 'asignacion', 'indices', 'mayor', 'contratos', 'arrend', 'import', 'concil', 'pce', 'reuniones', 'mas-herramientas'];
+      const secciones = ['desarrollo', 'clientes', 'usuarios', 'cuentas', 'habilitar', 'historial', 'medidor', 'programas', 'sumarias', 'pendientes', 'claude-revisar', 'pedidos-claude', 'aprobaciones-claude', 'flujo', 'auditoria', 'analisis', 'visitas', 'asignacion', 'indices', 'mayor', 'contratos', 'arrend', 'import', 'import2', 'concil', 'pce', 'reuniones', 'mas-herramientas'];
       const grupoSubmenu = sec => ['auditoria', 'visitas', 'asignacion'].includes(sec) ? 'planificacion' : ['indices', 'mayor', 'contratos', 'flujo', 'pce', 'reuniones', 'mas-herramientas'].includes(sec)
         ? 'herramientas'
         : (['clientes', 'usuarios', 'cuentas', 'habilitar', 'historial', 'medidor', 'programas'].includes(sec) ? 'config' : (['sumarias', 'pendientes', 'claude-revisar', 'pedidos-claude', 'aprobaciones-claude'].includes(sec) ? 'analisis' : null));
@@ -3486,6 +3532,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       if (seccion === 'flujo') abrirFlujo();
       if (seccion === 'arrend') abrirArrend();
       if (seccion === 'import') abrirImport();
+      if (seccion === 'import2') abrirImport2();
       if (seccion === 'concil') abrirConcil();
       if (seccion === 'pce') abrirPce();
       if (seccion === 'cuentas') abrirCatalogoCuentas();
@@ -3511,7 +3558,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
         abrirAnalisis(rubro, cuentaElegida);
       }
 
-      const desdeAnalisis = ((seccion === 'arrend' || seccion === 'import' || seccion === 'concil') && sub === 'analisis');
+      const desdeAnalisis = ((seccion === 'arrend' || seccion === 'import' || seccion === 'import2' || seccion === 'concil') && sub === 'analisis');
       if (seccion === 'arrend') { const t = document.getElementById('ar-titulo'); if (t) t.textContent = desdeAnalisis ? '2. Activos por derecho de uso y pasivos por arrendamiento' : 'Arrendamientos NIIF 16'; }
       if (seccion === 'concil') { pintarHojasAA(); const t = document.getElementById('cb-titulo'); if (t) t.textContent = '2. Bancos (conciliaciones bancarias)'; }
       if (desdeAnalisis) {
@@ -3556,6 +3603,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       'activos': [
         { sumaria: 'AA', id: 'concil', nombre: 'AA Efectivo y equivalentes de efectivo' },
         { sumaria: 'AF', id: 'import', nombre: 'AF Inventarios' },
+        { sumaria: 'AF', id: 'import2', nombre: 'AF Inventarios v2 (prueba)' },
         { sumaria: 'AOO', id: 'arrend', nombre: 'AOO Activos por derecho de uso y pasivos por arrendamiento' }
       ]
     };
@@ -15402,6 +15450,7 @@ ${cont.innerHTML}
       { clave: 'cta:inversiones_corrientes', nombre: '     ↳ 2. Análisis Claves › Activos › Inversiones corrientes', btn: 'nav-cuenta-activos-inversiones_corrientes', defecto: false },
       { clave: 'arrend', nombre: '     ↳ 2. Análisis Claves › Activos › Activos por derecho de uso y pasivos por arrendamiento', btn: 'nav-cuenta-extra-activos-arrend', defecto: false },
       { clave: 'import', nombre: '     ↳ 2. Análisis Claves › Activos › AF Inventarios (hojas Inventario para la venta, Materia prima, Producción en proceso e Importaciones)', btn: 'nav-cuenta-extra-activos-import', defecto: false },
+      { clave: 'import2', nombre: '     ↳ 2. Análisis Claves › Activos › AF Inventarios v2 (prueba)', btn: 'nav-cuenta-extra-activos-import2', defecto: false },
       { clave: 'concil', nombre: '     ↳ 2. Análisis Claves › Activos › AA Efectivo y equivalentes de efectivo (hojas Bancos y Equivalentes)', btn: 'nav-cuenta-extra-activos-concil', defecto: false },
       { clave: 'visitas', nombre: '1b) Auditoría/Planificación › Visitas (Calendario)', btn: 'nav-visitas' },
       { clave: 'asignacion', nombre: '1c) Auditoría/Planificación › Asignación de cuentas', btn: 'nav-asignacion' },
@@ -19159,6 +19208,92 @@ ${cont.innerHTML}
     async function mvQuitar(i) { if (!await confirmarApp('¿Quitar esta cuenta del movimiento?')) return; mvE.cuentas.splice(i, 1); mvGuardar(); mvPintar(); }
     function ivIrHoja(h) { ivE.hoja = h; ivPintarHojas(); }
     function ivIrBoton(b) { ivE.btn = b; ivPintarHojas(); }
+    // ===== AF Inventarios v2 (prueba): hoja "Inventario para la venta" › pestaña Programa =====
+    const v2E = { cliente: '', anio: '', visita: '', procs: [], filas: {}, cargaId: 0, abiertos: {} };
+    function v2Fmt(t) { return t ? new Date(t).toLocaleString('es-EC', { day: '2-digit', month: '2-digit', year: 'numeric', hour: 'numeric', minute: '2-digit' }) : ''; }
+    async function abrirImport2() {
+      asegurarClientesEn('v2-cliente');
+      const sa = $im('v2-anio'), hoy = new Date().getFullYear();
+      if (sa && !sa.options.length) { for (let y = hoy + 1; y >= hoy - 4; y--) sa.add(new Option('Año ' + y, String(y))); sa.value = String(($im('an-anio') || {}).value || hoy); }
+      v2Cargar();
+    }
+    async function v2Cargar() {
+      const cli = $im('v2-cliente').value, anio = $im('v2-anio').value, vis = $im('v2-visita').value;
+      Object.assign(v2E, { cliente: cli, anio, visita: vis, filas: {} });
+      const f = $im('v2-fecha'); if (f) f.value = vis === 'final' ? anio + '-12-31' : anio + '-09-30';
+      const a = $im('v2-auditor'); if (a) a.value = (typeof nombreUsuarioActivo === 'function' ? nombreUsuarioActivo() : '') || '';
+      const aviso = $im('v2-aviso'), esp = $im('v2-espacio');
+      if (!cli) { aviso.classList.remove('hidden'); esp.classList.add('hidden'); $im('v2-actualizado').value = ''; return; }
+      aviso.classList.add('hidden'); esp.classList.remove('hidden');
+      const id = ++v2E.cargaId; $im('v2-estado').textContent = 'Cargando…';
+      const [p, r] = await Promise.all([
+        supabaseClient.from('programas_plantilla').select('*').eq('sumaria', 'AF').eq('activo', true).order('orden', { ascending: true }),
+        supabaseClient.from('v2_programa').select('*').eq('cliente_id', cli).eq('anio', Number(anio)).eq('visita', vis).eq('sumaria', 'AF').eq('hoja', 'venta')
+      ]);
+      if (id !== v2E.cargaId) return;
+      if (p.error || r.error) { $im('v2-estado').textContent = 'No se pudo cargar: ' + ((p.error || r.error).message || ''); return; }
+      $im('v2-estado').textContent = '';
+      v2E.procs = p.data || []; v2E.filas = {};
+      (r.data || []).forEach(x => { v2E.filas[x.codigo] = x; });
+      const ult = (r.data || []).filter(x => x.actualizado_por).sort((x, y) => String(y.updated_at).localeCompare(String(x.updated_at)))[0];
+      const u = $im('v2-actualizado'); u.value = ult ? nombreMostrado(ult.actualizado_por) : ''; u.title = ult ? 'Último cambio: ' + v2Fmt(ult.updated_at) : '';
+      v2Pintar();
+    }
+    function v2Pintar() {
+      const h = escapeHtml;
+      const filas = v2E.procs.map(p => {
+        const f = v2E.filas[p.codigo] || {}, k = h(p.codigo || '');
+        const pts = (f.pt || []).map((t, i) => `<div class="flex items-center gap-1"><button type="button" onclick="v2PtBajar('${k}',${i})" class="text-indigo-600 hover:underline text-left" title="Descargar">📎 ${h(t.ref ? t.ref + ' · ' : '')}${h(t.nombre || '')}</button><button type="button" onclick="v2PtQuitar('${k}',${i})" class="text-slate-400 hover:text-red-600" title="Quitar">✕</button></div>`).join('');
+        const elab = f.elaborado_at ? `<div class="font-semibold text-slate-700">${h(f.elaborado_por || 'Claude')}</div><div class="text-[10px] text-slate-400">${v2Fmt(f.elaborado_at)}</div>` : `<div class="font-semibold text-slate-500">Claude</div><div class="text-[10px] text-amber-600">Pendiente</div>`;
+        const rev = f.revisado_at ? `<div class="font-semibold text-emerald-700">✔ ${h(nombreMostrado(f.revisado_por) || '')}</div><div class="text-[10px] text-slate-400">${v2Fmt(f.revisado_at)}</div><button type="button" onclick="v2Revisar('${k}',false)" class="text-[10px] text-slate-400 hover:underline">Quitar</button>` : `<button type="button" onclick="v2Revisar('${k}',true)" class="px-2 py-1 text-[11px] font-bold border border-slate-300 rounded-lg hover:bg-slate-50">Marcar revisado</button>`;
+        return `<tr class="border-t align-top">
+          <td class="px-2 py-2 font-bold text-slate-700 whitespace-nowrap">${k}</td>
+          <td class="px-2 py-2 text-slate-700">${h(p.procedimiento || '')}</td>
+          <td class="px-2 py-2 text-slate-500">${h(p.norma || '')}</td>
+          <td class="px-2 py-2 whitespace-nowrap">${elab}</td>
+          <td class="px-2 py-2 whitespace-nowrap">${rev}</td>
+          <td class="px-2 py-2 text-[11px] space-y-0.5">${pts || '<span class="text-slate-400">Sin papeles de trabajo</span>'}<label class="inline-block mt-1 text-[11px] text-slate-500 hover:underline cursor-pointer">＋ Adjuntar<input type="file" class="hidden" onchange="v2PtSubir('${k}',this)"></label></td>
+        </tr>`;
+      }).join('');
+      $im('v2-panel').innerHTML = `<table class="w-full text-xs"><thead class="bg-slate-50 text-slate-600 sticky top-0"><tr>
+        <th class="px-2 py-2 text-left">Código</th><th class="px-2 py-2 text-left">Procedimiento</th><th class="px-2 py-2 text-left">Norma de referencia</th><th class="px-2 py-2 text-left">Elaborado por</th><th class="px-2 py-2 text-left">Revisado por</th><th class="px-2 py-2 text-left">P/T</th></tr></thead><tbody>${filas || '<tr><td colspan="6" class="p-4 text-slate-500">No hay procedimientos cargados para esta sumaria.</td></tr>'}</tbody></table>`;
+    }
+    async function v2Guardar(codigo, cambios) {
+      const actual = v2E.filas[codigo] || {};
+      const fila = { cliente_id: v2E.cliente, anio: Number(v2E.anio), visita: v2E.visita, sumaria: 'AF', hoja: 'venta', codigo, ...cambios, actualizado_por: nombreUsuarioActivo() || null, updated_at: new Date().toISOString() };
+      const { data, error } = await supabaseClient.from('v2_programa').upsert(fila, { onConflict: 'cliente_id,anio,visita,sumaria,hoja,codigo' }).select().single();
+      if (error) { $im('v2-estado').textContent = 'No se pudo guardar: ' + (error.message || error); return false; }
+      v2E.filas[codigo] = { ...actual, ...data };
+      const u = $im('v2-actualizado'); u.value = nombreMostrado(data.actualizado_por) || '';
+      $im('v2-estado').textContent = '';
+      return true;
+    }
+    async function v2Revisar(codigo, marcar) {
+      const ok = await v2Guardar(codigo, marcar ? { revisado_por: nombreUsuarioActivo() || null, revisado_at: new Date().toISOString() } : { revisado_por: null, revisado_at: null });
+      if (ok) v2Pintar();
+    }
+    async function v2PtSubir(codigo, inp) {
+      const file = inp.files && inp.files[0]; if (!file) return;
+      const limpio = file.name.replace(/[^\w.\-]+/g, '_');
+      const ruta = `${v2E.cliente}/${v2E.anio}_${v2E.visita}/${codigo}/${Date.now()}_${limpio}`;
+      $im('v2-estado').textContent = 'Subiendo…';
+      const up = await supabaseClient.storage.from('papeles-v2').upload(ruta, file, { upsert: false });
+      if (up.error) { $im('v2-estado').textContent = 'No se pudo subir: ' + up.error.message; return; }
+      const pt = ((v2E.filas[codigo] || {}).pt || []).concat([{ ref: '', nombre: file.name, ruta, tipo: file.type || '', por: nombreUsuarioActivo() || '', en: new Date().toISOString() }]);
+      if (await v2Guardar(codigo, { pt })) v2Pintar();
+    }
+    async function v2PtBajar(codigo, i) {
+      const t = ((v2E.filas[codigo] || {}).pt || [])[i]; if (!t) return;
+      const { data, error } = await supabaseClient.storage.from('papeles-v2').createSignedUrl(t.ruta, 120, { download: t.nombre });
+      if (error || !data) { $im('v2-estado').textContent = 'No se pudo descargar: ' + ((error || {}).message || ''); return; }
+      const a = document.createElement('a'); a.href = data.signedUrl; a.download = t.nombre; document.body.appendChild(a); a.click(); a.remove();
+    }
+    async function v2PtQuitar(codigo, i) {
+      const lista = ((v2E.filas[codigo] || {}).pt || []).slice(), t = lista[i]; if (!t) return;
+      if (!confirm('¿Quitar el papel de trabajo "' + t.nombre + '"?')) return;
+      lista.splice(i, 1);
+      if (await v2Guardar(codigo, { pt: lista })) { supabaseClient.storage.from('papeles-v2').remove([t.ruta]); v2Pintar(); }
+    }
     async function abrirImport() {
       asegurarClientesEn('im-cliente');
       const sa = $im('im-anio'), hoy = new Date().getFullYear();
