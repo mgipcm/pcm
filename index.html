@@ -1125,6 +1125,10 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
         </div>
         <div class="flex items-end gap-2"><select id="pg-hoja" class="p-2 bg-white border border-slate-300 rounded-lg text-xs outline-none" title="Solo para la cuenta AA"><option value="">Hoja (solo AA)</option><option value="caja">Caja</option><option value="bancos">Bancos</option><option value="equivalentes">Equivalentes de efectivo</option><option value="venta">Inventario para la venta</option><option value="import">Importaciones (liquidaciones)</option></select><button type="button" onclick="agregarProcedimientoPlantilla()" class="px-3 py-2 rounded-lg text-xs transition bg-slate-100 text-slate-800 hover:bg-slate-200 font-medium">+ Agregar procedimiento</button></div>
       </div>
+      <div class="flex flex-wrap items-center gap-2">
+        <button type="button" onclick="descargarProgramasExcel(false)" class="px-3 py-1.5 rounded-lg text-xs transition bg-slate-100 text-slate-800 hover:bg-slate-200 font-medium" title="Descarga en Excel el programa de la sumaria elegida arriba">Descargar en Excel: la sumaria elegida</button>
+        <button type="button" onclick="descargarProgramasExcel(true)" class="px-3 py-1.5 rounded-lg text-xs transition bg-slate-100 text-slate-800 hover:bg-slate-200 font-medium" title="Descarga en Excel todos los programas, una hoja por sumaria">Descargar en Excel: todas las sumarias</button>
+      </div>
       <p id="pg-conteo" class="text-xs text-slate-500 min-h-[1rem]"></p>
       <div class="overflow-x-auto border border-slate-200 rounded-xl shadow-sm bg-white">
         <table class="w-full text-left text-xs text-slate-700 border-collapse">
@@ -3970,6 +3974,21 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
           '<td class="p-2 text-center"><input type="checkbox" ' + (r.activo ? 'checked' : '') + ' onchange="guardarCampoPlantilla(' + r.id + ',\'activo\',this.checked)"></td></tr>';
       });
       tb.innerHTML = html;
+    }
+    // Descarga los programas de trabajo en Excel: todas las sumarias (una hoja por cada una) o solo la elegida
+    async function descargarProgramasExcel(todo) {
+      if (!window.ExcelJS) { alert('No se pudo cargar el generador de Excel. Revisa tu conexión a internet.'); return; }
+      const s = valorAnalisis('pg-sumaria');
+      if (!todo && !s) { alert('Elige primero una sumaria en el cuadro «Sumaria», o usa «todas las sumarias».'); return; }
+      const nombreSum = x => { const c = catalogoCuentas.find(k => k.sumaria === x); return c ? c.cuenta : x; };
+      const lista = programasPlantilla.filter(r => !/^(FG|LA|QL)\d*$/.test(r.sumaria) && (todo || r.sumaria === s));
+      if (!lista.length) { alert('No hay procedimientos para descargar.'); return; }
+      lista.sort((x, y) => String(x.sumaria).localeCompare(String(y.sumaria), 'es', { numeric: true }) || (x.orden - y.orden) || (x.id - y.id));
+      const porSum = {}; lista.forEach(r => { (porSum[r.sumaria] = porSum[r.sumaria] || []).push(r); });
+      const cab = ['Código', 'Hoja', 'Tipo', 'Procedimiento', 'Norma de referencia', 'Alcance', 'Tamaño de empresa', 'Vigente'];
+      const info = [['Preparado por', (typeof nombreUsuarioActivo === 'function' && nombreUsuarioActivo()) || ''], ['Procedimientos', lista.length]];
+      const hojas = Object.keys(porSum).map(k => ({ nombre: k, aoa: [cab, ...porSum[k].map(r => [r.codigo || '', r.hoja ? pcNombreHoja(r.hoja) : '', r.tipo_procedimiento || '', r.procedimiento || '', r.norma || '', r.alcance || '', r.tamanos || '', r.activo ? 'Sí' : 'No'])], anchos: [{ wch: 12 }, { wch: 22 }, { wch: 22 }, { wch: 90 }, { wch: 28 }, { wch: 16 }, { wch: 30 }, { wch: 10 }], op: { titulo: 'Programa de trabajo: ' + nombreSum(k), info, totales: [] } }));
+      try { await arrXlsxConFormato(hojas, 'Programas de trabajo', 'Programa_de_trabajo_' + (todo ? 'todas_las_sumarias' : String(s).replace(/[^A-Za-z0-9]+/g, '_')) + '.xlsx'); } catch (e) { alert('No se pudo armar el Excel: ' + (e.message || e)); }
     }
     let _normasDB = null;
     function normasDB() { if (!_normasDB) { try { _normasDB = JSON.parse(document.getElementById('normas-json').textContent); } catch (e) { _normasDB = { p: {}, m: {} }; } } return _normasDB; }
