@@ -19219,18 +19219,20 @@ ${cont.innerHTML}
     }
     async function v2Cargar() {
       const cli = $im('v2-cliente').value, anio = $im('v2-anio').value, vis = $im('v2-visita').value;
-      Object.assign(v2E, { cliente: cli, anio, visita: vis, filas: {}, sv: null, res: null, bal: null });
+      Object.assign(v2E, { cliente: cli, anio, visita: vis, filas: {}, pts: [], sv: null, res: null, bal: null });
       const f = $im('v2-fecha'); if (f) f.value = vis === 'final' ? anio + '-12-31' : anio + '-09-30';
       const a = $im('v2-auditor'); if (a) a.value = (typeof nombreUsuarioActivo === 'function' ? nombreUsuarioActivo() : '') || '';
       const aviso = $im('v2-aviso'), esp = $im('v2-espacio');
       if (!cli) { aviso.classList.remove('hidden'); esp.classList.add('hidden'); $im('v2-actualizado').value = ''; return; }
       aviso.classList.add('hidden'); esp.classList.remove('hidden');
       const id = ++v2E.cargaId; $im('v2-estado').textContent = 'Cargando…';
-      const [p, r] = await Promise.all([
+      const [p, r, tp] = await Promise.all([
         supabaseClient.from('programas_plantilla').select('*').eq('sumaria', 'AF').eq('activo', true).order('orden', { ascending: true }),
-        supabaseClient.from('v2_programa').select('*').eq('cliente_id', cli).eq('anio', Number(anio)).eq('visita', vis).eq('sumaria', 'AF').eq('hoja', 'venta')
+        supabaseClient.from('v2_programa').select('*').eq('cliente_id', cli).eq('anio', Number(anio)).eq('visita', vis).eq('sumaria', 'AF').eq('hoja', 'venta'),
+        supabaseClient.from('v2_pt').select('*').eq('cliente_id', cli).eq('anio', Number(anio)).eq('visita', vis).eq('sumaria', 'AF').eq('hoja', 'venta').order('ref', { ascending: true })
       ]);
       if (id !== v2E.cargaId) return;
+      v2E.pts = (tp && !tp.error && tp.data) || [];
       if (p.error || r.error) { $im('v2-estado').textContent = 'No se pudo cargar: ' + ((p.error || r.error).message || ''); return; }
       $im('v2-estado').textContent = '';
       v2E.procs = p.data || []; v2E.filas = {};
@@ -19285,8 +19287,10 @@ ${cont.innerHTML}
         const kg = p.hoja || '';
         if (kg !== ult) { filas += `<tr><td colspan="6" class="px-3 py-2 bg-slate-100 text-slate-700 font-bold">${h(nombreSum + (p.hoja && typeof pcNombreHoja === 'function' ? ' · Hoja ' + pcNombreHoja(p.hoja) : ''))}</td></tr>`; ult = kg; }
         const f = v2E.filas[p.codigo] || {}, k = h(p.codigo || '');
-        const pts = (f.pt || []).map((t, i) => `<div class="flex items-center gap-1 py-0.5"><button type="button" onclick="v2PtBajar('${k}',${i})" class="text-indigo-700 hover:underline text-left" title="Descargar">📎 ${h(t.ref ? t.ref + ' · ' : '')}${h(t.nombre || '')}</button><button type="button" onclick="v2PtQuitar('${k}',${i})" class="text-slate-400 hover:text-red-600" title="Quitar">✕</button></div>`).join('');
-        const elab = f.elaborado_at ? `<div class="font-semibold text-slate-700">${h(f.elaborado_por || 'Claude')}</div><div class="text-[10px] text-slate-400 mt-0.5">${v2Fmt(f.elaborado_at)}</div>` : `<div class="font-semibold text-slate-600">Claude</div><div class="text-[10px] text-amber-600 mt-0.5">Pendiente</div>`;
+        const ptsC = (v2E.pts || []).filter(t => t.codigo === p.codigo).map(t => `<div class="py-0.5"><button type="button" onclick="v2PtVer('${t.id}')" class="text-indigo-700 hover:underline text-left" title="Ver papel de trabajo">📊 ${h(t.ref)} · ${h(t.titulo)}</button></div>`).join('');
+        const pts = ptsC + (f.pt || []).map((t, i) => `<div class="flex items-center gap-1 py-0.5"><button type="button" onclick="v2PtBajar('${k}',${i})" class="text-indigo-700 hover:underline text-left" title="Descargar">📎 ${h(t.ref ? t.ref + ' · ' : '')}${h(t.nombre || '')}</button><button type="button" onclick="v2PtQuitar('${k}',${i})" class="text-slate-400 hover:text-red-600" title="Quitar">✕</button></div>`).join('');
+        const ptE = (v2E.pts || []).filter(t => t.codigo === p.codigo).sort((a, b) => String(b.elaborado_at).localeCompare(String(a.elaborado_at)))[0];
+        const elab = ptE ? `<div class="font-semibold text-slate-700">${h(ptE.elaborado_por || 'Claude')}</div><div class="text-[10px] text-slate-400 mt-0.5">${v2Fmt(ptE.elaborado_at)}</div>` : f.elaborado_at ? `<div class="font-semibold text-slate-700">${h(f.elaborado_por || 'Claude')}</div><div class="text-[10px] text-slate-400 mt-0.5">${v2Fmt(f.elaborado_at)}</div>` : `<div class="font-semibold text-slate-600">Claude</div><div class="text-[10px] text-amber-600 mt-0.5">Pendiente</div>`;
         const rev = f.revisado_at ? `<div class="font-semibold text-emerald-700">✔ ${h(nombreMostrado(f.revisado_por) || '')}</div><div class="text-[10px] text-slate-400 mt-0.5">${v2Fmt(f.revisado_at)}</div><button type="button" onclick="v2Revisar('${k}',false)" class="text-[10px] text-slate-400 hover:underline mt-1">Quitar revisión</button>` : `<button type="button" onclick="v2Revisar('${k}',true)" class="px-2.5 py-1 text-[11px] font-semibold border border-slate-300 rounded-lg bg-white hover:bg-slate-50">Marcar revisado</button>`;
         filas += `<tr class="align-top">
           <td class="p-3 border-r border-slate-200 font-semibold text-slate-700 whitespace-nowrap">${k}</td>
@@ -19299,6 +19303,63 @@ ${cont.innerHTML}
       });
       $im('v2-panel').innerHTML = `<table class="w-full text-left text-xs text-slate-700 border-collapse"><thead class="bg-slate-100 text-slate-600 text-[10px] font-bold border-b border-slate-200"><tr>
         <th class="p-3 border-r border-slate-200 min-w-[90px]">Código</th><th class="p-3 border-r border-slate-200 min-w-[360px] w-full">Procedimiento</th><th class="p-3 border-r border-slate-200 min-w-[170px]">Norma de referencia</th><th class="p-3 border-r border-slate-200 min-w-[130px]">Elaborado por<br><span class="font-normal">(Claude)</span></th><th class="p-3 border-r border-slate-200 min-w-[150px]">Revisado por<br><span class="font-normal">(quien completa)</span></th><th class="p-3 min-w-[200px]">P/T</th></tr></thead><tbody class="divide-y divide-slate-200">${filas || '<tr><td colspan="6" class="p-8 text-center text-slate-400">No hay procedimientos cargados para esta sumaria.</td></tr>'}</tbody></table>`;
+    }
+    // ----- Papeles de trabajo (P/T): Claude los guarda como especificación (hojas, celdas, fórmulas); la app los muestra y arma el Excel con fórmulas vivas -----
+    function v2PtCol(n) { let s = ''; n++; while (n > 0) { const m = (n - 1) % 26; s = String.fromCharCode(65 + m) + s; n = Math.floor((n - 1) / 26); } return s; }
+    function v2PtCelda(c) { return (c !== null && typeof c === 'object') ? c : { v: c }; }
+    function v2PtVer(id, hi) {
+      const t = (v2E.pts || []).find(x => x.id === id); if (!t) return;
+      v2E.ptVer = { id, hi: hi || 0 };
+      const h = escapeHtml, hojas = t.hojas || [], H = hojas[v2E.ptVer.hi] || { filas: [] };
+      const tabs = hojas.map((x, i) => `<button type="button" onclick="v2PtVer('${id}',${i})" class="px-3 py-1 text-xs rounded-lg ${i === v2E.ptVer.hi ? 'bg-indigo-50 text-indigo-700 font-bold' : 'text-slate-500 hover:bg-slate-50'}">${h(x.nombre)}</button>`).join('');
+      const est = { h: 'background:#e8eefc;font-weight:700;color:#1e293b', t: 'background:#f1f5f9;font-weight:700;border-top:1px solid #94a3b8', ti: 'font-weight:700;font-size:14px;color:#1e293b', no: 'color:#64748b;font-style:italic', 'in': 'color:#1d4ed8', ok: 'font-weight:700;color:#047857' };
+      const fmt = (c, o) => { const v = o.v; if (v === undefined || v === null || v === '') return ''; if (typeof v === 'number') return o.e === 'p' ? (v * 100).toFixed(2) + '%' : v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); return h(String(v)); };
+      const rows = (H.filas || []).map((fila, r) => '<tr><td class="px-1.5 text-[10px] text-slate-400 bg-slate-50 border border-slate-200 text-right">' + (r + 1) + '</td>' + (fila || []).map((c, j) => { const o = v2PtCelda(c); const num = typeof o.v === 'number'; return `<td class="px-2 py-1 border border-slate-200 ${num ? 'text-right tabular-nums' : ''}" style="${est[o.e] || ''}" ${o.f ? 'title="=' + h(o.f) + '"' : ''}>${fmt(j, o)}${o.f ? '<span style="color:#94a3b8;font-size:9px"> ƒ</span>' : ''}</td>`; }).join('') + '</tr>').join('');
+      const ancho = Math.max(0, ...(H.filas || []).map(f => (f || []).length));
+      const cab = '<tr><th class="bg-slate-50 border border-slate-200 w-6"></th>' + Array.from({ length: ancho }, (_, j) => `<th class="bg-slate-50 border border-slate-200 text-[10px] text-slate-500 font-semibold">${v2PtCol(j)}</th>`).join('') + '</tr>';
+      let m = document.getElementById('v2-pt-modal'); if (!m) { m = document.createElement('div'); m.id = 'v2-pt-modal'; document.body.appendChild(m); }
+      m.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(15,23,42,.45);display:flex;align-items:center;justify-content:center;padding:20px';
+      m.innerHTML = `<div class="bg-white rounded-xl shadow-2xl flex flex-col" style="width:min(1100px,100%);max-height:92vh">
+        <div class="flex items-start gap-3 px-5 py-3 border-b border-slate-200"><div class="flex-1"><div class="text-[11px] font-bold text-indigo-700">${h(t.ref)} · Procedimiento ${h(t.codigo)}</div><div class="text-base font-bold text-slate-800">${h(t.titulo)}</div><div class="text-[11px] text-slate-500 mt-0.5">Elaborado por ${h(t.elaborado_por || 'Claude')} · ${v2Fmt(t.elaborado_at)}</div></div>
+          <button type="button" onclick="v2PtExcel('${t.id}')" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-emerald-600 text-white hover:bg-emerald-700">⬇ Descargar Excel (con fórmulas)</button>
+          <button type="button" onclick="document.getElementById('v2-pt-modal').remove()" class="text-slate-400 hover:text-slate-700 text-lg leading-none">✕</button></div>
+        <div class="px-5 py-3 overflow-auto text-xs text-slate-700">
+          ${t.objetivo ? `<div class="mb-1"><b>Objetivo:</b> ${h(t.objetivo)}</div>` : ''}${t.fuente ? `<div class="mb-1"><b>Fuente:</b> ${h(t.fuente)}</div>` : ''}${t.conclusion ? `<div class="mb-2 p-2 rounded-lg bg-blue-50 border border-blue-100"><b>Conclusión:</b> ${h(t.conclusion)}</div>` : ''}
+          <div class="flex gap-1 mb-2">${tabs}</div>
+          <div class="overflow-auto"><table class="border-collapse text-[12px]">${cab}${rows}</table></div>
+          <div class="text-[10px] text-slate-400 mt-2">ƒ = celda con fórmula (pasa el cursor para verla). Azul = dato de entrada. En el Excel descargado las fórmulas quedan vivas.</div>
+        </div></div>`;
+    }
+    async function v2PtExcel(id) {
+      const t = (v2E.pts || []).find(x => x.id === id); if (!t) return;
+      if (!window.ExcelJS) { alert('No se pudo cargar el generador de Excel. Revisa tu conexión a internet.'); return; }
+      const wb = new ExcelJS.Workbook(); wb.creator = 'MGI Guerra · Claude'; wb.created = new Date();
+      const cli = ($im('v2-cliente').selectedOptions[0] || {}).textContent || v2E.cliente;
+      const c = wb.addWorksheet('Carátula'); c.getColumn(1).width = 26; c.getColumn(2).width = 80;
+      const fila = (a, b, neg) => { const r = c.addRow([a, b]); r.getCell(1).font = { bold: true }; if (neg) { r.getCell(2).font = { bold: true, size: 14 }; } return r; };
+      fila('Cliente', cli); fila('Año / visita', v2E.anio + ' · ' + v2E.visita); fila('Sumaria', 'AF · Inventarios · Inventario para la venta');
+      fila('Referencia', t.ref, true); fila('Procedimiento', t.codigo); fila('Título', t.titulo); fila('Objetivo', t.objetivo || ''); fila('Fuente de la información', t.fuente || '');
+      fila('Elaborado por', (t.elaborado_por || 'Claude') + ' · ' + v2Fmt(t.elaborado_at)); fila('Revisado por', 'Pendiente'); fila('Conclusión', t.conclusion || '');
+      c.addRow([]); const l = c.addRow(['Leyenda', 'Azul = dato de entrada tomado de la información del cliente · Negro = fórmula · Gris = total / encabezado']); l.getCell(1).font = { bold: true };
+      c.eachRow(r => { r.getCell(2).alignment = { wrapText: true, vertical: 'top' }; });
+      const ESTILO = { h: { f: 'FFE8EEFC', b: true }, t: { f: 'FFF1F5F9', b: true, top: true }, ti: { b: true, sz: 14 }, no: { i: true, col: 'FF64748B' }, 'in': { col: 'FF1D4ED8' }, ok: { b: true, col: 'FF047857' } };
+      (t.hojas || []).forEach(H => {
+        const ws = wb.addWorksheet(String(H.nombre || 'Hoja').slice(0, 31).replace(/[\\\/\?\*\[\]:]/g, '-'));
+        (H.anchos || []).forEach((w, i) => { ws.getColumn(i + 1).width = w; });
+        (H.filas || []).forEach((fl, r) => (fl || []).forEach((cel, j) => {
+          const o = v2PtCelda(cel); if (o.v === undefined && !o.f) return;
+          const x = ws.getCell(r + 1, j + 1);
+          x.value = o.f ? { formula: String(o.f).replace(/^=/, ''), result: o.v } : o.v;
+          const e = ESTILO[o.e] || {};
+          if (typeof o.v === 'number' || o.f) x.numFmt = o.e === 'p' ? '0.00%' : '#,##0.00;[Red]-#,##0.00';
+          const fnt = {}; if (e.b) fnt.bold = true; if (e.i) fnt.italic = true; if (e.col) fnt.color = { argb: e.col }; if (e.sz) fnt.size = e.sz; if (Object.keys(fnt).length) x.font = fnt;
+          if (e.f) x.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: e.f } };
+          if (e.top) x.border = { top: { style: 'thin' } };
+        }));
+      });
+      const buf = await wb.xlsx.writeBuffer();
+      const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
+      a.download = (t.ref + ' ' + t.titulo + ' - ' + cli).replace(/[\\\/:*?"<>|]/g, '-') + '.xlsx'; document.body.appendChild(a); a.click(); a.remove();
     }
     // ----- Pestaña "Subir información": un solo pedido a Claude y el detalle de lo que ya está leído -----
     async function v2SubirCargar() {
