@@ -19208,7 +19208,7 @@ ${cont.innerHTML}
     function ivIrBoton(b) { ivE.btn = b; ivPintarHojas(); }
     // ===== AF Inventarios v2 (prueba): hoja "Inventario para la venta" › pestaña Programa =====
     const v2E = { cliente: '', anio: '', visita: '', procs: [], filas: {}, cargaId: 0, abiertos: {}, tab: 'programa', sv: null };
-    const V2_TABS = [['programa', 'Programa'], ['subir', 'Subir información'], ['resultado', 'Resultado del análisis – Claude']];
+    const V2_TABS = [['programa', 'Programa'], ['subir', 'Subir información'], ['resultado', 'Resultado del análisis – Claude'], ['cuadres', 'Resumen de cuadres y cruces']];
     function v2IrTab(t) { v2E.tab = t; v2Pintar(); }
     function v2Fmt(t) { return t ? new Date(t).toLocaleString('es-EC', { day: '2-digit', month: '2-digit', year: 'numeric', hour: 'numeric', minute: '2-digit' }) : ''; }
     async function abrirImport2() {
@@ -19219,7 +19219,7 @@ ${cont.innerHTML}
     }
     async function v2Cargar() {
       const cli = $im('v2-cliente').value, anio = $im('v2-anio').value, vis = $im('v2-visita').value;
-      Object.assign(v2E, { cliente: cli, anio, visita: vis, filas: {}, sv: null, res: null });
+      Object.assign(v2E, { cliente: cli, anio, visita: vis, filas: {}, sv: null, res: null, bal: null });
       const f = $im('v2-fecha'); if (f) f.value = vis === 'final' ? anio + '-12-31' : anio + '-09-30';
       const a = $im('v2-auditor'); if (a) a.value = (typeof nombreUsuarioActivo === 'function' ? nombreUsuarioActivo() : '') || '';
       const aviso = $im('v2-aviso'), esp = $im('v2-espacio');
@@ -19276,6 +19276,7 @@ ${cont.innerHTML}
       if (tb) tb.innerHTML = V2_TABS.map(([k, n]) => '<button type="button" onclick="v2IrTab(\'' + k + '\')" class="px-3 py-1.5 text-xs rounded-lg ' + (v2E.tab === k ? 'bg-indigo-50 text-indigo-700 font-bold' : 'text-slate-500 hover:bg-slate-50') + '">' + n + '</button>').join('');
       if (v2E.tab === 'subir') { v2SubirPintar(); return; }
       if (v2E.tab === 'resultado') { v2ResPintar(); return; }
+      if (v2E.tab === 'cuadres') { v2CuaPintar(); return; }
       const h = escapeHtml;
       const cuenta = (typeof catalogoCuentas !== 'undefined' && catalogoCuentas.find(k => k.sumaria === 'AF')) || null;
       const nombreSum = cuenta ? cuenta.cuenta : 'AF - Inventarios';
@@ -19368,6 +19369,8 @@ ${cont.innerHTML}
       if (id !== v2E.resId) return;
       v2E.res = { cargado: true, error: r.error ? (r.error.message || String(r.error)) : '', data: r.data || null };
       if (v2E.tab === 'resultado') v2ResPintar();
+      if (v2E.tab === 'cuadres') v2CuaPintar();
+      v2CuaCargarBal();
     }
     function v2ResHtml(bloques, conIds) {
       const e = escapeHtml, fmt = s => e(s).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
@@ -19423,6 +19426,83 @@ ${cont.innerHTML}
       const doc = f.contentWindow.document; doc.open();
       doc.write('<!doctype html><html><head><meta charset="utf-8"><title>' + escapeHtml(R.titulo || 'Resultado del análisis') + '</title><style>body{margin:24px}' + V2R_CSS + '.v2r-sello{display:block}@media print{.v2r-tw{overflow:visible}}</style></head><body><article class="v2r"><h1 class="v2r-h1">' + escapeHtml(R.titulo || '') + '</h1>' + v2ResHtml(R.bloques, false) + '</article></body></html>');
       doc.close(); setTimeout(() => { try { f.contentWindow.focus(); f.contentWindow.print(); } catch (e) { } setTimeout(() => f.remove(), 2000); }, 300);
+    }
+    // ----- Pestaña "Resumen de cuadres y cruces": los cuadros del informe, cruzados al instante con la sumaria -----
+    const V2C_TOL = 1; // diferencia máxima (USD) para considerar que cuadra
+    function v2CuaEstado(f, sum) {
+      const n = x => (x === null || x === undefined || x === '' || !Number.isFinite(Number(x))) ? null : Number(x);
+      const may = n(f.mayor), aud = n(f.aud), tiene = Array.isArray(f.cuentas) && f.cuentas.length;
+      const base = tiene ? sum : may;                       // lo que se compara contra el análisis
+      const dif = (base !== null && aud !== null) ? Math.round((base - aud) * 100) / 100 : null;
+      const difMay = (tiene && sum !== null && may !== null) ? Math.round((sum - may) * 100) / 100 : null; // sumaria vs mayor
+      let est;
+      if (tiene && sum === null) est = 'nosum';
+      else if (difMay !== null && Math.abs(difMay) > V2C_TOL) est = 'dif';
+      else if (aud === null) est = 'sinsoporte';
+      else if (Math.abs(dif) <= V2C_TOL) est = 'cuadra';
+      else if (f.expl) est = 'expl';
+      else est = 'dif';
+      return { est, dif, difMay, base, may, aud, tiene };
+    }
+    const V2C_PILL = {
+      cuadra: ['✓ Cuadra', '#e7f6ec', '#1d6b3a'], expl: ['Diferencia explicada', '#fdf3dc', '#8a5a00'], dif: ['⚠ Diferencia', '#fde8e8', '#b42318'],
+      sinsoporte: ['○ Sin soporte', '#eef1f5', '#475467'], nosum: ['⚠ No está en la sumaria', '#fde8e8', '#b42318']
+    };
+    async function v2CuaCargarBal() {
+      const cli = v2E.cliente, anio = Number(v2E.anio), vis = v2E.visita; const id = v2E.resId;
+      v2E.bal = cli ? { cargado: false } : null; if (!cli) return;
+      let data = [], err = '';
+      for (let d = 0; ; d += 1000) {
+        const r = await supabaseClient.from('balance_comprobacion').select('codigo, cuenta, saldo').eq('cliente_id', cli).eq('anio', anio).eq('visita', vis).eq('sumaria', 'AF').range(d, d + 999);
+        if (r.error) { err = r.error.message || String(r.error); break; }
+        data.push(...(r.data || [])); if (!r.data || r.data.length < 1000) break;
+      }
+      if (id !== v2E.resId) return;
+      const m = {}; data.forEach(x => { const k = String(x.codigo || '').trim(); if (k) m[k] = { nombre: x.cuenta || '', saldo: (m[k] ? m[k].saldo : 0) + (Number(x.saldo) || 0) }; });
+      v2E.bal = { cargado: true, error: err, m };
+      if (v2E.tab === 'cuadres') v2CuaPintar();
+    }
+    function v2IrSeccion(ref) {
+      const bl = ((v2E.res && v2E.res.data && v2E.res.data.bloques) || []).filter(b => b.t === 'h2');
+      const i = bl.findIndex(b => String(b.x).toLowerCase().includes(String(ref).toLowerCase()));
+      v2E.tab = 'resultado'; v2Pintar(); if (i >= 0) setTimeout(() => v2ResIr(i), 50);
+    }
+    function v2CuaPintar() {
+      const c = $im('v2-panel'), R = v2E.res, B = v2E.bal, fm = formatoNumeroAnexo, e = escapeHtml;
+      if (!v2E.cliente || !R) { c.innerHTML = '<p class="text-xs text-slate-500 p-4">Selecciona el cliente para comenzar.</p>'; return; }
+      if (!R.cargado || !B || !B.cargado) { c.innerHTML = '<p class="text-xs text-slate-500 p-4">Cargando…</p>'; return; }
+      const cu = (R.data && Array.isArray(R.data.cuadres)) ? R.data.cuadres : [];
+      if (!cu.length) { c.innerHTML = '<div class="p-8 text-center text-sm text-slate-600 space-y-2"><p>Aún no hay cuadres para este cliente, año y visita.</p><p class="text-xs text-slate-500">Cuando Claude termine el análisis, aquí aparecerán los cuadros del informe cruzados con la sumaria.</p></div>'; return; }
+      const bal = B.m || {}, usadas = {}, cont = { cuadra: 0, expl: 0, dif: 0, sinsoporte: 0, nosum: 0 };
+      const cel = (x, cls) => '<td class="p-3 border-r border-slate-200 text-right whitespace-nowrap ' + (cls || '') + '">' + (x === null || x === undefined ? '<span class="text-slate-300">—</span>' : fm(x)) + '</td>';
+      const tarjetas = cu.map(q => {
+        const filas = (q.filas || []).map(f => {
+          const cuentas = Array.isArray(f.cuentas) ? f.cuentas : [];
+          cuentas.forEach(k => { (usadas[k] = usadas[k] || []).push(q.titulo); });
+          const enSum = cuentas.map(k => bal[k]).filter(Boolean), falta = cuentas.filter(k => !bal[k]);
+          const sum = cuentas.length ? (enSum.length ? Math.round(enSum.reduce((t, x) => t + x.saldo, 0) * 100) / 100 : null) : null;
+          const r = v2CuaEstado(f, cuentas.length && falta.length === cuentas.length ? null : sum);
+          cont[r.est]++;
+          const P = V2C_PILL[r.est];
+          const aj = Number.isFinite(Number(f.ajuste)) && f.ajuste !== null && f.ajuste !== '' && sum !== null ? '<div class="mt-1 text-[11px] text-slate-500">Ajuste propuesto <b>' + fm(f.ajuste) + '</b> → saldo ajustado <b>' + fm(Math.round((sum + Number(f.ajuste)) * 100) / 100) + '</b></div>' : '';
+          const ref = f.ref ? ' <a href="#" onclick="v2IrSeccion(\'' + e(f.ref).replace(/'/g, '') + '\');return false" class="text-[11px] hover:underline" style="color:#3b6fc4" title="Ver en el informe de Claude">ver ' + e(f.ref) + ' ›</a>' : '';
+          const dm = r.difMay !== null && Math.abs(r.difMay) > V2C_TOL ? '<div class="mt-1 text-[11px]" style="color:#b42318">Sumaria vs mayor: ' + fm(r.difMay) + '</div>' : '';
+          return '<tr class="align-top"><td class="p-3 border-r border-slate-200 text-[12px] text-slate-800">' + e(f.c || '') + ref + (f.nota ? '<div class="mt-1 text-[11px] text-slate-500">' + e(f.nota) + '</div>' : '') + (r.est === 'expl' ? '<div class="mt-1 text-[11px]" style="color:#8a5a00">' + e(f.expl) + '</div>' : '') + aj + dm + '</td>' +
+            '<td class="p-3 border-r border-slate-200 text-[11px] text-slate-600 whitespace-nowrap">' + (cuentas.length ? cuentas.map(k => e(k) + (bal[k] ? '' : ' <span style="color:#b42318">(no está)</span>')).join('<br>') : '<span class="text-slate-300">fuera de la sumaria AF</span>') + '</td>' +
+            cel(cuentas.length ? sum : null, 'font-semibold') + cel(r.may) + cel(r.aud) +
+            '<td class="p-3 border-r border-slate-200 text-right whitespace-nowrap font-bold" style="color:' + (r.dif === null ? '#94a3b8' : Math.abs(r.dif) <= V2C_TOL ? '#1d6b3a' : '#b42318') + '">' + (r.dif === null ? '—' : fm(r.dif)) + '</td>' +
+            '<td class="p-3"><span style="display:inline-block;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:700;background:' + P[1] + ';color:' + P[2] + '">' + P[0] + '</span></td></tr>';
+        }).join('');
+        return '<div class="border border-slate-200 rounded-xl shadow-sm bg-white overflow-hidden"><div class="px-4 py-3 border-b border-slate-200 bg-white flex items-center justify-between gap-2"><div class="text-[13px] font-bold text-slate-800">' + e(q.titulo || '') + '</div>' + (q.ref ? '<a href="#" onclick="v2IrSeccion(\'' + e(q.ref).replace(/'/g, '') + '\');return false" class="text-[11px] hover:underline" style="color:#3b6fc4">ver en el informe ›</a>' : '') + '</div><div class="overflow-x-auto"><table class="w-full text-left text-xs text-slate-700 border-collapse"><thead class="bg-slate-100 text-slate-600 text-[10px] font-bold border-b border-slate-200"><tr><th class="p-3 border-r border-slate-200 min-w-[240px]">Concepto</th><th class="p-3 border-r border-slate-200 min-w-[120px]">Cuenta(s)</th><th class="p-3 border-r border-slate-200 text-right">Según sumaria</th><th class="p-3 border-r border-slate-200 text-right">Según mayor</th><th class="p-3 border-r border-slate-200 text-right">Análisis de Claude</th><th class="p-3 border-r border-slate-200 text-right" title="Sumaria (o mayor, si la cuenta no está en la sumaria) menos el análisis de Claude">Diferencia</th><th class="p-3">Estado</th></tr></thead><tbody class="divide-y divide-slate-200">' + filas + '</tbody></table></div></div>';
+      }).join('');
+      // Cobertura: toda cuenta de la sumaria debe estar cruzada en algún cuadro
+      const cods = Object.keys(bal).sort();
+      const sinCruce = cods.filter(k => !usadas[k]);
+      const cob = '<div class="border border-slate-200 rounded-xl shadow-sm bg-white overflow-hidden"><div class="px-4 py-3 border-b border-slate-200 flex items-center justify-between"><div class="text-[13px] font-bold text-slate-800">Cobertura de la sumaria AF</div><span style="display:inline-block;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:700;background:' + (sinCruce.length ? '#fde8e8' : '#e7f6ec') + ';color:' + (sinCruce.length ? '#b42318' : '#1d6b3a') + '">' + (cods.length ? (sinCruce.length ? '⚠ ' + sinCruce.length + ' cuenta(s) sin cruce' : '✓ Todas las cuentas están cruzadas') : 'Sin sumaria cargada') + '</span></div><div class="overflow-x-auto"><table class="w-full text-left text-xs text-slate-700 border-collapse"><thead class="bg-slate-100 text-slate-600 text-[10px] font-bold border-b border-slate-200"><tr><th class="p-3 border-r border-slate-200">Cuenta</th><th class="p-3 border-r border-slate-200">Nombre</th><th class="p-3 border-r border-slate-200 text-right">Saldo en la sumaria</th><th class="p-3">Se cruza en</th></tr></thead><tbody class="divide-y divide-slate-200">' +
+        (cods.map(k => '<tr><td class="p-3 border-r border-slate-200 whitespace-nowrap">' + e(k) + '</td><td class="p-3 border-r border-slate-200">' + e(bal[k].nombre) + '</td><td class="p-3 border-r border-slate-200 text-right whitespace-nowrap">' + fm(bal[k].saldo) + '</td><td class="p-3 ' + (usadas[k] ? 'text-slate-600' : '') + '">' + (usadas[k] ? e([...new Set(usadas[k])].join(' · ')) : '<b style="color:#b42318">Sin cruce: pedir a Claude que lo analice</b>') + '</td></tr>').join('') || '<tr><td colspan="4" class="p-4 text-center text-slate-400">No hay balance de comprobación cargado para esta visita.</td></tr>') + '</tbody></table></div></div>';
+      const chip = (n, t, P) => '<span style="display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:99px;font-size:12px;font-weight:700;background:' + P[1] + ';color:' + P[2] + '"><span style="font-size:15px">' + n + '</span>' + t + '</span>';
+      const resumen = '<div class="flex flex-wrap items-center gap-2">' + chip(cont.cuadra, 'cuadran', V2C_PILL.cuadra) + chip(cont.expl, 'explicadas', V2C_PILL.expl) + chip(cont.dif + cont.nosum, 'con diferencia', V2C_PILL.dif) + chip(cont.sinsoporte, 'sin soporte', V2C_PILL.sinsoporte) + '<span class="text-[11px] text-slate-500 ml-1">Tolerancia: ' + fm(V2C_TOL) + ' · la sumaria se lee en vivo del balance de comprobación</span></div>';
+      c.innerHTML = '<div class="p-4 space-y-4 bg-slate-50">' + resumen + tarjetas + cob + '</div>';
     }
     async function v2Guardar(codigo, cambios) {
       const actual = v2E.filas[codigo] || {};
