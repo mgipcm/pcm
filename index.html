@@ -20127,7 +20127,7 @@ ${(im.aprendidos || []).length ? `<p class="text-xs text-slate-600 bg-slate-50 b
       filas.forEach(f => {
         if (f.ids.length || f.valor <= 0 || /Devoluci|Transferencia/.test(f.tipo)) return;
         const cand = L.filter(im => !conEntrada.has(im.id) && Math.abs(impR2(impValoresLiq(im).total || 0) - f.valor) <= tol && impR2(impValoresLiq(im).total || 0) > 0 && dias(im.fecha, f.fecha) <= 150);
-        if (cand.length === 1) { f.ids = [cand[0].id]; f.tipo = 'Importación (OC mal digitada)'; f.ocMal = true; conEntrada.add(cand[0].id); }
+        if (cand.length === 1) { f.ids = [cand[0].id]; f.tipo = 'Importación (número mal digitado)'; f.ocMal = true; conEntrada.add(cand[0].id); }
       });
       const porImp = L.map(im => {
         const mias = filas.filter(f => f.ids.length === 1 && f.ids[0] === im.id), comp2 = filas.filter(f => f.ids.length > 1 && f.ids.includes(im.id));
@@ -20135,7 +20135,7 @@ ${(im.aprendidos || []).length ? `<p class="text-xs text-slate-600 bg-slate-50 b
         let est = 'Cuadra'; if (Math.abs(dif) > tol) est = !mias.length && !comp2.length ? 'Sin entrada en el mayor' : 'Revisar';
         if (!liq && !may) est = 'N/A';
         const corte = impEstado.cfg.corte, nota = [];
-        if (mias.some(f => f.ocMal)) nota.push('Una entrada se identificó por importe y fecha: el número de OC está mal digitado en el mayor (hallazgo a reportar).');
+        if (mias.some(f => f.ocMal)) nota.push('Una entrada se identificó por importe y fecha: el número de orden o documento está mal digitado en el mayor (hallazgo a reportar).');
         if (mias.some(f => f.reversa)) nota.push('Incluye reversión(es) unidas a su ingreso original, por ' + (mias.some(f => f.reversa === 'número') ? 'número de documento' : 'importe opuesto') + '.');
         if (est !== 'Cuadra' && est !== 'N/A') { if (!mias.length && im.fecha && corte && im.fecha > corte) nota.push('La importación es posterior al corte.'); if (cmp) nota.push('Hay entradas que nombran varias importaciones (' + formatoNumeroAnexo(cmp) + '), no se asignan.'); if (mias.length && dif > 0) nota.push('El mayor registra menos que la liquidación.'); if (mias.length && dif < 0) nota.push('El mayor registra más que la liquidación.'); }
         return { id: im.id, proveedor: im.proveedor || '', fecha: im.fecha || '', liq, may, dif, cmp, n: mias.length, est, nota: nota.join(' ') };
