@@ -17869,7 +17869,7 @@ ${cont.innerHTML}
       };
       if (document.body) iniciar(); else document.addEventListener('DOMContentLoaded', iniciar);
     })();
-    const IV_VENTA_BOTONES = [['ingreso', 'i) Ingreso de información'], ['mov', 'ii) Movimiento del inventario, importaciones en tránsito y kárdex'], ['impcompras', 'iii) Compras/Liquidaciones de importación → Entradas (mayor contable)'], ['salidas', 'iv) Costo de ventas → Salidas (mayor contable)'], ['kcompras', 'v) Kárdex (entradas) → Compras/Liquidaciones de importación'], ['ksalidas', 'vi) Kárdex (salidas) → Costo de ventas']];
+    const IV_VENTA_BOTONES = [['ingreso', 'i) Ingreso de información'], ['mov', 'ii) Movimiento del inventario, importaciones en tránsito y kárdex'], ['impcompras', 'iii) Compras/Liquidaciones de importación → Entradas (mayor contable)'], ['salidas', 'iv) Costo de ventas → Salidas (mayor contable)'], ['kcompras', 'v) Kárdex (entradas) → Compras/Liquidaciones de importación'], ['ksalidas', 'vi) Kárdex (salidas) → Costo de ventas'], ['resumen', 'vii) Resumen de diferencias y conclusión']];
     const ivE = { hoja: 'venta', btn: 'ingreso' };
     function ivPintarHojas() {
       const btn = (on, clic, n, extra) => '<button type="button" onclick="' + clic + '" style="padding:8px 18px;font-size:13px;cursor:pointer;background:' + (on ? '#bdbdba' : 'transparent') + ';color:' + (on ? '#1f2937' : '#64748b') + ';font-weight:' + (on ? '700' : '500') + ';border:0;border-bottom:3px solid ' + (on ? '#1e293b' : 'transparent') + ';margin-bottom:-1px;border-radius:6px 6px 0 0">' + n + (extra || '') + '</button>';
@@ -17887,7 +17887,7 @@ ${cont.innerHTML}
         otras.classList.toggle('hidden', imp);
         if (!imp) {
           if (ivE.hoja === 'venta') otras.innerHTML = '<div class="border-t border-slate-300 mt-3 mb-2"></div><div class="flex flex-wrap gap-1 p-1.5 bg-white border border-slate-200 rounded-2xl">' + IV_VENTA_BOTONES.map(([k, n]) => '<button type="button" onclick="ivIrBoton(\'' + k + '\')" class="px-3 py-1.5 text-xs transition rounded-lg ' + (ivE.btn === k ? 'bg-slate-200 text-slate-900 font-semibold' : 'text-slate-600 hover:bg-slate-100') + '">' + n + '</button>').join('') + '</div>' +
-            (ivE.btn === 'ingreso' ? '<div id="ig-cont" class="mt-3"></div>' : ivE.btn === 'mov' ? '<div id="mv-cont" class="mt-3"></div>' : ivE.btn === 'salidas' ? '<div id="cv-cont" class="mt-3"></div>' : ivE.btn === 'kcompras' ? '<div id="kc-cont" class="mt-3"></div>' : ivE.btn === 'ksalidas' ? '<div id="ks-cont" class="mt-3"></div>' : emb ? '' : '<div class="border border-dashed border-slate-300 rounded-xl p-8 mt-3 text-center text-sm text-slate-500"><div class="font-bold text-slate-700 mb-1">' + escapeHtml((IV_VENTA_BOTONES.find(x => x[0] === ivE.btn) || [])[1] || '') + '</div>Esta herramienta está en desarrollo. La iremos construyendo en los siguientes pasos.</div>');
+            (ivE.btn === 'ingreso' ? '<div id="ig-cont" class="mt-3"></div>' : ivE.btn === 'mov' ? '<div id="mv-cont" class="mt-3"></div>' : ivE.btn === 'salidas' ? '<div id="cv-cont" class="mt-3"></div>' : ivE.btn === 'kcompras' ? '<div id="kc-cont" class="mt-3"></div>' : ivE.btn === 'ksalidas' ? '<div id="ks-cont" class="mt-3"></div>' : ivE.btn === 'resumen' ? '<div id="rs-cont" class="mt-3"></div>' : emb ? '' : '<div class="border border-dashed border-slate-300 rounded-xl p-8 mt-3 text-center text-sm text-slate-500"><div class="font-bold text-slate-700 mb-1">' + escapeHtml((IV_VENTA_BOTONES.find(x => x[0] === ivE.btn) || [])[1] || '') + '</div>Esta herramienta está en desarrollo. La iremos construyendo en los siguientes pasos.</div>');
           else if (ivE.hoja === 'voucheo') otras.innerHTML = '<div id="vc-cont" class="mt-3"></div>';
           else otras.innerHTML = '<div class="border border-dashed border-slate-300 rounded-xl p-8 text-center text-sm text-slate-500"><div class="font-bold text-slate-700 mb-1">' + escapeHtml(nom) + '</div>Esta hoja está en desarrollo.</div>';
         }
@@ -17901,6 +17901,7 @@ ${cont.innerHTML}
       else if (!emb) { if (av) av.classList.add('hidden'); if (esp) esp.classList.add('hidden'); }
       if (!imp && ivE.hoja === 'venta' && ivE.btn === 'salidas') { const hayCambio = cvE.cliente !== $im('im-cliente').value || cvE.anio !== $im('im-anio').value || cvE.visita !== $im('im-visita').value; if (hayCambio || !cvE.cargado) cvCargar(); else cvPintar(); }
       if (!imp && ivE.hoja === 'voucheo') { const hayCambio = vcE.cliente !== $im('im-cliente').value || vcE.anio !== $im('im-anio').value || vcE.visita !== $im('im-visita').value; if (hayCambio || !vcE.cargado) vcCargar(); else vcPintar(); }
+      if (!imp && ivE.hoja === 'venta' && ivE.btn === 'resumen') { const hayCambio = rsE.cliente !== $im('im-cliente').value || rsE.anio !== $im('im-anio').value || rsE.visita !== $im('im-visita').value; if (!rsE.cargando && (hayCambio || !rsE.cargado)) rsCargar(); else rsPintar(); }
       if (!imp && ivE.hoja === 'venta' && ivE.btn === 'ksalidas') { const hayCambio = ksE.cliente !== $im('im-cliente').value || ksE.anio !== $im('im-anio').value || ksE.visita !== $im('im-visita').value; if (hayCambio || !ksE.cargado) ksCargar(); else ksPintar(); }
       if (!imp && ivE.hoja === 'venta' && ivE.btn === 'kcompras') { const hayCambio = kcE.cliente !== $im('im-cliente').value || kcE.anio !== $im('im-anio').value || kcE.visita !== $im('im-visita').value; if (hayCambio || !kcE.cargado) kcCargar(); else kcPintar(); }
       if (!imp && ivE.hoja === 'venta' && (ivE.btn === 'mov' || ivE.btn === 'ingreso')) { const hayCambio = mvE.cliente !== $im('im-cliente').value || mvE.anio !== $im('im-anio').value || mvE.visita !== $im('im-visita').value; if (hayCambio || !mvE.cargado) mvCargar(); else { mvPintar(); igPintar(); } }
@@ -18538,6 +18539,147 @@ ${cont.innerHTML}
       const nOk = vcE.filas.filter(f => vcResultado(f) === 'ok').length, nEx = vcE.filas.filter(f => vcResultado(f) === 'ex').length, nPe = vcE.filas.length - nOk - nEx;
       h += '<div class="mt-3 grid sm:grid-cols-4 gap-2 text-xs"><div class="p-2 bg-slate-50 rounded-lg"><div class="text-[10px] text-slate-500">Partidas</div><div class="font-bold">' + vcE.filas.length + '</div></div><div class="p-2 rounded-lg" style="background:#d1fae5"><div class="text-[10px] text-slate-500">Sin excepción</div><div class="font-bold">' + nOk + ' · ' + F(tot(f => vcResultado(f) === 'ok')) + '</div></div><div class="p-2 rounded-lg" style="background:#fee2e2"><div class="text-[10px] text-slate-500">Con excepción</div><div class="font-bold">' + nEx + ' · ' + F(tot(f => vcResultado(f) === 'ex')) + '</div></div><div class="p-2 bg-slate-50 rounded-lg"><div class="text-[10px] text-slate-500">Pendientes</div><div class="font-bold">' + nPe + ' · ' + F(tot(f => !vcResultado(f))) + '</div></div></div>';
       c.innerHTML = h;
+    }
+
+
+    // ===== AF Inventarios › Inventario para la venta › vii) Resumen de diferencias y conclusión =====
+    // Junta las diferencias de las comparaciones ii) a vi) y la revisión de documentación; la conclusión preliminar se arma con reglas y el auditor escribe la suya.
+    const rsE = { cargaId: 0, cargando: false, cargado: false, cliente: '', anio: '', visita: '', concAud: '', act: null, tmp: null, D: null };
+    async function rsCargar() {
+      const cli = $im('im-cliente').value, anio = $im('im-anio').value, vis = $im('im-visita').value;
+      Object.assign(rsE, { cliente: cli, anio, visita: vis, cargado: false, cargando: !!cli, concAud: '', act: null, D: null });
+      if (!cli) { rsPintar(); return; }
+      const id = ++rsE.cargaId; rsPintar();
+      try {
+        const mismo = (E, ex) => E.cliente === cli && E.anio === anio && E.visita === vis && E.cargado && (ex === undefined || ex);
+        const tareas = [];
+        if (!mismo(mvE)) tareas.push(mvCargar());
+        if (!mismo(cvE)) tareas.push(cvCargar());
+        if (!mismo(kcE)) tareas.push(kcCargar());
+        if (!mismo(ksE)) tareas.push(ksCargar());
+        if (!mismo(vcE)) tareas.push(vcCargar());
+        await Promise.all(tareas);
+        if (!(impEstado.cargado && impEstado.cliente === cli && impEstado.anio === anio && impEstado.visita === vis)) await impCargar();
+        await impCargarMov();
+        const r = await supabaseClient.from('resumen_diferencias').select('conclusion_auditor, actualizado_por, updated_at').eq('cliente_id', cli).eq('anio', Number(anio)).eq('visita', vis).maybeSingle();
+        if (id !== rsE.cargaId) return;
+        if (r.data) { rsE.concAud = r.data.conclusion_auditor || ''; rsE.act = { por: r.data.actualizado_por, en: r.data.updated_at }; }
+      } catch (e) { console.error(e); }
+      if (id !== rsE.cargaId) return;
+      rsE.cargando = false; rsE.cargado = true; rsPintar();
+    }
+    function rsGuardarAud(v) {
+      rsE.concAud = v; clearTimeout(rsE.tmp);
+      const m = document.getElementById('rs-msg'); if (m) m.textContent = 'Guardando…';
+      rsE.tmp = setTimeout(async () => {
+        const fila = { cliente_id: rsE.cliente, anio: Number(rsE.anio), visita: rsE.visita, conclusion_auditor: rsE.concAud, actualizado_por: (typeof nombreUsuarioActivo === 'function' && nombreUsuarioActivo()) || null, updated_at: new Date().toISOString() };
+        const { error } = await supabaseClient.from('resumen_diferencias').upsert([fila], { onConflict: 'cliente_id,anio,visita' });
+        const m2 = document.getElementById('rs-msg'); if (m2) { m2.textContent = error ? 'No se guardó: ' + (error.message || error) : 'Guardado ✓'; m2.style.color = error ? '#dc2626' : '#64748b'; }
+        if (!error) rsE.act = { por: fila.actualizado_por, en: fila.updated_at };
+      }, 700);
+    }
+    // Reúne, de cada comparación, lo que ya calcula su pestaña. Cada bloque falla por separado: si falta un dato, se dice cuál.
+    function rsCalcular() {
+      const tol = 1, B = [], R = (a, b) => r2f(a - b);
+      const bloque = (cod, titulo, fn) => { const o = { cod, titulo, filas: [], det: [], nota: '' }; try { fn(o); } catch (e) { console.error(e); o.nota = 'No se pudo calcular: ' + (e.message || e); o.sin = true; } B.push(o); };
+      const fila = (o, concepto, a, b, ex) => { const d = R(a, b); o.filas.push({ concepto, a: r2f(a), b: r2f(b), dif: d, ok: Math.abs(d) <= tol, ex: ex || '' }); };
+      bloque('ii', 'Movimiento del inventario y saldos (mayor contable)', o => {
+        if (!mvE.cuentas.length) { o.nota = 'Aún no hay movimiento del inventario cargado.'; o.sin = true; return; }
+        mvE.cuentas.forEach(c => {
+          const nom = ((c.codigo ? c.codigo + ' ' : '') + (c.cuenta || 'Cuenta')).trim(), ini = mvN(c.saldo_inicial), mov = MV_MOV.reduce((a, k) => a + mvVal(c, k), 0), fin = mvN(c.saldo_final);
+          fila(o, nom + ': saldo inicial + movimientos vs saldo final', ini + mov, fin);
+          if (mvHayLibros(c)) fila(o, nom + ': saldo final vs balance de comprobación', fin, mvN(c.saldo_libros));
+        });
+      });
+      bloque('iii', 'Liquidaciones de importación → Entradas (mayor contable)', o => {
+        const X = impResumenCalc();
+        if (!X) { o.nota = 'Falta la lectura de liquidaciones o del mayor contable.'; o.sin = true; return; }
+        X.filas.forEach(f => { if (f.est === 'N/A') return; fila(o, 'Importación ' + f.id + (f.proveedor ? ' (' + f.proveedor + ')' : '') + ': liquidación vs mayor', f.baseLiq, f.ajust); });
+        if (Math.abs(X.compartido) > tol) o.det.push('Gastos que el mayor reparte entre varias importaciones y no se asignaron a una sola: ' + formatoNumeroAnexo(X.compartido));
+        if (Math.abs(X.posterior) > tol) o.det.push('Gastos registrados después de la fecha de corte: ' + formatoNumeroAnexo(X.posterior));
+      });
+      bloque('iv', 'Costo de ventas → Salidas (mayor contable)', o => {
+        if (!cvE.cv.length) { o.nota = 'Aún no hay lectura del costo de ventas.'; o.sin = true; return; }
+        const X = cvCalcular();
+        fila(o, 'Salidas vs costo de ventas del mayor', X.tSal, X.tCos);
+        if (X.hayMov && X.hayVal) fila(o, 'Salidas vs movimiento del inventario (pestaña i)', X.tSal, X.movTot);
+        if (X.hayBal) fila(o, 'Costo de ventas del mayor vs balance de comprobación', X.tCos, X.tBal);
+        if (X.mesesDifMov) o.det.push('Meses donde las salidas no coinciden con el movimiento del inventario: ' + X.mesesDifMov);
+        X.filas.filter(m => Math.abs(m.dif) > tol).forEach(m => o.det.push(cvMes(m.ym) + ': diferencia de ' + formatoNumeroAnexo(m.dif)));
+      });
+      bloque('v', 'Kárdex (entradas) → Compras/Liquidaciones de importación', o => {
+        if (!kcE.mov.length || !kcE.prod.length) { o.nota = 'Faltan datos: ' + (!kcE.mov.length ? 'movimiento del inventario' : 'kárdex') + '.'; o.sin = true; return; }
+        const X = kcCalcular();
+        X.cuadre.forEach(x => { if (!['compras', 'salidas', 'ajustes', 'reclasificaciones', 'otros', 'saldo_inicial', 'saldo_final'].includes(x.k)) return;
+          const ex = (x.exp && x.exp.length) ? 'Se explica por: ' + x.exp.map(c => c.t + ' (' + formatoNumeroAnexo(Math.abs(c.v)) + ')').join('; ') : '';
+          fila(o, x.t + ': mayor vs kárdex', x.may, x.kar, ex); });
+        X.filas.filter(m => Math.abs(m.dif) > tol).forEach(m => o.det.push('Compras de ' + cvMes(m.ym) + ': diferencia mayor − kárdex de ' + formatoNumeroAnexo(m.dif)));
+        o.det.push('Liquidaciones de importación en el año: ' + formatoNumeroAnexo(X.tL));
+      });
+      bloque('vi', 'Kárdex (salidas) → Costo de ventas', o => {
+        if (!ksE.kar.length || !ksE.cv.length) { o.nota = 'Faltan datos: ' + (!ksE.kar.length ? 'kárdex' : 'costo de ventas del mayor') + '.'; o.sin = true; return; }
+        const X = ksCalcular();
+        fila(o, 'Costo de ventas del mayor vs salidas del kárdex (año)', X.T.may, X.T.kar, (X.T.exp && X.T.exp.length) ? 'Se explica por: ' + X.T.exp.map(c => c.t + ' (' + formatoNumeroAnexo(Math.abs(c.v)) + ')').join('; ') : '');
+        X.filas.filter(m => Math.abs(m.dif) > tol).forEach(m => o.det.push(m.t + ': diferencia de ' + formatoNumeroAnexo(m.dif)));
+      });
+      // Revisión de documentación (voucheo)
+      const V = { n: 0, ok: 0, ex: 0, pen: 0, claude: 0, ex_l: [] };
+      if (vcE.cargado && vcE.cliente === rsE.cliente) vcE.filas.forEach(f => { V.n++; const r = vcResultado(f); if (r === 'ok') V.ok++; else if (r === 'ex') { V.ex++; V.ex_l.push(f); } else V.pen++; if (VC_ATRIB.some(a => vcAplica(a, f) && !(f.rev || {})[a.k] && vcDeClaude(f, a.k))) V.claude++; });
+      return { B, V, tol };
+    }
+    function rsConclusion(D) {
+      const F = formatoNumeroAnexo, con = D.B.filter(b => !b.sin), sin = D.B.filter(b => b.sin);
+      const filas = con.flatMap(b => b.filas.map(f => ({ ...f, cod: b.cod }))), dif = filas.filter(f => !f.ok), ok = filas.length - dif.length;
+      const t = [];
+      t.push('Se compararon ' + con.length + ' de ' + D.B.length + ' cruces: ' + filas.length + ' comparaciones, de las cuales ' + ok + ' cuadran y ' + dif.length + ' tienen una diferencia mayor a ' + D.tol + '.');
+      if (dif.length) {
+        const top = [...dif].sort((a, b) => Math.abs(b.dif) - Math.abs(a.dif)).slice(0, 4);
+        t.push('Las diferencias más importantes son: ' + top.map(f => f.cod + ') ' + f.concepto + ' (' + F(f.dif) + ')' + (f.ex ? ', ' + f.ex.charAt(0).toLowerCase() + f.ex.slice(1) : '')).join('; ') + '.');
+        if (dif.length > top.length) t.push('Hay ' + (dif.length - top.length) + ' diferencia(s) más en el detalle.');
+      } else if (filas.length) t.push('No se detectaron diferencias que requieran seguimiento en las comparaciones cargadas.');
+      if (sin.length) t.push('Quedan sin comparar: ' + sin.map(b => b.cod + ') ' + b.nota.replace(/\.$/, '')).join('; ') + '.');
+      if (D.V.n) t.push('Revisión de documentación: de ' + D.V.n + ' partidas de la muestra, ' + D.V.ok + ' sin excepción, ' + D.V.ex + ' con excepción y ' + D.V.pen + ' pendientes' + (D.V.claude ? '; hay marcas de Claude por ratificar' : '') + '.');
+      t.push('Esta conclusión se armó con reglas a partir de las cifras de las pestañas; el auditor debe ratificarla o reemplazarla en el recuadro de abajo.');
+      return t;
+    }
+    function rsPintar() {
+      if (typeof ivE === 'undefined' || ivE.hoja !== 'venta' || ivE.btn !== 'resumen') return;
+      const c = document.getElementById('rs-cont'); if (!c) return;
+      if (!rsE.cliente) { c.innerHTML = '<p class="text-xs text-slate-500 border border-dashed border-slate-300 rounded-xl p-4">Selecciona el cliente para comenzar.</p>'; return; }
+      if (!rsE.cargado) { c.innerHTML = '<p class="text-xs text-slate-500 p-4">Reuniendo las diferencias de las comparaciones…</p>'; return; }
+      const F = formatoNumeroAnexo, e = escapeHtml, TH = 'px-2 py-2 text-[11px] font-bold text-slate-700 bg-slate-100 border-b border-slate-300', TD = 'px-2 py-1';
+      const D = rsE.D = rsCalcular(), concl = rsConclusion(D);
+      let h = '<div class="text-[11px] text-slate-500 mb-3">Aquí se juntan las diferencias de las comparaciones ii) a vi) y la revisión de documentación. Las cifras son las mismas de cada pestaña; si cambias algo allí, vuelve a entrar a esta pestaña para actualizarlas.</div>';
+      h += '<div class="flex flex-wrap items-center gap-2 mb-3"><button type="button" onclick="rsDescargar()" class="px-3 py-1.5 rounded-lg text-xs transition bg-slate-200 text-slate-900 hover:bg-slate-300 font-semibold">Descargar papel de trabajo en Excel</button><button type="button" onclick="rsCargar()" class="px-1 py-1.5 text-xs font-bold bg-transparent border-0 hover:underline" style="color:#449964">↻ Actualizar cifras</button><span id="rs-msg" class="text-[11px] text-slate-500"></span></div>';
+      h += '<div class="overflow-x-auto border border-slate-200 rounded-xl"><table class="w-full text-[11px] border-collapse" style="min-width:820px"><thead><tr><th class="' + TH + ' text-left">Comparación</th><th class="' + TH + ' text-right">Un lado</th><th class="' + TH + ' text-right">Otro lado</th><th class="' + TH + ' text-right">Diferencia</th><th class="' + TH + ' text-center">Resultado</th></tr></thead><tbody>';
+      D.B.forEach(b => {
+        h += '<tr class="bg-slate-50 border-t border-slate-300"><td colspan="5" class="' + TD + ' font-bold text-slate-800">' + e(b.cod) + ') ' + e(b.titulo) + (b.nota ? ' <span class="font-normal text-amber-700">· ' + e(b.nota) + '</span>' : '') + '</td></tr>';
+        b.filas.forEach(f => { h += '<tr class="border-t border-slate-100 align-top"><td class="' + TD + '">' + e(f.concepto) + (f.ex ? '<div class="text-slate-500">' + e(f.ex) + '</div>' : '') + '</td><td class="' + TD + ' text-right whitespace-nowrap">' + F(f.a) + '</td><td class="' + TD + ' text-right whitespace-nowrap">' + F(f.b) + '</td><td class="' + TD + ' text-right whitespace-nowrap font-bold" style="color:' + (f.ok ? '#047857' : '#dc2626') + '">' + F(f.dif) + '</td><td class="' + TD + ' text-center font-bold" style="color:' + (f.ok ? '#047857' : '#dc2626') + '">' + (f.ok ? 'Cuadra' : 'Con diferencia') + '</td></tr>'; });
+        b.det.forEach(t => { h += '<tr><td colspan="5" class="' + TD + ' text-slate-500 pl-6">' + e(t) + '</td></tr>'; });
+      });
+      h += '</tbody></table></div>';
+      h += '<div class="grid lg:grid-cols-2 gap-3 mt-3"><div class="p-3 bg-white border border-slate-200 rounded-xl space-y-1 text-xs text-slate-700"><div class="text-[13px] font-semibold text-slate-800 ic-claude ic-tomate">Conclusión preliminar</div>' + concl.map(t => '<p>' + e(t) + '</p>').join('') + '</div>';
+      h += '<div class="p-3 bg-white border border-slate-200 rounded-xl space-y-1 text-xs text-slate-700"><div class="text-[13px] font-semibold text-slate-800">Conclusión del auditor</div><textarea id="rs-aud" rows="8" oninput="rsGuardarAud(this.value)" placeholder="Escribe aquí tu conclusión sobre las diferencias y los procedimientos efectuados." class="w-full p-2 border border-slate-300 rounded-lg text-xs">' + e(rsE.concAud) + '</textarea>' + (rsE.act && rsE.act.por ? '<div class="text-[11px] text-slate-500">Último cambio: ' + e(nombreMostrado(rsE.act.por)) + '</div>' : '') + '</div></div>';
+      c.innerHTML = h;
+    }
+    async function rsDescargar() {
+      if (!window.ExcelJS) { alert('No se pudo cargar el generador de Excel. Revisa tu conexión a internet.'); return; }
+      const D = rsE.D || rsCalcular(), concl = rsConclusion(D), TNx = { imp: 'Importación', loc: 'Compra local', dev: 'Devolución o reversión', bod: 'Transferencia entre bodegas' };
+      const info = [['Año evaluado', rsE.anio], ['Visita', rsE.visita === 'final' ? 'Final' : 'Preliminar'], ['Preparado por', (typeof nombreUsuarioActivo === 'function' && nombreUsuarioActivo()) || '']];
+      const aoa = [['Cruce', 'Comparación', 'Un lado', 'Otro lado', 'Diferencia', 'Resultado', 'Explicación']];
+      D.B.forEach(b => { if (b.nota) aoa.push([b.cod + ') ' + b.titulo, b.nota, '', '', '', 'Sin comparar', '']); b.filas.forEach(f => aoa.push([b.cod + ') ' + b.titulo, f.concepto, f.a, f.b, f.dif, f.ok ? 'Cuadra' : 'Con diferencia', f.ex])); b.det.forEach(t => aoa.push([b.cod + ') ' + b.titulo, t, '', '', '', '', ''])); });
+      aoa.push([], ['Conclusión preliminar (armada con reglas)'], ...concl.map(t => [t]), [], ['Conclusión del auditor'], [rsE.concAud || '(sin conclusión escrita)']);
+      const hojas = [{ nombre: 'Resumen de diferencias', aoa, anchos: [{ wch: 44 }, { wch: 70 }, { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 60 }], op: { titulo: 'Resumen de diferencias y conclusión', info, totales: [] } }];
+      const mes = (nombre, tit, cab, fl) => hojas.push({ nombre, aoa: [cab, ...fl], anchos: cab.map((x, i) => ({ wch: i === 0 ? 24 : 20 })), op: { titulo: tit, info, totales: [] } });
+      try { if (mvE.cuentas.length) mes('ii Cuentas', 'Movimiento del inventario por cuenta', ['Cuenta', 'Saldo inicial', 'Movimientos', 'Saldo final', 'Diferencia', 'Según balance', 'Diferencia con balance'], mvE.cuentas.map(c => [((c.codigo ? c.codigo + ' ' : '') + (c.cuenta || '')).trim(), mvN(c.saldo_inicial), r2f(MV_MOV.reduce((a, k) => a + mvVal(c, k), 0)), mvN(c.saldo_final), mvDif(c), mvHayLibros(c) ? mvN(c.saldo_libros) : '', mvHayLibros(c) ? mvDifLibros(c) : ''])); } catch (x) { console.error(x); }
+      try { const X = impResumenCalc(); if (X) mes('iii Importaciones', 'Liquidaciones de importación vs mayor contable', ['Importación', 'Proveedor', 'Según liquidación', 'Según mayor', 'Diferencia'], X.filas.map(f => [f.id, f.proveedor, f.baseLiq, f.ajust, f.dif])); } catch (x) { console.error(x); }
+      try { if (cvE.cv.length) { const X = cvCalcular(); mes('iv Costo de ventas', 'Costo de ventas vs salidas', ['Mes', 'Salidas', 'Costo de ventas del mayor', 'Diferencia'], [...X.filas.map(m => [cvMes(m.ym), m.sal, m.cos, m.dif]), ['Total', X.tSal, X.tCos, X.dif]]); } } catch (x) { console.error(x); }
+      try { if (kcE.mov.length && kcE.prod.length) { const X = kcCalcular(); mes('v Kárdex entradas', 'Kárdex (entradas) vs compras del mayor', ['Mes', 'Mayor contable', 'Kárdex', 'Diferencia', 'Liquidaciones'], [...X.filas.map(m => [cvMes(m.ym), m.may, m.kar, m.dif, m.liq]), ['Total', X.tM, X.tK, X.dif, X.tL]]); } } catch (x) { console.error(x); }
+      try { if (ksE.kar.length && ksE.cv.length) { const X = ksCalcular(); mes('vi Kárdex salidas', 'Kárdex (salidas) vs costo de ventas', ['Mes', 'Salidas del kárdex', 'Costo de ventas del mayor', 'Diferencia'], [...X.filas.map(m => [m.t, m.kar, m.may, m.dif]), ['Total', X.T.kar, X.T.may, X.T.dif]]); } } catch (x) { console.error(x); }
+      try { if (vcE.cargado && vcE.cliente === rsE.cliente && vcE.filas.length) { const E = { ok: 'Sin excepción', ex: 'Con excepción', na: 'No aplica', '': 'Pendiente' }, ap = VC_ATRIB;
+        mes('Voucheo', 'Revisión de documentación (voucheo)', ['N.°', 'Tipo', 'Fecha', 'Referencia', 'Descripción', 'Valor', ...ap.map(a => a.t), 'Resultado', 'Comentario', 'Soportes'], vcE.filas.map(f => [f.k || '', TNx[f.tipo] || 'Compra local', f.fecha || '', f.ref || '', f.desc || '', Number(f.valor) || 0, ...ap.map(a => vcAplica(a, f) ? (E[vcVal(f, a.k)] || 'Pendiente') + (!(f.rev || {})[a.k] && vcDeClaude(f, a.k) ? ' (Claude)' : '') : '—'), vcResultado(f) === 'ok' ? 'Sin excepción' : vcResultado(f) === 'ex' ? 'Con excepción' : 'Pendiente', f.nota || '', (f.docs || []).length])); } } catch (x) { console.error(x); }
+      const cli = (typeof impNombreCliente === 'function' && impNombreCliente()) || 'cliente';
+      try { await arrXlsxConFormato(hojas, cli, 'Papel_de_trabajo_inventarios_' + String(cli).replace(/[^A-Za-z0-9]+/g, '_').slice(0, 30) + '_' + rsE.anio + '.xlsx'); } catch (x) { alert('No se pudo armar el Excel: ' + (x.message || x)); }
     }
 
     // ===== AF Inventarios › Inventario para la venta › vi) Kárdex (salidas) → Costo de ventas =====
