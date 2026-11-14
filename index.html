@@ -4816,8 +4816,15 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       const et = pcEtiquetas(sum, valorAnalisis('pc-hoja')).filter(x => x !== 'Otro');
       const todo = pcEtiquetasElegidas.includes(PC_TODO);
       if (sum === 'AF' && valorAnalisis('pc-hoja') === 'venta') {
-        const nom = { 'Mayor contable completo': 'Mayor contable completo', 'Mayor contable de inventarios': 'Mayor contable de inventarios e importaciones', 'Balance de comprobación': 'Balance de comprobación (subir desde sumarias)', 'Kárdex (movimiento por producto)': 'Kárdex del cliente: movimiento por producto (Excel, CSV o PDF)', 'Liquidación de importación (PDF)': 'Liquidaciones de importación (PDF)', 'Liquidación de importación (Excel)': 'Liquidaciones de importación (Excel)', 'Declaración aduanera (DAI / DAU)': 'Declaraciones aduaneras (DAI / DAU)', 'Factura del proveedor': 'Facturas del proveedor' };
-        el.innerHTML = '<div class="font-bold">Qué subir:</div>' + et.filter(x => x !== PC_TODO).map((x, i) => '<div>' + (i + 1) + ') ' + ((todo || pcEtiquetasElegidas.includes(x)) ? '<span class="text-emerald-700">✓ ' : '<span class="text-slate-500">') + escapeHtml(nom[x] || x) + '</span></div>').join('');
+        const grupos = [
+          ['Mayor contable: completo o de inventarios e importaciones', ['Mayor contable completo', 'Mayor contable de inventarios']],
+          ['Balance de comprobación (subir desde sumarias)', ['Balance de comprobación']],
+          ['Kárdex del cliente: completo o del inventario (Excel, CSV o PDF)', ['Kárdex (movimiento por producto)', 'Kárdex (saldos por producto)']],
+          ['Liquidaciones de importación (PDF o Excel)', ['Liquidación de importación (PDF)', 'Liquidación de importación (Excel)']],
+          ['Declaraciones aduaneras (DAI / DAU)', ['Declaración aduanera (DAI / DAU)']],
+          ['Facturas del proveedor', ['Factura del proveedor']]
+        ];
+        el.innerHTML = '<div class="font-bold">Qué subir:</div>' + grupos.map(([t, ks], i) => '<div>' + (i + 1) + ') ' + ((todo || ks.some(k => pcEtiquetasElegidas.includes(k))) ? '<span class="text-emerald-700">✓ ' : '<span class="text-slate-500">') + escapeHtml(t) + '</span></div>').join('');
         return;
       }
       el.innerHTML = '<b>Qué subir:</b> ' + et.filter(x => x !== PC_TODO).map(x => ((todo || pcEtiquetasElegidas.includes(x)) ? '<span class="text-emerald-700">✓ ' : '<span class="text-slate-500">○ ') + escapeHtml(x) + '</span>').join(' · ');
