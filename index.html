@@ -2212,9 +2212,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       <div class="flex flex-wrap items-center justify-between gap-2"><span id="v2-estado" class="text-[11px] text-slate-500"></span></div>
       <p id="v2-aviso" class="text-xs text-slate-500 border border-dashed border-slate-300 rounded-xl p-4">Selecciona el cliente para comenzar.</p>
       <div id="v2-espacio" class="hidden space-y-2">
-        <div class="flex flex-wrap gap-1 p-1.5 bg-white border border-slate-200 rounded-2xl">
-          <button type="button" class="px-3 py-1.5 text-xs rounded-lg bg-indigo-50 text-indigo-700 font-bold">Programa</button>
-        </div>
+        <div id="v2-tabs" class="flex flex-wrap gap-1 p-1.5 bg-white border border-slate-200 rounded-2xl"></div>
         <div id="v2-panel" class="overflow-x-auto border border-slate-200 rounded-xl shadow-sm bg-white"></div>
       </div>
     </section>
@@ -19209,7 +19207,9 @@ ${cont.innerHTML}
     function ivIrHoja(h) { ivE.hoja = h; ivPintarHojas(); }
     function ivIrBoton(b) { ivE.btn = b; ivPintarHojas(); }
     // ===== AF Inventarios v2 (prueba): hoja "Inventario para la venta" › pestaña Programa =====
-    const v2E = { cliente: '', anio: '', visita: '', procs: [], filas: {}, cargaId: 0, abiertos: {} };
+    const v2E = { cliente: '', anio: '', visita: '', procs: [], filas: {}, cargaId: 0, abiertos: {}, tab: 'programa', sv: null };
+    const V2_TABS = [['programa', 'Programa'], ['subir', 'Subir información']];
+    function v2IrTab(t) { v2E.tab = t; v2Pintar(); }
     function v2Fmt(t) { return t ? new Date(t).toLocaleString('es-EC', { day: '2-digit', month: '2-digit', year: 'numeric', hour: 'numeric', minute: '2-digit' }) : ''; }
     async function abrirImport2() {
       asegurarClientesEn('v2-cliente');
@@ -19239,6 +19239,7 @@ ${cont.innerHTML}
       const ult = (r.data || []).filter(x => x.actualizado_por).sort((x, y) => String(y.updated_at).localeCompare(String(x.updated_at)))[0];
       const u = $im('v2-actualizado'); u.value = ult ? nombreMostrado(ult.actualizado_por) : ''; u.title = ult ? 'Último cambio: ' + v2Fmt(ult.updated_at) : '';
       v2Pintar();
+      v2SubirCargar();
     }
     // Si la referencia no está tal cual en la base de normas (p. ej. "NIC 2.9 y 2.36"), la arma desde sus partes
     function v2ArmarChips(txt) {
@@ -19270,6 +19271,9 @@ ${cont.innerHTML}
         : '<span class="inline-block px-1.5 py-0.5 m-0.5 text-[11px] text-slate-500">' + escapeHtml(c.t) + '</span>').join('');
     }
     function v2Pintar() {
+      const tb = $im('v2-tabs');
+      if (tb) tb.innerHTML = V2_TABS.map(([k, n]) => '<button type="button" onclick="v2IrTab(\'' + k + '\')" class="px-3 py-1.5 text-xs rounded-lg ' + (v2E.tab === k ? 'bg-indigo-50 text-indigo-700 font-bold' : 'text-slate-500 hover:bg-slate-50') + '">' + n + '</button>').join('');
+      if (v2E.tab === 'subir') { v2SubirPintar(); return; }
       const h = escapeHtml;
       const cuenta = (typeof catalogoCuentas !== 'undefined' && catalogoCuentas.find(k => k.sumaria === 'AF')) || null;
       const nombreSum = cuenta ? cuenta.cuenta : 'AF - Inventarios';
@@ -19292,6 +19296,48 @@ ${cont.innerHTML}
       });
       $im('v2-panel').innerHTML = `<table class="w-full text-left text-xs text-slate-700 border-collapse"><thead class="bg-slate-100 text-slate-600 text-[10px] font-bold border-b border-slate-200"><tr>
         <th class="p-3 border-r border-slate-200 min-w-[90px]">Código</th><th class="p-3 border-r border-slate-200 min-w-[360px] w-full">Procedimiento</th><th class="p-3 border-r border-slate-200 min-w-[170px]">Norma de referencia</th><th class="p-3 border-r border-slate-200 min-w-[130px]">Elaborado por<br><span class="font-normal">(Claude)</span></th><th class="p-3 border-r border-slate-200 min-w-[150px]">Revisado por<br><span class="font-normal">(quien completa)</span></th><th class="p-3 min-w-[200px]">P/T</th></tr></thead><tbody class="divide-y divide-slate-200">${filas || '<tr><td colspan="6" class="p-8 text-center text-slate-400">No hay procedimientos cargados para esta sumaria.</td></tr>'}</tbody></table>`;
+    }
+    // ----- Pestaña "Subir información": un solo pedido a Claude y el detalle de lo que ya está leído -----
+    async function v2SubirCargar() {
+      const cli = v2E.cliente, anio = Number(v2E.anio), vis = v2E.visita;
+      v2E.svId = (v2E.svId || 0) + 1; const id = v2E.svId; v2E.sv = cli ? { cargado: false, id } : null;
+      if (!cli) return;
+      if (v2E.tab === 'subir') v2SubirPintar();
+      const q = (t, sel, hoja) => { let r = supabaseClient.from(t).select(sel).eq('cliente_id', cli).eq('anio', anio).eq('visita', vis); if (hoja) r = r.eq('hoja', hoja); return r.maybeSingle(); };
+      const [mv, ki, cv, im] = await Promise.all([
+        q('inventario_movimiento', 'cuentas, actualizado_por, updated_at', 'venta'),
+        q('inventario_movimiento', 'cuentas, actualizado_por, updated_at', 'kardex'),
+        q('inventario_movimiento', 'cuentas, actualizado_por, updated_at', 'costo_ventas'),
+        q('importaciones_datos', 'cruce, config, liquidaciones, origen, estado_revision, revisado_por, revisado_at')
+      ]);
+      if (!v2E.sv || id !== v2E.sv.id) return;
+      const err = [mv, ki, cv, im].map(x => x && x.error).filter(Boolean)[0];
+      v2E.sv = { id, cargado: true, error: err ? (err.message || String(err)) : '', mov: mv.data || null, kar: ki.data || null, cv: cv.data || null, imp: im.data || null };
+      if (v2E.tab === 'subir') v2SubirPintar();
+    }
+    function v2SubirPintar() {
+      const c = $im('v2-panel'), S = v2E.sv;
+      if (!v2E.cliente || !S) { c.innerHTML = '<p class="text-xs text-slate-500 p-4">Selecciona el cliente para comenzar.</p>'; return; }
+      if (!S.cargado) { c.innerHTML = '<p class="text-xs text-slate-500 p-4">Cargando…</p>'; return; }
+      if (S.error) { c.innerHTML = '<p class="text-xs text-red-600 font-bold p-4">No se pudo cargar: ' + escapeHtml(S.error) + '</p>'; return; }
+      const I = S.imp || {}, cr = I.cruce || {}, cf = I.config || {}, liq = (I.liquidaciones && Array.isArray(I.liquidaciones.imports)) ? I.liquidaciones.imports : [];
+      const nAs = Array.isArray(cr.asientos) ? cr.asientos.length : 0, nLin = Array.isArray(cr.lineas) ? cr.lineas.length : 0;
+      const nCta = S.mov && Array.isArray(S.mov.cuentas) ? S.mov.cuentas.length : 0, nKar = S.kar && Array.isArray(S.kar.cuentas) ? S.kar.cuentas.length : 0, nCv = S.cv && Array.isArray(S.cv.cuentas) ? S.cv.cuentas.length : 0;
+      const fch = f => { const m = String(f || '').match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? m[3] + '/' + m[2] + '/' + m[1] : ''; };
+      const fila = (nombre, ok, det) => '<tr class="border-b border-slate-100"><td class="px-2 py-1.5 w-6 text-center">' + (ok ? '<span class="text-emerald-700 font-bold">✓</span>' : '<span class="text-slate-400">○</span>') + '</td><td class="px-2 py-1.5">' + nombre + '</td><td class="px-2 py-1.5 ' + (ok ? 'text-slate-700' : 'text-slate-400') + '">' + det + '</td></tr>';
+      const e = escapeHtml;
+      const estado = '<div class="mt-3 p-3 bg-white border border-slate-200 rounded-xl text-xs text-slate-700"><div class="flex items-center justify-between gap-2 mb-1"><div class="text-[13px] font-semibold text-slate-800">Qué hay leído de este cliente, año y visita</div><button type="button" onclick="v2SubirCargar()" class="px-2 py-1 text-[11px] font-semibold border border-slate-300 rounded-lg hover:bg-slate-50">↻ Actualizar</button></div><div class="overflow-x-auto"><table class="text-[11px] leading-tight border-collapse w-full" style="min-width:34rem"><tbody>' +
+        fila('Mayor contable', !!cr.archivo, cr.archivo ? e(cr.archivo) + (cr.fecha ? ' · leído el ' + fch(cr.fecha) : '') : 'Aún no leído') +
+        fila('Movimiento del inventario', nCta > 0, nCta ? nCta + ' cuenta(s) de inventario' + (S.mov.updated_at ? ' · actualizado el ' + fch(S.mov.updated_at) : '') : 'Aún no leído') +
+        fila('Importaciones en tránsito', !!(cf.transito && nAs), cf.transito && nAs ? 'Cuenta ' + e(cf.transito) + ' · ' + nAs + ' asientos' : 'Aún no leído') +
+        fila('Kárdex', nKar > 0, nKar ? nKar + ' producto(s)' + (S.kar.updated_at ? ' · actualizado el ' + fch(S.kar.updated_at) : '') : 'Aún no leído') +
+        fila('Costo de ventas → Salidas (mayor contable)', nCv > 0, nCv ? nCv + ' cuenta(s) de costo de ventas' + (S.cv.updated_at ? ' · actualizado el ' + fch(S.cv.updated_at) : '') : 'Aún no leído (indica las cuentas de costo de ventas al hacer el pedido)') +
+        fila('Liquidaciones de importación', liq.length > 0, liq.length ? liq.length + ' importaciones' : 'Aún no leídas') +
+        fila('Liquidaciones → Importaciones (mayor contable)', nLin > 0, nLin ? nLin + ' líneas del mayor ubicadas en las importaciones' : 'Aún no hay cruce') +
+        '</tbody></table></div></div>';
+      const porClaude = (S.mov && S.mov.actualizado_por === 'Claude') || (S.kar && S.kar.actualizado_por === 'Claude') || estadoOrigen(S.imp) === 'procesado';
+      const sello = porClaude ? '<div class="mt-3"><span class="pill-origen rev ic-claude">Procesado por Claude, sujeto a modificaciones en caso de existir</span></div>' : '';
+      c.innerHTML = '<div class="p-3">' + sello + pcBarraPedido('venta', v2E.cliente, v2E.anio, v2E.visita, 'Aquí se sube todo en un solo pedido: el mayor contable, las cuentas de inventario y de tránsito, las cuentas de costo de ventas, el kárdex del cliente y las liquidaciones de importación (si el cliente importa). Claude lo lee junto y las demás pestañas leen de aquí. Cuando el pedido pase a "hecho", presiona «Actualizar».') + estado + '</div>';
     }
     async function v2Guardar(codigo, cambios) {
       const actual = v2E.filas[codigo] || {};
