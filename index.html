@@ -19458,8 +19458,16 @@ ${cont.innerHTML}
         data.push(...(r.data || [])); if (!r.data || r.data.length < 1000) break;
       }
       if (id !== v2E.resId) return;
-      const m = {}; data.forEach(x => { const k = String(x.codigo || '').trim(); if (k) m[k] = { nombre: x.cuenta || '', saldo: (m[k] ? m[k].saldo : 0) + (Number(x.saldo) || 0) }; });
-      v2E.bal = { cargado: true, error: err, m };
+      const m = {}, af = {}; data.forEach(x => { const k = String(x.codigo || '').trim(); if (k) { m[k] = { nombre: x.cuenta || '', saldo: (m[k] ? m[k].saldo : 0) + (Number(x.saldo) || 0), sumaria: 'AF' }; af[k] = 1; } });
+      // cuentas de los cuadros que están en otras sumarias (por ejemplo, costo de ventas)
+      const cu = (v2E.res && v2E.res.data && v2E.res.data.cuadres) || [], otras = [...new Set(cu.flatMap(q => (q.filas || []).flatMap(f => f.cuentas || [])).map(k => String(k).trim()).filter(k => k && !af[k]))];
+      if (otras.length) {
+        const r2 = await supabaseClient.from('balance_comprobacion').select('codigo, cuenta, saldo, sumaria').eq('cliente_id', cli).eq('anio', anio).eq('visita', vis).in('codigo', otras);
+        if (r2.error) err = err || (r2.error.message || String(r2.error));
+        (r2.data || []).forEach(x => { const k = String(x.codigo || '').trim(); if (k) m[k] = { nombre: x.cuenta || '', saldo: (m[k] ? m[k].saldo : 0) + (Number(x.saldo) || 0), sumaria: x.sumaria || '' }; });
+      }
+      if (id !== v2E.resId) return;
+      v2E.bal = { cargado: true, error: err, m, af };
       if (v2E.tab === 'cuadres') v2CuaPintar();
     }
     function v2IrSeccion(ref) {
@@ -19488,7 +19496,7 @@ ${cont.innerHTML}
           const ref = f.ref ? ' <a href="#" onclick="v2IrSeccion(\'' + e(f.ref).replace(/'/g, '') + '\');return false" class="text-[11px] hover:underline" style="color:#3b6fc4" title="Ver en el informe de Claude">ver ' + e(f.ref) + ' ›</a>' : '';
           const dm = r.difMay !== null && Math.abs(r.difMay) > V2C_TOL ? '<div class="mt-1 text-[11px]" style="color:#b42318">Sumaria vs mayor: ' + fm(r.difMay) + '</div>' : '';
           return '<tr class="align-top"><td class="p-3 border-r border-slate-200 text-[12px] text-slate-800">' + e(f.c || '') + ref + (f.nota ? '<div class="mt-1 text-[11px] text-slate-500">' + e(f.nota) + '</div>' : '') + (r.est === 'expl' ? '<div class="mt-1 text-[11px]" style="color:#8a5a00">' + e(f.expl) + '</div>' : '') + aj + dm + '</td>' +
-            '<td class="p-3 border-r border-slate-200 text-[11px] text-slate-600 whitespace-nowrap">' + (cuentas.length ? cuentas.map(k => e(k) + (bal[k] ? '' : ' <span style="color:#b42318">(no está)</span>')).join('<br>') : '<span class="text-slate-300">fuera de la sumaria AF</span>') + '</td>' +
+            '<td class="p-3 border-r border-slate-200 text-[11px] text-slate-600 whitespace-nowrap">' + (cuentas.length ? cuentas.map(k => e(k) + (bal[k] ? (bal[k].sumaria && bal[k].sumaria !== 'AF' ? ' <span class="text-slate-400">· sumaria ' + e(bal[k].sumaria) + '</span>' : '') : ' <span style="color:#b42318">(no está)</span>')).join('<br>') : '<span class="text-slate-300">sin cuenta indicada</span>') + '</td>' +
             cel(cuentas.length ? sum : null, 'font-semibold') + cel(r.may) + cel(r.aud) +
             '<td class="p-3 border-r border-slate-200 text-right whitespace-nowrap font-bold" style="color:' + (r.dif === null ? '#94a3b8' : Math.abs(r.dif) <= V2C_TOL ? '#1d6b3a' : '#b42318') + '">' + (r.dif === null ? '—' : fm(r.dif)) + '</td>' +
             '<td class="p-3"><span style="display:inline-block;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:700;background:' + P[1] + ';color:' + P[2] + '">' + P[0] + '</span></td></tr>';
@@ -19496,7 +19504,7 @@ ${cont.innerHTML}
         return '<div class="border border-slate-200 rounded-xl shadow-sm bg-white overflow-hidden"><div class="px-4 py-3 border-b border-slate-200 bg-white flex items-center justify-between gap-2"><div class="text-[13px] font-bold text-slate-800">' + e(q.titulo || '') + '</div>' + (q.ref ? '<a href="#" onclick="v2IrSeccion(\'' + e(q.ref).replace(/'/g, '') + '\');return false" class="text-[11px] hover:underline" style="color:#3b6fc4">ver en el informe ›</a>' : '') + '</div><div class="overflow-x-auto"><table class="w-full text-left text-xs text-slate-700 border-collapse"><thead class="bg-slate-100 text-slate-600 text-[10px] font-bold border-b border-slate-200"><tr><th class="p-3 border-r border-slate-200 min-w-[240px]">Concepto</th><th class="p-3 border-r border-slate-200 min-w-[120px]">Cuenta(s)</th><th class="p-3 border-r border-slate-200 text-right">Según sumaria</th><th class="p-3 border-r border-slate-200 text-right">Según mayor</th><th class="p-3 border-r border-slate-200 text-right">Análisis de Claude</th><th class="p-3 border-r border-slate-200 text-right" title="Sumaria (o mayor, si la cuenta no está en la sumaria) menos el análisis de Claude">Diferencia</th><th class="p-3">Estado</th></tr></thead><tbody class="divide-y divide-slate-200">' + filas + '</tbody></table></div></div>';
       }).join('');
       // Cobertura: toda cuenta de la sumaria debe estar cruzada en algún cuadro
-      const cods = Object.keys(bal).sort();
+      const cods = Object.keys(bal).filter(k => (B.af || {})[k]).sort();
       const sinCruce = cods.filter(k => !usadas[k]);
       const cob = '<div class="border border-slate-200 rounded-xl shadow-sm bg-white overflow-hidden"><div class="px-4 py-3 border-b border-slate-200 flex items-center justify-between"><div class="text-[13px] font-bold text-slate-800">Cobertura de la sumaria AF</div><span style="display:inline-block;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:700;background:' + (sinCruce.length ? '#fde8e8' : '#e7f6ec') + ';color:' + (sinCruce.length ? '#b42318' : '#1d6b3a') + '">' + (cods.length ? (sinCruce.length ? '⚠ ' + sinCruce.length + ' cuenta(s) sin cruce' : '✓ Todas las cuentas están cruzadas') : 'Sin sumaria cargada') + '</span></div><div class="overflow-x-auto"><table class="w-full text-left text-xs text-slate-700 border-collapse"><thead class="bg-slate-100 text-slate-600 text-[10px] font-bold border-b border-slate-200"><tr><th class="p-3 border-r border-slate-200">Cuenta</th><th class="p-3 border-r border-slate-200">Nombre</th><th class="p-3 border-r border-slate-200 text-right">Saldo en la sumaria</th><th class="p-3">Se cruza en</th></tr></thead><tbody class="divide-y divide-slate-200">' +
         (cods.map(k => '<tr><td class="p-3 border-r border-slate-200 whitespace-nowrap">' + e(k) + '</td><td class="p-3 border-r border-slate-200">' + e(bal[k].nombre) + '</td><td class="p-3 border-r border-slate-200 text-right whitespace-nowrap">' + fm(bal[k].saldo) + '</td><td class="p-3 ' + (usadas[k] ? 'text-slate-600' : '') + '">' + (usadas[k] ? e([...new Set(usadas[k])].join(' · ')) : '<b style="color:#b42318">Sin cruce: pedir a Claude que lo analice</b>') + '</td></tr>').join('') || '<tr><td colspan="4" class="p-4 text-center text-slate-400">No hay balance de comprobación cargado para esta visita.</td></tr>') + '</tbody></table></div></div>';
