@@ -4921,7 +4921,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       tb.innerHTML = lista.map(p => {
         const cli = buscarClienteNombre(p.cliente_id), nom = cli ? (cli.nombre_corto || cli.nombre_completo || p.cliente_id) : p.cliente_id;
         const c = catalogoCuentas.find(k => k.sumaria === p.sumaria), est = ESTADOS_PEDIDO[p.estado] || [p.estado, 'pill-origen'];
-        const detalle = p.estado === 'autorizado' || p.estado === 'hecho' ? 'Autorizó ' + escapeHtml(p.autorizado_por || '') + (p.autorizado_at ? ' · ' + fechaCortaOrigen(p.autorizado_at) : '') : (p.estado === 'rechazado' ? 'Motivo: ' + escapeHtml(p.motivo_rechazo || '—') : '');
+        const detalle = p.estado === 'autorizado' || p.estado === 'hecho' ? 'Autorizó ' + escapeHtml(p.autorizado_por || '') + (p.autorizado_at ? ' · ' + fechaCortaOrigen(p.autorizado_at) : '') + (p.estado === 'autorizado' && !(Number(p.progreso) > 0) ? '<br>Claude lo recoge en su próxima revisión (' + pcProxRevision() + ')' : '') : (p.estado === 'rechazado' ? 'Motivo: ' + escapeHtml(p.motivo_rechazo || '—') : '');
         const btn = (fn, txt, cls) => '<button type="button" onclick="' + fn + '(\'' + p.id + '\')" class="px-3 py-1.5 text-[11px] rounded-lg transition ' + cls + ' font-medium">' + txt + '</button>';
         let acc = '';
         if (p.estado === 'solicitado' || p.estado === 'autorizado') acc = btn('cancelarPedidoClaude', 'Cancelar', 'border border-slate-300 text-slate-700 hover:bg-slate-100');
@@ -4945,7 +4945,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       tb.innerHTML = lista.map(p => {
         const cli = buscarClienteNombre(p.cliente_id), nom = cli ? (cli.nombre_corto || cli.nombre_completo || p.cliente_id) : p.cliente_id;
         const c = catalogoCuentas.find(k => k.sumaria === p.sumaria), est = ESTADOS_PEDIDO[p.estado] || [p.estado, 'pill-origen'];
-        const detalle = p.estado === 'autorizado' || p.estado === 'hecho' ? 'Autorizó ' + escapeHtml(p.autorizado_por || '') + (p.autorizado_at ? ' · ' + fechaCortaOrigen(p.autorizado_at) : '') : (p.estado === 'rechazado' ? 'Motivo: ' + escapeHtml(p.motivo_rechazo || '—') : '');
+        const detalle = p.estado === 'autorizado' || p.estado === 'hecho' ? 'Autorizó ' + escapeHtml(p.autorizado_por || '') + (p.autorizado_at ? ' · ' + fechaCortaOrigen(p.autorizado_at) : '') + (p.estado === 'autorizado' && !(Number(p.progreso) > 0) ? '<br>Claude lo recoge en su próxima revisión (' + pcProxRevision() + ')' : '') : (p.estado === 'rechazado' ? 'Motivo: ' + escapeHtml(p.motivo_rechazo || '—') : '');
         let acc = '';
         if (p.estado === 'solicitado') {
           if (aut) acc += '<button type="button" onclick="autorizarPedidoClaude(\'' + p.id + '\')" class="px-3 py-1.5 text-[11px] rounded-lg transition bg-slate-200 text-slate-900 hover:bg-slate-300 font-semibold">Autorizar</button> <button type="button" onclick="rechazarPedidoClaude(\'' + p.id + '\')" class="px-3 py-1.5 text-[11px] rounded-lg transition border border-slate-300 text-slate-700 hover:bg-slate-100 font-medium">Rechazar</button> ';
@@ -5006,6 +5006,8 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
         return n ? 'Se envió el correo a ' + n + ' persona(s).' : (data && data.omitido) || 'No se envió correo.';
       } catch (e) { return 'No se pudo enviar el correo (' + (e.message || e) + '); el pedido igual quedó registrado.'; }
     }
+    // Claude revisa los pedidos autorizados cada hora, al minuto 3
+    function pcProxRevision() { const d = new Date(), n = new Date(d); n.setMinutes(3, 0, 0); if (n <= d) n.setHours(n.getHours() + 1); return 'a las ' + String(n.getHours()).padStart(2, '0') + ':' + String(n.getMinutes()).padStart(2, '0'); }
     async function cambiarEstadoPedido(id, cambios, accion) {
       const { error } = await supabaseClient.from('pedidos_claude').update(cambios).eq('id', id);
       if (error) { alert('No se pudo guardar: ' + (error.message || error)); return false; }
@@ -5445,7 +5447,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       else {
         const prog = Number(p.progreso) || 0;
         pct = Math.max(30, Math.min(95, prog));
-        txt = p.progreso_texto || 'Autorizado. En cola: Claude revisa los pedidos cada hora y apenas empiece verás aquí los avances. No lo canceles.';
+        txt = p.progreso_texto || ('Autorizado. En cola: Claude revisa los pedidos cada hora y lo recoge en su próxima revisión (' + pcProxRevision() + '); apenas empiece verás aquí los avances. No lo canceles.');
       }
       const anim = p.estado === 'autorizado' ? 'background-image:repeating-linear-gradient(45deg,rgba(255,255,255,.28) 0 7px,transparent 7px 14px);background-size:28px 28px;animation:pcRayas 1s linear infinite;' : '';
       const color = p.estado === 'hecho' ? '#059669' : '#475569';
