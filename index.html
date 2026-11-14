@@ -19242,7 +19242,7 @@ ${cont.innerHTML}
     function v2Pintar() {
       const h = escapeHtml;
       const cuenta = (typeof catalogoCuentas !== 'undefined' && catalogoCuentas.find(k => k.sumaria === 'AF')) || null;
-      const nombreSum = 'AF - ' + (cuenta ? cuenta.cuenta : 'Activos fijos e inventarios');
+      const nombreSum = cuenta ? cuenta.cuenta : 'AF - Inventarios';
       let ult = null, filas = '';
       v2E.procs.forEach(p => {
         const kg = p.hoja || '';
