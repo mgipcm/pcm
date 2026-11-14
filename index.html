@@ -18582,19 +18582,19 @@ ${cont.innerHTML}
     function rsCalcular() {
       const tol = 1, B = [], R = (a, b) => r2f(a - b);
       const bloque = (cod, titulo, fn) => { const o = { cod, titulo, filas: [], det: [], nota: '' }; try { fn(o); } catch (e) { console.error(e); o.nota = 'No se pudo calcular: ' + (e.message || e); o.sin = true; } B.push(o); };
-      const fila = (o, concepto, a, b, ex) => { const d = R(a, b); o.filas.push({ concepto, a: r2f(a), b: r2f(b), dif: d, ok: Math.abs(d) <= tol, ex: ex || '' }); };
+      const fila = (o, concepto, a, b, grupo) => { const d = R(a, b); o.filas.push({ concepto, a: r2f(a), b: r2f(b), dif: d, ok: Math.abs(d) <= tol, grupo: grupo || '' }); };
       bloque('ii', 'Movimiento del inventario y saldos (mayor contable)', o => {
         if (!mvE.cuentas.length) { o.nota = 'Aún no hay movimiento del inventario cargado.'; o.sin = true; return; }
         mvE.cuentas.forEach(c => {
           const nom = ((c.codigo ? c.codigo + ' ' : '') + (c.cuenta || 'Cuenta')).trim(), ini = mvN(c.saldo_inicial), mov = MV_MOV.reduce((a, k) => a + mvVal(c, k), 0), fin = mvN(c.saldo_final);
-          fila(o, nom + ': saldo inicial + movimientos vs saldo final', ini + mov, fin);
-          if (mvHayLibros(c)) fila(o, nom + ': saldo final vs balance de comprobación', fin, mvN(c.saldo_libros));
+          fila(o, nom + ': saldo inicial + movimientos vs saldo final', ini + mov, fin, 'Saldo inicial + movimientos vs saldo final');
+          if (mvHayLibros(c)) fila(o, nom + ': saldo final vs balance de comprobación', fin, mvN(c.saldo_libros), 'Saldo final vs balance de comprobación');
         });
       });
       bloque('iii', 'Liquidaciones de importación → Entradas (mayor contable)', o => {
         const X = impResumenCalc();
         if (!X) { o.nota = 'Falta la lectura de liquidaciones o del mayor contable.'; o.sin = true; return; }
-        X.filas.forEach(f => { if (f.est === 'N/A') return; fila(o, 'Importación ' + f.id + (f.proveedor ? ' (' + f.proveedor + ')' : '') + ': liquidación vs mayor', f.baseLiq, f.ajust); });
+        X.filas.forEach(f => { if (f.est === 'N/A') return; fila(o, 'Importación ' + f.id + (f.proveedor ? ' (' + f.proveedor + ')' : '') + ': liquidación vs mayor', f.baseLiq, f.ajust, 'Liquidaciones vs mayor contable'); });
       });
       bloque('iv', 'Costo de ventas → Salidas (mayor contable)', o => {
         if (!cvE.cv.length) { o.nota = 'Aún no hay lectura del costo de ventas.'; o.sin = true; return; }
@@ -18617,6 +18617,15 @@ ${cont.innerHTML}
       // Revisión de documentación (voucheo)
       const V = { n: 0, ok: 0, ex: 0, pen: 0, claude: 0, ex_l: [] };
       if (vcE.cargado && vcE.cliente === rsE.cliente) vcE.filas.forEach(f => { V.n++; const r = vcResultado(f); if (r === 'ok') V.ok++; else if (r === 'ex') { V.ex++; V.ex_l.push(f); } else V.pen++; if (VC_ATRIB.some(a => vcAplica(a, f) && !(f.rev || {})[a.k] && vcDeClaude(f, a.k))) V.claude++; });
+      // Lo que se muestra: un total por grupo de comparaciones y, debajo, solo las partidas con diferencia
+      B.forEach(b => {
+        b.vista = []; const gr = {}; b.filas.forEach(f => { const k = f.grupo || f.concepto; (gr[k] = gr[k] || []).push(f); });
+        Object.keys(gr).forEach(k => { const L = gr[k];
+          if (L.length === 1) { b.vista.push({ t: L[0].concepto, a: L[0].a, b: L[0].b, dif: L[0].dif, ok: L[0].ok, sub: false }); return; }
+          const a = r2f(L.reduce((t, f) => t + f.a, 0)), bb = r2f(L.reduce((t, f) => t + f.b, 0)), n = L.filter(f => !f.ok).length;
+          b.vista.push({ t: 'Total: ' + k + ' (' + L.length + ' comparaciones' + (n ? ', ' + n + ' con diferencia' : ', todas cuadran') + ')', a, b: bb, dif: r2f(a - bb), ok: !n && Math.abs(a - bb) <= tol, sub: false, tot: true });
+          L.filter(f => !f.ok).forEach(f => b.vista.push({ t: f.concepto, a: f.a, b: f.b, dif: f.dif, ok: false, sub: true }));
+        }); });
       return { B, V, tol };
     }
     function rsConclusion(D) {
@@ -18646,7 +18655,7 @@ ${cont.innerHTML}
       h += '<div class="overflow-x-auto border border-slate-200 rounded-xl"><table class="w-full text-[11px] border-collapse" style="min-width:820px"><thead><tr><th class="' + TH + ' text-left">Comparación</th><th class="' + TH + ' text-right">Un lado</th><th class="' + TH + ' text-right">Otro lado</th><th class="' + TH + ' text-right">Diferencia</th><th class="' + TH + ' text-center">Resultado</th></tr></thead><tbody>';
       D.B.forEach(b => {
         h += '<tr class="bg-slate-50 border-t border-slate-300"><td colspan="5" class="' + TD + ' font-bold text-slate-800">' + e(b.cod) + ') ' + e(b.titulo) + (b.nota ? ' <span class="font-normal text-amber-700">· ' + e(b.nota) + '</span>' : '') + '</td></tr>';
-        b.filas.forEach(f => { h += '<tr class="border-t border-slate-100 align-top"><td class="' + TD + '">' + e(f.concepto) + '</td><td class="' + TD + ' text-right whitespace-nowrap">' + F(f.a) + '</td><td class="' + TD + ' text-right whitespace-nowrap">' + F(f.b) + '</td><td class="' + TD + ' text-right whitespace-nowrap font-bold" style="color:' + (f.ok ? '#047857' : '#dc2626') + '">' + F(f.dif) + '</td><td class="' + TD + ' text-center font-bold" style="color:' + (f.ok ? '#047857' : '#dc2626') + '">' + (f.ok ? 'Cuadra' : 'Con diferencia') + '</td></tr>'; });
+        b.vista.forEach(f => { h += '<tr class="border-t border-slate-100 align-top' + (f.tot ? ' font-bold' : '') + '"><td class="' + TD + (f.sub ? ' pl-6' : '') + '">' + e(f.t) + '</td><td class="' + TD + ' text-right whitespace-nowrap">' + F(f.a) + '</td><td class="' + TD + ' text-right whitespace-nowrap">' + F(f.b) + '</td><td class="' + TD + ' text-right whitespace-nowrap font-bold" style="color:' + (f.ok ? '#047857' : '#dc2626') + '">' + F(f.dif) + '</td><td class="' + TD + ' text-center font-bold" style="color:' + (f.ok ? '#047857' : '#dc2626') + '">' + (f.ok ? 'Cuadra' : 'Con diferencia') + '</td></tr>'; });
       });
       h += '</tbody></table></div>';
       h += '<div class="grid lg:grid-cols-2 gap-3 mt-3"><div class="p-3 bg-white border border-slate-200 rounded-xl space-y-1 text-xs text-slate-700"><div class="text-[13px] font-semibold text-slate-800 ic-claude ic-tomate">Conclusión preliminar</div>' + concl.map(t => '<p>' + e(t) + '</p>').join('') + '</div>';
@@ -18658,7 +18667,7 @@ ${cont.innerHTML}
       const D = rsE.D || rsCalcular(), concl = rsConclusion(D);
       const info = [['Año evaluado', rsE.anio], ['Visita', rsE.visita === 'final' ? 'Final' : 'Preliminar'], ['Preparado por', (typeof nombreUsuarioActivo === 'function' && nombreUsuarioActivo()) || '']];
       const aoa = [['Cruce', 'Comparación', 'Un lado', 'Otro lado', 'Diferencia', 'Resultado']];
-      D.B.forEach(b => { if (b.nota) aoa.push([b.cod + ') ' + b.titulo, b.nota, '', '', '', 'Sin comparar']); b.filas.forEach(f => aoa.push([b.cod + ') ' + b.titulo, f.concepto, f.a, f.b, f.dif, f.ok ? 'Cuadra' : 'Con diferencia'])); });
+      D.B.forEach(b => { if (b.nota) aoa.push([b.cod + ') ' + b.titulo, b.nota, '', '', '', 'Sin comparar']); b.vista.forEach(f => aoa.push([b.cod + ') ' + b.titulo, (f.sub ? '   ' : '') + f.t, f.a, f.b, f.dif, f.ok ? 'Cuadra' : 'Con diferencia'])); });
       if (D.V.n) aoa.push([], ['Revisión de documentación (voucheo)', 'Partidas de la muestra', D.V.n, '', '', ''], ['', 'Sin excepción', D.V.ok, '', '', ''], ['', 'Con excepción', D.V.ex, '', '', ''], ['', 'Pendientes', D.V.pen, '', '', '']);
       aoa.push([], ['Conclusión preliminar (armada con reglas)'], ...concl.map(t => [t]), [], ['Conclusión del auditor'], [rsE.concAud || '(sin conclusión escrita)']);
       const hojas = [{ nombre: 'Resumen de diferencias', aoa, anchos: [{ wch: 44 }, { wch: 70 }, { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 16 }], op: { titulo: 'Resumen de diferencias y conclusión', info, totales: [] } }];
