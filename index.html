@@ -14841,7 +14841,7 @@ ${cont.innerHTML}
       const [r1, r2, r3, r4] = await Promise.all([
         supabaseClient.from('conciliaciones_datos').select('*').eq('cliente_id', cli).eq('anio', Number(anio)).eq('visita', vis).maybeSingle(),
         supabaseClient.from('analisis_claude_cuentas').select('id, created_at, anio, visita, analisis, origen, estado_revision, revisado_por, revisado_at, pendientes, criterio_final, criterio_por, criterio_at').eq('cliente_id', cli).eq('cuenta', 'bancos').eq('anio', Number(anio)).order('created_at', { ascending: false }).limit(1),
-        cbE.plantilla ? Promise.resolve({ data: cbE.plantilla }) : supabaseClient.from('programas_plantilla').select('sumaria, codigo, titulo, tipo_procedimiento, procedimiento, orden, alcance, tamanos').eq('sumaria', 'AA').eq('hoja', 'bancos').order('orden', { ascending: true })
+        cbE.plantilla ? Promise.resolve({ data: cbE.plantilla }) : supabaseClient.from('programas_plantilla').select('id, sumaria, codigo, titulo, tipo_procedimiento, procedimiento, norma, orden, alcance, tamanos').eq('sumaria', 'AA').eq('hoja', 'bancos').order('orden', { ascending: true })
         ,supabaseClient.from('criterio_auditor_cuentas').select('*').eq('cliente_id', cli).eq('anio', Number(anio)).eq('cuenta', 'bancos').eq('visita', vis).maybeSingle()
       ]);
       if (id !== cbE.cargaId) return;
@@ -14853,7 +14853,7 @@ ${cont.innerHTML}
       cbE.crit = (r4 && !r4.error && r4.data) ? r4.data : null; cbE.draft = borradorAnt || cbDraftLocal() || cbDraftDesde(cbE.crit);
       cbE.ctx = await traerContextoRiesgo(cli, anio, vis);
       if (id !== cbE.cargaId) return;
-      if (!cbE.plantilla && !r3.error) { const cont = {}; cbE.plantilla = (r3.data || []).map(x => { cont[x.codigo] = (cont[x.codigo] || 0) + 1; return { ...x, k: cont[x.codigo] > 1 ? x.codigo + '#' + cont[x.codigo] : x.codigo }; }); }
+      if (!cbE.plantilla && !r3.error) { const cont = {}; cbE.plantilla = (r3.data || []).map(x => { cont[x.codigo] = (cont[x.codigo] || 0) + 1; return { ...x, k: cont[x.codigo] > 1 ? x.codigo + '#' + cont[x.codigo] : x.codigo }; }); (cbE.plantilla || []).forEach(x => { if (x.id && !programasPlantilla.some(y => y.id === x.id)) programasPlantilla.push(x); }); }
       cbSync(); cbRender();
     }
     function cbSync() {
@@ -15278,31 +15278,69 @@ ${cont.innerHTML}
       bitacoraClaude('Guardó criterio final', 'Bancos (conciliaciones)', cbE.cliente, String(a.anio));
     }
     function cbFilasPrograma(todo) {
-      const todas = (cbE.plantilla || []).map(x => { const g = cbE.programa.find(k => k.k === x.k) || {}; return { ...x, donde: g.donde || '', quien: g.quien || '', estado: g.estado || 'pendiente', otro: !!g.otro, registrado_por: g.registrado_por || '', nota: g.nota || '', noAplica: motivosNoAplica(x, 'AA', cbE.ctx) }; });
+      const todas = (cbE.plantilla || []).map(x => { const g = cbE.programa.find(k => k.k === x.k) || {}; return { ...x, donde: g.donde || '', quien: g.quien || '', estado: g.estado || 'pendiente', otro: false, registrado_por: g.registrado_por || '', nota: g.nota || '', pt: Array.isArray(g.pt) ? g.pt : [], revisado_por: g.revisado_por || '', revisado_at: g.revisado_at || '', noAplica: motivosNoAplica(x, 'AA', cbE.ctx) }; });
       return todo ? todas : todas.filter(x => !x.noAplica.length || x.estado === 'hecho');
     }
     function cbVerTodosProg(v) { cbE.verTodos = !!v; cbRender(); }
     function cbHtmlPrograma() {
       if (cbE.plantilla === null) return '<div class="p-8 text-center text-slate-400 text-sm">Cargando el programa de trabajo...</div>';
       if (!cbE.plantilla.length) return '<div class="p-8 text-center text-slate-400 text-sm">No hay procedimientos cargados para AA (hoja Bancos) en Configuración › Programas de trabajo.</div>';
-      const filas = cbE.verTodos ? cbFilasPrograma(true) : cbFilasPrograma(), hechos = filas.filter(x => x.estado === 'hecho').length;
-      let h = '<div class="p-4 text-sm text-slate-700">' + htmlContextoPrograma(cbE.ctx, 'AA', cbE.plantilla.length, cbFilasPrograma().length, cbE.verTodos, 'cbVerTodosProg') + '<div class="flex flex-wrap items-center gap-2 mb-3"><span class="pill-origen rev">Hechos: ' + hechos + '</span><span class="pill-origen mod">Pendientes: ' + (filas.length - hechos) + '</span></div><div class="overflow-x-auto border border-slate-200 rounded-xl"><table class="w-full text-left text-sm border-collapse"><thead class="bg-slate-100 text-slate-600 text-xs font-bold border-b border-slate-200"><tr><th class="p-3 w-16">Código</th><th class="p-3 min-w-[360px]">Procedimiento</th><th class="p-3 min-w-[200px]">Dónde está hecho</th><th class="p-3 min-w-[220px]">Comentario</th><th class="p-3 w-40">Quién lo hizo</th><th class="p-3 min-w-[170px]">Verificaciones (pestaña 5)</th><th class="p-3 w-36">Estado</th></tr></thead><tbody>';
+      const filas = cbE.verTodos ? cbFilasPrograma(true) : cbFilasPrograma(), hechos = filas.filter(x => x.estado === 'hecho').length, nas = filas.filter(x => x.estado === 'na').length;
+      const hh = escapeHtml, claudeAn = cbE.analisis;
+      let h = '<div class="p-4 text-sm text-slate-700">' + htmlContextoPrograma(cbE.ctx, 'AA', cbE.plantilla.length, cbFilasPrograma().length, cbE.verTodos, 'cbVerTodosProg') + '<div class="flex flex-wrap items-center gap-2 mb-3"><span class="pill-origen rev">Hechos: ' + hechos + '</span><span class="pill-origen mod">Pendientes: ' + (filas.length - hechos - nas) + '</span>' + (nas ? '<span class="pill-origen">N/A: ' + nas + '</span>' : '') + '</div><div class="overflow-x-auto border border-slate-200 rounded-xl"><table class="w-full text-left text-xs text-slate-700 border-collapse"><thead class="bg-slate-100 text-slate-600 text-[10px] font-bold border-b border-slate-200"><tr><th class="p-3 border-r border-slate-200 min-w-[90px]">Código</th><th class="p-3 border-r border-slate-200 min-w-[360px] w-full">Procedimiento</th><th class="p-3 border-r border-slate-200 min-w-[170px]">Norma de referencia</th><th class="p-3 border-r border-slate-200 min-w-[130px]">Elaborado por<br><span class="font-normal">(Claude)</span></th><th class="p-3 border-r border-slate-200 min-w-[150px]">Revisado por<br><span class="font-normal">(quien completa)</span></th><th class="p-3 min-w-[200px]">P/T</th><th class="p-3 min-w-[220px] border-l border-slate-200">Comentario</th><th class="p-3 min-w-[150px] border-l border-slate-200">Estado</th></tr></thead><tbody class="divide-y divide-slate-200">';
       filas.forEach(x => {
-        const v = cbVerifDeProc(x.codigo), col = v.abiertas ? 'text-amber-700' : 'text-emerald-700';
-        h += '<tr class="align-top border-b border-slate-100' + (x.noAplica.length ? ' opacity-60' : '') + '"><td class="p-3 font-semibold">' + escapeHtml(x.codigo) + '</td><td class="p-3">' + tituloProcHtml(x) + '<div class="text-xs text-slate-400">' + escapeHtml(x.tipo_procedimiento || '') + '</div>' + escapeHtml(x.procedimiento || '') + (x.noAplica.length ? '<div class="text-xs text-amber-700 mt-1">Ya no aplica por ' + escapeHtml(x.noAplica.join(' y ')) + (x.estado === 'hecho' ? ' (estaba hecho)' : '') + '</div>' : '') + '</td>' +
-          '<td class="p-3"><input type="text" value="' + escapeHtml(x.donde) + '" placeholder="Ej. Pestaña 1" onchange="cbProgSet(\'' + x.k + '\', \'donde\', this.value)" class="w-full p-2 border border-slate-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500"></td>' +
-          '<td class="p-3"><input type="text" value="' + escapeHtml(x.nota || '') + '" placeholder="Ej. Inmaterial, no se ajustó" onchange="cbProgSet(\'' + x.k + '\', \'nota\', this.value)" class="w-full p-2 border border-slate-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500"></td>' +
-          '<td class="p-3">' + htmlQuienProg(x, 'cbProgSet', x.k, cbRender) + '</td>' +
-          '<td class="p-3 text-xs">' + (v.total ? '<button type="button" onclick="cbTab(\'verif\')" class="underline font-bold text-left ' + col + '">' + (v.abiertas ? v.abiertas + ' por resolver de ' + v.total : 'Todas cerradas (' + v.total + ')') + '</button>' + (x.estado !== 'hecho' && !v.abiertas ? '<div class="text-slate-500">Puedes marcarlo Hecho</div>' : '') + (x.estado === 'hecho' && v.abiertas ? (String(x.nota || '').trim() ? '<div class="text-slate-600">Hecho con verificaciones abiertas; queda el comentario como constancia</div>' : '<div class="text-amber-700">Está Hecho pero tiene verificaciones abiertas: agrega un comentario</div>') : '') : '<span class="text-slate-400">Sin verificaciones</span>') + '</td>' +
-          '<td class="p-3">' + htmlSelectEstadoProg(x, 'cbProgSet', x.k) + '</td></tr>';
+        const k = hh(x.k).replace(/'/g, '&#39;');
+        const elab = claudeAn ? '<div class="font-semibold text-slate-700">Claude</div><div class="text-[10px] text-slate-400 mt-0.5">' + v2Fmt(claudeAn.created_at) + '</div>' : '<div class="font-semibold text-slate-600">Claude</div><div class="text-[10px] text-slate-400 mt-0.5">Sin análisis</div>';
+        const rev = x.revisado_at ? '<div class="font-semibold text-emerald-700">✔ ' + hh(nombreMostrado(x.revisado_por) || '') + '</div><div class="text-[10px] text-slate-400 mt-0.5">' + v2Fmt(x.revisado_at) + '</div><button type="button" onclick="cbProgRevisar(\'' + k + '\', false)" class="text-[10px] text-slate-400 hover:underline mt-1">Quitar revisión</button>' : '<button type="button" onclick="cbProgRevisar(\'' + k + '\', true)" class="px-2.5 py-1 text-[11px] font-semibold border border-slate-300 rounded-lg bg-white hover:bg-slate-50">Marcar revisado</button>';
+        const pts = x.pt.map((t, i) => '<div class="flex items-center gap-1 py-0.5"><input type="text" value="' + hh(t.ref || '') + '" placeholder="Ref" title="Referencia del papel de trabajo" onchange="cbPtRef(\'' + k + '\', ' + i + ', this.value)" class="w-14 p-1 border border-slate-300 rounded text-[11px] outline-none focus:ring-2 focus:ring-indigo-500"><button type="button" onclick="cbPtBajar(\'' + k + '\', ' + i + ')" class="text-indigo-700 hover:underline text-left" title="Descargar">📎 ' + hh(t.nombre || '') + '</button><button type="button" onclick="cbPtQuitar(\'' + k + '\', ' + i + ')" class="text-slate-400 hover:text-red-600" title="Quitar">✕</button></div>').join('');
+        const antes = !x.pt.length && x.donde ? '<div class="text-[11px] text-slate-500">' + hh(x.donde) + '</div>' : '';
+        const op = (v, t) => '<option value="' + v + '"' + (x.estado === v || (v === 'hecho' && x.estado === 'hecho') ? ' selected' : '') + '>' + t + '</option>';
+        const est = '<select onchange="cbProgSet(\'' + k + '\', \'estado\', this.value)" style="min-width:130px;width:100%" class="p-2 border border-slate-300 rounded-lg text-xs bg-white outline-none focus:ring-2 focus:ring-indigo-500">' + op('pendiente', 'Pendiente') + op('hecho', 'Hecho') + op('na', 'N/A') + '</select>';
+        h += '<tr class="align-top' + (x.noAplica.length ? ' opacity-60' : '') + '"><td class="p-3 border-r border-slate-200 font-semibold text-slate-700 whitespace-nowrap">' + hh(x.codigo) + '</td>' +
+          '<td class="p-3 border-r border-slate-200 text-slate-700 leading-relaxed text-[12px]">' + (x.titulo ? '<div class="font-bold text-slate-800 mb-0.5 text-[13px]">' + hh(x.titulo) + '</div>' : '') + hh(x.procedimiento || '') + (x.noAplica.length ? '<div class="text-xs text-amber-700 mt-1">Ya no aplica por ' + hh(x.noAplica.join(' y ')) + (x.estado === 'hecho' ? ' (estaba hecho)' : '') + '</div>' : '') + '</td>' +
+          '<td class="p-3 border-r border-slate-200 text-[12px]">' + v2Norma(x) + '</td>' +
+          '<td class="p-3 border-r border-slate-200 whitespace-nowrap text-[12px]">' + elab + '</td>' +
+          '<td class="p-3 border-r border-slate-200 whitespace-nowrap text-[12px]">' + rev + '</td>' +
+          '<td class="p-3 text-[12px]">' + (pts || antes || '<div class="text-slate-400">Sin papeles de trabajo</div>') + '<label class="inline-block mt-1.5 text-[11px] text-slate-500 hover:underline cursor-pointer">＋ Adjuntar<input type="file" class="hidden" onchange="cbPtSubir(\'' + k + '\', this)"></label></td>' +
+          '<td class="p-3 border-l border-slate-200"><input type="text" value="' + hh(x.nota || '') + '" placeholder="Ej. Inmaterial, no se ajustó" onchange="cbProgSet(\'' + k + '\', \'nota\', this.value)" class="w-full p-2 border border-slate-300 rounded-lg text-xs outline-none focus:ring-2 focus:ring-indigo-500"></td>' +
+          '<td class="p-3 border-l border-slate-200" style="min-width:150px">' + est + '</td></tr>';
       });
       return h + '</tbody></table></div></div>';
+    }
+    function cbProgEntrada(k) { let e = cbE.programa.find(x => x.k === k); if (!e) { e = { k, donde: '', quien: '', estado: 'pendiente' }; cbE.programa.push(e); } return e; }
+    function cbProgRevisar(k, marcar) {
+      const quien = nombreUsuarioActivo();
+      if (marcar && !quien) { alert('Ingresa con tu usuario para marcar el procedimiento como revisado.'); return; }
+      const e = cbProgEntrada(k); e.revisado_por = marcar ? quien : ''; e.revisado_at = marcar ? new Date().toISOString() : ''; cbGuardar(); cbRenderConScroll();
+    }
+    async function cbPtSubir(k, inp) {
+      const file = inp.files && inp.files[0]; if (!file) return;
+      if (!nombreUsuarioActivo()) { alert('Ingresa con tu usuario para adjuntar papeles de trabajo.'); inp.value = ''; return; }
+      const limpio = file.name.replace(/[^\w.\-]+/g, '_');
+      const ruta = cbE.cliente + '/' + cbE.anio + '_' + cbE.visita + '/bancos/' + String(k).replace(/[^\w\-]+/g, '_') + '/' + Date.now() + '_' + limpio;
+      cbMsg('Subiendo…');
+      const up = await supabaseClient.storage.from('papeles-v2').upload(ruta, file, { upsert: false });
+      if (up.error) { cbMsg('No se pudo subir: ' + up.error.message, 'text-red-600 font-bold'); return; }
+      const e = cbProgEntrada(k); e.pt = (Array.isArray(e.pt) ? e.pt : []).concat([{ ref: '', nombre: file.name, ruta, tipo: file.type || '', por: nombreUsuarioActivo() || '', en: new Date().toISOString() }]);
+      cbGuardar(); cbRenderConScroll();
+    }
+    function cbPtRef(k, i, v) { const e = cbProgEntrada(k); if (e.pt && e.pt[i]) { e.pt[i].ref = v.trim(); cbGuardar(); } }
+    async function cbPtBajar(k, i) {
+      const t = ((cbProgEntrada(k).pt) || [])[i]; if (!t) return;
+      const { data, error } = await supabaseClient.storage.from('papeles-v2').createSignedUrl(t.ruta, 120, { download: t.nombre });
+      if (error || !data) { cbMsg('No se pudo descargar: ' + ((error || {}).message || ''), 'text-red-600 font-bold'); return; }
+      const a = document.createElement('a'); a.href = data.signedUrl; a.download = t.nombre; document.body.appendChild(a); a.click(); a.remove();
+    }
+    function cbPtQuitar(k, i) {
+      const e = cbProgEntrada(k), t = (e.pt || [])[i]; if (!t) return;
+      if (!confirm('¿Quitar el papel de trabajo "' + t.nombre + '"?')) return;
+      e.pt.splice(i, 1); supabaseClient.storage.from('papeles-v2').remove([t.ruta]); cbGuardar(); cbRenderConScroll();
     }
     function cbProgSet(k, campo, valor) {
       const quien = nombreUsuarioActivo();
       if (campo === 'estado' && valor !== 'pendiente' && !quien) { alert('Ingresa con tu usuario para marcar un procedimiento como hecho.'); cbRender(); return; }
       let e = cbE.programa.find(x => x.k === k); if (!e) { e = { k, donde: '', quien: '', estado: 'pendiente' }; cbE.programa.push(e); }
-      aplicarCambioProg(e, campo, valor, quien, esAnaliticaProg((cbE.plantilla || []).find(p => p.k === k)));
+      if (campo === 'estado' && valor === 'na') { e.estado = 'na'; e.otro = false; e.quien = ''; e.registrado_por = ''; e.fecha = new Date().toISOString(); } else aplicarCambioProg(e, campo, valor, quien, esAnaliticaProg((cbE.plantilla || []).find(p => p.k === k)));
       cbGuardar(); if (campo === 'estado' || campo === 'quien') cbRenderConScroll();
     }
 
@@ -15317,7 +15355,7 @@ ${cont.innerHTML}
       const V = cbE.config.verif || {}, ver = [], cerr = cbCodigosConComentario();
       cbVerifAuto().forEach(([t, e, d, cod]) => { if (e === 'rev' && !cerr.has(cod)) ver.push({ t, d, cod, tipo: 'Automática' }); });
       CB_VERIF_MANUALES.forEach(([k, t, ref, cod]) => { const e = (V[k] || {}).e || 'pendiente'; if ((e === 'pendiente' || e === 'nocumple') && !cerr.has(cod)) ver.push({ t, d: e === 'nocumple' ? 'Marcada como No cumple' : 'Sin evaluar', cod, tipo: 'Del auditor' }); });
-      const prog = cbE.plantilla ? cbFilasPrograma().filter(x => x.estado !== 'hecho' || (x.otro && !x.quien)) : [];
+      const prog = cbE.plantilla ? cbFilasPrograma().filter(x => x.estado !== 'hecho' && x.estado !== 'na') : [];
       // Una sola lista por programa: cada código aparece una vez con su procedimiento y sus verificaciones abiertas
       const mapa = new Map();
       const todos = cbE.plantilla ? cbFilasPrograma(true) : [];
@@ -15431,7 +15469,7 @@ ${cont.innerHTML}
       const R = cbE.config.revel || {};
       add('Revelaciones', [cbH(['Banco', 'Cuenta', 'Tipo', 'Moneda', 'Saldo en libros']), ...cbE.cuentas.map(c => [c.banco, c.cuenta, c.tipo, c.moneda, cbN(c.saldo_libros)]), [], cbL(['Restricciones sobre el efectivo', R.restr || '']), cbL(['Otras revelaciones', R.otras || ''])]);
       if (cbE.analisis) add('Análisis de Claude', arrFilasClaude(cbE.analisis), { texto: true });
-      add('Programa de trabajo', [cbH(['Código', 'Procedimiento', 'Dónde está hecho', 'Comentario', 'Quién lo hizo', 'Verificaciones (pestaña 5)', 'Estado']), ...cbFilasPrograma().map(x => { const v = cbVerifDeProc(x.codigo); return [x.codigo, x.procedimiento || '', x.donde, x.nota || '', x.quien, v.total ? (v.abiertas ? v.abiertas + ' por resolver de ' + v.total : 'Todas cerradas (' + v.total + ')') : 'Sin verificaciones', x.estado === 'hecho' ? (x.otro ? (esAnaliticaProg(x) ? 'Hecho en planificación' : 'Hecho por otro auditor') : 'Hecho') : 'Pendiente']; })]);
+      add('Programa de trabajo', [cbH(['Código', 'Procedimiento', 'Norma de referencia', 'Elaborado por', 'Revisado por', 'P/T', 'Comentario', 'Estado']), ...cbFilasPrograma().map(x => [x.codigo, x.procedimiento || '', x.norma || '', 'Claude', x.revisado_por || '', (x.pt || []).map(t => (t.ref ? t.ref + ' · ' : '') + (t.nombre || '')).join(' ; '), x.nota || '', x.estado === 'hecho' ? 'Hecho' : (x.estado === 'na' ? 'N/A' : 'Pendiente')])]);
       // Por concluir (igual que la pestaña 6)
       { const P = cbPorConcluir(); add('Por concluir', [cbH(['Programa', 'Procedimiento', 'Estado', 'Verificaciones por resolver']), ...(P.grupos.length ? P.grupos.map(g => [g.cod, g.proc ? g.proc.procedimiento || '' : '', g.pendiente ? 'Pendiente' : 'Hecho', g.ver.length ? g.ver.map(v => '• ' + v.t + ' (' + (v.d || '') + ')').join('\n') : 'Todas cerradas']) : [['Nada pendiente']])]); }
       // Mismo orden y nombres que las pestañas de la pantalla
