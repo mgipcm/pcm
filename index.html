@@ -13549,6 +13549,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
 
     function nombreCuentaPorClave(clave) {
       if (clave === 'bancos') return 'Efectivo y equivalentes de efectivo › Bancos (conciliaciones)';
+      if (clave === 'inventarios_v2') return 'AF Inventarios v2 (prueba) › Conclusiones de la cuenta';
       for (const r of Object.values(RUBROS_ANALISIS)) {
         const c = r.cuentas.find(x => x.clave === clave);
         if (c) return c.nombre;
@@ -13634,6 +13635,15 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
         if (sa) { if (![...sa.options].some(o => o.value === String(r.anio))) sa.add(new Option('Año ' + r.anio, String(r.anio))); sa.value = String(r.anio); }
         const sv = document.getElementById('cb-visita'); if (sv) sv.value = r.visita === 'preliminar' ? 'preliminar' : 'final';
         cbE.tab = 'libros'; cbCargar();
+        return;
+      }
+      if (r.cuenta === 'inventarios_v2') {
+        navegarMenu('import2', 'analisis');
+        const sc2 = document.getElementById('v2-cliente'); if (sc2) sc2.value = String(r.cliente_id);
+        const sa2 = document.getElementById('v2-anio');
+        if (sa2) { if (![...sa2.options].some(o => o.value === String(r.anio))) sa2.add(new Option('Año ' + r.anio, String(r.anio))); sa2.value = String(r.anio); }
+        const sv2 = document.getElementById('v2-visita'); if (sv2) sv2.value = r.visita === 'preliminar' ? 'preliminar' : 'final';
+        v2E.tab = 'conclusiones'; v2Cargar();
         return;
       }
       const rubro = Object.keys(RUBROS_ANALISIS).find(k => RUBROS_ANALISIS[k].cuentas.some(c => c.clave === r.cuenta)) || 'activos';
@@ -19628,7 +19638,7 @@ ${cont.innerHTML}
       c.innerHTML = '<style>' + V2R_CSS + '</style><div class="p-4 space-y-4 bg-slate-50">' + resumen + cob + tarjetas + '</div>';
     }
     // ===== Conclusiones de la cuenta (v2): por concluir, To/Do-Quick Lett-Opinión, ajustes, revelaciones y conclusión =====
-    const V2_PREG = 'A_05_P_008', V2_PREG_NOM = 'E.08. Cuentas significativas determinadas que tengan riesgo';
+    const V2_CUENTA = 'inventarios_v2';
     const V2_DEST = { todo: 'To/Do', quicklett: 'Quick Lett', opinion: 'Opinión' };
     function v2ConcK(s) { return String(s == null ? '' : s).replace(/[^\w.-]/g, '_'); }
     async function v2ConcCargar() {
@@ -19670,28 +19680,28 @@ ${cont.innerHTML}
       const campo = { pc: 'pcExtra', env: 'envExtra', rev: 'revExtra' }[tipo];
       if (await v2ConcGuardar(d => { d[campo] = (d[campo] || []).filter(x => x.id !== id); })) v2ConcPintar();
     }
-    // Lleva un punto a To/Do, Quick Lett u Opinión de la pregunta E.08; si ya hay texto, lo agrega al final
+    // Lleva un punto al consolidado «To/Do - Quick Lett - Opinión» (tabla criterio_auditor_cuentas, como el Criterio final de los demás análisis)
     async function v2ConcEnviar(id, destino) {
       const C = v2E.conc; if (!C || !C.cargado) return;
       const cl = (v2E.res && v2E.res.data && v2E.res.data.conclusiones) || {};
       const x = (cl.envios || []).concat((C.datos.envExtra || [])).find(k => k.id === id); if (!x) return;
       if (C.datos.envios && C.datos.envios[id] && C.datos.envios[id].destino) return;
-      const email = usuarioSesionEmail || (usuarioActivo && usuarioActivo.email) || '', quien = nombreUsuarioActivo();
+      const quien = nombreUsuarioActivo();
       if (!quien) { alert('Ingresa con tu usuario para enviar el punto.'); return; }
-      if (!await confirmarApp('¿Enviar este punto a ' + V2_DEST[destino] + '?\n\n' + x.texto + '\n\nPregunta: ' + V2_PREG_NOM + ' (' + v2E.anio + ')')) return;
-      const cli = v2E.cliente, anio = Number(v2E.anio), txt = 'Inventarios (AF) · ' + x.texto;
-      const { data: ex, error: e1 } = await supabaseClient.from('respuestas_auditoria').select('*').eq('cliente_id', cli).eq('anio', anio).eq('pregunta_id', V2_PREG).maybeSingle();
-      if (e1) { alert('No se pudo leer la pregunta: ' + (e1.message || e1)); return; }
-      const sumar = previo => { const p = String(previo || '').trim(); return p.includes(txt) ? p : (p ? p + '\n' : '') + '• ' + txt; };
-      let datos;
-      if (destino === 'todo') datos = { es_todo: true, detalle_todo: sumar(ex && ex.detalle_todo), elaborado_todo: (ex && ex.elaborado_todo) || email, ...(v2E.visita === 'preliminar' ? { visita_preliminar_todo: true } : { visita_final_todo: true }) };
-      else if (destino === 'quicklett') datos = { es_quicklett: true, detalle_quicklett: sumar(ex && ex.detalle_quicklett), elaborado_quicklett: (ex && ex.elaborado_quicklett) || email };
-      else datos = { es_opinion: true, detalle_opinion: sumar(ex && ex.detalle_opinion), elaborado_opinion: (ex && ex.elaborado_opinion) || email, decision_opinion: (ex && ex.decision_opinion) || 'PENDIENTE' };
-      const r = ex ? await supabaseClient.from('respuestas_auditoria').update(datos).eq('id', ex.id) : await supabaseClient.from('respuestas_auditoria').insert([{ cliente_id: cli, anio, pregunta_id: V2_PREG, ...datos }]);
+      if (!await confirmarApp('¿Enviar este punto a ' + V2_DEST[destino] + '?\n\n' + x.texto + '\n\nSe verá en el consolidado «To/Do - Quick Lett - Opinión» (' + v2E.anio + ').')) return;
+      const cli = v2E.cliente, anio = Number(v2E.anio), vis = v2E.visita;
+      const { data: ex, error: e1 } = await supabaseClient.from('criterio_auditor_cuentas').select('*').eq('cliente_id', cli).eq('anio', anio).eq('cuenta', V2_CUENTA).eq('visita', vis).maybeSingle();
+      if (e1) { alert('No se pudo leer el consolidado: ' + (e1.message || e1)); return; }
+      const linea = '• [' + V2_DEST[destino] + '] ' + x.texto;
+      const previo = String((ex && ex.criterio) || '').trim();
+      const marcas = String((ex && ex.conclusion) || '').split(SEP_CONCLUSION).map(m => m.trim()).filter(Boolean);
+      if (!marcas.includes(V2_DEST[destino])) marcas.push(V2_DEST[destino]);
+      const fila = { cliente_id: cli, anio, cuenta: V2_CUENTA, visita: vis, conclusion: marcas.join(SEP_CONCLUSION), criterio: previo.includes(linea) ? previo : (previo ? previo + '\n' : '') + linea, auditor: (ex && ex.auditor) || quien, actualizado_por: quien, updated_at: new Date().toISOString() };
+      const r = await upsertConFallbackActualizado('criterio_auditor_cuentas', fila);
       if (r.error) { alert('No se pudo enviar: ' + (r.error.message || r.error)); return; }
       const ok = await v2ConcGuardar(d => { d.envios = d.envios || {}; d.envios[id] = { destino, por: quien, cuando: new Date().toISOString() }; });
       if (!ok) { alert('Se envió a ' + V2_DEST[destino] + ', pero no se pudo marcar como enviado en esta lista.'); return; }
-      bitacoraClaude('Envió punto de Inventarios a ' + V2_DEST[destino], x.texto.slice(0, 120), cli, String(anio));
+      bitacoraClaude('Envió punto de Inventarios v2 a ' + V2_DEST[destino], x.texto.slice(0, 120), cli, String(anio));
       v2ConcPintar();
     }
     async function v2ConcCriterio() {
@@ -19758,7 +19768,7 @@ ${cont.innerHTML}
         '<div class="overflow-x-auto"><table class="w-full text-xs border-collapse"><thead><tr><th class="' + TH + '">Asunto</th><th class="' + TH + '">Qué falta</th><th class="' + TH + '">Responsable</th><th class="' + TH + '">Fecha límite</th><th class="' + TH + '">Estado</th></tr></thead><tbody>' + (filasPc || '<tr><td colspan="5" class="' + TD + ' text-slate-400">Sin puntos por concluir.</td></tr>') + '</tbody></table></div>' +
         '<div class="flex flex-wrap gap-2 mt-2 items-center"><div style="width:14rem">' + add('Asunto', 'vc-pc-asunto') + '</div><div style="flex:1;min-width:16rem">' + add('Qué falta', 'vc-pc-falta') + '</div><button type="button" onclick="v2ConcNuevo(\'pc\')" class="px-3 py-1 text-xs rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-100 font-medium">+ Agregar</button></div>' +
         '<h2 id="vc-s2" class="' + H2 + '">2. To/Do · Quick Lett · Opinión</h2>' +
-        '<p class="text-xs text-slate-500 mb-2">Envía cada punto a To/Do, Quick Lett u Opinión de la pregunta «' + e(V2_PREG_NOM) + '» de este cliente y año. Al enviarlo queda marcado aquí. El botón resaltado es lo que sugiere Claude.</p>' +
+        '<p class="text-xs text-slate-500 mb-2">Envía cada punto a To/Do, Quick Lett u Opinión: pasa al consolidado «To/Do - Quick Lett - Opinión» de este cliente y año (menú Auditoría/Análisis Claves). Al enviarlo queda marcado aquí. El botón resaltado es lo que sugiere Claude.</p>' +
         '<div class="overflow-x-auto"><table class="w-full text-xs border-collapse"><thead><tr><th class="' + TH + '">Origen</th><th class="' + TH + '">Punto</th><th class="' + TH + '">Enviar a</th></tr></thead><tbody>' + (filasEnv || '<tr><td colspan="3" class="' + TD + ' text-slate-400">Sin puntos.</td></tr>') + '</tbody></table></div>' +
         '<div class="flex flex-wrap gap-2 mt-2 items-center"><div style="flex:1;min-width:20rem">' + add('Otro punto del auditor', 'vc-env-texto') + '</div><button type="button" onclick="v2ConcNuevo(\'env\')" class="px-3 py-1 text-xs rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-100 font-medium">+ Agregar</button></div>' +
         '<h2 id="vc-s3" class="' + H2 + '">3. Ajustes propuestos</h2>' +
