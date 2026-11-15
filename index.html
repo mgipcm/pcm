@@ -19219,7 +19219,7 @@ ${cont.innerHTML}
     function ivIrBoton(b) { ivE.btn = b; ivPintarHojas(); }
     // ===== AF Inventarios v2 (prueba): hoja "Inventario para la venta" › pestaña Programa =====
     const v2E = { cliente: '', anio: '', visita: '', procs: [], filas: {}, cargaId: 0, abiertos: {}, tab: 'programa', sv: null };
-    const V2_TABS = [['programa', 'Programa'], ['subir', 'Subir información'], ['resultado', 'Resultado del análisis – Claude'], ['cuadres', 'Resumen de cuadres y cruces']];
+    const V2_TABS = [['programa', 'Programa'], ['subir', 'Subir información'], ['resultado', 'Resultado del análisis – Claude'], ['cuadres', 'Resumen de cuadres y cruces'], ['conclusiones', 'Conclusiones de la cuenta']];
     function v2IrTab(t) { v2E.tab = t; v2Pintar(); }
     function v2Fmt(t) { return t ? new Date(t).toLocaleString('es-EC', { day: '2-digit', month: '2-digit', year: 'numeric', hour: 'numeric', minute: '2-digit' }) : ''; }
     async function abrirImport2() {
@@ -19230,7 +19230,7 @@ ${cont.innerHTML}
     }
     async function v2Cargar() {
       const cli = $im('v2-cliente').value, anio = $im('v2-anio').value, vis = $im('v2-visita').value;
-      Object.assign(v2E, { cliente: cli, anio, visita: vis, filas: {}, pts: [], sv: null, res: null, bal: null });
+      Object.assign(v2E, { cliente: cli, anio, visita: vis, filas: {}, pts: [], sv: null, res: null, bal: null, conc: null });
       const f = $im('v2-fecha'); if (f) f.value = vis === 'final' ? anio + '-12-31' : anio + '-09-30';
       const a = $im('v2-auditor'); if (a) a.value = (typeof nombreUsuarioActivo === 'function' ? nombreUsuarioActivo() : '') || '';
       const aviso = $im('v2-aviso'), esp = $im('v2-espacio');
@@ -19254,6 +19254,7 @@ ${cont.innerHTML}
       v2Pintar();
       v2SubirCargar();
       v2ResCargar();
+      v2ConcCargar();
     }
     // Si la referencia no está tal cual en la base de normas (p. ej. "NIC 2.9 y 2.36"), la arma desde sus partes
     function v2ArmarChips(txt) {
@@ -19290,6 +19291,7 @@ ${cont.innerHTML}
       if (v2E.tab === 'subir') { v2SubirPintar(); return; }
       if (v2E.tab === 'resultado') { v2ResPintar(); return; }
       if (v2E.tab === 'cuadres') { v2CuaPintar(); return; }
+      if (v2E.tab === 'conclusiones') { v2ConcPintar(); return; }
       const h = escapeHtml;
       const cuenta = (typeof catalogoCuentas !== 'undefined' && catalogoCuentas.find(k => k.sumaria === 'AF')) || null;
       const nombreSum = cuenta ? cuenta.cuenta : 'AF - Inventarios';
@@ -19452,6 +19454,7 @@ ${cont.innerHTML}
       v2E.res = { cargado: true, error: r.error ? (r.error.message || String(r.error)) : '', data: r.data || null };
       if (v2E.tab === 'resultado') v2ResPintar();
       if (v2E.tab === 'cuadres') v2CuaPintar();
+      if (v2E.tab === 'conclusiones') v2ConcPintar();
       v2CuaCargarBal();
     }
     function v2ResHtml(bloques, conIds) {
@@ -19624,6 +19627,152 @@ ${cont.innerHTML}
       const resumen = '<div class="flex flex-wrap items-center gap-2">' + chip(cont.cuadra, 'cuadran', V2C_PILL.cuadra) + chip(cont.expl, 'explicadas', V2C_PILL.expl) + chip(cont.dif + cont.nosum, 'con diferencia', V2C_PILL.dif) + chip(cont.sinsoporte, 'sin soporte', V2C_PILL.sinsoporte) + '<span class="text-[11px] text-slate-500 ml-1">Tolerancia: ' + fm(V2C_TOL) + ' · la sumaria se lee en vivo del balance de comprobación</span></div>';
       c.innerHTML = '<style>' + V2R_CSS + '</style><div class="p-4 space-y-4 bg-slate-50">' + resumen + cob + tarjetas + '</div>';
     }
+    // ===== Conclusiones de la cuenta (v2): por concluir, To/Do-Quick Lett-Opinión, ajustes, revelaciones y conclusión =====
+    const V2_PREG = 'A_05_P_008', V2_PREG_NOM = 'E.08. Cuentas significativas determinadas que tengan riesgo';
+    const V2_DEST = { todo: 'To/Do', quicklett: 'Quick Lett', opinion: 'Opinión' };
+    function v2ConcK(s) { return String(s == null ? '' : s).replace(/[^\w.-]/g, '_'); }
+    async function v2ConcCargar() {
+      const cli = v2E.cliente;
+      if (!cli) { v2E.conc = null; return; }
+      const id = (v2E.concId = (v2E.concId || 0) + 1);
+      v2E.conc = { cargado: false, datos: {}, id: null, error: '' };
+      const r = await supabaseClient.from('v2_conclusion').select('*').eq('cliente_id', cli).eq('anio', Number(v2E.anio)).eq('visita', v2E.visita).eq('sumaria', 'AF').eq('hoja', 'venta').maybeSingle();
+      if (id !== v2E.concId) return;
+      v2E.conc = { cargado: true, error: r.error ? (r.error.message || String(r.error)) : '', datos: (r.data && r.data.datos) || {}, id: r.data ? r.data.id : null };
+      if (v2E.tab === 'conclusiones') v2ConcPintar();
+    }
+    // Aplica un cambio a una copia de los datos del auditor y lo guarda; devuelve true si quedó guardado
+    async function v2ConcGuardar(mut) {
+      const C = v2E.conc; if (!C || !C.cargado) return false;
+      const datos = JSON.parse(JSON.stringify(C.datos || {})); mut(datos);
+      const fila = { cliente_id: v2E.cliente, anio: Number(v2E.anio), visita: v2E.visita, sumaria: 'AF', hoja: 'venta', datos, actualizado_por: nombreUsuarioActivo() || null, updated_at: new Date().toISOString() };
+      const { data, error } = await supabaseClient.from('v2_conclusion').upsert(fila, { onConflict: 'cliente_id,anio,visita,sumaria,hoja' }).select().single();
+      if (error) { $im('v2-estado').textContent = 'No se pudo guardar: ' + (error.message || error); return false; }
+      C.datos = data.datos || datos; C.id = data.id; $im('v2-estado').textContent = '';
+      return true;
+    }
+    async function v2ConcSet(grupo, id, campo, valor) { if (await v2ConcGuardar(d => { d[grupo] = d[grupo] || {}; d[grupo][id] = { ...(d[grupo][id] || {}), [campo]: valor }; })) v2ConcPintar(); }
+    async function v2ConcNuevo(tipo) {
+      const g = n => { const el = $im(n); return el ? el.value.trim() : ''; };
+      if (tipo === 'pc') {
+        const asunto = g('vc-pc-asunto'), falta = g('vc-pc-falta'); if (!asunto) { alert('Escribe el asunto.'); return; }
+        if (await v2ConcGuardar(d => { (d.pcExtra = d.pcExtra || []).push({ id: 'x' + Date.now(), asunto, falta, por: nombreUsuarioActivo() || '' }); })) v2ConcPintar();
+      } else if (tipo === 'env') {
+        const texto = g('vc-env-texto'); if (!texto) { alert('Escribe el punto.'); return; }
+        if (await v2ConcGuardar(d => { (d.envExtra = d.envExtra || []).push({ id: 'x' + Date.now(), texto, origen: 'Auditor', por: nombreUsuarioActivo() || '' }); })) v2ConcPintar();
+      } else {
+        const tema = g('vc-rev-tema'), que = g('vc-rev-que'), norma = g('vc-rev-norma'); if (!tema) { alert('Escribe el tema.'); return; }
+        if (await v2ConcGuardar(d => { (d.revExtra = d.revExtra || []).push({ id: 'x' + Date.now(), tema, que, norma }); })) v2ConcPintar();
+      }
+    }
+    async function v2ConcQuitar(tipo, id) {
+      if (!await confirmarApp('¿Quitar este punto de la lista?')) return;
+      const campo = { pc: 'pcExtra', env: 'envExtra', rev: 'revExtra' }[tipo];
+      if (await v2ConcGuardar(d => { d[campo] = (d[campo] || []).filter(x => x.id !== id); })) v2ConcPintar();
+    }
+    // Lleva un punto a To/Do, Quick Lett u Opinión de la pregunta E.08; si ya hay texto, lo agrega al final
+    async function v2ConcEnviar(id, destino) {
+      const C = v2E.conc; if (!C || !C.cargado) return;
+      const cl = (v2E.res && v2E.res.data && v2E.res.data.conclusiones) || {};
+      const x = (cl.envios || []).concat((C.datos.envExtra || [])).find(k => k.id === id); if (!x) return;
+      if (C.datos.envios && C.datos.envios[id] && C.datos.envios[id].destino) return;
+      const email = usuarioSesionEmail || (usuarioActivo && usuarioActivo.email) || '', quien = nombreUsuarioActivo();
+      if (!quien) { alert('Ingresa con tu usuario para enviar el punto.'); return; }
+      if (!await confirmarApp('¿Enviar este punto a ' + V2_DEST[destino] + '?\n\n' + x.texto + '\n\nPregunta: ' + V2_PREG_NOM + ' (' + v2E.anio + ')')) return;
+      const cli = v2E.cliente, anio = Number(v2E.anio), txt = 'Inventarios (AF) · ' + x.texto;
+      const { data: ex, error: e1 } = await supabaseClient.from('respuestas_auditoria').select('*').eq('cliente_id', cli).eq('anio', anio).eq('pregunta_id', V2_PREG).maybeSingle();
+      if (e1) { alert('No se pudo leer la pregunta: ' + (e1.message || e1)); return; }
+      const sumar = previo => { const p = String(previo || '').trim(); return p.includes(txt) ? p : (p ? p + '\n' : '') + '• ' + txt; };
+      let datos;
+      if (destino === 'todo') datos = { es_todo: true, detalle_todo: sumar(ex && ex.detalle_todo), elaborado_todo: (ex && ex.elaborado_todo) || email, ...(v2E.visita === 'preliminar' ? { visita_preliminar_todo: true } : { visita_final_todo: true }) };
+      else if (destino === 'quicklett') datos = { es_quicklett: true, detalle_quicklett: sumar(ex && ex.detalle_quicklett), elaborado_quicklett: (ex && ex.elaborado_quicklett) || email };
+      else datos = { es_opinion: true, detalle_opinion: sumar(ex && ex.detalle_opinion), elaborado_opinion: (ex && ex.elaborado_opinion) || email, decision_opinion: (ex && ex.decision_opinion) || 'PENDIENTE' };
+      const r = ex ? await supabaseClient.from('respuestas_auditoria').update(datos).eq('id', ex.id) : await supabaseClient.from('respuestas_auditoria').insert([{ cliente_id: cli, anio, pregunta_id: V2_PREG, ...datos }]);
+      if (r.error) { alert('No se pudo enviar: ' + (r.error.message || r.error)); return; }
+      const ok = await v2ConcGuardar(d => { d.envios = d.envios || {}; d.envios[id] = { destino, por: quien, cuando: new Date().toISOString() }; });
+      if (!ok) { alert('Se envió a ' + V2_DEST[destino] + ', pero no se pudo marcar como enviado en esta lista.'); return; }
+      bitacoraClaude('Envió punto de Inventarios a ' + V2_DEST[destino], x.texto.slice(0, 120), cli, String(anio));
+      v2ConcPintar();
+    }
+    async function v2ConcCriterio() {
+      const quien = nombreUsuarioActivo(); if (!quien) { alert('Ingresa con tu usuario para guardar la conclusión.'); return; }
+      const t = ($im('vc-crit') || {}).value || '';
+      if (await v2ConcGuardar(d => { d.conclusion_auditor = t; d.conclusion_por = quien; d.conclusion_at = new Date().toISOString(); })) { bitacoraClaude('Guardó conclusión del auditor', 'Inventarios (AF)', v2E.cliente, String(v2E.anio)); v2ConcPintar(); }
+    }
+    async function v2ConcMarca(campo, poner) {
+      const quien = nombreUsuarioActivo(); if (!quien) { alert('Ingresa con tu usuario.'); return; }
+      if (poner && campo === 'ratificado' && !String((v2E.conc.datos || {}).conclusion_auditor || '').trim()) { alert('Primero escribe y guarda la conclusión del auditor.'); return; }
+      if (await v2ConcGuardar(d => { d[campo + '_por'] = poner ? quien : null; d[campo + '_at'] = poner ? new Date().toISOString() : null; })) { bitacoraClaude((poner ? 'Marcó ' : 'Quitó ') + campo + ' las conclusiones de Inventarios', 'Inventarios (AF)', v2E.cliente, String(v2E.anio)); v2ConcPintar(); }
+    }
+    function v2ConcPintar() {
+      const c = $im('v2-panel'), R = v2E.res, C = v2E.conc, e = escapeHtml, fm = formatoNumeroAnexo;
+      if (!v2E.cliente || !R) { c.innerHTML = '<p class="text-xs text-slate-500 p-4">Selecciona el cliente para comenzar.</p>'; return; }
+      if (!R.cargado || !C || !C.cargado) { c.innerHTML = '<p class="text-xs text-slate-500 p-4">Cargando…</p>'; return; }
+      if (C.error) { c.innerHTML = '<p class="text-xs text-red-600 font-bold p-4">No se pudo cargar: ' + e(/does not exist|schema cache/i.test(C.error) ? 'falta la tabla v2_conclusion en Supabase.' : C.error) + '</p>'; return; }
+      const cl = (R.data && R.data.conclusiones) || null, D = C.datos || {};
+      if (!cl) { c.innerHTML = '<div class="p-8 text-center text-sm text-slate-600 space-y-2"><p>Aún no hay conclusiones para este cliente, año y visita.</p><p class="text-xs text-slate-500">Cuando Claude termine el análisis, aquí aparecerán los puntos por concluir, los ajustes, las revelaciones y su conclusión.</p></div>'; return; }
+      const H2 = 'font-bold text-slate-800 text-base border-b border-slate-200 mt-6 mb-2 pb-1';
+      const TH = 'px-3 py-2 text-left font-bold text-slate-600 bg-slate-50 border-b border-slate-200', TD = 'px-3 py-2 align-top border-b border-slate-100';
+      const INP = 'w-full px-2 py-1 border border-slate-300 rounded-lg text-xs outline-none focus:ring-2 focus:ring-indigo-500 bg-white';
+      const ABR = 'onchange';
+      const SEL = (opc, val, fn) => '<select class="' + INP + '" onchange="' + fn + '">' + opc.map(([v, t]) => '<option value="' + e(v) + '"' + (v === val ? ' selected' : '') + '>' + e(t) + '</option>').join('') + '</select>';
+      const quitar = (tipo, id) => '<button type="button" onclick="v2ConcQuitar(\'' + tipo + '\',\'' + e(v2ConcK(id)) + '\')" class="text-slate-400 hover:text-red-600 text-xs" title="Quitar">✕</button>';
+      // 1. Por concluir
+      const pcs = (cl.por_concluir || []).map(x => ({ ...x, id: v2ConcK(x.id), mio: false })).concat((D.pcExtra || []).map(x => ({ ...x, ref: '', mio: true })));
+      const ESTPC = [['abierto', 'Abierto'], ['proceso', 'En proceso'], ['cerrado', 'Cerrado']];
+      const nPc = pcs.filter(x => ((D.pc || {})[x.id] || {}).estado !== 'cerrado').length;
+      const filasPc = pcs.map(x => { const s = (D.pc || {})[x.id] || {}, k = e(x.id);
+        return '<tr><td class="' + TD + ' font-medium text-slate-800" style="min-width:12rem">' + (x.ref ? '<span class="v2t-cod">' + e(x.ref) + '</span> ' : '') + e(x.asunto || '') + (x.mio ? ' ' + quitar('pc', x.id) : '') + '</td><td class="' + TD + '" style="min-width:18rem">' + e(x.falta || '') + '</td>' +
+          '<td class="' + TD + '" style="min-width:9rem"><input class="' + INP + '" value="' + e(s.resp || '') + '" placeholder="Responsable" onchange="v2ConcSet(\'pc\',\'' + k + '\',\'resp\',this.value)"></td>' +
+          '<td class="' + TD + '" style="min-width:8rem"><input type="date" class="' + INP + '" value="' + e(s.fecha || '') + '" onchange="v2ConcSet(\'pc\',\'' + k + '\',\'fecha\',this.value)"></td>' +
+          '<td class="' + TD + '" style="min-width:8rem">' + SEL(ESTPC, s.estado || 'abierto', 'v2ConcSet(\'pc\',\'' + k + '\',\'estado\',this.value)') + '</td></tr>'; }).join('');
+      // 2. To/Do - Quick Lett - Opinión
+      const envs = (cl.envios || []).map(x => ({ ...x, id: v2ConcK(x.id), mio: false })).concat((D.envExtra || []).map(x => ({ ...x, mio: true })));
+      const nEnv = envs.filter(x => !((D.envios || {})[x.id] || {}).destino).length;
+      const btnD = (id, d, sug) => '<button type="button" onclick="v2ConcEnviar(\'' + e(id) + '\',\'' + d + '\')" class="px-2.5 py-1 text-xs rounded-lg transition border font-medium ' + (sug === d ? 'border-indigo-400 text-indigo-700 bg-indigo-50 hover:bg-indigo-100' : 'border-slate-300 text-slate-700 hover:bg-slate-100') + '">' + V2_DEST[d] + '</button>';
+      const filasEnv = envs.map(x => { const s = (D.envios || {})[x.id] || {};
+        return '<tr><td class="' + TD + ' text-slate-500 whitespace-nowrap">' + e(x.origen || '') + (x.ref ? ' · <span class="v2t-cod">' + e(x.ref) + '</span>' : '') + '</td><td class="' + TD + '" style="min-width:20rem">' + e(x.texto || '') + (x.mio ? ' ' + quitar('env', x.id) : '') + '</td><td class="' + TD + ' whitespace-nowrap">' +
+          (s.destino ? '<span class="text-slate-600">Enviado a <b>' + V2_DEST[s.destino] + '</b>' + (s.por ? ' · ' + e(nombreMostrado(s.por)) : '') + (s.cuando ? ' · ' + e(v2Fmt(s.cuando)) : '') + '</span>' : '<div class="flex gap-2">' + btnD(x.id, 'todo', x.sugerido) + btnD(x.id, 'quicklett', x.sugerido) + btnD(x.id, 'opinion', x.sugerido) + '</div>') + '</td></tr>'; }).join('');
+      // 3. Ajustes
+      const ajs = cl.ajustes || [], ESTAJ = [['propuesto', 'Propuesto'], ['aceptado', 'Aceptado por el cliente'], ['noreg', 'No registrado']];
+      const tot = { d: 0, h: 0, r: 0, m: 0 };
+      const filasAj = ajs.map(a => { const n = v2ConcK(a.n), s = (D.ajEstado || {})[n] || 'propuesto', ls = Array.isArray(a.asiento) && a.asiento.length ? a.asiento : [{ cuenta: '', debe: a.monto, haber: 0 }];
+        tot.m += Number(a.monto) || 0; tot.r += Number(a.efecto_resultados) || 0;
+        return ls.map((l, i) => { tot.d += Number(l.debe) || 0; tot.h += Number(l.haber) || 0;
+          return '<tr>' + (i === 0 ? '<td class="' + TD + ' font-bold text-slate-800" rowspan="' + ls.length + '">' + e(a.n) + '</td>' : '') + '<td class="' + TD + '">' + e(l.cuenta || '') + '</td><td class="' + TD + ' text-right whitespace-nowrap">' + (Number(l.debe) ? fm(l.debe) : '') + '</td><td class="' + TD + ' text-right whitespace-nowrap">' + (Number(l.haber) ? fm(l.haber) : '') + '</td>' +
+            (i === 0 ? '<td class="' + TD + '" rowspan="' + ls.length + '" style="min-width:14rem">' + e(a.concepto || '') + '</td><td class="' + TD + ' text-right whitespace-nowrap" rowspan="' + ls.length + '">' + (Number(a.efecto_resultados) ? fm(a.efecto_resultados) : '0,00') + '</td><td class="' + TD + '" rowspan="' + ls.length + '" style="min-width:16rem">' + e(a.efecto_tributario || '') + '</td><td class="' + TD + '" rowspan="' + ls.length + '" style="min-width:9rem">' + SEL(ESTAJ, s, 'v2ConcAj(\'' + e(n) + '\',this.value)') + '</td>' : '') + '</tr>'; }).join(''); }).join('');
+      // 4. Revelaciones
+      const revs = (cl.revelaciones || []).map(x => ({ ...x, id: v2ConcK(x.id), mio: false })).concat((D.revExtra || []).map(x => ({ ...x, mio: true })));
+      const nRev = revs.filter(x => ((D.rev || {})[x.id] || {}).notas !== 'si').length;
+      const filasRev = revs.map(x => { const s = (D.rev || {})[x.id] || {}, k = e(x.id);
+        return '<tr><td class="' + TD + ' font-medium text-slate-800" style="min-width:11rem">' + e(x.tema || '') + (x.mio ? ' ' + quitar('rev', x.id) : '') + '</td><td class="' + TD + '" style="min-width:18rem">' + e(x.que || '') + '</td><td class="' + TD + ' text-slate-600" style="min-width:8rem">' + e(x.norma || '') + '</td><td class="' + TD + '" style="min-width:8rem">' + SEL([['', 'Por confirmar'], ['si', 'Sí'], ['no', 'No']], s.notas || '', 'v2ConcSet(\'rev\',\'' + k + '\',\'notas\',this.value)') + '</td></tr>'; }).join('');
+      // 5. Conclusión
+      const prep = R.data.elaborado_at ? 'Claude (' + e(v2Fmt(R.data.elaborado_at)) + ')' : 'Claude';
+      const marca = (campo, txt) => D[campo + '_por'] ? '<b>' + e(nombreMostrado(D[campo + '_por'])) + '</b> · ' + e(v2Fmt(D[campo + '_at'])) + ' <button type="button" onclick="v2ConcMarca(\'' + campo + '\',false)" class="text-slate-400 hover:text-red-600 ml-1" title="Quitar">✕</button>' : '<button type="button" onclick="v2ConcMarca(\'' + campo + '\',true)" class="px-2.5 py-1 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-100 font-medium">' + txt + '</button>';
+      const chip = (t, n, extra) => '<a href="#" onclick="document.getElementById(\'vc-s' + extra + '\').scrollIntoView({behavior:\'smooth\'});return false" class="px-3 py-1.5 rounded-full border border-slate-300 bg-white text-xs text-slate-700 hover:bg-slate-50"><b>' + t + '</b>: ' + n + '</a>';
+      const add = (ph, id, extra) => '<input id="' + id + '" class="' + INP + '" placeholder="' + ph + '"' + (extra || '') + '>';
+      c.innerHTML = '<div class="p-4 text-sm text-slate-700 max-w-6xl">' +
+        '<div class="flex flex-wrap gap-2 mb-2">' + chip('Por concluir', nPc, '1') + chip('To/Do · Quick Lett · Opinión', nEnv + ' por enviar', '2') + chip('Ajustes', ajs.length + ' · USD ' + fm(tot.m), '3') + chip('Revelaciones', nRev + ' por confirmar', '4') + '</div>' +
+        '<p class="text-xs text-slate-500">Lo que hay que decidir o hacer, en orden de urgencia. Claude lo propone y el auditor lo completa; todo se guarda al cambiarlo.</p>' +
+        '<h2 id="vc-s1" class="' + H2 + '">1. Por concluir</h2>' +
+        '<div class="overflow-x-auto"><table class="w-full text-xs border-collapse"><thead><tr><th class="' + TH + '">Asunto</th><th class="' + TH + '">Qué falta</th><th class="' + TH + '">Responsable</th><th class="' + TH + '">Fecha límite</th><th class="' + TH + '">Estado</th></tr></thead><tbody>' + (filasPc || '<tr><td colspan="5" class="' + TD + ' text-slate-400">Sin puntos por concluir.</td></tr>') + '</tbody></table></div>' +
+        '<div class="flex flex-wrap gap-2 mt-2 items-center"><div style="width:14rem">' + add('Asunto', 'vc-pc-asunto') + '</div><div style="flex:1;min-width:16rem">' + add('Qué falta', 'vc-pc-falta') + '</div><button type="button" onclick="v2ConcNuevo(\'pc\')" class="px-3 py-1 text-xs rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-100 font-medium">+ Agregar</button></div>' +
+        '<h2 id="vc-s2" class="' + H2 + '">2. To/Do · Quick Lett · Opinión</h2>' +
+        '<p class="text-xs text-slate-500 mb-2">Envía cada punto a To/Do, Quick Lett u Opinión de la pregunta «' + e(V2_PREG_NOM) + '» de este cliente y año. Al enviarlo queda marcado aquí. El botón resaltado es lo que sugiere Claude.</p>' +
+        '<div class="overflow-x-auto"><table class="w-full text-xs border-collapse"><thead><tr><th class="' + TH + '">Origen</th><th class="' + TH + '">Punto</th><th class="' + TH + '">Enviar a</th></tr></thead><tbody>' + (filasEnv || '<tr><td colspan="3" class="' + TD + ' text-slate-400">Sin puntos.</td></tr>') + '</tbody></table></div>' +
+        '<div class="flex flex-wrap gap-2 mt-2 items-center"><div style="flex:1;min-width:20rem">' + add('Otro punto del auditor', 'vc-env-texto') + '</div><button type="button" onclick="v2ConcNuevo(\'env\')" class="px-3 py-1 text-xs rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-100 font-medium">+ Agregar</button></div>' +
+        '<h2 id="vc-s3" class="' + H2 + '">3. Ajustes propuestos</h2>' +
+        '<div class="overflow-x-auto"><table class="w-full text-xs border-collapse"><thead><tr><th class="' + TH + '">N.º</th><th class="' + TH + '">Cuenta</th><th class="' + TH + ' text-right">Débito</th><th class="' + TH + ' text-right">Crédito</th><th class="' + TH + '">Concepto</th><th class="' + TH + ' text-right">Efecto en resultados</th><th class="' + TH + '">Efecto tributario</th><th class="' + TH + '">Estado</th></tr></thead><tbody>' + (filasAj || '<tr><td colspan="8" class="' + TD + ' text-slate-400">Claude no propone ajustes.</td></tr>') +
+        (ajs.length ? '<tr class="font-bold bg-slate-50"><td class="' + TD + '" colspan="2">Total</td><td class="' + TD + ' text-right">' + fm(tot.d) + '</td><td class="' + TD + ' text-right">' + fm(tot.h) + '</td><td class="' + TD + '"></td><td class="' + TD + ' text-right">' + fm(tot.r) + '</td><td class="' + TD + '" colspan="2"></td></tr>' : '') + '</tbody></table></div>' +
+        '<h2 id="vc-s4" class="' + H2 + '">4. Revelaciones</h2>' +
+        '<div class="overflow-x-auto"><table class="w-full text-xs border-collapse"><thead><tr><th class="' + TH + '">Tema</th><th class="' + TH + '">Qué debe revelarse</th><th class="' + TH + '">Norma</th><th class="' + TH + '">¿Está en las notas?</th></tr></thead><tbody>' + (filasRev || '<tr><td colspan="4" class="' + TD + ' text-slate-400">Sin revelaciones.</td></tr>') + '</tbody></table></div>' +
+        '<div class="flex flex-wrap gap-2 mt-2 items-center"><div style="width:12rem">' + add('Tema', 'vc-rev-tema') + '</div><div style="flex:1;min-width:14rem">' + add('Qué debe revelarse', 'vc-rev-que') + '</div><div style="width:10rem">' + add('Norma', 'vc-rev-norma') + '</div><button type="button" onclick="v2ConcNuevo(\'rev\')" class="px-3 py-1 text-xs rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-100 font-medium">+ Agregar</button></div>' +
+        '<h2 id="vc-s5" class="' + H2 + '">5. Conclusión y ratificación</h2>' +
+        '<div class="grid gap-4" style="grid-template-columns:repeat(auto-fit,minmax(20rem,1fr))"><div><div class="text-xs font-bold text-slate-600 mb-1">Conclusión de Claude</div><div class="p-3 border border-slate-200 rounded-lg bg-slate-50 leading-relaxed whitespace-pre-wrap">' + e(cl.conclusion || '') + '</div></div>' +
+        '<div><div class="text-xs font-bold text-slate-600 mb-1">Conclusión del auditor</div><textarea id="vc-crit" rows="7" class="w-full p-3 border border-slate-300 rounded-lg text-sm leading-relaxed outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Escribe aquí la conclusión del auditor...">' + e(D.conclusion_auditor || '') + '</textarea><div class="flex flex-wrap items-center gap-3 mt-2"><button type="button" onclick="v2ConcCriterio()" class="px-3 py-1.5 text-xs rounded-lg transition bg-slate-200 text-slate-900 hover:bg-slate-300 font-semibold">Guardar conclusión</button><span class="text-xs text-slate-500">' + (D.conclusion_por ? 'Guardado por ' + e(nombreMostrado(D.conclusion_por)) + ' · ' + e(v2Fmt(D.conclusion_at)) : '') + '</span></div></div></div>' +
+        '<div class="flex flex-wrap items-center gap-x-6 gap-y-2 mt-4 text-xs text-slate-600"><span>Preparado por: <b>' + prep + '</b></span><span>Revisado por: ' + marca('revisado', 'Marcar revisado') + '</span><span>Ratificado por: ' + marca('ratificado', 'Ratificar') + '</span></div></div>';
+    }
+    async function v2ConcAj(n, v) { if (await v2ConcGuardar(d => { d.ajEstado = d.ajEstado || {}; d.ajEstado[n] = v; })) v2ConcPintar(); }
     async function v2Guardar(codigo, cambios) {
       const actual = v2E.filas[codigo] || {};
       const fila = { cliente_id: v2E.cliente, anio: Number(v2E.anio), visita: v2E.visita, sumaria: 'AF', hoja: 'venta', codigo, ...cambios, actualizado_por: nombreUsuarioActivo() || null, updated_at: new Date().toISOString() };
