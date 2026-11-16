@@ -14908,6 +14908,13 @@ ${cont.innerHTML}
       let anc = null; if (A[t]) { anc = A[t][1]; t = A[t][0]; }
       cbE.tab = t; cbRender(); if (anc) setTimeout(() => cbIrSec(anc), 30);
     }
+    function irFilaResaltada(id) {
+      const el = document.getElementById(id); if (!el) return;
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      const celdas = el.querySelectorAll('td'); celdas.forEach(c => { c.style.transition = 'background-color .6s'; c.style.backgroundColor = '#fef3c7'; });
+      setTimeout(() => celdas.forEach(c => { c.style.backgroundColor = ''; }), 2200);
+    }
+    function cbIrProg(cod) { cbE.tab = 'programa'; cbRender(); setTimeout(() => irFilaResaltada('cb-prog-' + cod), 40); }
     function cbIrSec(id) { const el = document.getElementById(id); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
     function cbRenderConScroll() { const p = $cb('cb-panel'), st = p ? p.scrollTop : 0; cbRender(); if (p) p.scrollTop = st; }
     function cbAgregarCuenta() { cbE.cuentas.push({ id: cbId(), banco: '', cuenta: '', tipo: 'Corriente', moneda: 'USD', saldo_estado: '', saldo_libros: '', partidas: [] }); cbGuardar(); cbRenderConScroll(); }
@@ -15380,7 +15387,7 @@ ${cont.innerHTML}
         const antes = !x.pt.length && x.donde ? '<div class="text-[11px] text-slate-500">' + hh(x.donde) + '</div>' : '';
         const op = (v, t) => '<option value="' + v + '"' + (x.estado === v || (v === 'hecho' && x.estado === 'hecho') ? ' selected' : '') + '>' + t + '</option>';
         const est = '<select onchange="cbProgSet(\'' + k + '\', \'estado\', this.value)" style="min-width:130px;width:100%" class="p-2 border border-slate-300 rounded-lg text-xs bg-white outline-none focus:ring-2 focus:ring-indigo-500">' + op('pendiente', 'Pendiente') + op('hecho', 'Hecho') + op('na', 'N/A') + '</select>';
-        h += '<tr class="align-top' + (x.noAplica.length ? ' opacity-60' : '') + '"><td class="p-3 border-r border-slate-200 font-semibold text-slate-700 whitespace-nowrap">' + hh(x.codigo) + '</td>' +
+        h += '<tr id="cb-prog-' + hh(x.codigo) + '" class="align-top' + (x.noAplica.length ? ' opacity-60' : '') + '"><td class="p-3 border-r border-slate-200 font-semibold text-slate-700 whitespace-nowrap">' + hh(x.codigo) + '</td>' +
           '<td class="p-3 border-r border-slate-200 text-slate-700 leading-relaxed text-[12px]">' + (x.titulo ? '<div class="font-bold text-slate-800 mb-0.5 text-[13px]">' + hh(x.titulo) + '</div>' : '') + hh(x.procedimiento || '') + (x.noAplica.length ? '<div class="text-xs text-amber-700 mt-1">Ya no aplica por ' + hh(x.noAplica.join(' y ')) + (x.estado === 'hecho' ? ' (estaba hecho)' : '') + '</div>' : '') + '</td>' +
           '<td class="p-3 border-r border-slate-200 text-[12px]">' + v2Norma(x) + '</td>' +
           '<td class="p-3 border-r border-slate-200 whitespace-nowrap text-[12px]">' + elab + '</td>' +
@@ -15460,7 +15467,7 @@ ${cont.innerHTML}
         const x = g.proc;
         const proc = x ? tituloProcHtml(x) + '<div class="text-[11px] text-slate-400">' + escapeHtml(x.tipo_procedimiento || '') + '</div>' + escapeHtml(x.procedimiento || '') : '<span class="text-slate-400">—</span>';
         const est = (g.pendiente ? '<span class="text-amber-700 font-semibold">' + (x && x.estado === 'hecho' && x.otro ? 'Falta indicar auditor' : 'Pendiente') + '</span>' : '<span class="text-emerald-700 font-semibold">Hecho</span>') + (g.ver.length ? '<div class="mt-1"><button type="button" onclick="cbIrSec(\'cb-sec-verif\')" class="text-[11px] underline text-amber-700 font-semibold">' + g.ver.length + (g.ver.length === 1 ? ' verificación abierta' : ' verificaciones abiertas') + '</button></div>' : '');
-        return '<tr class="border-b border-slate-100 align-top"><td class="p-2 font-semibold">' + escapeHtml(g.cod) + '</td><td class="p-2">' + proc + '</td><td class="p-2">' + est + '</td></tr>';
+        return '<tr class="border-b border-slate-100 align-top"><td class="p-2 font-semibold">' + (x ? '<button type="button" onclick="cbIrProg(\'' + escapeHtml(g.cod) + '\')" class="underline text-indigo-700 font-semibold" title="Ir a este procedimiento en el Programa">' + escapeHtml(g.cod) + '</button>' : escapeHtml(g.cod)) + '</td><td class="p-2">' + proc + '</td><td class="p-2">' + est + '</td></tr>';
       }).join('') + '</tbody></table></div></div>';
       return h;
     }
@@ -19473,6 +19480,7 @@ ${cont.innerHTML}
     // ===== AF Inventarios v2 (prueba): hoja "Inventario para la venta" › pestaña Programa =====
     const v2E = { cliente: '', anio: '', visita: '', procs: [], filas: {}, cargaId: 0, abiertos: {}, tab: 'programa', sv: null };
     const V2_TABS = [['programa', 'Programa'], ['subir', 'Subir información'], ['resultado', 'Resultado del análisis – Claude'], ['cuadres', 'Resumen de cuadres y cruces'], ['conclusiones', 'Conclusiones de la cuenta']];
+    function v2IrProg(cod) { v2E.tab = 'programa'; v2Pintar(); setTimeout(() => irFilaResaltada('v2-prog-' + cod), 40); }
     function v2IrTab(t) { v2E.tab = t; v2Pintar(); }
     function v2Fmt(t) { return t ? new Date(t).toLocaleString('es-EC', { day: '2-digit', month: '2-digit', year: 'numeric', hour: 'numeric', minute: '2-digit' }) : ''; }
     async function abrirImport2() {
@@ -19565,7 +19573,7 @@ ${cont.innerHTML}
         const opc = (v, t) => `<option value="${v}"${estSel === v ? ' selected' : ''}>${t}</option>`;
         const estCel = `<select onchange="v2Guardar('${k}',{estado:this.value})" style="min-width:130px;width:100%" class="p-2 border border-slate-300 rounded-lg text-xs bg-white outline-none focus:ring-2 focus:ring-indigo-500"><option value=""${estSel === '' ? ' selected' : ''}>Elegir…</option>${opc('hecho', 'Hecho')}${opc('na', 'N/A')}${opc('pendiente', 'Pendiente')}</select>`;
         const rev = f.revisado_at ? `<div class="font-semibold text-emerald-700">✔ ${h(nombreMostrado(f.revisado_por) || '')}</div><div class="text-[10px] text-slate-400 mt-0.5">${v2Fmt(f.revisado_at)}</div><button type="button" onclick="v2Revisar('${k}',false)" class="text-[10px] text-slate-400 hover:underline mt-1">Quitar revisión</button>` : `<button type="button" onclick="v2Revisar('${k}',true)" class="px-2.5 py-1 text-[11px] font-semibold border border-slate-300 rounded-lg bg-white hover:bg-slate-50">Marcar revisado</button>`;
-        filas += `<tr class="align-top">
+        filas += `<tr id="v2-prog-${k}" class="align-top">
           <td class="p-3 border-r border-slate-200 font-semibold text-slate-700 whitespace-nowrap">${k}</td>
           <td class="p-3 border-r border-slate-200 text-slate-700 leading-relaxed text-[12px]">${p.titulo ? `<div class="font-bold text-slate-800 mb-0.5 text-[13px]">${h(p.titulo)}</div>` : ''}${h(p.procedimiento || '')}</td>
           <td class="p-3 border-r border-slate-200 text-[12px]" >${v2Norma(p)}</td>
@@ -20050,7 +20058,7 @@ ${cont.innerHTML}
         const bul = [];
         if (g.sinPt) bul.push('• Sin papel de trabajo');
         g.items.forEach(x => bul.push('• ' + e(x.asunto || '') + (x.falta ? ': ' + e(x.falta) : '') + ' <button type="button" onclick="v2ConcSet(\'pc\',\'' + e(x.id) + '\',\'estado\',\'cerrado\')" class="text-[11px] underline text-indigo-700 font-semibold ml-1">Cerrar</button>' + (x.mio ? ' ' + quitar('pc', x.id) : '')));
-        return '<tr class="border-b border-slate-100 align-top"><td class="p-2 font-semibold">' + e(g.cod) + '</td><td class="p-2">' + proc + '</td><td class="p-2">' + est + '</td><td class="p-2">' + (bul.length ? bul.map(b => '<div class="mb-1">' + b + '</div>').join('') : '<span class="text-slate-400">—</span>') + '</td></tr>';
+        return '<tr class="border-b border-slate-100 align-top"><td class="p-2 font-semibold">' + (g.proc ? '<button type="button" onclick="v2IrProg(\'' + e(g.cod) + '\')" class="underline text-indigo-700 font-semibold" title="Ir a este procedimiento en el Programa">' + e(g.cod) + '</button>' : e(g.cod)) + '</td><td class="p-2">' + proc + '</td><td class="p-2">' + est + '</td><td class="p-2">' + (bul.length ? bul.map(b => '<div class="mb-1">' + b + '</div>').join('') : '<span class="text-slate-400">—</span>') + '</td></tr>';
       }).join('');
       const cerrados = pcsAll.filter(cerrado);
       // 2. To/Do - Quick Lett - Opinión
