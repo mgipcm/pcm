@@ -15530,15 +15530,38 @@ ${cont.innerHTML}
         '<h2 id="cb-sec-resumen" class="' + CB_H2 + '">2. Resumen de conciliaciones</h2>' + cbHtmlResumen() +
         '<div class="px-3">' + cbHtmlMemo() + '</div></div>';
     }
+    // ----- Tarjetas de estado de "Conclusiones de la cuenta" (compartidas por Bancos e Inventarios v2) -----
+    function conclTarjetaClic(el) {
+      const g = el.parentNode; if (!g) return;
+      g.querySelectorAll('a').forEach(a => { a.style.boxShadow = ''; a.style.outline = ''; });
+      el.style.outline = '2px solid #334155'; el.style.outlineOffset = '1px';
+    }
+    function conclTarjetas(items) {
+      const C = { alerta: ['#fff7ed', '#fdba74', '#c2410c'], ok: ['#f0fdf4', '#86efac', '#15803d'], neutro: ['#ffffff', '#cbd5e1', '#475569'] };
+      return '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:12px">' + items.map(x => {
+        const c = C[x.estado] || C.neutro;
+        return '<a href="#" onclick="conclTarjetaClic(this);' + x.go + ';return false" style="display:block;text-decoration:none;background:' + c[0] + ';border:1px solid ' + c[1] + ';border-radius:12px;padding:10px 14px;cursor:pointer">' +
+          '<div style="font-size:12px;font-weight:700;color:#1e293b;line-height:1.2">' + x.t + '</div>' +
+          '<div style="font-size:' + (String(x.n).length > 9 ? '20' : '28') + 'px;font-weight:800;color:' + c[2] + ';line-height:1.15;margin-top:4px">' + x.n + '</div>' +
+          '<div style="font-size:11px;color:#64748b;margin-top:1px">' + x.sub + '</div></a>';
+      }).join('') + '</div>';
+    }
     // ----- Conclusiones de la cuenta: por concluir, To/Do · Quick Lett · Opinión, ajustes, verificaciones, revelaciones y conclusión -----
     function cbHtmlConclusiones() {
       if (cbE.plantilla === null) return '<div class="p-8 text-center text-slate-400 text-sm">Cargando...</div>';
       const P = cbPorConcluir(), D = cbDr(), t = cbAsTotales(), R = cbE.config.revel || {};
       const nRev = ['restr', 'otras'].filter(k => String(R[k] || '').trim()).length, e1 = estadoOrigen(cbE.org);
-      const chip = (tt, n, id) => '<a href="#" onclick="cbIrSec(\'' + id + '\');return false" class="px-3 py-1.5 rounded-full border border-slate-300 bg-white text-xs text-slate-700 hover:bg-slate-50"><b>' + tt + '</b>: ' + n + '</a>';
-      return '<div class="p-4 text-sm text-slate-700 max-w-6xl"><div class="flex flex-wrap gap-2 mb-2">' +
-        chip('Por concluir', P.grupos.length, 'cb-sec-concluir') + chip('To/Do · Quick Lett · Opinión', cbEnvios().filter(x => !((cbE.config.envios || {})[x.id] || {}).destino).length + ' por enviar', 'cb-sec-todo') + chip('Ajustes', t.debe ? 'USD ' + formatoNumeroAnexo(t.debe) : 'sin asiento', 'cb-sec-ajustes') + chip('Verificaciones', P.ver.length + ' por resolver', 'cb-sec-verif') + chip('Revelaciones', nRev + ' de 2 completadas', 'cb-sec-revel') + chip('Conclusión', e1 === 'revisado' ? 'ratificada' : 'por ratificar', 'cb-sec-concl') + '</div>' +
-        '<p class="text-xs text-slate-500">Lo que hay que decidir o hacer. Claude lo propone y el auditor lo completa.</p>' +
+      const nEnvB = cbEnvios().filter(x => !((cbE.config.envios || {})[x.id] || {}).destino).length;
+      const go = id => 'cbIrSec(\'' + id + '\')';
+      return '<div class="p-4 text-sm text-slate-700 max-w-6xl">' + conclTarjetas([
+        { t: 'Por concluir', n: P.grupos.length, sub: 'por decidir', estado: P.grupos.length ? 'alerta' : 'ok', go: go('cb-sec-concluir') },
+        { t: 'To/Do · Quick Lett · Opinión', n: nEnvB, sub: 'por enviar', estado: nEnvB ? 'alerta' : 'ok', go: go('cb-sec-todo') },
+        { t: 'Ajustes propuestos', n: t.debe ? 'USD ' + formatoNumeroAnexo(t.debe) : '—', sub: t.debe ? 'asiento propuesto' : 'sin asiento', estado: t.debe ? 'alerta' : 'neutro', go: go('cb-sec-ajustes') },
+        { t: 'Verificaciones', n: P.ver.length, sub: 'por resolver', estado: P.ver.length ? 'alerta' : 'ok', go: go('cb-sec-verif') },
+        { t: 'Revelaciones', n: nRev + ' de 2', sub: 'completadas', estado: nRev >= 2 ? 'ok' : 'alerta', go: go('cb-sec-revel') },
+        { t: 'Conclusión', n: e1 === 'revisado' ? 'Ratificada' : 'Por ratificar', sub: e1 === 'revisado' ? 'listo' : 'falta el visto bueno', estado: e1 === 'revisado' ? 'ok' : 'alerta', go: go('cb-sec-concl') }
+      ]) +
+        '<p class="text-sm text-slate-600 mb-2">Lo que hay que decidir o hacer. Claude lo propone y el auditor lo completa.</p>' +
         '<h2 id="cb-sec-concluir" class="' + CB_H2.replace(' px-3', '') + '">1. Por concluir</h2>' + cbHtmlConcluir() +
         '<h2 id="cb-sec-todo" class="' + CB_H2.replace(' px-3', '') + '">2. To/Do · Quick Lett · Opinión</h2>' + cbHtmlConclEnvios() +
         '<h2 id="cb-sec-ajustes" class="' + CB_H2.replace(' px-3', '') + '">3. Ajustes propuestos</h2>' + cbHtmlConclAjustes() +
@@ -20050,11 +20073,16 @@ ${cont.innerHTML}
       // 5. Conclusión
       const prep = R.data.elaborado_at ? 'Claude (' + e(v2Fmt(R.data.elaborado_at)) + ')' : 'Claude';
       const marca = (campo, txt) => D[campo + '_por'] ? '<b>' + e(nombreMostrado(D[campo + '_por'])) + '</b> · ' + e(v2Fmt(D[campo + '_at'])) + ' <button type="button" onclick="v2ConcMarca(\'' + campo + '\',false)" class="text-slate-400 hover:text-red-600 ml-1" title="Quitar">✕</button>' : '<button type="button" onclick="v2ConcMarca(\'' + campo + '\',true)" class="px-2.5 py-1 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-100 font-medium">' + txt + '</button>';
-      const chip = (t, n, extra) => '<a href="#" onclick="document.getElementById(\'vc-s' + extra + '\').scrollIntoView({behavior:\'smooth\'});return false" class="px-3 py-1.5 rounded-full border border-slate-300 bg-white text-xs text-slate-700 hover:bg-slate-50"><b>' + t + '</b>: ' + n + '</a>';
       const add = (ph, id, extra) => '<input id="' + id + '" class="' + INP + '" placeholder="' + ph + '"' + (extra || '') + '>';
       c.innerHTML = '<div class="p-4 text-sm text-slate-700 max-w-6xl">' +
-        '<div class="flex flex-wrap gap-2 mb-2">' + chip('Por concluir', nPc, '1') + chip('To/Do · Quick Lett · Opinión', nEnv + ' por enviar', '2') + chip('Ajustes', ajs.length + ' · USD ' + fm(tot.m), '3') + chip('Verificaciones', nVer + ' por resolver', '4') + chip('Revelaciones', nRev + ' por confirmar', '5') + '</div>' +
-        '<p class="text-xs text-slate-500">Lo que hay que decidir o hacer, en orden de urgencia. Claude lo propone y el auditor lo completa; todo se guarda al cambiarlo.</p>' +
+        conclTarjetas([
+          { t: 'Por concluir', n: nPc, sub: 'por decidir', estado: nPc ? 'alerta' : 'ok', go: "document.getElementById('vc-s1').scrollIntoView({behavior:'smooth'})" },
+          { t: 'To/Do · Quick Lett · Opinión', n: nEnv, sub: 'por enviar', estado: nEnv ? 'alerta' : 'ok', go: "document.getElementById('vc-s2').scrollIntoView({behavior:'smooth'})" },
+          { t: 'Ajustes propuestos', n: ajs.length ? 'USD ' + fm(tot.m) : '—', sub: ajs.length ? ajs.length + ' asiento(s)' : 'sin asiento', estado: ajs.length ? 'alerta' : 'neutro', go: "document.getElementById('vc-s3').scrollIntoView({behavior:'smooth'})" },
+          { t: 'Verificaciones', n: nVer, sub: 'por resolver', estado: nVer ? 'alerta' : 'ok', go: "document.getElementById('vc-s4').scrollIntoView({behavior:'smooth'})" },
+          { t: 'Revelaciones', n: nRev, sub: 'por confirmar', estado: nRev ? 'alerta' : 'ok', go: "document.getElementById('vc-s5').scrollIntoView({behavior:'smooth'})" }
+        ]) +
+        '<p class="text-sm text-slate-600 mb-2">Lo que hay que decidir o hacer, en orden de urgencia. Claude lo propone y el auditor lo completa; todo se guarda al cambiarlo.</p>' +
         '<h2 id="vc-s1" class="' + H2 + '">1. Por concluir</h2>' +
         (nPc ? '<div class="font-bold text-slate-800 mb-2 text-sm">Programas por concluir (' + nPc + ') · <button type="button" onclick="v2IrTab(\'programa\')" class="underline text-indigo-700 font-bold">ir al Programa de trabajo</button> · <button type="button" onclick="document.getElementById(\'vc-s4\').scrollIntoView({behavior:\'smooth\'})" class="underline text-indigo-700 font-bold">ir a Verificaciones</button></div><div class="overflow-x-auto border border-slate-200 rounded-xl"><table class="w-full text-left text-xs border-collapse"><thead class="bg-slate-100 text-slate-600 font-bold border-b border-slate-200"><tr><th class="p-2 w-20">Programa</th><th class="p-2 min-w-[320px]">Procedimiento</th><th class="p-2 w-28">Estado</th><th class="p-2 min-w-[300px]">Por resolver</th></tr></thead><tbody>' + filasPc + '</tbody></table></div>' : '<div class="p-4 text-center text-emerald-700 text-sm font-semibold">Nada pendiente: todos los procedimientos están hechos y no quedan puntos por concluir.</div>') +
         (cerrados.length ? '<div class="text-[11px] text-slate-500 mt-2">Cerrados: ' + cerrados.map(x => e(x.asunto || '') + ' <button type="button" onclick="v2ConcSet(\'pc\',\'' + e(x.id) + '\',\'estado\',\'abierto\')" class="underline text-indigo-700">Reabrir</button>').join(' · ') + '</div>' : '') +
