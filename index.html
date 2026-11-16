@@ -19884,6 +19884,8 @@ ${cont.innerHTML}
       ['liquidacion', 'Las liquidaciones se cruzaron contra el tránsito', 'NIC 2.10', 'AF-17'],
       ['manuales', 'Se obtuvo el soporte y la aprobación de los asientos manuales sin movimiento en el kárdex', 'NIA 240.32', 'AF-18']
     ];
+    function v2EstProc(p) { const f = v2E.filas[p.codigo] || {}; return f.estado === 'hecho' || f.estado === 'na' || f.estado === 'pendiente' ? f.estado : (v2TienePt(p) ? 'hecho' : ''); }
+    function v2TienePt(p) { return (v2E.pts || []).some(t => t.codigo === p.codigo) || ((v2E.filas[p.codigo] || {}).pt || []).length > 0; }
     function v2VerifAuto() {
       const R = v2E.res, B = v2E.bal; if (!R || !R.cargado || !B || !B.cargado) return null;
       const bal = B.m || {}, cu = (R.data && Array.isArray(R.data.cuadres)) ? R.data.cuadres : [], R2 = x => Math.round(x * 100) / 100, fm = formatoNumeroAnexo, out = [], usadas = {};
@@ -19939,15 +19941,27 @@ ${cont.innerHTML}
       const ABR = 'onchange';
       const SEL = (opc, val, fn) => '<select class="' + INP + '" onchange="' + fn + '">' + opc.map(([v, t]) => '<option value="' + e(v) + '"' + (v === val ? ' selected' : '') + '>' + e(t) + '</option>').join('') + '</select>';
       const quitar = (tipo, id) => '<button type="button" onclick="v2ConcQuitar(\'' + tipo + '\',\'' + e(v2ConcK(id)) + '\')" class="text-slate-400 hover:text-red-600 text-xs" title="Quitar">✕</button>';
-      // 1. Por concluir
-      const pcs = (cl.por_concluir || []).map(x => ({ ...x, id: v2ConcK(x.id), mio: false })).concat((D.pcExtra || []).map(x => ({ ...x, ref: '', mio: true })));
-      const ESTPC = [['abierto', 'Abierto'], ['proceso', 'En proceso'], ['cerrado', 'Cerrado']];
-      const nPc = pcs.filter(x => ((D.pc || {})[x.id] || {}).estado !== 'cerrado').length;
-      const filasPc = pcs.map(x => { const s = (D.pc || {})[x.id] || {}, k = e(x.id);
-        return '<tr><td class="' + TD + ' font-medium text-slate-800" style="min-width:12rem">' + (x.ref ? '<span class="v2t-cod">' + e(x.ref) + '</span> ' : '') + e(x.asunto || '') + (x.mio ? ' ' + quitar('pc', x.id) : '') + '</td><td class="' + TD + '" style="min-width:18rem">' + e(x.falta || '') + '</td>' +
-          '<td class="' + TD + '" style="min-width:9rem"><input class="' + INP + '" value="' + e(s.resp || '') + '" placeholder="Responsable" onchange="v2ConcSet(\'pc\',\'' + k + '\',\'resp\',this.value)"></td>' +
-          '<td class="' + TD + '" style="min-width:8rem"><input type="date" class="' + INP + '" value="' + e(s.fecha || '') + '" onchange="v2ConcSet(\'pc\',\'' + k + '\',\'fecha\',this.value)"></td>' +
-          '<td class="' + TD + '" style="min-width:8rem">' + SEL(ESTPC, s.estado || 'abierto', 'v2ConcSet(\'pc\',\'' + k + '\',\'estado\',this.value)') + '</td></tr>'; }).join('');
+      // 1. Por concluir: un renglón por programa, con lo que falta resolver (mismo formato que Bancos)
+      const pcsAll = (cl.por_concluir || []).map(x => ({ ...x, id: v2ConcK(x.id), mio: false })).concat((D.pcExtra || []).map(x => ({ ...x, ref: '', mio: true })));
+      const cerrado = x => ((D.pc || {})[x.id] || {}).estado === 'cerrado';
+      const procsPc = v2E.procs || [], mapaPc = new Map();
+      const getPc = cod => { if (!mapaPc.has(cod)) mapaPc.set(cod, { cod, proc: procsPc.find(p => p.codigo === cod) || null, pend: false, sinPt: false, items: [], evals: [] }); return mapaPc.get(cod); };
+      procsPc.forEach(p => { const st = v2EstProc(p); if (st === 'na') return; if (st !== 'hecho') getPc(p.codigo).pend = true; if (!v2TienePt(p)) getPc(p.codigo).sinPt = true; });
+      V2_VERIF_MANUALES.forEach(([k, t, ref, cod]) => { const ev = (((D.verif || {})[k] || {}).e) || 'pendiente'; if (ev === 'pendiente' || ev === 'nocumple') getPc(cod).evals.push({ t, ev }); });
+      pcsAll.filter(x => !cerrado(x)).forEach(x => getPc(x.ref || '—').items.push(x));
+      const gruposPc = [...mapaPc.values()].filter(g => g.pend || g.sinPt || g.items.length || g.evals.length).sort((x, y) => String(x.cod).localeCompare(String(y.cod), 'es', { numeric: true }));
+      const nPc = gruposPc.length;
+      const filasPc = gruposPc.map(g => {
+        const x = g.proc;
+        const proc = x ? (x.titulo ? '<div class="font-bold text-slate-800 mb-0.5">' + e(x.titulo) + '</div>' : '') + '<div class="text-[11px] text-slate-400">' + e(x.tipo_procedimiento || '') + '</div>' + e(x.procedimiento || '') : (g.items[0] ? '<span class="font-bold text-slate-800">' + e(g.items[0].asunto || '') + '</span>' : '<span class="text-slate-400">—</span>');
+        const est = g.proc ? (g.pend ? '<span class="text-amber-700 font-semibold">Pendiente</span>' : '<span class="text-emerald-700 font-semibold">Hecho</span>') : '<span class="text-amber-700 font-semibold">Abierto</span>';
+        const bul = [];
+        if (g.sinPt) bul.push('• Sin papel de trabajo');
+        g.evals.forEach(v => bul.push('• Evaluación del auditor: ' + e(v.t) + ' <span class="text-amber-700">(' + (v.ev === 'nocumple' ? 'No cumple' : 'Pendiente') + ')</span>'));
+        g.items.forEach(x => bul.push('• ' + e(x.asunto || '') + (x.falta ? ': ' + e(x.falta) : '') + ' <button type="button" onclick="v2ConcSet(\'pc\',\'' + e(x.id) + '\',\'estado\',\'cerrado\')" class="text-[11px] underline text-indigo-700 font-semibold ml-1">Cerrar</button>' + (x.mio ? ' ' + quitar('pc', x.id) : '')));
+        return '<tr class="border-b border-slate-100 align-top"><td class="p-2 font-semibold">' + e(g.cod) + '</td><td class="p-2">' + proc + '</td><td class="p-2">' + est + '</td><td class="p-2">' + (bul.length ? bul.map(b => '<div class="mb-1">' + b + '</div>').join('') : '<span class="text-emerald-700">Todas cerradas</span>') + '</td></tr>';
+      }).join('');
+      const cerrados = pcsAll.filter(cerrado);
       // 2. To/Do - Quick Lett - Opinión
       const envs = (cl.envios || []).map(x => ({ ...x, id: v2ConcK(x.id), mio: false })).concat((D.envExtra || []).map(x => ({ ...x, mio: true })));
       const nEnv = envs.filter(x => !((D.envios || {})[x.id] || {}).destino).length;
@@ -19991,7 +20005,8 @@ ${cont.innerHTML}
         '<div class="flex flex-wrap gap-2 mb-2">' + chip('Por concluir', nPc, '1') + chip('To/Do · Quick Lett · Opinión', nEnv + ' por enviar', '2') + chip('Ajustes', ajs.length + ' · USD ' + fm(tot.m), '3') + chip('Verificaciones', nVer + ' por resolver', '4') + chip('Revelaciones', nRev + ' por confirmar', '5') + '</div>' +
         '<p class="text-xs text-slate-500">Lo que hay que decidir o hacer, en orden de urgencia. Claude lo propone y el auditor lo completa; todo se guarda al cambiarlo.</p>' +
         '<h2 id="vc-s1" class="' + H2 + '">1. Por concluir</h2>' +
-        '<div class="overflow-x-auto"><table class="w-full text-xs border-collapse"><thead class="bg-slate-100 text-slate-600 text-[10px] font-bold border-b border-slate-200"><tr><th class="' + TH + '">Asunto</th><th class="' + TH + '">Qué falta</th><th class="' + TH + '">Responsable</th><th class="' + TH + '">Fecha límite</th><th class="' + TH + '">Estado</th></tr></thead><tbody>' + (filasPc || '<tr><td colspan="5" class="' + TD + ' text-slate-400">Sin puntos por concluir.</td></tr>') + '</tbody></table></div>' +
+        (nPc ? '<div class="font-bold text-slate-800 mb-2 text-sm">Programas por concluir (' + nPc + ') · <button type="button" onclick="v2IrTab(\'programa\')" class="underline text-indigo-700 font-bold">ir al Programa de trabajo</button> · <button type="button" onclick="document.getElementById(\'vc-s4\').scrollIntoView({behavior:\'smooth\'})" class="underline text-indigo-700 font-bold">ir a Verificaciones</button></div><div class="overflow-x-auto border border-slate-200 rounded-xl"><table class="w-full text-left text-xs border-collapse"><thead class="bg-slate-100 text-slate-600 font-bold border-b border-slate-200"><tr><th class="p-2 w-20">Programa</th><th class="p-2 min-w-[320px]">Procedimiento</th><th class="p-2 w-28">Estado</th><th class="p-2 min-w-[300px]">Por resolver</th></tr></thead><tbody>' + filasPc + '</tbody></table></div>' : '<div class="p-4 text-center text-emerald-700 text-sm font-semibold">Nada pendiente: todos los procedimientos están hechos y no quedan puntos por concluir.</div>') +
+        (cerrados.length ? '<div class="text-[11px] text-slate-500 mt-2">Cerrados: ' + cerrados.map(x => e(x.asunto || '') + ' <button type="button" onclick="v2ConcSet(\'pc\',\'' + e(x.id) + '\',\'estado\',\'abierto\')" class="underline text-indigo-700">Reabrir</button>').join(' · ') + '</div>' : '') +
         '<div class="flex flex-wrap gap-2 mt-2 items-center"><div style="width:14rem">' + add('Asunto', 'vc-pc-asunto') + '</div><div style="flex:1;min-width:16rem">' + add('Qué falta', 'vc-pc-falta') + '</div><button type="button" onclick="v2ConcNuevo(\'pc\')" class="px-3 py-1 text-xs rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-100 font-medium">+ Agregar</button></div>' +
         '<h2 id="vc-s2" class="' + H2 + '">2. To/Do · Quick Lett · Opinión</h2>' +
         '<p class="text-xs text-slate-500 mb-2">Envía cada punto a To/Do, Quick Lett u Opinión: pasa al consolidado «To/Do - Quick Lett - Opinión» de este cliente y año (menú Auditoría/Análisis Claves). Al enviarlo queda marcado aquí. El botón resaltado es lo que sugiere Claude.</p>' +
