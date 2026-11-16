@@ -19449,7 +19449,7 @@ ${cont.innerHTML}
     function v2Pintar() {
       flechasLados('sec-import2', 'v2-panel');
       const tb = $im('v2-tabs');
-      if (tb) tb.innerHTML = V2_TABS.map(([k, n]) => '<button type="button" onclick="v2IrTab(\'' + k + '\')" class="px-3 py-1.5 text-xs rounded-lg ' + (v2E.tab === k ? 'bg-indigo-50 text-indigo-700 font-bold' : 'text-slate-500 hover:bg-slate-50') + '">' + n + '</button>').join('');
+      if (tb) tb.innerHTML = V2_TABS.map(([k, n]) => '<button type="button" onclick="v2IrTab(\'' + k + '\')" class="px-3 py-1.5 text-xs transition rounded-lg ' + (v2E.tab === k ? 'bg-slate-200 text-slate-900 font-semibold' : 'text-slate-600 hover:bg-slate-100 font-medium') + '">' + n + '</button>').join('');
       if (v2E.tab === 'subir') { v2SubirPintar(); return; }
       if (v2E.tab === 'resultado') { v2ResPintar(); return; }
       if (v2E.tab === 'cuadres') { v2CuaPintar(); return; }
