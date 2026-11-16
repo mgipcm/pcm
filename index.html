@@ -1123,7 +1123,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
           <label class="block text-xs font-semibold text-slate-600 mb-1">Buscar</label>
           <input type="text" id="pg-buscar" oninput="pintarProgramas()" placeholder="Palabra del procedimiento" class="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs sm:text-sm outline-none">
         </div>
-        <div class="flex items-end gap-2"><select id="pg-hoja" class="p-2 bg-white border border-slate-300 rounded-lg text-xs outline-none" title="Solo para la cuenta AA"><option value="">Hoja (solo AA)</option><option value="caja">Caja</option><option value="bancos">Bancos</option><option value="equivalentes">Equivalentes de efectivo</option><option value="venta">Inventario para la venta</option><option value="import">Importaciones (liquidaciones)</option></select><button type="button" onclick="agregarProcedimientoPlantilla()" class="px-3 py-2 rounded-lg text-xs transition bg-slate-100 text-slate-800 hover:bg-slate-200 font-medium">+ Agregar procedimiento</button></div>
+        <div class="flex items-end gap-2"><select id="pg-hoja" class="p-2 bg-white border border-slate-300 rounded-lg text-xs outline-none" title="Para las cuentas AA, AF y RC"><option value="">Hoja (AA, AF, RC)</option><option value="caja">Caja</option><option value="bancos">Bancos</option><option value="equivalentes">Equivalentes de efectivo</option><option value="venta">Inventario para la venta</option><option value="import">Importaciones (liquidaciones)</option><option value="nomina">Nómina (RC)</option><option value="depreciaciones">Depreciaciones (RC)</option><option value="gastos">Gastos en general (RC)</option></select><button type="button" onclick="agregarProcedimientoPlantilla()" class="px-3 py-2 rounded-lg text-xs transition bg-slate-100 text-slate-800 hover:bg-slate-200 font-medium">+ Agregar procedimiento</button></div>
       </div>
       <div class="flex flex-wrap items-center gap-2">
         <button type="button" onclick="descargarProgramasExcel(false)" class="px-3 py-1.5 rounded-lg text-xs transition bg-slate-100 text-slate-800 hover:bg-slate-200 font-medium" title="Descarga en Excel el programa de la sumaria elegida arriba">Descargar en Excel: la sumaria elegida</button>
@@ -4002,12 +4002,13 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       document.getElementById('pg-conteo').textContent = lista.length + ' procedimiento(s) · ' + lista.filter(r => r.activo).length + ' vigentes · ' + programasPlantilla.length + ' en total';
       const tb = document.getElementById('pg-filas');
       if (!lista.length) { tb.innerHTML = '<tr><td colspan="7" class="p-8 text-center text-slate-400">No hay procedimientos con este filtro.</td></tr>'; return; }
-      lista.sort((x, y) => String(x.sumaria).localeCompare(String(y.sumaria), 'es', { numeric: true }) || (x.orden - y.orden) || (x.id - y.id));
+      const rangoRC = h => ({ nomina: 1, depreciaciones: 2, gastos: 3 }[h] || 9);
+      lista.sort((x, y) => String(x.sumaria).localeCompare(String(y.sumaria), 'es', { numeric: true }) || (x.sumaria === 'RC' ? rangoRC(x.hoja) - rangoRC(y.hoja) : 0) || (x.orden - y.orden) || (x.id - y.id));
       const nombreSum = x => { const c = catalogoCuentas.find(k => k.sumaria === x); return c ? c.cuenta : x; };
       let ult = null, html = '';
       lista.forEach(r => {
         const kg = r.sumaria + '|' + (r.hoja || '');
-        if ((!s || r.hoja) && kg !== ult) { html += '<tr><td colspan="7" class="px-3 py-2 bg-slate-100 text-slate-700 font-bold">' + escapeHtml(nombreSum(r.sumaria) + (r.hoja ? ' · Hoja ' + pcNombreHoja(r.hoja) : '')) + '</td></tr>'; ult = kg; }
+        if ((!s || r.hoja) && kg !== ult) { html += '<tr><td colspan="7" class="px-3 py-2 bg-slate-100 text-slate-700 font-bold">' + escapeHtml(nombreSum(r.sumaria) + (r.hoja ? (r.sumaria === 'RC' ? ' · ' : ' · Hoja ') + pcNombreHoja(r.hoja) : '')) + '</td></tr>'; ult = kg; }
         html += '<tr class="align-top' + (r.activo ? '' : ' opacity-50') + '">' +
           '<td class="p-2 border-r border-slate-200"><input type="text" value="' + escapeHtml(r.codigo || '') + '" onchange="guardarCampoPlantilla(' + r.id + ',\'codigo\',this.value)" class="w-full p-1 border border-slate-200 rounded outline-none bg-white"></td>' +
           '<td class="p-2 border-r border-slate-200"><input type="text" value="' + escapeHtml(r.tipo_procedimiento || '') + '" onchange="guardarCampoPlantilla(' + r.id + ',\'tipo_procedimiento\',this.value)" class="w-full p-1 border border-slate-200 rounded outline-none bg-white"></td>' +
@@ -4027,7 +4028,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       const nombreSum = x => { const c = catalogoCuentas.find(k => k.sumaria === x); return c ? c.cuenta : x; };
       const lista = programasPlantilla.filter(r => !/^(FG|LA|QL)\d*$/.test(r.sumaria) && (todo || r.sumaria === s));
       if (!lista.length) { alert('No hay procedimientos para descargar.'); return; }
-      lista.sort((x, y) => String(x.sumaria).localeCompare(String(y.sumaria), 'es', { numeric: true }) || (x.orden - y.orden) || (x.id - y.id));
+      lista.sort((x, y) => String(x.sumaria).localeCompare(String(y.sumaria), 'es', { numeric: true }) || (x.sumaria === 'RC' ? ({ nomina: 1, depreciaciones: 2, gastos: 3 }[x.hoja] || 9) - ({ nomina: 1, depreciaciones: 2, gastos: 3 }[y.hoja] || 9) : 0) || (x.orden - y.orden) || (x.id - y.id));
       const porSum = {}; lista.forEach(r => { (porSum[r.sumaria] = porSum[r.sumaria] || []).push(r); });
       const cab = ['Código', 'Hoja', 'Tipo', 'Procedimiento', 'Norma de referencia', 'Alcance', 'Tamaño de empresa', 'Vigente'];
       const info = [['Preparado por', (typeof nombreUsuarioActivo === 'function' && nombreUsuarioActivo()) || ''], ['Procedimientos', lista.length]];
@@ -4104,7 +4105,8 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
     async function agregarProcedimientoPlantilla() {
       const s = valorAnalisis('pg-sumaria'), est = document.getElementById('pg-estado');
       if (!s) { est.textContent = 'Elige primero una sumaria para agregarle el procedimiento.'; est.className = 'text-[11px] min-h-[1rem] text-red-600 font-bold'; return; }
-      const hoja = s === 'AA' ? valorAnalisis('pg-hoja') : '';
+      const hoja = (s === 'AA' || s === 'RC') ? valorAnalisis('pg-hoja') : '';
+      if (s === 'RC' && !hoja) { est.textContent = 'Para la cuenta RC elige también el tema (Nómina, Depreciaciones o Gastos en general).'; est.className = 'text-[11px] min-h-[1rem] text-red-600 font-bold'; return; }
       if (s === 'AA' && !hoja) { est.textContent = 'Para la cuenta AA elige también la hoja (Caja, Bancos o Equivalentes de efectivo).'; est.className = 'text-[11px] min-h-[1rem] text-red-600 font-bold'; return; }
       const maxOrden = programasPlantilla.reduce((m, r) => Math.max(m, r.orden || 0), 0);
       const { data, error } = await supabaseClient.from('programas_plantilla').insert([{ sumaria: s, hoja: hoja || null, codigo: '', procedimiento: 'Nuevo procedimiento', activo: true, orden: maxOrden + 1, actualizado_por: nombreUsuarioActivo() || null }]).select().single();
@@ -4759,7 +4761,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       AB: ['Certificado o póliza de inversión', 'Estado de cuenta', 'Confirmación bancaria', 'Detalle o anexo de inversiones', 'Otro'],
       AS: ['Certificado o póliza de inversión', 'Estado de cuenta', 'Confirmación bancaria', 'Detalle o anexo de inversiones', 'Otro']
     };
-    const PC_HOJAS = { caja: 'Caja', bancos: 'Bancos', equivalentes: 'Equivalentes de efectivo', venta: 'Inventario para la venta, importaciones en tránsito y kárdex', costo_ventas: 'Costo de ventas → salidas', kardex: 'Movimiento de kárdex', import: 'Importaciones (liquidaciones)', voucheo: 'Revisión de documentación (voucheo)', nomina: 'Nómina' };
+    const PC_HOJAS = { caja: 'Caja', bancos: 'Bancos', equivalentes: 'Equivalentes de efectivo', venta: 'Inventario para la venta, importaciones en tránsito y kárdex', costo_ventas: 'Costo de ventas → salidas', kardex: 'Movimiento de kárdex', import: 'Importaciones (liquidaciones)', voucheo: 'Revisión de documentación (voucheo)', nomina: 'Nómina', depreciaciones: 'Depreciaciones', gastos: 'Gastos en general' };
     const PC_HOJAS_SUM = { AA: [['caja', 'Caja'], ['bancos', 'Bancos'], ['equivalentes', 'Equivalentes de efectivo']], AF: [['venta', 'Inventario para la venta, importaciones en tránsito y kárdex']], RC: [['nomina', 'Nómina']] };
     function pcNombreHoja(h) { return PC_HOJAS[h] || h || ''; }
     const PC_TODO = 'Todo en un archivo (todos los documentos juntos)';
@@ -18697,7 +18699,7 @@ ${cont.innerHTML}
       aviso.classList.add('hidden'); esp.classList.remove('hidden');
       const id = ++nmE.cargaId; $im('nm-estado').textContent = 'Cargando…';
       const [p, r, tp] = await Promise.all([
-        supabaseClient.from('programas_plantilla').select('*').eq('sumaria', 'RC').eq('activo', true).order('orden', { ascending: true }),
+        supabaseClient.from('programas_plantilla').select('*').eq('sumaria', 'RC').eq('hoja', 'nomina').eq('activo', true).order('orden', { ascending: true }),
         supabaseClient.from('v2_programa').select('*').eq('cliente_id', cli).eq('anio', Number(anio)).eq('visita', vis).eq('sumaria', 'RC').eq('hoja', 'nomina'),
         supabaseClient.from('v2_pt').select('*').eq('cliente_id', cli).eq('anio', Number(anio)).eq('visita', vis).eq('sumaria', 'RC').eq('hoja', 'nomina').order('ref', { ascending: true })
       ]);
@@ -19146,11 +19148,7 @@ ${cont.innerHTML}
       ['roles', 'El resumen de roles de pago por mes cuadra con el mayor contable y con la sumaria', 'NIC 19.11', 'RC-03'],
       ['ir', 'Se recalculó el impuesto a la renta en relación de dependencia en una muestra de colaboradores', 'LRTI', 'RC-04'],
       ['expedientes', 'Los expedientes de los colaboradores respaldan sueldo, afiliación y beneficios pagados', 'NIA 500', 'RC-05'],
-      ['soportes', 'Se determinó la necesidad de revisar la documentación soporte de las partidas relevantes', 'NIA 500', 'RC-07'],
-      ['corte', 'El corte de gastos es correcto: no hay gastos del período sin registrar', 'NIC 1.27', 'RC-09'],
-      ['relacionadas', 'Se identificaron los gastos con partes relacionadas y se evaluó su revelación', 'NIC 24', 'RC-10'],
-      ['bonos', 'Se evaluaron bonos, pagos basados en acciones y beneficios a la gerencia', 'NIC 19 / NIIF 2', 'RC-11'],
-      ['clasificacion', 'Los gastos se clasifican según NIIF 18', 'NIIF 18', 'RC-12']
+      ['bonos', 'Se evaluaron bonos, pagos basados en acciones y beneficios a la gerencia', 'NIC 19 / NIIF 2', 'RC-11']
     ];
     function nmEstProc(p) { const f = nmE.filas[p.codigo] || {}; return f.estado === 'hecho' || f.estado === 'na' || f.estado === 'pendiente' ? f.estado : (nmTienePt(p) ? 'hecho' : ''); }
     function nmTienePt(p) { return (nmE.pts || []).some(t => t.codigo === p.codigo) || ((nmE.filas[p.codigo] || {}).pt || []).length > 0; }
