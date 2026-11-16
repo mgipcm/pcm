@@ -18330,7 +18330,7 @@ ${cont.innerHTML}
       }
       else if (!emb) { if (av) av.classList.add('hidden'); if (esp) esp.classList.add('hidden'); }
       if (!imp && ivE.hoja === 'venta' && ivE.btn === 'salidas') { const hayCambio = cvE.cliente !== $im('im-cliente').value || cvE.anio !== $im('im-anio').value || cvE.visita !== $im('im-visita').value; if (hayCambio || !cvE.cargado) cvCargar(); else cvPintar(); }
-      if (!imp && ivE.hoja === 'voucheo') { const hayCambio = vcE.cliente !== $im('im-cliente').value || vcE.anio !== $im('im-anio').value || vcE.visita !== $im('im-visita').value; if (hayCambio || !vcE.cargado) vcCargar(); else vcPintar(); }
+      if (!imp && ivE.hoja === 'voucheo') { if (vcE.host !== 'v1') { vcE.host = 'v1'; vcE.cargado = false; } const hayCambio = vcE.cliente !== $im('im-cliente').value || vcE.anio !== $im('im-anio').value || vcE.visita !== $im('im-visita').value; if (hayCambio || !vcE.cargado) vcCargar(); else vcPintar(); }
       if (!imp && ivE.hoja === 'venta' && ivE.btn === 'resumen') { const hayCambio = rsE.cliente !== $im('im-cliente').value || rsE.anio !== $im('im-anio').value || rsE.visita !== $im('im-visita').value; if (!rsE.cargando && (hayCambio || !rsE.cargado)) rsCargar(); else rsPintar(); }
       if (!imp && ivE.hoja === 'venta' && ivE.btn === 'ksalidas') { const hayCambio = ksE.cliente !== $im('im-cliente').value || ksE.anio !== $im('im-anio').value || ksE.visita !== $im('im-visita').value; if (hayCambio || !ksE.cargado) ksCargar(); else ksPintar(); }
       if (!imp && ivE.hoja === 'venta' && ivE.btn === 'kcompras') { const hayCambio = kcE.cliente !== $im('im-cliente').value || kcE.anio !== $im('im-anio').value || kcE.visita !== $im('im-visita').value; if (hayCambio || !kcE.cargado) kcCargar(); else kcPintar(); }
@@ -18549,7 +18549,8 @@ ${cont.innerHTML}
     const VC_ESTADOS = { '': ['·', '#94a3b8', '#f1f5f9'], ok: ['✓', '#047857', '#d1fae5'], ex: ['✗', '#b91c1c', '#fee2e2'], na: ['N/A', '#64748b', '#e2e8f0'] };
     const vcE = { cargaId: 0, cliente: '', anio: '', visita: '', cargado: false, error: '', mov: [], imp: null, cfg: { pct: 20, cuentas: null }, filas: [], org: null, act: null, docAbierto: '', tmp: null, filtro: '', nuevo: false, claude: {}, ped: null, tPed: 0, concAbierto: '', concCols: false };
     async function vcCargar() {
-      const cli = $im('im-cliente').value, anio = $im('im-anio').value, vis = $im('im-visita').value;
+      const pre = vcE.host === 'v2' ? 'v2' : 'im';
+      const cli = $im(pre + '-cliente').value, anio = $im(pre + '-anio').value, vis = $im(pre + '-visita').value;
       Object.assign(vcE, { cliente: cli, anio, visita: vis, cargado: false, error: '', mov: [], imp: null, cfg: { pct: 20, cuentas: null }, filas: [], org: null, act: null, docAbierto: '', filtro: '', nuevo: false, claude: {}, ped: null });
       clearTimeout(vcE.tPed);
       if (!cli) { vcPintar(); return; }
@@ -18594,9 +18595,12 @@ ${cont.innerHTML}
     // Valor de una marca: la de la persona manda; si no hay, se muestra la que dejó Claude
     function vcDeClaude(f, k) { const c = f.k && vcE.claude && vcE.claude[f.k]; return (c && c.rev && c.rev[k]) || ''; }
     function vcVal(f, k) { return ((f.rev || {})[k]) || vcDeClaude(f, k); }
+    // El voucheo se puede ver en Inventarios (v1) o como pestaña de Inventarios v2
+    function vcActivo() { return vcE.host === 'v2' ? (typeof v2E !== 'undefined' && v2E.tab === 'voucheo') : (typeof ivE !== 'undefined' && ivE.hoja === 'voucheo'); }
+    function vcCont() { return document.getElementById(vcE.host === 'v2' ? 'vc-cont2' : 'vc-cont'); }
     async function vcCargarPedido() {
       clearTimeout(vcE.tPed);
-      if (!vcE.cliente || typeof ivE === 'undefined' || ivE.hoja !== 'voucheo') return;
+      if (!vcE.cliente || !vcActivo()) return;
       const cli = vcE.cliente, an = vcE.anio, vi = vcE.visita;
       const { data } = await supabaseClient.from('pedidos_claude').select('id, estado, progreso, progreso_texto').eq('cliente_id', cli).eq('anio', Number(an)).eq('visita', vi || 'final').eq('sumaria', 'AF').eq('hoja', 'voucheo').in('estado', ['solicitado', 'autorizado', 'hecho']).order('created_at', { ascending: false }).limit(1);
       if (cli !== vcE.cliente || an !== vcE.anio || vi !== vcE.visita) return;
@@ -18909,14 +18913,15 @@ ${cont.innerHTML}
     }
     function vcFiltro(v) { vcE.filtro = v; vcPintar(); const el = document.getElementById('vc-filtro'); if (el) { el.focus(); el.setSelectionRange(v.length, v.length); } }
     function vcPintar() {
-      if (typeof ivE === 'undefined' || ivE.hoja !== 'voucheo') return;
-      const c = document.getElementById('vc-cont'); if (!c) return;
+      if (!vcActivo()) return;
+      const c = vcCont(); if (!c) return;
+      if (vcE.host === 'v2') { const viejo = document.getElementById('vc-cont'); if (viejo) viejo.innerHTML = ''; }
       try { impFlechas(c.closest('section')); } catch (_) { }
       if (!vcE.cliente) { c.innerHTML = '<p class="text-xs text-slate-500 border border-dashed border-slate-300 rounded-xl p-4">Selecciona el cliente para comenzar.</p>'; return; }
       if (!vcE.cargado) { c.innerHTML = '<p class="text-xs text-slate-500 p-4">Cargando…</p>'; return; }
       if (vcE.error) { c.innerHTML = '<p class="text-xs text-red-600 font-bold p-4">No se pudo cargar: ' + escapeHtml(vcE.error) + '</p>'; return; }
       const F = formatoNumeroAnexo, e = escapeHtml, TH = 'px-2 py-2 text-[11px] font-bold text-slate-700 bg-slate-100 border-b border-slate-300 align-bottom', TD = 'px-2 py-1 align-top';
-      const lkIng = impLkIng('Ingreso de información'), lkMov = impLkMov('Movimiento del inventario');
+      const lkIng = vcE.host === 'v2' ? OJO_A('Ingreso de información', "v2IrTab('subir');", 'Ir a Subir información') : impLkIng('Ingreso de información'), lkMov = vcE.host === 'v2' ? OJO_A('Movimiento del inventario', "v2IrTab('subir');", 'Ir a Subir información') : impLkMov('Movimiento del inventario');
       let h = '<div class="text-[11px] text-slate-500 mb-3">El voucheo va de lo registrado en los libros al documento que lo respalda: prueba que la partida existe, es del período y está bien registrada. La población son las adiciones (compras e importaciones) del ' + lkMov + '. ' + (vcE.mov.length ? '' : 'Aún no hay movimiento: haz el pedido en ' + lkIng + '.') + '</div>';
       if (!vcE.mov.length) { c.innerHTML = h; return; }
       { const pe = vcE.ped, nSop = vcE.filas.reduce((t, f) => t + (f.docs ? f.docs.length : 0), 0) + vcSueltos().length, nNue = vcE.filas.reduce((t, f) => t + (f.docs ? f.docs.filter(d => !d.pedido).length : 0), 0) + vcSueltos().filter(d => !d.pedido).length;
@@ -19572,9 +19577,17 @@ ${cont.innerHTML}
     function ivIrBoton(b) { ivE.btn = b; ivPintarHojas(); }
     // ===== AF Inventarios v2 (prueba): hoja "Inventario para la venta" › pestaña Programa =====
     const v2E = { cliente: '', anio: '', visita: '', procs: [], filas: {}, cargaId: 0, abiertos: {}, tab: 'programa', sv: null };
-    const V2_TABS = [['programa', 'Programa'], ['subir', 'Subir información'], ['resultado', 'Resultado del análisis – Claude'], ['cuadres', 'Resumen de cuadres y cruces'], ['conclusiones', 'Conclusiones de la cuenta']];
+    const V2_TABS = [['programa', 'Programa'], ['subir', 'Subir información'], ['resultado', 'Resultado del análisis – Claude'], ['cuadres', 'Resumen de cuadres y cruces'], ['voucheo', 'Revisión de documentación (voucheo)'], ['conclusiones', 'Conclusiones de la cuenta']];
     function v2IrProg(cod) { v2E.tab = 'programa'; v2Pintar(); setTimeout(() => irFilaResaltada('v2-prog-' + cod), 40); }
     function v2IrTab(t) { v2E.tab = t; v2Pintar(); }
+    // Revisión de documentación (voucheo): es la misma de Inventarios v1, ahora como pestaña de v2 (usa el mismo movimiento y las mismas importaciones)
+    function v2VoucheoPintar() {
+      const c = $im('v2-panel'); if (!c) return;
+      c.innerHTML = '<div id="vc-cont2" class="p-3"></div>';
+      const igual = vcE.host === 'v2' && vcE.cargado && vcE.cliente === v2E.cliente && vcE.anio === v2E.anio && vcE.visita === v2E.visita;
+      vcE.host = 'v2';
+      if (!igual) vcCargar(); else vcPintar();
+    }
     function v2Fmt(t) { return t ? new Date(t).toLocaleString('es-EC', { day: '2-digit', month: '2-digit', year: 'numeric', hour: 'numeric', minute: '2-digit' }) : ''; }
     async function abrirImport2() {
       asegurarClientesEn('v2-cliente');
@@ -19644,6 +19657,7 @@ ${cont.innerHTML}
       const tb = $im('v2-tabs');
       if (tb) tb.innerHTML = V2_TABS.map(([k, n]) => '<button type="button" onclick="v2IrTab(\'' + k + '\')" class="px-3 py-1.5 text-xs transition rounded-lg ' + (v2E.tab === k ? 'bg-slate-200 text-slate-900 font-semibold' : 'text-slate-600 hover:bg-slate-100 font-medium') + '">' + n + '</button>').join('');
       if (v2E.tab === 'subir') { v2SubirPintar(); return; }
+      if (v2E.tab === 'voucheo') { v2VoucheoPintar(); return; }
       if (v2E.tab === 'resultado') { v2ResPintar(); return; }
       if (v2E.tab === 'cuadres') { v2CuaPintar(); return; }
       if (v2E.tab === 'conclusiones') { v2ConcPintar(); return; }
