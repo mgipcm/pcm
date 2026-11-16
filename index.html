@@ -19717,6 +19717,7 @@ ${cont.innerHTML}
       if (id !== v2E.resId) return;
       v2E.bal = { cargado: true, error: err, m, af };
       if (v2E.tab === 'cuadres') v2CuaPintar();
+      if (v2E.tab === 'conclusiones') v2ConcPintar();
     }
     function v2IrSeccion(ref) {
       const bl = ((v2E.res && v2E.res.data && v2E.res.data.bloques) || []).filter(b => b.t === 'h2');
@@ -19867,6 +19868,64 @@ ${cont.innerHTML}
       if (poner && campo === 'ratificado' && !String((v2E.conc.datos || {}).conclusion_auditor || '').trim()) { alert('Primero escribe y guarda la conclusión del auditor.'); return; }
       if (await v2ConcGuardar(d => { d[campo + '_por'] = poner ? quien : null; d[campo + '_at'] = poner ? new Date().toISOString() : null; })) { bitacoraClaude((poner ? 'Marcó ' : 'Quitó ') + campo + ' las conclusiones de Inventarios', 'Inventarios (AF)', v2E.cliente, String(v2E.anio)); v2ConcPintar(); }
     }
+    // ----- Verificaciones de Inventarios v2: automáticas (se recalculan con lo que hay cargado) y evaluaciones del auditor -----
+    const V2_ESTADOS = [['pendiente', 'Pendiente'], ['cumple', 'Cumple'], ['nocumple', 'No cumple'], ['noaplica', 'No aplica']];
+    const V2_VERIF_MANUALES = [
+      ['valorado', 'El inventario valorado a la fecha de corte coincide con el mayor contable y con la sumaria', 'NIC 2.9', 'AF-02'],
+      ['rotacion', 'Se analizó la lenta rotación y la obsolescencia y se determinó la provisión necesaria', 'NIC 2.28 a 2.33', 'AF-03'],
+      ['vnr', 'Se realizó la prueba de valor neto de realización', 'NIC 2.28 a 2.33', 'AF-06'],
+      ['fisico', 'Se observó la toma física y los conteos de prueba coinciden con el registro', 'NIA 501.4', 'AF-08'],
+      ['cruce', 'Se cruzó el conteo físico con los registros contables y se valoraron las diferencias', 'NIA 501.4', 'AF-09'],
+      ['corte', 'El corte de inventarios (últimas recepciones y despachos) está en el período correcto', 'NIC 2.34', 'AF-10'],
+      ['terceros', 'Se confirmó el inventario en poder de terceros o en consignación', 'NIA 501.8', 'AF-11'],
+      ['garantia', 'Se indagó si hay inventario en garantía o con restricciones y se obtuvo el soporte para la revelación', 'NIC 2.36', 'AF-12'],
+      ['tributario', 'Se registraron las partidas no deducibles y las diferencias temporarias de la cuenta', 'NIC 12.15 y 12.24', 'AF-13'],
+      ['importacion', 'El costo de cada importación incluye todos sus componentes (con ISD) y está respaldado', 'NIC 2.11', 'AF-15'],
+      ['liquidacion', 'Las liquidaciones se cruzaron contra el tránsito', 'NIC 2.10', 'AF-17'],
+      ['manuales', 'Se obtuvo el soporte y la aprobación de los asientos manuales sin movimiento en el kárdex', 'NIA 240.32', 'AF-18']
+    ];
+    function v2VerifAuto() {
+      const R = v2E.res, B = v2E.bal; if (!R || !R.cargado || !B || !B.cargado) return null;
+      const bal = B.m || {}, cu = (R.data && Array.isArray(R.data.cuadres)) ? R.data.cuadres : [], R2 = x => Math.round(x * 100) / 100, fm = formatoNumeroAnexo, out = [], usadas = {};
+      const lista = (a, n) => a.slice(0, n).join(', ') + (a.length > n ? ' y ' + (a.length - n) + ' más' : '');
+      cu.forEach(q => {
+        const ests = [];
+        if (q.tipo === 'composicion') {
+          const cuentas = Array.isArray(q.cuentas) ? q.cuentas : []; cuentas.forEach(k => { usadas[k] = 1; });
+          const total = R2((q.filas || []).reduce((t, f) => t + (Number(f.v) || 0), 0)), enSum = cuentas.map(k => bal[k]).filter(Boolean);
+          const sum = cuentas.length && enSum.length ? R2(enSum.reduce((t, x) => t + x.saldo, 0)) : null;
+          const base = cuentas.length ? sum : ((q.esperado !== undefined && q.esperado !== null) ? Number(q.esperado) : null);
+          const dif = base === null ? null : R2(base - total);
+          ests.push([base === null ? (cuentas.length ? 'nosum' : 'sinsoporte') : (Math.abs(dif) <= V2C_TOL ? 'cuadra' : (q.expl ? 'expl' : 'dif')), q.titulo || 'Composición', dif]);
+        } else (q.filas || []).forEach(f => {
+          const cuentas = Array.isArray(f.cuentas) ? f.cuentas : []; cuentas.forEach(k => { usadas[k] = 1; });
+          const enSum = cuentas.map(k => bal[k]).filter(Boolean), falta = cuentas.filter(k => !bal[k]);
+          const sum = cuentas.length ? (enSum.length ? R2(enSum.reduce((t, x) => t + x.saldo, 0)) : null) : null;
+          const r = v2CuaEstado(f, cuentas.length && falta.length === cuentas.length ? null : sum);
+          ests.push([r.est, f.c || '', r.dif]);
+        });
+        if (!ests.length) return;
+        const malos = ests.filter(x => x[0] === 'dif' || x[0] === 'nosum' || x[0] === 'sinsoporte'), expl = ests.filter(x => x[0] === 'expl'), ok = ests.filter(x => x[0] === 'cuadra');
+        const det = ok.length + ' de ' + ests.length + ' concepto(s) cuadran' + (expl.length ? '; ' + expl.length + ' con diferencia explicada' : '') + (malos.length ? '. Por revisar: ' + lista(malos.map(x => x[1] + (x[2] !== null && x[2] !== undefined ? ' (' + fm(x[2]) + ')' : x[0] === 'sinsoporte' ? ' (sin soporte)' : ' (sin sumaria)')), 3) : '');
+        out.push(['El cuadro «' + (q.titulo || '') + '» cuadra con la sumaria, el mayor y el análisis de Claude', malos.length ? 'rev' : (expl.length ? 'info' : 'ok'), det, q.ref || '']);
+      });
+      const codsAF = Object.keys(bal).filter(k => (B.af || {})[k]).sort(), sinCruce = codsAF.filter(k => !usadas[k]);
+      out.push(['Todas las cuentas de la sumaria están cruzadas en algún cuadro', !codsAF.length ? 'info' : (sinCruce.length ? 'rev' : 'ok'), !codsAF.length ? 'Sin sumaria cargada' : (sinCruce.length ? sinCruce.length + ' cuenta(s) sin cruce: ' + lista(sinCruce, 6) : 'Las ' + codsAF.length + ' cuentas están cruzadas'), '']);
+      const procs = v2E.procs || [], pts = v2E.pts || [];
+      const est = p => { const f = v2E.filas[p.codigo] || {}; return f.estado === 'hecho' || f.estado === 'na' || f.estado === 'pendiente' ? f.estado : ((pts.some(t => t.codigo === p.codigo) || (f.pt || []).length) ? 'hecho' : ''); };
+      const sinPt = procs.filter(p => est(p) !== 'na' && !pts.some(t => t.codigo === p.codigo) && !((v2E.filas[p.codigo] || {}).pt || []).length).map(p => p.codigo);
+      out.push(['Cada procedimiento del programa tiene su papel de trabajo', sinPt.length ? 'rev' : 'ok', sinPt.length ? sinPt.length + ' sin papel de trabajo: ' + lista(sinPt, 8) : 'Todos tienen papel de trabajo', 'AF']);
+      const sinCon = procs.filter(p => { const f = v2E.filas[p.codigo] || {}; return est(p) !== 'na' && !(f.conclusion || (pts.find(t => t.codigo === p.codigo) || {}).conclusion); }).map(p => p.codigo);
+      out.push(['Cada procedimiento tiene su conclusión', sinCon.length ? 'rev' : 'ok', sinCon.length ? sinCon.length + ' sin conclusión: ' + lista(sinCon, 8) : 'Todos tienen conclusión', 'AF']);
+      const sinEst = procs.filter(p => est(p) !== 'hecho' && est(p) !== 'na').map(p => p.codigo);
+      out.push(['Todos los procedimientos están marcados como Hecho o N/A', sinEst.length ? 'rev' : 'ok', sinEst.length ? sinEst.length + ' pendiente(s): ' + lista(sinEst, 8) : 'Todos marcados', 'AF']);
+      const sinRev = procs.filter(p => est(p) !== 'na' && !(v2E.filas[p.codigo] || {}).revisado_at).map(p => p.codigo);
+      out.push(['Todos los procedimientos están revisados por el auditor', sinRev.length ? 'rev' : 'ok', sinRev.length ? sinRev.length + ' sin revisar: ' + lista(sinRev, 8) : 'Todos revisados', 'AF']);
+      return out;
+    }
+    async function v2VerifEditar(k, campo, valor) {
+      if (await v2ConcGuardar(d => { d.verif = d.verif || {}; d.verif[k] = { ...(d.verif[k] || {}), [campo]: valor }; })) { if (campo === 'e') v2ConcPintar(); }
+    }
     function v2ConcPintar() {
       const c = $im('v2-panel'), R = v2E.res, C = v2E.conc, e = escapeHtml, fm = formatoNumeroAnexo;
       if (!v2E.cliente || !R) { c.innerHTML = '<p class="text-xs text-slate-500 p-4">Selecciona el cliente para comenzar.</p>'; return; }
@@ -19904,7 +19963,21 @@ ${cont.innerHTML}
         return ls.map((l, i) => { tot.d += Number(l.debe) || 0; tot.h += Number(l.haber) || 0;
           return '<tr>' + (i === 0 ? '<td class="' + TD + ' font-bold text-slate-800" rowspan="' + ls.length + '">' + e(a.n) + '</td>' : '') + '<td class="' + TD + '">' + e(l.cuenta || '') + '</td><td class="' + TD + ' text-right whitespace-nowrap">' + (Number(l.debe) ? fm(l.debe) : '') + '</td><td class="' + TD + ' text-right whitespace-nowrap">' + (Number(l.haber) ? fm(l.haber) : '') + '</td>' +
             (i === 0 ? '<td class="' + TD + '" rowspan="' + ls.length + '" style="min-width:14rem">' + e(a.concepto || '') + '</td><td class="' + TD + ' text-right whitespace-nowrap" rowspan="' + ls.length + '">' + (Number(a.efecto_resultados) ? fm(a.efecto_resultados) : '0,00') + '</td><td class="' + TD + '" rowspan="' + ls.length + '" style="min-width:16rem">' + e(a.efecto_tributario || '') + '</td><td class="' + TD + '" rowspan="' + ls.length + '" style="min-width:9rem">' + SEL(ESTAJ, s, 'v2ConcAj(\'' + e(n) + '\',this.value)') + '</td>' : '') + '</tr>'; }).join(''); }).join('');
-      // 4. Revelaciones
+      // 4. Verificaciones
+      const aut = v2VerifAuto(), VM = D.verif || {};
+      const COL = { ok: 'text-emerald-700', rev: 'text-amber-700', info: 'text-slate-500' }, TX = { ok: 'Cumple', rev: 'Revisar', info: 'Informativo' };
+      const lnkV = ref => !ref ? '<span class="text-slate-400">—</span>' : (/^AF/.test(ref) ? '<span class="font-semibold">' + e(ref) + '</span>' : '<a href="#" onclick="v2IrSeccion(\'' + e(ref).replace(/'/g, '') + '\');return false" class="hover:underline" style="color:#3b6fc4">ver ' + e(ref) + ' ›</a>');
+      const nAutoRev = aut ? aut.filter(x => x[1] === 'rev').length : 0, nManPend = V2_VERIF_MANUALES.filter(x => ['pendiente', 'nocumple'].includes((VM[x[0]] || {}).e || 'pendiente')).length, nVer = nAutoRev + nManPend;
+      const filasAut = aut ? aut.map(x => '<tr><td class="' + TD + ' whitespace-nowrap text-[12px]">' + lnkV(x[3]) + '</td><td class="' + TD + '" style="min-width:18rem">' + e(x[0]) + '</td><td class="' + TD + ' font-bold whitespace-nowrap ' + COL[x[1]] + '">' + TX[x[1]] + '</td><td class="' + TD + ' text-slate-600" style="min-width:16rem">' + e(x[2]) + '</td></tr>').join('') : '<tr><td colspan="4" class="p-4 text-center text-slate-400">Cargando las verificaciones…</td></tr>';
+      const filasMan = V2_VERIF_MANUALES.map(([k, t, ref, cod]) => { const v = VM[k] || { e: 'pendiente', n: '' };
+        return '<tr><td class="' + TD + ' whitespace-nowrap font-semibold text-[12px]">' + e(cod) + '</td><td class="' + TD + '" style="min-width:18rem">' + e(t) + '<div class="text-[10px] text-slate-400">' + e(ref) + '</div></td><td class="' + TD + '" style="min-width:9rem">' + SEL(V2_ESTADOS, v.e || 'pendiente', 'v2VerifEditar(\'' + k + '\',\'e\',this.value)') + '</td><td class="' + TD + '" style="min-width:16rem"><input class="' + INP + '" value="' + e(v.n || '') + '" placeholder="Comentario o papel de trabajo" onchange="v2VerifEditar(\'' + k + '\',\'n\',this.value)"></td></tr>'; }).join('');
+      const nEval = V2_VERIF_MANUALES.filter(x => ((VM[x[0]] || {}).e || 'pendiente') !== 'pendiente').length;
+      const THB = 'bg-slate-100 text-slate-600 text-[10px] font-bold border-b border-slate-200';
+      const verifHtml = '<h2 id="vc-s4" class="' + H2 + '">4. Verificaciones</h2><div class="text-xs font-bold text-slate-700 mb-1">Verificaciones automáticas (se recalculan con los cuadres, la sumaria y el programa)</div>' +
+        '<div class="overflow-x-auto"><table class="w-full text-xs border-collapse"><thead class="' + THB + '"><tr><th class="' + TH + '">Referencia</th><th class="' + TH + '">Verificación</th><th class="' + TH + '">Resultado</th><th class="' + TH + '">Detalle</th></tr></thead><tbody>' + filasAut + '</tbody></table></div>' +
+        '<div class="text-xs font-bold text-slate-700 mt-4 mb-1">Evaluaciones del auditor (se guardan por cliente, año y visita): ' + nEval + ' de ' + V2_VERIF_MANUALES.length + ' evaluadas</div>' +
+        '<div class="overflow-x-auto"><table class="w-full text-xs border-collapse"><thead class="' + THB + '"><tr><th class="' + TH + '">Programa</th><th class="' + TH + '">Verificación</th><th class="' + TH + '">Estado</th><th class="' + TH + '">Comentario o papel de trabajo</th></tr></thead><tbody>' + filasMan + '</tbody></table></div>';
+      // 5. Revelaciones
       const revs = (cl.revelaciones || []).map(x => ({ ...x, id: v2ConcK(x.id), mio: false })).concat((D.revExtra || []).map(x => ({ ...x, mio: true })));
       const nRev = revs.filter(x => ((D.rev || {})[x.id] || {}).notas !== 'si').length;
       const filasRev = revs.map(x => { const s = (D.rev || {})[x.id] || {}, k = e(x.id);
@@ -19915,7 +19988,7 @@ ${cont.innerHTML}
       const chip = (t, n, extra) => '<a href="#" onclick="document.getElementById(\'vc-s' + extra + '\').scrollIntoView({behavior:\'smooth\'});return false" class="px-3 py-1.5 rounded-full border border-slate-300 bg-white text-xs text-slate-700 hover:bg-slate-50"><b>' + t + '</b>: ' + n + '</a>';
       const add = (ph, id, extra) => '<input id="' + id + '" class="' + INP + '" placeholder="' + ph + '"' + (extra || '') + '>';
       c.innerHTML = '<div class="p-4 text-sm text-slate-700 max-w-6xl">' +
-        '<div class="flex flex-wrap gap-2 mb-2">' + chip('Por concluir', nPc, '1') + chip('To/Do · Quick Lett · Opinión', nEnv + ' por enviar', '2') + chip('Ajustes', ajs.length + ' · USD ' + fm(tot.m), '3') + chip('Revelaciones', nRev + ' por confirmar', '4') + '</div>' +
+        '<div class="flex flex-wrap gap-2 mb-2">' + chip('Por concluir', nPc, '1') + chip('To/Do · Quick Lett · Opinión', nEnv + ' por enviar', '2') + chip('Ajustes', ajs.length + ' · USD ' + fm(tot.m), '3') + chip('Verificaciones', nVer + ' por resolver', '4') + chip('Revelaciones', nRev + ' por confirmar', '5') + '</div>' +
         '<p class="text-xs text-slate-500">Lo que hay que decidir o hacer, en orden de urgencia. Claude lo propone y el auditor lo completa; todo se guarda al cambiarlo.</p>' +
         '<h2 id="vc-s1" class="' + H2 + '">1. Por concluir</h2>' +
         '<div class="overflow-x-auto"><table class="w-full text-xs border-collapse"><thead class="bg-slate-100 text-slate-600 text-[10px] font-bold border-b border-slate-200"><tr><th class="' + TH + '">Asunto</th><th class="' + TH + '">Qué falta</th><th class="' + TH + '">Responsable</th><th class="' + TH + '">Fecha límite</th><th class="' + TH + '">Estado</th></tr></thead><tbody>' + (filasPc || '<tr><td colspan="5" class="' + TD + ' text-slate-400">Sin puntos por concluir.</td></tr>') + '</tbody></table></div>' +
@@ -19927,10 +20000,11 @@ ${cont.innerHTML}
         '<h2 id="vc-s3" class="' + H2 + '">3. Ajustes propuestos</h2>' +
         '<div class="overflow-x-auto"><table class="w-full text-xs border-collapse"><thead class="bg-slate-100 text-slate-600 text-[10px] font-bold border-b border-slate-200"><tr><th class="' + TH + '">N.º</th><th class="' + TH + '">Cuenta</th><th class="' + TH + ' text-right">Débito</th><th class="' + TH + ' text-right">Crédito</th><th class="' + TH + '">Concepto</th><th class="' + TH + ' text-right">Efecto en resultados</th><th class="' + TH + '">Efecto tributario</th><th class="' + TH + '">Estado</th></tr></thead><tbody>' + (filasAj || '<tr><td colspan="8" class="' + TD + ' text-slate-400">Claude no propone ajustes.</td></tr>') +
         (ajs.length ? '<tr class="font-bold bg-slate-50"><td class="' + TD + '" colspan="2">Total</td><td class="' + TD + ' text-right">' + fm(tot.d) + '</td><td class="' + TD + ' text-right">' + fm(tot.h) + '</td><td class="' + TD + '"></td><td class="' + TD + ' text-right">' + fm(tot.r) + '</td><td class="' + TD + '" colspan="2"></td></tr>' : '') + '</tbody></table></div>' +
-        '<h2 id="vc-s4" class="' + H2 + '">4. Revelaciones</h2>' +
+        verifHtml +
+        '<h2 id="vc-s5" class="' + H2 + '">5. Revelaciones</h2>' +
         '<div class="overflow-x-auto"><table class="w-full text-xs border-collapse"><thead class="bg-slate-100 text-slate-600 text-[10px] font-bold border-b border-slate-200"><tr><th class="' + TH + '">Tema</th><th class="' + TH + '">Qué debe revelarse</th><th class="' + TH + '">Norma</th><th class="' + TH + '">¿Está en las notas?</th></tr></thead><tbody>' + (filasRev || '<tr><td colspan="4" class="' + TD + ' text-slate-400">Sin revelaciones.</td></tr>') + '</tbody></table></div>' +
         '<div class="flex flex-wrap gap-2 mt-2 items-center"><div style="width:12rem">' + add('Tema', 'vc-rev-tema') + '</div><div style="flex:1;min-width:14rem">' + add('Qué debe revelarse', 'vc-rev-que') + '</div><div style="width:10rem">' + add('Norma', 'vc-rev-norma') + '</div><button type="button" onclick="v2ConcNuevo(\'rev\')" class="px-3 py-1 text-xs rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-100 font-medium">+ Agregar</button></div>' +
-        '<h2 id="vc-s5" class="' + H2 + '">5. Conclusión y ratificación</h2>' +
+        '<h2 id="vc-s6" class="' + H2 + '">6. Conclusión y ratificación</h2>' +
         '<div class="grid gap-4" style="grid-template-columns:repeat(auto-fit,minmax(20rem,1fr))"><div><div class="text-xs font-bold text-slate-600 mb-1">Conclusión de Claude</div><div class="p-3 border border-slate-200 rounded-lg bg-slate-50 leading-relaxed whitespace-pre-wrap">' + e(cl.conclusion || '') + '</div></div>' +
         '<div><div class="text-xs font-bold text-slate-600 mb-1">Conclusión del auditor</div><textarea id="vc-crit" rows="7" class="w-full p-3 border border-slate-300 rounded-lg text-sm leading-relaxed outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Escribe aquí la conclusión del auditor...">' + e(D.conclusion_auditor || '') + '</textarea><div class="flex flex-wrap items-center gap-3 mt-2"><button type="button" onclick="v2ConcCriterio()" class="px-3 py-1.5 text-xs rounded-lg transition bg-slate-200 text-slate-900 hover:bg-slate-300 font-semibold">Guardar conclusión</button><span class="text-xs text-slate-500">' + (D.conclusion_por ? 'Guardado por ' + e(nombreMostrado(D.conclusion_por)) + ' · ' + e(v2Fmt(D.conclusion_at)) : '') + '</span></div></div></div>' +
         '<div class="flex flex-wrap items-center gap-x-6 gap-y-2 mt-4 text-xs text-slate-600"><span>Preparado por: <b>' + prep + '</b></span><span>Revisado por: ' + marca('revisado', 'Marcar revisado') + '</span><span>Ratificado por: ' + marca('ratificado', 'Ratificar') + '</span></div></div>';
