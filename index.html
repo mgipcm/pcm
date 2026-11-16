@@ -15173,6 +15173,8 @@ ${cont.innerHTML}
     }
     function cbHtmlConclCriterio() {
       const D = cbDr(), c = cbE.crit;
+      // Si aún no hay criterio guardado ni texto escrito, se propone el texto predeterminado (queda como borrador hasta pulsar "Guardar criterio final")
+      if (!D.autoHecho && cbE.cuentas && cbE.cuentas.length) { D.autoHecho = true; if (!String(D.criterio || '').trim() && !(c && String(c.criterio || '').trim())) { const t0 = cbCritPredeterminado(); if (t0) D.criterio = t0; } }
       const meta = c ? 'Última actualización: ' + formatoFechaContrato(c.updated_at) + ((c.actualizado_por || c.auditor) ? ' · Actualizado por: ' + escapeHtml(c.actualizado_por || c.auditor) : '') : 'Aún no se ha registrado el criterio final.';
       const BTN = 'px-3 py-1.5 rounded-lg text-[11px] transition disabled:opacity-60 bg-slate-100 text-slate-800 hover:bg-slate-200 font-medium';
       const BTN2 = 'px-3 py-1.5 bg-white text-slate-700 hover:bg-slate-100 border border-slate-400 rounded-lg text-[11px] font-bold transition';
