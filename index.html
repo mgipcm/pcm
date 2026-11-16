@@ -14840,7 +14840,7 @@ ${cont.innerHTML}
       const id = ++cbE.cargaId; cbMsg('Cargando…');
       const [r1, r2, r3, r4] = await Promise.all([
         supabaseClient.from('conciliaciones_datos').select('*').eq('cliente_id', cli).eq('anio', Number(anio)).eq('visita', vis).maybeSingle(),
-        supabaseClient.from('analisis_claude_cuentas').select('id, created_at, anio, visita, analisis, origen, estado_revision, revisado_por, revisado_at, pendientes, criterio_final, criterio_por, criterio_at').eq('cliente_id', cli).eq('cuenta', 'bancos').eq('anio', Number(anio)).order('created_at', { ascending: false }).limit(1),
+        supabaseClient.from('analisis_claude_cuentas').select('id, created_at, anio, visita, analisis, origen, estado_revision, revisado_por, revisado_at, pendientes, criterio_final, criterio_por, criterio_at, conclusiones').eq('cliente_id', cli).eq('cuenta', 'bancos').eq('anio', Number(anio)).order('created_at', { ascending: false }).limit(1),
         cbE.plantilla ? Promise.resolve({ data: cbE.plantilla }) : supabaseClient.from('programas_plantilla').select('id, sumaria, codigo, titulo, tipo_procedimiento, procedimiento, norma, orden, alcance, tamanos').eq('sumaria', 'AA').eq('hoja', 'bancos').order('orden', { ascending: true })
         ,supabaseClient.from('criterio_auditor_cuentas').select('*').eq('cliente_id', cli).eq('anio', Number(anio)).eq('cuenta', 'bancos').eq('visita', vis).maybeSingle()
       ]);
@@ -14872,7 +14872,7 @@ ${cont.innerHTML}
       try { registrarActividad('Revisó trabajo de Claude', 'Resumen de conciliaciones', { cliente: cbE.cliente, anio: String(cbE.anio) }); } catch (e) { }
     }
     function cbCambiarCorte(v) { cbE.corte = v; cbGuardar(); cbRender(); }
-    function cbGuardar() {
+    function cbGuardar(sinMarca) {
       clearTimeout(cbE.tmp); cbMsg('Guardando…');
       const snap = { cliente_id: cbE.cliente, anio: Number(cbE.anio), visita: cbE.visita, corte: cbE.corte || null, cuentas: cbE.cuentas, config: cbE.config, programa: cbE.programa };
       cbE.tmp = setTimeout(async () => {
@@ -14880,7 +14880,7 @@ ${cont.innerHTML}
         const quien = nombreUsuarioActivo() || null;
         // Si una persona cambia algo que preparó Claude, queda anotado como "Modificado por"
         const marca = {};
-        if (quien && cbE.org && cbE.org.origen === 'claude' && cbE.org.estado_revision !== 'modificado') { marca.estado_revision = 'modificado'; marca.revisado_por = quien; marca.revisado_at = new Date().toISOString(); }
+        if (!sinMarca && quien && cbE.org && cbE.org.origen === 'claude' && cbE.org.estado_revision !== 'modificado') { marca.estado_revision = 'modificado'; marca.revisado_por = quien; marca.revisado_at = new Date().toISOString(); }
         const { error } = await supabaseClient.from('conciliaciones_datos').upsert({ ...snap, ...marca, actualizado_por: quien, updated_at: new Date().toISOString() }, { onConflict: 'cliente_id,anio,visita' });
         if (error) { cbMsg('No se guardó: ' + (error.message || error), 'text-red-600 font-bold'); return; }
         if (marca.estado_revision) Object.assign(cbE.org, marca);
@@ -15083,18 +15083,67 @@ ${cont.innerHTML}
       } catch (e) { return null; }
     }
     // La conclusión se reparte en bloques de la pestaña «Conclusiones de la cuenta»: marcas (To/Do · Quick Lett · Opinión), ajustes y criterio
-    function cbHtmlConclMarcas() {
-      const D = cbDr();
-      const opciones = [...CONCLUSIONES_AUDITOR, ...D.marcadas.filter(m => !CONCLUSIONES_AUDITOR.includes(m))];
-      const lista = opciones.map(o => '<label class="flex items-start gap-2 py-1 px-1.5 rounded hover:bg-slate-50 cursor-pointer text-xs text-slate-800 font-medium leading-snug"><input type="checkbox" ' + (D.marcadas.includes(o) ? 'checked ' : '') + 'onchange="cbConclMarcar(this, \'' + escapeHtml(o).replace(/'/g, "\\'") + '\')" class="mt-0.5 h-3.5 w-3.5 shrink-0 accent-indigo-600"><span>' + escapeHtml(o) + (CONCLUSIONES_AUDITOR.includes(o) ? '' : ' (anterior)') + '</span></label>').join('');
-      return '<div class="space-y-2" style="text-align:left"><p class="text-[11px] text-slate-500">Marca una o varias. Lo que marques aparece en el resumen de To/Do, Quick Lett y Opinión del menú. Se guarda con «Guardar criterio final», al final de esta pestaña.</p><div class="border border-slate-300 rounded-lg bg-white p-1.5 space-y-0.5 shadow-xs max-w-3xl">' + lista + '</div></div>';
+    // To/Do · Quick Lett · Opinión: Claude deja los puntos y el auditor envía cada uno (igual que en Inventarios v2)
+    const CB_DEST = { todo: 'To/Do', quicklett: 'Quick Lett', opinion: 'Opinión' };
+    function cbEnvios() {
+      const cl = (cbE.analisis && cbE.analisis.conclusiones) || {}, K = x => String(x == null ? '' : x).replace(/[^\w.-]/g, '_');
+      return (Array.isArray(cl.envios) ? cl.envios : []).map(x => ({ ...x, id: K(x.id), mio: false })).concat((cbE.config.envExtra || []).map(x => ({ ...x, mio: true })));
+    }
+    function cbHtmlConclEnvios() {
+      const e = escapeHtml, EV = cbE.config.envios || {}, items = cbEnvios();
+      const TH = 'p-3 border-r border-slate-200', TD = 'px-3 py-2 align-top border-b border-slate-100';
+      const btnD = (id, d, sug) => '<button type="button" onclick="cbConclEnviar(\'' + e(id) + '\', \'' + d + '\')" class="px-2.5 py-1 text-xs rounded-lg transition border font-medium ' + (sug === d ? 'border-indigo-400 text-indigo-700 bg-indigo-50 hover:bg-indigo-100' : 'border-slate-300 text-slate-700 hover:bg-slate-100') + '">' + CB_DEST[d] + '</button>';
+      const filas = items.map(x => { const s1 = EV[x.id] || {};
+        return '<tr><td class="' + TD + ' text-slate-500 whitespace-nowrap">' + e(x.origen || 'Auditor') + (x.ref ? ' · <span class="font-semibold">' + e(x.ref) + '</span>' : '') + '</td><td class="' + TD + '" style="min-width:20rem">' + e(x.texto || '') + (x.mio ? ' <button type="button" onclick="cbConclQuitarEnvio(\'' + e(x.id) + '\')" class="text-slate-400 hover:text-red-600 text-xs" title="Quitar">✕</button>' : '') + '</td><td class="' + TD + ' whitespace-nowrap">' +
+          (s1.destino ? '<span class="text-slate-600">Enviado a <b>' + CB_DEST[s1.destino] + '</b>' + (s1.por ? ' · ' + e(nombreMostrado(s1.por)) : '') + (s1.cuando ? ' · ' + e(v2Fmt(s1.cuando)) : '') + '</span>' : '<div class="flex gap-2">' + btnD(x.id, 'todo', x.sugerido) + btnD(x.id, 'quicklett', x.sugerido) + btnD(x.id, 'opinion', x.sugerido) + '</div>') + '</td></tr>'; }).join('');
+      const vacio = cbE.analisis && !(cbE.analisis.conclusiones && Array.isArray(cbE.analisis.conclusiones.envios)) ? 'Este análisis de Claude no trae la lista de puntos. Puedes agregar tus puntos abajo, o pedir de nuevo el análisis.' : (cbE.analisis ? 'Sin puntos.' : 'Aún no hay análisis de Claude: puedes agregar tus puntos abajo.');
+      const INP = 'w-full px-2 py-1 border border-slate-300 rounded-lg text-xs outline-none focus:ring-2 focus:ring-indigo-500 bg-white';
+      return '<p class="text-xs text-slate-500 mb-2">Envía cada punto a To/Do, Quick Lett u Opinión: pasa al consolidado «To/Do - Quick Lett - Opinión» de este cliente y año (menú Auditoría/Análisis Claves). Al enviarlo queda marcado aquí. El botón resaltado es lo que sugiere Claude.</p>' +
+        '<div class="overflow-x-auto"><table class="w-full text-xs border-collapse"><thead class="bg-slate-100 text-slate-600 text-[10px] font-bold border-b border-slate-200"><tr><th class="' + TH + '">Origen</th><th class="' + TH + '">Punto</th><th class="' + TH + '">Enviar a</th></tr></thead><tbody>' + (filas || '<tr><td colspan="3" class="' + TD + ' text-slate-400">' + vacio + '</td></tr>') + '</tbody></table></div>' +
+        '<div class="flex flex-wrap gap-2 mt-2 items-center"><div style="flex:1;min-width:20rem"><input id="cb-env-texto" class="' + INP + '" placeholder="Otro punto del auditor"></div><button type="button" onclick="cbConclNuevoEnvio()" class="px-3 py-1 text-xs rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-100 font-medium">+ Agregar</button></div>';
+    }
+    function cbConclNuevoEnvio() {
+      const el = $cb('cb-env-texto'), t = el ? el.value.trim() : ''; if (!t) { alert('Escribe el punto.'); return; }
+      (cbE.config.envExtra = cbE.config.envExtra || []).push({ id: 'x' + Date.now(), origen: 'Auditor', sugerido: '', ref: '', texto: t, por: nombreUsuarioActivo() || '' });
+      cbGuardar(true); cbRenderConScroll();
+    }
+    function cbConclQuitarEnvio(id) {
+      cbE.config.envExtra = (cbE.config.envExtra || []).filter(x => x.id !== id); if (cbE.config.envios) delete cbE.config.envios[id];
+      cbGuardar(true); cbRenderConScroll();
+    }
+    async function cbConclEnviar(id, destino) {
+      const x = cbEnvios().find(k => k.id === id); if (!x) return;
+      if (cbE.config.envios && cbE.config.envios[id] && cbE.config.envios[id].destino) return;
+      const quien = nombreUsuarioActivo();
+      if (!quien) { alert('Ingresa con tu usuario para enviar el punto.'); return; }
+      if (!await confirmarApp('¿Enviar este punto a ' + CB_DEST[destino] + '?\n\n' + x.texto + '\n\nSe verá en el consolidado «To/Do - Quick Lett - Opinión» (' + cbE.anio + ').')) return;
+      const cli = cbE.cliente, anio = Number(cbE.anio), vis = cbE.visita;
+      const { data: ex, error: e1 } = await supabaseClient.from('criterio_auditor_cuentas').select('*').eq('cliente_id', cli).eq('anio', anio).eq('cuenta', 'bancos').eq('visita', vis).maybeSingle();
+      if (e1) { alert('No se pudo leer el consolidado: ' + (e1.message || e1)); return; }
+      const linea = '• [' + CB_DEST[destino] + '] ' + x.texto;
+      const previo = String((ex && ex.criterio) || '').trim();
+      const marcas = String((ex && ex.conclusion) || '').split(CB_SEP).map(m => m.trim()).filter(Boolean);
+      if (!marcas.includes(CB_DEST[destino])) marcas.push(CB_DEST[destino]);
+      const fila = { cliente_id: cli, anio, cuenta: 'bancos', visita: vis, conclusion: marcas.join(CB_SEP), criterio: previo.includes(linea) ? previo : (previo ? previo + '\n' : '') + linea, auditor: (ex && ex.auditor) || quien, actualizado_por: quien, updated_at: new Date().toISOString() };
+      const r = await upsertConFallbackActualizado('criterio_auditor_cuentas', fila);
+      if (r.error) { alert('No se pudo enviar: ' + (r.error.message || r.error)); return; }
+      // Se mantiene al día lo guardado y el borrador, para que «Guardar criterio final» no lo pise
+      cbE.crit = { ...(cbE.crit || {}), ...fila, asiento: (cbE.crit || {}).asiento };
+      const D = cbDr(); if (!D.marcadas.includes(CB_DEST[destino])) D.marcadas.push(CB_DEST[destino]);
+      if (!String(D.criterio || '').includes(linea)) D.criterio = (String(D.criterio || '').trim() ? D.criterio.trim() + '\n' : '') + linea;
+      { const ta = $cb('cb-crit'); if (ta) ta.value = D.criterio; }
+      cbDraftPersistir();
+      cbE.config.envios = cbE.config.envios || {}; cbE.config.envios[id] = { destino, por: quien, cuando: new Date().toISOString() };
+      cbGuardar(true);
+      bitacoraClaude('Envió punto de Bancos a ' + CB_DEST[destino], x.texto.slice(0, 120), cli, String(anio));
+      cbRenderConScroll();
     }
     function cbHtmlConclAjustes() {
       const D = cbDr();
       const filas = D.asiento.lineas.map((x, i) => '<tr class="border-b border-slate-200"><td class="p-1.5"><input type="text" value="' + escapeHtml(x.cuenta) + '" oninput="cbAsLinea(' + i + ', \'cuenta\', this.value)" placeholder="Código y nombre de la cuenta" class="w-full p-1.5 border border-slate-300 rounded text-xs outline-none focus:ring-2 focus:ring-indigo-500"></td>' +
         ['debe', 'haber'].map(k => '<td class="p-1.5"><input type="text" inputmode="decimal" value="' + escapeHtml(x[k]) + '" oninput="cbAsLinea(' + i + ', \'' + k + '\', this.value)" onblur="cbAsFormato(this, ' + i + ', \'' + k + '\')" placeholder="0.00" class="w-full p-1.5 border border-slate-300 rounded text-xs text-right outline-none focus:ring-2 focus:ring-indigo-500"></td>').join('') +
         '<td class="p-1.5 text-center">' + (D.asiento.lineas.length > 2 ? '<button type="button" onclick="cbAsQuitar(' + i + ')" class="text-[11px] font-bold text-rose-600 hover:underline">Quitar</button>' : '') + '</td></tr>').join('');
-      return '<div class="space-y-2 max-w-3xl" style="text-align:left"><p class="text-[11px] text-slate-500">Asiento de ajuste propuesto (Debe / Haber). Se guarda con «Guardar criterio final».</p><div class="border border-slate-300 rounded-lg bg-white overflow-x-auto"><table class="w-full text-xs border-collapse min-w-[520px]"><thead class="bg-slate-100 text-slate-600 text-[10px] font-bold border-b border-slate-200"><tr class="text-left"><th class="p-3 border-r border-slate-200">Cuenta contable</th><th class="p-3 border-r border-slate-200 text-right w-[22%]">Debe</th><th class="p-3 border-r border-slate-200 text-right w-[22%]">Haber</th><th class="p-3 w-[10%]"></th></tr></thead><tbody>' + filas + '</tbody><tfoot id="cb-as-tot"></tfoot></table></div>' +
+      return '<div class="space-y-2 max-w-3xl" style="text-align:left"><p class="text-[11px] text-slate-500">Asiento de ajuste propuesto (Debe / Haber). Se guarda con «Guardar criterio final»; si tiene valores, se marca «Ajustes propuestos» en el consolidado.</p><div class="border border-slate-300 rounded-lg bg-white overflow-x-auto"><table class="w-full text-xs border-collapse min-w-[520px]"><thead class="bg-slate-100 text-slate-600 text-[10px] font-bold border-b border-slate-200"><tr class="text-left"><th class="p-3 border-r border-slate-200">Cuenta contable</th><th class="p-3 border-r border-slate-200 text-right w-[22%]">Debe</th><th class="p-3 border-r border-slate-200 text-right w-[22%]">Haber</th><th class="p-3 w-[10%]"></th></tr></thead><tbody>' + filas + '</tbody><tfoot id="cb-as-tot"></tfoot></table></div>' +
         '<div class="flex flex-wrap items-center justify-between gap-2"><button type="button" onclick="cbAsAgregar()" class="px-2.5 py-1 bg-white text-slate-700 hover:bg-slate-50 border border-slate-400 rounded text-[11px] font-bold transition">+ Agregar línea</button><p id="cb-as-cuadre" class="text-[11px] font-bold"></p></div>' +
         '<input type="text" value="' + escapeHtml(D.asiento.glosa || '') + '" oninput="cbDr().asiento.glosa = this.value; cbDraftPersistir()" placeholder="Glosa o concepto del asiento (opcional)" class="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-indigo-500 outline-none"></div>';
     }
@@ -15212,8 +15261,9 @@ ${cont.innerHTML}
       const D = cbDr(), quien = nombreUsuarioActivo(), ta = $cb('cb-crit'); if (ta) D.criterio = ta.value;
       if (!cbE.cliente || !cbE.anio) { alert('Primero selecciona el cliente y el año.'); return; }
       if (!quien) { alert('Tu sesión no está activa. Vuelve a ingresar al sistema para guardar el criterio final.'); return; }
-      if (D.marcadas.length === 0) { alert('Marca al menos una conclusión.'); return; }
+      if (D.marcadas.length === 0) { alert('Antes de guardar, envía al menos un punto a To/Do, Quick Lett u Opinión (sección 2), o agrega el tuyo.'); return; }
       const t = cbAsTotales();
+      if (t.debe !== 0 && !D.marcadas.includes('Ajustes propuestos')) D.marcadas.push('Ajustes propuestos');
       if ((t.debe !== 0 || t.haber !== 0) && t.dif !== 0 && !await confirmarApp('El asiento de ajuste no cuadra: el Debe y el Haber tienen una diferencia de ' + formatoNumeroAnexo(t.dif) + '.\n\n¿Quieres guardar de todas formas?')) return;
       const fila = { cliente_id: cbE.cliente, anio: Number(cbE.anio), cuenta: 'bancos', visita: cbE.visita, conclusion: D.marcadas.join(CB_SEP), criterio: D.criterio.trim() || null, auditor: (cbE.config.resp || quien), actualizado_por: quien, asiento: cbAsParaGuardar(), updated_at: new Date().toISOString() };
       const b = $cb('cb-btn-crit'); if (b) b.disabled = true; cbCritMsg('Guardando...');
@@ -15486,10 +15536,10 @@ ${cont.innerHTML}
       const nRev = ['restr', 'otras'].filter(k => String(R[k] || '').trim()).length, e1 = estadoOrigen(cbE.org);
       const chip = (tt, n, id) => '<a href="#" onclick="cbIrSec(\'' + id + '\');return false" class="px-3 py-1.5 rounded-full border border-slate-300 bg-white text-xs text-slate-700 hover:bg-slate-50"><b>' + tt + '</b>: ' + n + '</a>';
       return '<div class="p-4 text-sm text-slate-700 max-w-6xl"><div class="flex flex-wrap gap-2 mb-2">' +
-        chip('Por concluir', P.grupos.length, 'cb-sec-concluir') + chip('To/Do · Quick Lett · Opinión', D.marcadas.length + ' marcada(s)', 'cb-sec-todo') + chip('Ajustes', t.debe ? 'USD ' + formatoNumeroAnexo(t.debe) : 'sin asiento', 'cb-sec-ajustes') + chip('Verificaciones', P.ver.length + ' por resolver', 'cb-sec-verif') + chip('Revelaciones', nRev + ' de 2 completadas', 'cb-sec-revel') + chip('Conclusión', e1 === 'revisado' ? 'ratificada' : 'por ratificar', 'cb-sec-concl') + '</div>' +
+        chip('Por concluir', P.grupos.length, 'cb-sec-concluir') + chip('To/Do · Quick Lett · Opinión', cbEnvios().filter(x => !((cbE.config.envios || {})[x.id] || {}).destino).length + ' por enviar', 'cb-sec-todo') + chip('Ajustes', t.debe ? 'USD ' + formatoNumeroAnexo(t.debe) : 'sin asiento', 'cb-sec-ajustes') + chip('Verificaciones', P.ver.length + ' por resolver', 'cb-sec-verif') + chip('Revelaciones', nRev + ' de 2 completadas', 'cb-sec-revel') + chip('Conclusión', e1 === 'revisado' ? 'ratificada' : 'por ratificar', 'cb-sec-concl') + '</div>' +
         '<p class="text-xs text-slate-500">Lo que hay que decidir o hacer. Claude lo propone y el auditor lo completa.</p>' +
         '<h2 id="cb-sec-concluir" class="' + CB_H2.replace(' px-3', '') + '">1. Por concluir</h2>' + cbHtmlConcluir() +
-        '<h2 id="cb-sec-todo" class="' + CB_H2.replace(' px-3', '') + '">2. To/Do · Quick Lett · Opinión</h2>' + cbHtmlConclMarcas() +
+        '<h2 id="cb-sec-todo" class="' + CB_H2.replace(' px-3', '') + '">2. To/Do · Quick Lett · Opinión</h2>' + cbHtmlConclEnvios() +
         '<h2 id="cb-sec-ajustes" class="' + CB_H2.replace(' px-3', '') + '">3. Ajustes propuestos</h2>' + cbHtmlConclAjustes() +
         '<h2 id="cb-sec-verif" class="' + CB_H2.replace(' px-3', '') + '">4. Verificaciones</h2><div class="border border-slate-200 rounded-xl overflow-hidden">' + cbHtmlVerif() + '</div>' +
         '<h2 id="cb-sec-revel" class="' + CB_H2.replace(' px-3', '') + '">5. Revelaciones</h2><div class="border border-slate-200 rounded-xl">' + cbHtmlRevel() + '</div>' +
