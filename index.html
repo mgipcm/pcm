@@ -2130,7 +2130,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
     <section id="sec-concil" class="hidden bg-white rounded-2xl shadow-xl border border-slate-200 p-6 min-h-[92vh] space-y-5">
       <div id="cb-hojas"></div>
       <div class="border-b pb-4">
-        <h1 id="cb-titulo" class="text-xl font-bold text-slate-800">2. Bancos (conciliaciones bancarias)</h1>
+        <h1 id="cb-titulo" class="text-xl font-bold text-slate-800">2. Bancos</h1>
         <p class="text-xs text-slate-500">Resumen de conciliaciones bancarias por cuenta, con el detalle de sus partidas, la comparación con los saldos en libros, verificaciones, revelaciones, análisis de Claude y programa de trabajo (sumaria AA, hoja Bancos).</p>
       </div>
       <div class="grid grid-cols-1 md:grid-cols-4 xl:grid-cols-8 gap-4">
@@ -3558,7 +3558,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
 
       const desdeAnalisis = ((seccion === 'arrend' || seccion === 'import' || seccion === 'import2' || seccion === 'concil') && sub === 'analisis');
       if (seccion === 'arrend') { const t = document.getElementById('ar-titulo'); if (t) t.textContent = desdeAnalisis ? '2. Activos por derecho de uso y pasivos por arrendamiento' : 'Arrendamientos NIIF 16'; }
-      if (seccion === 'concil') { pintarHojasAA(); const t = document.getElementById('cb-titulo'); if (t) t.textContent = '2. Bancos (conciliaciones bancarias)'; }
+      if (seccion === 'concil') { pintarHojasAA(); const t = document.getElementById('cb-titulo'); if (t) t.textContent = '2. Bancos'; }
       if (desdeAnalisis) {
         const bx = document.getElementById('nav-cuenta-extra-activos-' + seccion);
         if (bx) bx.className = "w-full text-left px-3 py-1.5 rounded-lg text-xs font-bold bg-indigo-600 text-white shadow-md transition flex items-center gap-2";
@@ -13549,7 +13549,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
     }
 
     function nombreCuentaPorClave(clave) {
-      if (clave === 'bancos') return 'Efectivo y equivalentes de efectivo › Bancos (conciliaciones)';
+      if (clave === 'bancos') return 'Efectivo y equivalentes de efectivo › Bancos';
       if (clave === 'inventarios_v2') return 'AF Inventarios v2 (prueba) › Conclusiones de la cuenta';
       for (const r of Object.values(RUBROS_ANALISIS)) {
         const c = r.cuentas.find(x => x.clave === clave);
