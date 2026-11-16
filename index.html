@@ -15538,12 +15538,12 @@ ${cont.innerHTML}
     }
     function conclTarjetas(items) {
       const C = { alerta: ['#fff7ed', '#fdba74', '#c2410c'], ok: ['#f0fdf4', '#86efac', '#15803d'], neutro: ['#ffffff', '#cbd5e1', '#475569'] };
-      return '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:12px">' + items.map(x => {
+      return '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(105px,1fr));gap:7px;margin-bottom:10px">' + items.map(x => {
         const c = C[x.estado] || C.neutro;
-        return '<a href="#" onclick="conclTarjetaClic(this);' + x.go + ';return false" style="display:block;text-decoration:none;background:' + c[0] + ';border:1px solid ' + c[1] + ';border-radius:12px;padding:10px 14px;cursor:pointer">' +
-          '<div style="font-size:12px;font-weight:700;color:#1e293b;line-height:1.2">' + x.t + '</div>' +
-          '<div style="font-size:' + (String(x.n).length > 9 ? '20' : '28') + 'px;font-weight:800;color:' + c[2] + ';line-height:1.15;margin-top:4px">' + x.n + '</div>' +
-          '<div style="font-size:11px;color:#64748b;margin-top:1px">' + x.sub + '</div></a>';
+        return '<a href="#" onclick="conclTarjetaClic(this);' + x.go + ';return false" style="display:block;text-decoration:none;background:' + c[0] + ';border:1px solid ' + c[1] + ';border-radius:9px;padding:7px 10px;cursor:pointer">' +
+          '<div style="font-size:9px;font-weight:700;color:#1e293b;line-height:1.2">' + x.t + '</div>' +
+          '<div style="font-size:' + (String(x.n).length > 9 ? '14' : '20') + 'px;font-weight:800;color:' + c[2] + ';line-height:1.15;margin-top:3px">' + x.n + '</div>' +
+          '<div style="font-size:8px;color:#64748b;margin-top:1px">' + x.sub + '</div></a>';
       }).join('') + '</div>';
     }
     // ----- Conclusiones de la cuenta: por concluir, To/Do · Quick Lett · Opinión, ajustes, verificaciones, revelaciones y conclusión -----
@@ -15559,7 +15559,7 @@ ${cont.innerHTML}
         { t: 'Ajustes propuestos', n: t.debe ? 'USD ' + formatoNumeroAnexo(t.debe) : '—', sub: t.debe ? 'asiento propuesto' : 'sin asiento', estado: t.debe ? 'alerta' : 'neutro', go: go('cb-sec-ajustes') },
         { t: 'Verificaciones', n: P.ver.length, sub: 'por resolver', estado: P.ver.length ? 'alerta' : 'ok', go: go('cb-sec-verif') },
         { t: 'Revelaciones', n: nRev + ' de 2', sub: 'completadas', estado: nRev >= 2 ? 'ok' : 'alerta', go: go('cb-sec-revel') },
-        { t: 'Conclusión', n: e1 === 'revisado' ? 'Ratificada' : 'Por ratificar', sub: e1 === 'revisado' ? 'listo' : 'falta el visto bueno', estado: e1 === 'revisado' ? 'ok' : 'alerta', go: go('cb-sec-concl') }
+        { t: 'Conclusión y ratificación', n: e1 === 'revisado' ? 'Ratificada' : 'Por ratificar', sub: e1 === 'revisado' ? 'listo' : 'falta el visto bueno', estado: e1 === 'revisado' ? 'ok' : 'alerta', go: go('cb-sec-concl') }
       ]) +
         '<p class="text-sm text-slate-600 mb-2">Lo que hay que decidir o hacer. Claude lo propone y el auditor lo completa.</p>' +
         '<h2 id="cb-sec-concluir" class="' + CB_H2.replace(' px-3', '') + '">1. Por concluir</h2>' + cbHtmlConcluir() +
@@ -20080,7 +20080,8 @@ ${cont.innerHTML}
           { t: 'To/Do · Quick Lett · Opinión', n: nEnv, sub: 'por enviar', estado: nEnv ? 'alerta' : 'ok', go: "document.getElementById('vc-s2').scrollIntoView({behavior:'smooth'})" },
           { t: 'Ajustes propuestos', n: ajs.length ? 'USD ' + fm(tot.m) : '—', sub: ajs.length ? ajs.length + ' asiento(s)' : 'sin asiento', estado: ajs.length ? 'alerta' : 'neutro', go: "document.getElementById('vc-s3').scrollIntoView({behavior:'smooth'})" },
           { t: 'Verificaciones', n: nVer, sub: 'por resolver', estado: nVer ? 'alerta' : 'ok', go: "document.getElementById('vc-s4').scrollIntoView({behavior:'smooth'})" },
-          { t: 'Revelaciones', n: nRev, sub: 'por confirmar', estado: nRev ? 'alerta' : 'ok', go: "document.getElementById('vc-s5').scrollIntoView({behavior:'smooth'})" }
+          { t: 'Revelaciones', n: nRev, sub: 'por confirmar', estado: nRev ? 'alerta' : 'ok', go: "document.getElementById('vc-s5').scrollIntoView({behavior:'smooth'})" },
+          { t: 'Conclusión y ratificación', n: D.ratificado_por ? 'Ratificada' : D.revisado_por ? 'Revisada' : 'Por ratificar', sub: D.ratificado_por ? 'listo' : D.revisado_por ? 'falta ratificar' : 'falta el visto bueno', estado: D.ratificado_por ? 'ok' : 'alerta', go: "document.getElementById('vc-s6').scrollIntoView({behavior:'smooth'})" }
         ]) +
         '<p class="text-sm text-slate-600 mb-2">Lo que hay que decidir o hacer, en orden de urgencia. Claude lo propone y el auditor lo completa; todo se guarda al cambiarlo.</p>' +
         '<h2 id="vc-s1" class="' + H2 + '">1. Por concluir</h2>' +
