@@ -15096,12 +15096,22 @@ ${cont.innerHTML}
       const btnD = (id, d, sug) => '<button type="button" onclick="cbConclEnviar(\'' + e(id) + '\', \'' + d + '\')" class="px-2.5 py-1 text-xs rounded-lg transition border font-medium ' + (sug === d ? 'border-indigo-400 text-indigo-700 bg-indigo-50 hover:bg-indigo-100' : 'border-slate-300 text-slate-700 hover:bg-slate-100') + '">' + CB_DEST[d] + '</button>';
       const filas = items.map(x => { const s1 = EV[x.id] || {};
         return '<tr><td class="' + TD + ' text-slate-500 whitespace-nowrap">' + e(x.origen || 'Auditor') + (x.ref ? ' · <span class="font-semibold">' + e(x.ref) + '</span>' : '') + '</td><td class="' + TD + '" style="min-width:20rem">' + e(x.texto || '') + (x.mio ? ' <button type="button" onclick="cbConclQuitarEnvio(\'' + e(x.id) + '\')" class="text-slate-400 hover:text-red-600 text-xs" title="Quitar">✕</button>' : '') + '</td><td class="' + TD + ' whitespace-nowrap">' +
-          (s1.destino ? '<span class="text-slate-600">Enviado a <b>' + CB_DEST[s1.destino] + '</b>' + (s1.por ? ' · ' + e(nombreMostrado(s1.por)) : '') + (s1.cuando ? ' · ' + e(v2Fmt(s1.cuando)) : '') + '</span>' : '<div class="flex gap-2">' + btnD(x.id, 'todo', x.sugerido) + btnD(x.id, 'quicklett', x.sugerido) + btnD(x.id, 'opinion', x.sugerido) + '</div>') + '</td></tr>'; }).join('');
+          (s1.destino ? '<span class="text-slate-600">Enviado a <b>' + CB_DEST[s1.destino] + '</b>' + (s1.por ? ' · ' + e(nombreMostrado(s1.por)) : '') + (s1.cuando ? ' · ' + e(v2Fmt(s1.cuando)) : '') + '</span>' : s1.na ? '<span class="text-slate-400">—</span>' : '<div class="flex gap-2">' + btnD(x.id, 'todo', x.sugerido) + btnD(x.id, 'quicklett', x.sugerido) + btnD(x.id, 'opinion', x.sugerido) + '</div>') + '</td>' +
+          '<td class="' + TD + ' text-center"><input type="checkbox" ' + (s1.na ? 'checked ' : '') + (s1.destino ? 'disabled ' : '') + 'onchange="cbEnvNA(\'' + e(x.id) + '\', this.checked)" title="Este punto no aplica"></td>' +
+          '<td class="' + TD + '" style="min-width:13rem"><input type="text" value="' + e(s1.coment || '') + '" placeholder="Comentario" onchange="cbEnvComent(\'' + e(x.id) + '\', this.value)" class="w-full px-2 py-1 border border-slate-300 rounded-lg text-xs outline-none focus:ring-2 focus:ring-indigo-500 bg-white"></td></tr>'; }).join('');
       const vacio = cbE.analisis && !(cbE.analisis.conclusiones && Array.isArray(cbE.analisis.conclusiones.envios)) ? 'Este análisis de Claude no trae la lista de puntos. Puedes agregar tus puntos abajo, o pedir de nuevo el análisis.' : (cbE.analisis ? 'Sin puntos.' : 'Aún no hay análisis de Claude: puedes agregar tus puntos abajo.');
       const INP = 'w-full px-2 py-1 border border-slate-300 rounded-lg text-xs outline-none focus:ring-2 focus:ring-indigo-500 bg-white';
       return '<p class="text-xs text-slate-500 mb-2">Envía cada punto a To/Do, Quick Lett u Opinión: pasa al consolidado «To/Do - Quick Lett - Opinión» de este cliente y año (menú Auditoría/Análisis Claves). Al enviarlo queda marcado aquí. El botón resaltado es lo que sugiere Claude.</p>' +
-        '<div class="overflow-x-auto"><table class="w-full text-xs border-collapse"><thead class="bg-slate-100 text-slate-600 text-[10px] font-bold border-b border-slate-200"><tr><th class="' + TH + '">Origen</th><th class="' + TH + '">Punto</th><th class="' + TH + '">Enviar a</th></tr></thead><tbody>' + (filas || '<tr><td colspan="3" class="' + TD + ' text-slate-400">' + vacio + '</td></tr>') + '</tbody></table></div>' +
+        '<div class="overflow-x-auto"><table class="w-full text-xs border-collapse"><thead class="bg-slate-100 text-slate-600 text-[10px] font-bold border-b border-slate-200"><tr><th class="' + TH + '">Origen</th><th class="' + TH + '">Punto</th><th class="' + TH + '">Enviar a</th><th class="' + TH + '">No aplica</th><th class="' + TH + '">Comentario</th></tr></thead><tbody>' + (filas || '<tr><td colspan="5" class="' + TD + ' text-slate-400">' + vacio + '</td></tr>') + '</tbody></table></div>' +
         '<div class="flex flex-wrap gap-2 mt-2 items-center"><div style="flex:1;min-width:20rem"><input id="cb-env-texto" class="' + INP + '" placeholder="Otro punto del auditor"></div><button type="button" onclick="cbConclNuevoEnvio()" class="px-3 py-1 text-xs rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-100 font-medium">+ Agregar</button></div>';
+    }
+    function cbEnvNA(id, v) {
+      cbE.config.envios = cbE.config.envios || {}; cbE.config.envios[id] = { ...(cbE.config.envios[id] || {}), na: !!v };
+      cbGuardar(true); cbRenderConScroll();
+    }
+    function cbEnvComent(id, v) {
+      cbE.config.envios = cbE.config.envios || {}; cbE.config.envios[id] = { ...(cbE.config.envios[id] || {}), coment: v };
+      cbGuardar(true);
     }
     function cbConclNuevoEnvio() {
       const el = $cb('cb-env-texto'), t = el ? el.value.trim() : ''; if (!t) { alert('Escribe el punto.'); return; }
@@ -15134,7 +15144,7 @@ ${cont.innerHTML}
       if (!String(D.criterio || '').includes(linea)) D.criterio = (String(D.criterio || '').trim() ? D.criterio.trim() + '\n' : '') + linea;
       { const ta = $cb('cb-crit'); if (ta) ta.value = D.criterio; }
       cbDraftPersistir();
-      cbE.config.envios = cbE.config.envios || {}; cbE.config.envios[id] = { destino, por: quien, cuando: new Date().toISOString() };
+      cbE.config.envios = cbE.config.envios || {}; cbE.config.envios[id] = { ...(cbE.config.envios[id] || {}), destino, por: quien, cuando: new Date().toISOString() };
       cbGuardar(true);
       bitacoraClaude('Envió punto de Bancos a ' + CB_DEST[destino], x.texto.slice(0, 120), cli, String(anio));
       cbRenderConScroll();
@@ -15560,7 +15570,7 @@ ${cont.innerHTML}
       if (cbE.plantilla === null) return '<div class="p-8 text-center text-slate-400 text-sm">Cargando...</div>';
       const P = cbPorConcluir(), D = cbDr(), t = cbAsTotales(), R = cbE.config.revel || {};
       const nRev = ['restr', 'otras'].filter(k => String(R[k] || '').trim()).length, e1 = estadoOrigen(cbE.org);
-      const nEnvB = cbEnvios().filter(x => !((cbE.config.envios || {})[x.id] || {}).destino).length;
+      const nEnvB = cbEnvios().filter(x => { const q = (cbE.config.envios || {})[x.id] || {}; return !q.destino && !q.na; }).length;
       const go = id => 'cbIrSec(\'' + id + '\')';
       return '<div class="p-4 text-sm text-slate-700 max-w-6xl">' + conclTarjetas([
         { t: 'Por concluir', n: P.grupos.length, sub: 'por decidir', estado: P.grupos.length ? 'alerta' : 'ok', go: go('cb-sec-concluir') },
@@ -19936,7 +19946,7 @@ ${cont.innerHTML}
       const fila = { cliente_id: cli, anio, cuenta: V2_CUENTA, visita: vis, conclusion: marcas.join(SEP_CONCLUSION), criterio: previo.includes(linea) ? previo : (previo ? previo + '\n' : '') + linea, auditor: (ex && ex.auditor) || quien, actualizado_por: quien, updated_at: new Date().toISOString() };
       const r = await upsertConFallbackActualizado('criterio_auditor_cuentas', fila);
       if (r.error) { alert('No se pudo enviar: ' + (r.error.message || r.error)); return; }
-      const ok = await v2ConcGuardar(d => { d.envios = d.envios || {}; d.envios[id] = { destino, por: quien, cuando: new Date().toISOString() }; });
+      const ok = await v2ConcGuardar(d => { d.envios = d.envios || {}; d.envios[id] = { ...(d.envios[id] || {}), destino, por: quien, cuando: new Date().toISOString() }; });
       if (!ok) { alert('Se envió a ' + V2_DEST[destino] + ', pero no se pudo marcar como enviado en esta lista.'); return; }
       bitacoraClaude('Envió punto de Inventarios v2 a ' + V2_DEST[destino], x.texto.slice(0, 120), cli, String(anio));
       v2ConcPintar();
@@ -20047,11 +20057,13 @@ ${cont.innerHTML}
       const cerrados = pcsAll.filter(cerrado);
       // 2. To/Do - Quick Lett - Opinión
       const envs = (cl.envios || []).map(x => ({ ...x, id: v2ConcK(x.id), mio: false })).concat((D.envExtra || []).map(x => ({ ...x, mio: true })));
-      const nEnv = envs.filter(x => !((D.envios || {})[x.id] || {}).destino).length;
+      const nEnv = envs.filter(x => { const q = (D.envios || {})[x.id] || {}; return !q.destino && !q.na; }).length;
       const btnD = (id, d, sug) => '<button type="button" onclick="v2ConcEnviar(\'' + e(id) + '\',\'' + d + '\')" class="px-2.5 py-1 text-xs rounded-lg transition border font-medium ' + (sug === d ? 'border-indigo-400 text-indigo-700 bg-indigo-50 hover:bg-indigo-100' : 'border-slate-300 text-slate-700 hover:bg-slate-100') + '">' + V2_DEST[d] + '</button>';
       const filasEnv = envs.map(x => { const s = (D.envios || {})[x.id] || {};
         return '<tr><td class="' + TD + ' text-slate-500 whitespace-nowrap">' + e(x.origen || '') + (x.ref ? ' · <span class="v2t-cod">' + e(x.ref) + '</span>' : '') + '</td><td class="' + TD + '" style="min-width:20rem">' + e(x.texto || '') + (x.mio ? ' ' + quitar('env', x.id) : '') + '</td><td class="' + TD + ' whitespace-nowrap">' +
-          (s.destino ? '<span class="text-slate-600">Enviado a <b>' + V2_DEST[s.destino] + '</b>' + (s.por ? ' · ' + e(nombreMostrado(s.por)) : '') + (s.cuando ? ' · ' + e(v2Fmt(s.cuando)) : '') + '</span>' : '<div class="flex gap-2">' + btnD(x.id, 'todo', x.sugerido) + btnD(x.id, 'quicklett', x.sugerido) + btnD(x.id, 'opinion', x.sugerido) + '</div>') + '</td></tr>'; }).join('');
+          (s.destino ? '<span class="text-slate-600">Enviado a <b>' + V2_DEST[s.destino] + '</b>' + (s.por ? ' · ' + e(nombreMostrado(s.por)) : '') + (s.cuando ? ' · ' + e(v2Fmt(s.cuando)) : '') + '</span>' : s.na ? '<span class="text-slate-400">—</span>' : '<div class="flex gap-2">' + btnD(x.id, 'todo', x.sugerido) + btnD(x.id, 'quicklett', x.sugerido) + btnD(x.id, 'opinion', x.sugerido) + '</div>') + '</td>' +
+          '<td class="' + TD + ' text-center"><input type="checkbox" ' + (s.na ? 'checked ' : '') + (s.destino ? 'disabled ' : '') + 'onchange="v2ConcSet(\'envios\',\'' + e(x.id) + '\',\'na\',this.checked)" title="Este punto no aplica"></td>' +
+          '<td class="' + TD + '" style="min-width:13rem"><input type="text" value="' + e(s.coment || '') + '" placeholder="Comentario" onchange="v2ConcSet(\'envios\',\'' + e(x.id) + '\',\'coment\',this.value)" class="' + INP + '"></td></tr>'; }).join('');
       // 3. Ajustes
       const ajs = cl.ajustes || [], ESTAJ = [['propuesto', 'Propuesto'], ['aceptado', 'Aceptado por el cliente'], ['noreg', 'No registrado']];
       const tot = { d: 0, h: 0, r: 0, m: 0 };
@@ -20099,7 +20111,7 @@ ${cont.innerHTML}
         '<div class="flex flex-wrap gap-2 mt-2 items-center"><div style="width:14rem">' + add('Asunto', 'vc-pc-asunto') + '</div><div style="flex:1;min-width:16rem">' + add('Qué falta', 'vc-pc-falta') + '</div><button type="button" onclick="v2ConcNuevo(\'pc\')" class="px-3 py-1 text-xs rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-100 font-medium">+ Agregar</button></div>' +
         conclH2('vc-s2', '2. To/Do · Quick Lett · Opinión', nEnv + ' por enviar', nEnv ? 'alerta' : 'ok', false) +
         '<p class="text-xs text-slate-500 mb-2">Envía cada punto a To/Do, Quick Lett u Opinión: pasa al consolidado «To/Do - Quick Lett - Opinión» de este cliente y año (menú Auditoría/Análisis Claves). Al enviarlo queda marcado aquí. El botón resaltado es lo que sugiere Claude.</p>' +
-        '<div class="overflow-x-auto"><table class="w-full text-xs border-collapse"><thead class="bg-slate-100 text-slate-600 text-[10px] font-bold border-b border-slate-200"><tr><th class="' + TH + '">Origen</th><th class="' + TH + '">Punto</th><th class="' + TH + '">Enviar a</th></tr></thead><tbody>' + (filasEnv || '<tr><td colspan="3" class="' + TD + ' text-slate-400">Sin puntos.</td></tr>') + '</tbody></table></div>' +
+        '<div class="overflow-x-auto"><table class="w-full text-xs border-collapse"><thead class="bg-slate-100 text-slate-600 text-[10px] font-bold border-b border-slate-200"><tr><th class="' + TH + '">Origen</th><th class="' + TH + '">Punto</th><th class="' + TH + '">Enviar a</th><th class="' + TH + '">No aplica</th><th class="' + TH + '">Comentario</th></tr></thead><tbody>' + (filasEnv || '<tr><td colspan="5" class="' + TD + ' text-slate-400">Sin puntos.</td></tr>') + '</tbody></table></div>' +
         '<div class="flex flex-wrap gap-2 mt-2 items-center"><div style="flex:1;min-width:20rem">' + add('Otro punto del auditor', 'vc-env-texto') + '</div><button type="button" onclick="v2ConcNuevo(\'env\')" class="px-3 py-1 text-xs rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-100 font-medium">+ Agregar</button></div>' +
         conclH2('vc-s3', '3. Ajustes propuestos', ajs.length ? ajs.length + ' asiento(s)' : 'sin asiento', ajs.length ? 'alerta' : 'neutro', false) +
         '<div class="overflow-x-auto"><table class="w-full text-xs border-collapse"><thead class="bg-slate-100 text-slate-600 text-[10px] font-bold border-b border-slate-200"><tr><th class="' + TH + '">N.º</th><th class="' + TH + '">Cuenta</th><th class="' + TH + ' text-right">Débito</th><th class="' + TH + ' text-right">Crédito</th><th class="' + TH + '">Concepto</th><th class="' + TH + ' text-right">Efecto en resultados</th><th class="' + TH + '">Efecto tributario</th><th class="' + TH + '">Estado</th></tr></thead><tbody>' + (filasAj || '<tr><td colspan="8" class="' + TD + ' text-slate-400">Claude no propone ajustes.</td></tr>') +
