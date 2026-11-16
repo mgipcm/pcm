@@ -2217,6 +2217,45 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       </div>
     </section>
 
+    <section id="sec-nomina" class="hidden bg-white rounded-2xl shadow-xl border border-slate-200 p-6 min-h-[92vh] space-y-5">
+      <div class="border-b pb-4">
+        <h1 class="text-xl font-bold text-slate-800">2. Nómina <span class="text-[11px] font-semibold text-amber-600 border border-amber-300 rounded px-1.5 py-0.5 align-middle">PRUEBA</span></h1>
+        <p class="text-xs text-slate-500">Análisis guiado por el programa de auditoría: Claude elabora cada procedimiento de nómina y arma los papeles de trabajo; el auditor revisa.</p>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-4 xl:grid-cols-10 gap-4">
+        <div class="md:col-span-2 xl:col-span-2">
+          <label for="nm-cliente" class="block text-xs font-semibold text-slate-600 mb-1">Cliente</label>
+          <select id="nm-cliente" onchange="nmCargar()" class="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs sm:text-sm focus:ring-2 focus:ring-indigo-500 outline-none"><option value="">-- Selecciona un Cliente --</option></select>
+        </div>
+        <div>
+          <label for="nm-anio" class="block text-xs font-semibold text-slate-600 mb-1">Año a Evaluar</label>
+          <select id="nm-anio" onchange="nmCargar()" class="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs sm:text-sm focus:ring-2 focus:ring-indigo-500 outline-none"></select>
+        </div>
+        <div>
+          <label for="nm-visita" class="block text-xs font-semibold text-slate-600 mb-1">Visita</label>
+          <select id="nm-visita" onchange="nmCargar()" class="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs sm:text-sm focus:ring-2 focus:ring-indigo-500 outline-none"><option value="preliminar">Visita preliminar</option><option value="final">Visita final</option></select>
+        </div>
+        <div>
+          <label for="nm-fecha" class="block text-xs font-semibold text-slate-600 mb-1">Fecha de corte</label>
+          <input type="date" id="nm-fecha" class="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs sm:text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+        </div>
+        <div class="md:col-span-2 xl:col-span-2">
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Auditor responsable</label>
+          <input type="text" id="nm-auditor" readonly tabindex="-1" placeholder="Sin identificar" class="w-full p-2 bg-slate-100 border border-slate-300 rounded-lg text-xs sm:text-sm text-slate-700 outline-none cursor-default">
+        </div>
+        <div class="md:col-span-2 xl:col-span-2">
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Actualizado por</label>
+          <input type="text" id="nm-actualizado" readonly tabindex="-1" placeholder="Sin cambios" class="w-full p-2 bg-slate-100 border border-slate-300 rounded-lg text-xs sm:text-sm text-slate-700 outline-none cursor-default">
+        </div>
+      </div>
+      <div class="flex flex-wrap items-center justify-between gap-2"><span id="nm-estado" class="text-[11px] text-slate-500"></span></div>
+      <p id="nm-aviso" class="text-xs text-slate-500 border border-dashed border-slate-300 rounded-xl p-4">Selecciona el cliente para comenzar.</p>
+      <div id="nm-espacio" class="hidden space-y-2">
+        <div id="nm-tabs" class="flex flex-wrap gap-1 p-1.5 bg-white border border-slate-200 rounded-2xl"></div>
+        <div id="nm-panel" class="overflow-x-auto border border-slate-200 rounded-xl shadow-sm bg-white"></div>
+      </div>
+    </section>
+
     <section id="sec-import" class="hidden bg-white rounded-2xl shadow-xl border border-slate-200 p-6 min-h-[92vh] space-y-5">
       <div id="im-hojas"></div>
       <div class="border-b pb-4">
@@ -3407,7 +3446,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       'claude-revisar': { cliente: 'cr-cliente', anio: 'cr-anio', visita: 'cr-visita' },
       'pedidos-claude': { cliente: 'pc-cliente', anio: 'pc-anio', visita: 'pc-visita' },
       contratos: { cliente: 'contr-cliente' }, flujo: { cliente: 'fl-cliente', anio: 'fl-anio' },
-      arrend: { cliente: 'ar-cliente', anio: 'ar-anio', visita: 'ar-visita' }, import: { cliente: 'im-cliente', anio: 'im-anio', visita: 'im-visita' }, import2: { cliente: 'v2-cliente', anio: 'v2-anio', visita: 'v2-visita' }, concil: { cliente: 'cb-cliente', anio: 'cb-anio', visita: 'cb-visita' },
+      arrend: { cliente: 'ar-cliente', anio: 'ar-anio', visita: 'ar-visita' }, import: { cliente: 'im-cliente', anio: 'im-anio', visita: 'im-visita' }, import2: { cliente: 'v2-cliente', anio: 'v2-anio', visita: 'v2-visita' }, nomina: { cliente: 'nm-cliente', anio: 'nm-anio', visita: 'nm-visita' }, concil: { cliente: 'cb-cliente', anio: 'cb-anio', visita: 'cb-visita' },
       pce: { cliente: 'pce-cliente' }, reuniones: { cliente: 'reu-cliente' }, mayor: { cliente: 'my-cliente' },
       asignacion: { cliente: 'as-cliente', anio: 'as-anio', visita: 'as-visita' }
     };
@@ -3488,14 +3527,14 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       }
 
       const claveLinea = (seccion === 'analisis' && cuenta) ? (cuenta === 'equivalentes' ? 'concil' : 'cta:' + cuenta) : (seccion === 'aprobaciones-claude' ? 'pedidos-claude' : seccion);
-      if ((seccion === 'sumarias' || seccion === 'pendientes' || seccion === 'claude-revisar' || seccion === 'pedidos-claude' || seccion === 'aprobaciones-claude' || seccion === 'arrend' || seccion === 'import' || seccion === 'import2' || seccion === 'concil' || (seccion === 'analisis' && cuenta)) && !herramientaHabilitada(claveLinea)) { avisarEnDesarrollo(); return; }
+      if ((seccion === 'sumarias' || seccion === 'pendientes' || seccion === 'claude-revisar' || seccion === 'pedidos-claude' || seccion === 'aprobaciones-claude' || seccion === 'arrend' || seccion === 'import' || seccion === 'import2' || seccion === 'nomina' || seccion === 'concil' || (seccion === 'analisis' && cuenta)) && !herramientaHabilitada(claveLinea)) { avisarEnDesarrollo(); return; }
       if (!herramientaHabilitada(seccion === 'aprobaciones-claude' ? 'pedidos-claude' : seccion)) {
         if (seccion === 'auditoria') seccion = 'desarrollo'; // pantalla principal: se muestra un aviso en vez de un mensaje emergente
         else { avisarEnDesarrollo(); return; }
       }
       if (!['clientes', 'usuarios', 'cuentas', 'habilitar', 'historial', 'medidor', 'programas'].includes(seccion)) guardarVista({ seccion: seccion, sub: sub || null, cuenta: cuenta || null });
 
-      const secciones = ['desarrollo', 'clientes', 'usuarios', 'cuentas', 'habilitar', 'historial', 'medidor', 'programas', 'sumarias', 'pendientes', 'claude-revisar', 'pedidos-claude', 'aprobaciones-claude', 'flujo', 'auditoria', 'analisis', 'visitas', 'asignacion', 'indices', 'mayor', 'contratos', 'arrend', 'import', 'import2', 'concil', 'pce', 'reuniones', 'mas-herramientas'];
+      const secciones = ['desarrollo', 'clientes', 'usuarios', 'cuentas', 'habilitar', 'historial', 'medidor', 'programas', 'sumarias', 'pendientes', 'claude-revisar', 'pedidos-claude', 'aprobaciones-claude', 'flujo', 'auditoria', 'analisis', 'visitas', 'asignacion', 'indices', 'mayor', 'contratos', 'arrend', 'import', 'import2', 'nomina', 'concil', 'pce', 'reuniones', 'mas-herramientas'];
       const grupoSubmenu = sec => ['auditoria', 'visitas', 'asignacion'].includes(sec) ? 'planificacion' : ['indices', 'mayor', 'contratos', 'flujo', 'pce', 'reuniones', 'mas-herramientas'].includes(sec)
         ? 'herramientas'
         : (['clientes', 'usuarios', 'cuentas', 'habilitar', 'historial', 'medidor', 'programas'].includes(sec) ? 'config' : (['sumarias', 'pendientes', 'claude-revisar', 'pedidos-claude', 'aprobaciones-claude'].includes(sec) ? 'analisis' : null));
@@ -3531,6 +3570,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       if (seccion === 'arrend') abrirArrend();
       if (seccion === 'import') abrirImport();
       if (seccion === 'import2') abrirImport2();
+      if (seccion === 'nomina') abrirNomina();
       if (seccion === 'concil') abrirConcil();
       if (seccion === 'pce') abrirPce();
       if (seccion === 'cuentas') abrirCatalogoCuentas();
@@ -3556,16 +3596,17 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
         abrirAnalisis(rubro, cuentaElegida);
       }
 
-      const desdeAnalisis = ((seccion === 'arrend' || seccion === 'import' || seccion === 'import2' || seccion === 'concil') && sub === 'analisis');
+      const desdeAnalisis = ((seccion === 'arrend' || seccion === 'import' || seccion === 'import2' || seccion === 'nomina' || seccion === 'concil') && sub === 'analisis');
       if (seccion === 'arrend') { const t = document.getElementById('ar-titulo'); if (t) t.textContent = desdeAnalisis ? '2. Activos por derecho de uso y pasivos por arrendamiento' : 'Arrendamientos NIIF 16'; }
       if (seccion === 'concil') { pintarHojasAA(); const t = document.getElementById('cb-titulo'); if (t) t.textContent = '2. Bancos'; }
       if (desdeAnalisis) {
-        const bx = document.getElementById('nav-cuenta-extra-activos-' + seccion);
+        const bx = document.querySelector('[id^="nav-cuenta-extra-"][id$="-' + seccion + '"]');
+        const rubroNav = bx ? bx.id.slice('nav-cuenta-extra-'.length, bx.id.length - seccion.length - 1) : 'activos';
         if (bx) bx.className = "w-full text-left px-3 py-1.5 rounded-lg text-xs font-bold bg-indigo-600 text-white shadow-md transition flex items-center gap-2";
         document.getElementById('submenu-analisis').classList.remove('hidden');
         document.getElementById('icon-analisis').classList.add('rotate-180');
-        const cj = document.getElementById('submenu-rubro-activos'); if (cj) cj.classList.remove('hidden');
-        const fl = document.getElementById('icon-rubro-activos'); if (fl) fl.classList.add('rotate-180');
+        const cj = document.getElementById('submenu-rubro-' + rubroNav); if (cj) cj.classList.remove('hidden');
+        const fl = document.getElementById('icon-rubro-' + rubroNav); if (fl) fl.classList.add('rotate-180');
         const gr = bx ? bx.closest('[id^="submenu-grupo-"]') : null;
         if (gr) { gr.classList.remove('hidden'); const ic = document.getElementById(gr.id.replace('submenu-grupo-', 'icon-grupo-')); if (ic) ic.classList.add('rotate-180'); }
       }
@@ -3605,6 +3646,9 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
         { sumaria: 'AOO', id: 'arrend', nombre: 'AOO Activos por derecho de uso y pasivos por arrendamiento' }
       ]
     };
+    EXTRAS_ANALISIS['costos-gastos'] = [
+      { sumaria: 'RC', id: 'nomina', nombre: 'RC01 Nómina (prueba)' }
+    ];
     const RUBROS_ANALISIS = {
       'activos': { titulo: 'Activos', cuentas: [{ clave: 'inversiones_corrientes', nombre: 'Inversiones corrientes', sumariaCorto: 'AB', sumariaLargo: 'AS' }, { clave: 'equivalentes', nombre: 'Efectivo y equivalentes de efectivo › Equivalentes de efectivo', sumariaCorto: 'AA', hoja: 'equivalentes', oculta: true }] },
       'pasivos': { titulo: 'Pasivos', cuentas: [] },
@@ -4748,6 +4792,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
 
     // ===== Tipos de documento por cuenta y lista de qué subir =====
     const PC_ETIQ = {
+      'RC:nomina': ['Mayor contable de nómina', 'Rol de pagos', 'Planilla del IESS', 'Décimos y fondo de reserva', 'Utilidades a trabajadores', 'Finiquitos y liquidaciones', 'Formulario 107', 'Contrato o expediente del colaborador', 'Otro'],
       'AA:bancos': ['Conciliación bancaria', 'Estado de cuenta', 'Confirmación bancaria', 'Firmas autorizadas', 'Otro'],
       'AA:caja': ['Acta de arqueo de caja', 'Detalle de fondos y caja chica', 'Documento de soporte', 'Otro'],
       'AA:equivalentes': ['Certificado o póliza de inversión', 'Estado de cuenta', 'Confirmación de la institución', 'Detalle de equivalentes de efectivo', 'Otro'],
@@ -4761,12 +4806,12 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       AB: ['Certificado o póliza de inversión', 'Estado de cuenta', 'Confirmación bancaria', 'Detalle o anexo de inversiones', 'Otro'],
       AS: ['Certificado o póliza de inversión', 'Estado de cuenta', 'Confirmación bancaria', 'Detalle o anexo de inversiones', 'Otro']
     };
-    const PC_HOJAS = { caja: 'Caja', bancos: 'Bancos', equivalentes: 'Equivalentes de efectivo', venta: 'Inventario para la venta, importaciones en tránsito y kárdex', costo_ventas: 'Costo de ventas → salidas', kardex: 'Movimiento de kárdex', import: 'Importaciones (liquidaciones)', voucheo: 'Revisión de documentación (voucheo)' };
-    const PC_HOJAS_SUM = { AA: [['caja', 'Caja'], ['bancos', 'Bancos'], ['equivalentes', 'Equivalentes de efectivo']], AF: [['venta', 'Inventario para la venta, importaciones en tránsito y kárdex']] };
+    const PC_HOJAS = { caja: 'Caja', bancos: 'Bancos', equivalentes: 'Equivalentes de efectivo', venta: 'Inventario para la venta, importaciones en tránsito y kárdex', costo_ventas: 'Costo de ventas → salidas', kardex: 'Movimiento de kárdex', import: 'Importaciones (liquidaciones)', voucheo: 'Revisión de documentación (voucheo)', nomina: 'Nómina' };
+    const PC_HOJAS_SUM = { AA: [['caja', 'Caja'], ['bancos', 'Bancos'], ['equivalentes', 'Equivalentes de efectivo']], AF: [['venta', 'Inventario para la venta, importaciones en tránsito y kárdex']], RC: [['nomina', 'Nómina']] };
     function pcNombreHoja(h) { return PC_HOJAS[h] || h || ''; }
     const PC_TODO = 'Todo en un archivo (todos los documentos juntos)';
     function pcEtiquetas(sumaria, hoja) {
-      const l = PC_ETIQ[(sumaria === 'AA' || sumaria === 'AF') ? sumaria + ':' + (hoja || '') : sumaria] || ['Documento de soporte', 'Otro'];
+      const l = PC_ETIQ[(sumaria === 'AA' || sumaria === 'AF' || sumaria === 'RC') ? sumaria + ':' + (hoja || '') : sumaria] || ['Documento de soporte', 'Otro'];
       const i = l.indexOf('Otro');
       return i < 0 ? l.concat([PC_TODO]) : l.slice(0, i).concat([PC_TODO], l.slice(i));
     }
@@ -5399,14 +5444,14 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
     // Barra fija para enviar un pedido a Claude desde la propia pantalla (cuando ya hay datos y se quiere actualizar)
     function pcBarraPedido(hoja, cli, anio, vis, texto) {
       if (!cli) return '';
-      const T = { venta: ['Ingreso de información: todo se pide a Claude', 'Pedir a Claude (mayor contable + cuentas de inventario, tránsito y costo de ventas + kárdex + liquidaciones)'], costo_ventas: ['Costo de ventas: todo se pide a Claude', 'Pedir a Claude (mayor contable + cuentas de costo de ventas)'], kardex: ['Kárdex: todo se pide a Claude', 'Pedir a Claude (kárdex)'] }[hoja] || ['Todo se pide a Claude', 'Pedir a Claude'];
-      return '<div class="mt-3 p-3 bg-white border border-slate-200 rounded-xl space-y-2 text-xs text-slate-700"><div class="text-[13px] font-semibold text-slate-800 ic-claude ic-tomate">' + T[0] + '</div><p class="text-slate-600">' + escapeHtml(texto) + '</p><div class="flex flex-wrap items-center gap-2"><button type="button" onclick="pcIrAPedido(\'AF\', \'' + escapeHtml(cli) + '\', \'' + escapeHtml(anio) + '\', \'' + escapeHtml(vis) + '\', \'' + hoja + '\')" class="px-3 py-1.5 rounded-lg text-xs transition bg-slate-200 text-slate-900 hover:bg-slate-300 font-semibold ic-claude">' + T[1] + '</button>' + (hoja === 'venta' ? '<button type="button" onclick="pcReprocesarPedido(\'' + escapeHtml(cli) + '\', \'' + escapeHtml(anio) + '\', \'' + escapeHtml(vis) + '\', \'' + hoja + '\')" class="px-1 py-1.5 text-xs font-bold bg-transparent border-0 hover:underline transition" style="color:#449964" title="Crea un pedido nuevo con los mismos archivos y cuentas del último pedido">↻ Pedir de nuevo a Claude (mismos archivos)</button>' : '') + '</div>' + (hoja === 'venta' ? '<p class="text-[11px] text-slate-500">«Pedir de nuevo» hace que Claude vuelva a leer los archivos (por ejemplo, si cambió algo en los datos). Para solo recalcular con lo ya leído use «↻ Recalcular» en cada pestaña.</p>' : '') + '</div>';
+      const T = { venta: ['Ingreso de información: todo se pide a Claude', 'Pedir a Claude (mayor contable + cuentas de inventario, tránsito y costo de ventas + kárdex + liquidaciones)'], costo_ventas: ['Costo de ventas: todo se pide a Claude', 'Pedir a Claude (mayor contable + cuentas de costo de ventas)'], kardex: ['Kárdex: todo se pide a Claude', 'Pedir a Claude (kárdex)'], nomina: ['Nómina: todo se pide a Claude', 'Pedir a Claude (mayor contable + roles de pago + IESS + décimos, fondo de reserva y utilidades + finiquitos)'] }[hoja] || ['Todo se pide a Claude', 'Pedir a Claude'];
+      return '<div class="mt-3 p-3 bg-white border border-slate-200 rounded-xl space-y-2 text-xs text-slate-700"><div class="text-[13px] font-semibold text-slate-800 ic-claude ic-tomate">' + T[0] + '</div><p class="text-slate-600">' + escapeHtml(texto) + '</p><div class="flex flex-wrap items-center gap-2"><button type="button" onclick="pcIrAPedido(\'' + (hoja === 'nomina' ? 'RC' : 'AF') + '\', \'' + escapeHtml(cli) + '\', \'' + escapeHtml(anio) + '\', \'' + escapeHtml(vis) + '\', \'' + hoja + '\')" class="px-3 py-1.5 rounded-lg text-xs transition bg-slate-200 text-slate-900 hover:bg-slate-300 font-semibold ic-claude">' + T[1] + '</button>' + ((hoja === 'venta' || hoja === 'nomina') ? '<button type="button" onclick="pcReprocesarPedido(\'' + escapeHtml(cli) + '\', \'' + escapeHtml(anio) + '\', \'' + escapeHtml(vis) + '\', \'' + hoja + '\')" class="px-1 py-1.5 text-xs font-bold bg-transparent border-0 hover:underline transition" style="color:#449964" title="Crea un pedido nuevo con los mismos archivos y cuentas del último pedido">↻ Pedir de nuevo a Claude (mismos archivos)</button>' : '') + '</div>' + (hoja === 'venta' ? '<p class="text-[11px] text-slate-500">«Pedir de nuevo» hace que Claude vuelva a leer los archivos (por ejemplo, si cambió algo en los datos). Para solo recalcular con lo ya leído use «↻ Recalcular» en cada pestaña.</p>' : '') + '</div>';
     }
     // Repite el último pedido de la hoja con los mismos archivos y cuentas (los archivos se copian, no se vuelven a subir)
     async function pcReprocesarPedido(cli, anio, vis, hoja) {
       if (!usuarioActivo || !nombreUsuarioActivo()) { alert('Ingresa con tu usuario para solicitar.'); return; }
       try {
-        const { data: pe, error: e0 } = await supabaseClient.from('pedidos_claude').select('*').eq('cliente_id', cli).eq('anio', Number(anio)).eq('visita', vis || 'final').eq('sumaria', 'AF').eq('hoja', hoja).in('estado', ['solicitado', 'autorizado', 'hecho']).order('created_at', { ascending: false }).limit(1);
+        const { data: pe, error: e0 } = await supabaseClient.from('pedidos_claude').select('*').eq('cliente_id', cli).eq('anio', Number(anio)).eq('visita', vis || 'final').eq('sumaria', hoja === 'nomina' ? 'RC' : 'AF').eq('hoja', hoja).in('estado', ['solicitado', 'autorizado', 'hecho']).order('created_at', { ascending: false }).limit(1);
         if (e0) { alert('No se pudo revisar el último pedido: ' + (e0.message || e0)); return; }
         const ant = pe && pe[0];
         if (!ant) { alert('Aún no hay un pedido anterior de este cliente y año. Haga el primer pedido con el botón «Pedir a Claude».'); return; }
@@ -13563,6 +13608,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
     function nombreCuentaPorClave(clave) {
       if (clave === 'bancos') return 'Efectivo y equivalentes de efectivo › Bancos';
       if (clave === 'inventarios_v2') return 'AF Inventarios v2 (prueba) › Conclusiones de la cuenta';
+      if (clave === 'nomina') return 'RC01 Nómina (prueba) › Conclusiones de la cuenta';
       for (const r of Object.values(RUBROS_ANALISIS)) {
         const c = r.cuentas.find(x => x.clave === clave);
         if (c) return c.nombre;
@@ -15766,6 +15812,7 @@ ${cont.innerHTML}
       { clave: 'arrend', nombre: '     ↳ 2. Análisis Claves › Activos › Activos por derecho de uso y pasivos por arrendamiento', btn: 'nav-cuenta-extra-activos-arrend', defecto: false },
       { clave: 'import', nombre: '     ↳ 2. Análisis Claves › Activos › AF Inventarios (hojas Inventario para la venta, Materia prima, Producción en proceso e Importaciones)', btn: 'nav-cuenta-extra-activos-import', defecto: false },
       { clave: 'import2', nombre: '     ↳ 2. Análisis Claves › Activos › AF Inventarios v2 (prueba)', btn: 'nav-cuenta-extra-activos-import2', defecto: false },
+      { clave: 'nomina', nombre: '     ↳ 2. Análisis Claves › Costos y gastos › RC01 Nómina (prueba)', btn: 'nav-cuenta-extra-costos-gastos-nomina', defecto: false },
       { clave: 'concil', nombre: '     ↳ 2. Análisis Claves › Activos › AA Efectivo y equivalentes de efectivo (hojas Bancos y Equivalentes)', btn: 'nav-cuenta-extra-activos-concil', defecto: false },
       { clave: 'visitas', nombre: '1b) Auditoría/Planificación › Visitas (Calendario)', btn: 'nav-visitas' },
       { clave: 'asignacion', nombre: '1c) Auditoría/Planificación › Asignación de cuentas', btn: 'nav-asignacion' },
@@ -20213,6 +20260,667 @@ ${cont.innerHTML}
       if (!confirm('¿Quitar el papel de trabajo "' + t.nombre + '"?')) return;
       lista.splice(i, 1);
       if (await v2Guardar(codigo, { pt: lista })) { supabaseClient.storage.from('papeles-v2').remove([t.ruta]); v2Pintar(); }
+    }
+    // ===== Nómina (RC01): mismo esquema de 5 pestañas que Inventarios v2 =====
+    const nmE = { cliente: '', anio: '', visita: '', procs: [], filas: {}, cargaId: 0, abiertos: {}, tab: 'programa', sv: null };
+    const NM_TABS = [['programa', 'Programa'], ['subir', 'Subir información'], ['resultado', 'Resultado del análisis – Claude'], ['cuadres', 'Resumen de cuadres y cruces'], ['conclusiones', 'Conclusiones de la cuenta']];
+    function nmIrProg(cod) { nmE.tab = 'programa'; nmPintar(); setTimeout(() => irFilaResaltada('nm-prog-' + cod), 40); }
+    function nmIrTab(t) { nmE.tab = t; nmPintar(); }
+    function nmFmt(t) { return t ? new Date(t).toLocaleString('es-EC', { day: '2-digit', month: '2-digit', year: 'numeric', hour: 'numeric', minute: '2-digit' }) : ''; }
+    async function abrirNomina() {
+      asegurarClientesEn('nm-cliente');
+      const sa = $im('nm-anio'), hoy = new Date().getFullYear();
+      if (sa && !sa.options.length) { for (let y = hoy + 1; y >= hoy - 4; y--) sa.add(new Option('Año ' + y, String(y))); sa.value = String(($im('an-anio') || {}).value || hoy); }
+      nmCargar();
+    }
+    async function nmCargar() {
+      const cli = $im('nm-cliente').value, anio = $im('nm-anio').value, vis = $im('nm-visita').value;
+      Object.assign(nmE, { cliente: cli, anio, visita: vis, filas: {}, pts: [], sv: null, res: null, bal: null, conc: null });
+      const f = $im('nm-fecha'); if (f) f.value = vis === 'final' ? anio + '-12-31' : anio + '-09-30';
+      const a = $im('nm-auditor'); if (a) a.value = (typeof nombreUsuarioActivo === 'function' ? nombreUsuarioActivo() : '') || '';
+      const aviso = $im('nm-aviso'), esp = $im('nm-espacio');
+      if (!cli) { aviso.classList.remove('hidden'); esp.classList.add('hidden'); $im('nm-actualizado').value = ''; return; }
+      aviso.classList.add('hidden'); esp.classList.remove('hidden');
+      const id = ++nmE.cargaId; $im('nm-estado').textContent = 'Cargando…';
+      const [p, r, tp] = await Promise.all([
+        supabaseClient.from('programas_plantilla').select('*').eq('sumaria', 'RC').eq('activo', true).order('orden', { ascending: true }),
+        supabaseClient.from('v2_programa').select('*').eq('cliente_id', cli).eq('anio', Number(anio)).eq('visita', vis).eq('sumaria', 'RC').eq('hoja', 'nomina'),
+        supabaseClient.from('v2_pt').select('*').eq('cliente_id', cli).eq('anio', Number(anio)).eq('visita', vis).eq('sumaria', 'RC').eq('hoja', 'nomina').order('ref', { ascending: true })
+      ]);
+      if (id !== nmE.cargaId) return;
+      nmE.pts = (tp && !tp.error && tp.data) || [];
+      if (p.error || r.error) { $im('nm-estado').textContent = 'No se pudo cargar: ' + ((p.error || r.error).message || ''); return; }
+      $im('nm-estado').textContent = '';
+      nmE.procs = p.data || []; nmE.filas = {};
+      nmE.procs.forEach(x => { if (!programasPlantilla.some(y => y.id === x.id)) programasPlantilla.push(x); });
+      (r.data || []).forEach(x => { nmE.filas[x.codigo] = x; });
+      const ult = (r.data || []).filter(x => x.actualizado_por).sort((x, y) => String(y.updated_at).localeCompare(String(x.updated_at)))[0];
+      const u = $im('nm-actualizado'); u.value = ult ? nombreMostrado(ult.actualizado_por) : ''; u.title = ult ? 'Último cambio: ' + nmFmt(ult.updated_at) : '';
+      nmPintar();
+      nmSubirCargar();
+      nmResCargar();
+      nmConcCargar();
+    }
+    // Si la referencia no está tal cual en la base de normas (p. ej. "NIC 2.9 y 2.36"), la arma desde sus partes
+    function nmArmarChips(txt) {
+      const db = normasDB(), out = [];
+      String(txt || '').split(/\s*;\s*/).filter(Boolean).forEach(seg => {
+        const m = seg.match(/^(.*?\s\d+[A-Z]?)\.(\d.*)$/);
+        const base = m && db.p[m[1]] ? m[1] : null; const k = [];
+        if (base) {
+          const num = base.match(/(\d+[A-Z]?)$/)[1];
+          const quitar = x => x.trim().replace(new RegExp('^' + num + '\\.'), '');
+          const parrs = Object.keys(db.p[base]);
+          m[2].split(/\s+y\s+|\s*,\s*/).forEach(pz => {
+            const r = pz.split(/\s+a\s+/).map(quitar);
+            if (r.length === 2) { const i0 = parseInt(r[0], 10), i1 = parseInt(r[1], 10); parrs.forEach(q => { const n = parseInt(q, 10); if (n >= i0 && n <= i1) k.push(base + '|' + q); }); }
+            else if (parrs.includes(r[0])) k.push(base + '|' + r[0]);
+          });
+        }
+        out.push({ t: seg, k });
+      });
+      return out.some(c => c.k.length) ? out : null;
+    }
+    function nmNorma(p) {
+      const db = normasDB();
+      if (p.norma && !db.m[p.norma]) { const c = nmArmarChips(p.norma); if (c) db.m[p.norma] = c; }
+      const chips = db.m[p.norma || ''];
+      if (!chips) return '<span style="color:#2b3a8c">' + escapeHtml(p.norma || '') + '</span>';
+      return chips.map((c, i) => c.k.length
+        ? '<button type="button" data-ntip="' + p.id + ',' + i + '" onclick="abrirNorma(' + p.id + ',' + i + ')" class="inline-block px-1.5 py-0.5 m-0.5 text-[11px] rounded border border-blue-200 bg-blue-50 text-blue-800 hover:bg-blue-100 cursor-pointer">' + escapeHtml(c.t) + '</button>'
+        : '<span class="inline-block px-1.5 py-0.5 m-0.5 text-[11px] text-slate-500">' + escapeHtml(c.t) + '</span>').join('');
+    }
+    function nmPintar() {
+      flechasLados('sec-nomina', 'nm-panel');
+      const tb = $im('nm-tabs');
+      if (tb) tb.innerHTML = NM_TABS.map(([k, n]) => '<button type="button" onclick="nmIrTab(\'' + k + '\')" class="px-3 py-1.5 text-xs transition rounded-lg ' + (nmE.tab === k ? 'bg-slate-200 text-slate-900 font-semibold' : 'text-slate-600 hover:bg-slate-100 font-medium') + '">' + n + '</button>').join('');
+      if (nmE.tab === 'subir') { nmSubirPintar(); return; }
+      if (nmE.tab === 'resultado') { nmResPintar(); return; }
+      if (nmE.tab === 'cuadres') { nmCuaPintar(); return; }
+      if (nmE.tab === 'conclusiones') { nmConcPintar(); return; }
+      const h = escapeHtml;
+      const cuenta = (typeof catalogoCuentas !== 'undefined' && catalogoCuentas.find(k => k.sumaria === 'RC')) || null;
+      const nombreSum = cuenta ? cuenta.cuenta : 'RC - Nómina';
+      let ult = null, filas = '';
+      nmE.procs.forEach(p => {
+        const kg = p.hoja || '';
+        if (kg !== ult) { filas += `<tr><td colspan="8" class="px-3 py-2 bg-slate-100 text-slate-700 font-bold">${h(nombreSum + (p.hoja && typeof pcNombreHoja === 'function' ? ' · Hoja ' + pcNombreHoja(p.hoja) : ''))}</td></tr>`; ult = kg; }
+        const f = nmE.filas[p.codigo] || {}, k = h(p.codigo || '');
+        const ptsC = (nmE.pts || []).filter(t => t.codigo === p.codigo).map(t => `<div class="py-0.5"><button type="button" onclick="nmPtVer('${t.id}')" class="text-indigo-700 hover:underline text-left" title="Ver papel de trabajo">📊 ${h(t.ref)} · ${h(t.titulo)}</button></div>`).join('');
+        const pts = ptsC + (f.pt || []).map((t, i) => `<div class="flex items-center gap-1 py-0.5"><button type="button" onclick="nmPtBajar('${k}',${i})" class="text-indigo-700 hover:underline text-left" title="Descargar">📎 ${h(t.ref ? t.ref + ' · ' : '')}${h(t.nombre || '')}</button><button type="button" onclick="nmPtQuitar('${k}',${i})" class="text-slate-400 hover:text-red-600" title="Quitar">✕</button></div>`).join('');
+        const ptE = (nmE.pts || []).filter(t => t.codigo === p.codigo).sort((a, b) => String(b.elaborado_at).localeCompare(String(a.elaborado_at)))[0];
+        const elab = ptE ? `<div class="font-semibold text-slate-700">${h(ptE.elaborado_por || 'Claude')}</div><div class="text-[10px] text-slate-400 mt-0.5">${nmFmt(ptE.elaborado_at)}</div>` : f.elaborado_at ? `<div class="font-semibold text-slate-700">${h(f.elaborado_por || 'Claude')}</div><div class="text-[10px] text-slate-400 mt-0.5">${nmFmt(f.elaborado_at)}</div>` : `<div class="font-semibold text-slate-600">Claude</div><div class="text-[10px] text-slate-400 mt-0.5">Sin papel de trabajo</div>`;
+        const concl = f.conclusion || (ptE && ptE.conclusion) || '';
+        const estH = concl ? `<div class="mt-1"><button type="button" onclick="document.getElementById('nmc-${k}').classList.toggle('hidden')" title="Ver conclusión de Claude">${IC_OJO} <span class="text-[11px] text-slate-500">Conclusión</span></button></div><div id="nmc-${k}" class="hidden mt-1 p-2 rounded-lg bg-blue-50 border border-blue-100 text-[11px] text-slate-700 whitespace-normal" style="max-width:230px">${h(concl)}</div>` : '';
+        const hayPt = (nmE.pts || []).some(t => t.codigo === p.codigo) || (f.pt || []).length > 0;
+        const estSel = f.estado === 'hecho' || f.estado === 'na' || f.estado === 'pendiente' ? f.estado : (hayPt ? 'hecho' : '');
+        const opc = (v, t) => `<option value="${v}"${estSel === v ? ' selected' : ''}>${t}</option>`;
+        const estCel = `<select onchange="nmGuardar('${k}',{estado:this.value})" style="min-width:130px;width:100%" class="p-2 border border-slate-300 rounded-lg text-xs bg-white outline-none focus:ring-2 focus:ring-indigo-500"><option value=""${estSel === '' ? ' selected' : ''}>Elegir…</option>${opc('hecho', 'Hecho')}${opc('na', 'N/A')}${opc('pendiente', 'Pendiente')}</select>`;
+        const rev = f.revisado_at ? `<div class="font-semibold text-emerald-700">✔ ${h(nombreMostrado(f.revisado_por) || '')}</div><div class="text-[10px] text-slate-400 mt-0.5">${nmFmt(f.revisado_at)}</div><button type="button" onclick="nmRevisar('${k}',false)" class="text-[10px] text-slate-400 hover:underline mt-1">Quitar revisión</button>` : `<button type="button" onclick="nmRevisar('${k}',true)" class="px-2.5 py-1 text-[11px] font-semibold border border-slate-300 rounded-lg bg-white hover:bg-slate-50">Marcar revisado</button>`;
+        filas += `<tr id="nm-prog-${k}" class="align-top">
+          <td class="p-3 border-r border-slate-200 font-semibold text-slate-700 whitespace-nowrap">${k}</td>
+          <td class="p-3 border-r border-slate-200 text-slate-700 leading-relaxed text-[12px]">${p.titulo ? `<div class="font-bold text-slate-800 mb-0.5 text-[13px]">${h(p.titulo)}</div>` : ''}${h(p.procedimiento || '')}</td>
+          <td class="p-3 border-r border-slate-200 text-[12px]" >${nmNorma(p)}</td>
+          <td class="p-3 border-r border-slate-200 whitespace-nowrap text-[12px]">${elab}${estH}</td>
+          <td class="p-3 border-r border-slate-200 whitespace-nowrap text-[12px]">${rev}</td>
+          <td class="p-3 text-[12px]">${pts || '<div class="text-slate-400">Sin papeles de trabajo</div>'}<label class="inline-block mt-1.5 text-[11px] text-slate-500 hover:underline cursor-pointer">＋ Adjuntar<input type="file" class="hidden" onchange="nmPtSubir('${k}',this)"></label></td>
+          <td class="p-3 border-l border-slate-200"><input type="text" value="${h(f.comentario || '')}" placeholder="Ej. Inmaterial, no se ajustó" onchange="nmGuardar('${k}',{comentario:this.value})" class="w-full p-2 border border-slate-300 rounded-lg text-xs outline-none focus:ring-2 focus:ring-indigo-500"></td>
+          <td class="p-3 border-l border-slate-200" style="min-width:150px">${estCel}</td>
+        </tr>`;
+      });
+      $im('nm-panel').innerHTML = `<table class="w-full text-left text-xs text-slate-700 border-collapse"><thead class="bg-slate-100 text-slate-600 text-[10px] font-bold border-b border-slate-200"><tr>
+        <th class="p-3 border-r border-slate-200 min-w-[90px]">Código</th><th class="p-3 border-r border-slate-200 min-w-[360px] w-full">Procedimiento</th><th class="p-3 border-r border-slate-200 min-w-[170px]">Norma de referencia</th><th class="p-3 border-r border-slate-200 min-w-[130px]">Elaborado por<br><span class="font-normal">(Claude)</span></th><th class="p-3 border-r border-slate-200 min-w-[150px]">Revisado por<br><span class="font-normal">(quien completa)</span></th><th class="p-3 min-w-[200px]">P/T</th><th class="p-3 min-w-[220px] border-l border-slate-200">Comentario</th><th class="p-3 min-w-[150px] border-l border-slate-200">Estado</th></tr></thead><tbody class="divide-y divide-slate-200">${filas || '<tr><td colspan="8" class="p-8 text-center text-slate-400">No hay procedimientos cargados para esta sumaria.</td></tr>'}</tbody></table>`;
+    }
+    // ----- Papeles de trabajo (P/T): Claude los guarda como especificación (hojas, celdas, fórmulas); la app los muestra y arma el Excel con fórmulas vivas -----
+    function nmPtCol(n) { let s = ''; n++; while (n > 0) { const m = (n - 1) % 26; s = String.fromCharCode(65 + m) + s; n = Math.floor((n - 1) / 26); } return s; }
+    function nmPtCelda(c) { return (c !== null && typeof c === 'object') ? c : { v: c }; }
+    function nmPtVer(id, hi) {
+      const t = (nmE.pts || []).find(x => x.id === id); if (!t) return;
+      nmE.ptVer = { id, hi: hi || 0 };
+      const h = escapeHtml, hojas = t.hojas || [], H = hojas[nmE.ptVer.hi] || { filas: [] };
+      const tabs = hojas.map((x, i) => `<button type="button" onclick="nmPtVer('${id}',${i})" class="px-3 py-1 text-xs rounded-lg ${i === nmE.ptVer.hi ? 'bg-indigo-50 text-indigo-700 font-bold' : 'text-slate-500 hover:bg-slate-50'}">${h(x.nombre)}</button>`).join('');
+      const est = { h: 'background:#e8eefc;font-weight:700;color:#1e293b', t: 'background:#f1f5f9;font-weight:700;border-top:1px solid #94a3b8', ti: 'font-weight:700;font-size:14px;color:#1e293b', no: 'color:#64748b;font-style:italic', 'in': 'color:#1d4ed8', ok: 'font-weight:700;color:#047857' };
+      const fmt = (c, o) => { const v = o.v; if (v === undefined || v === null || v === '') return ''; if (typeof v === 'number') return o.e === 'p' ? (v * 100).toFixed(2) + '%' : v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); return h(String(v)); };
+      const rows = (H.filas || []).map((fila, r) => '<tr><td class="px-1.5 text-[10px] text-slate-400 bg-slate-50 border border-slate-200 text-right">' + (r + 1) + '</td>' + (fila || []).map((c, j) => { const o = nmPtCelda(c); const num = typeof o.v === 'number'; return `<td class="px-2 py-1 border border-slate-200 ${num ? 'text-right tabular-nums' : ''}" style="${est[o.e] || ''}" ${o.f ? 'title="=' + h(o.f) + '"' : ''}>${fmt(j, o)}${o.f ? '<span style="color:#94a3b8;font-size:9px"> ƒ</span>' : ''}</td>`; }).join('') + '</tr>').join('');
+      const ancho = Math.max(0, ...(H.filas || []).map(f => (f || []).length));
+      const cab = '<tr><th class="bg-slate-50 border border-slate-200 w-6"></th>' + Array.from({ length: ancho }, (_, j) => `<th class="bg-slate-50 border border-slate-200 text-[10px] text-slate-500 font-semibold">${nmPtCol(j)}</th>`).join('') + '</tr>';
+      let m = document.getElementById('nm-pt-modal'); if (!m) { m = document.createElement('div'); m.id = 'nm-pt-modal'; document.body.appendChild(m); }
+      m.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(15,23,42,.45);display:flex;align-items:center;justify-content:center;padding:20px';
+      m.innerHTML = `<div class="bg-white rounded-xl shadow-2xl flex flex-col" style="width:min(1100px,100%);max-height:92vh">
+        <div class="flex items-start gap-3 px-5 py-3 border-b border-slate-200"><div class="flex-1"><div class="text-[11px] font-bold text-indigo-700">${h(t.ref)} · Procedimiento ${h(t.codigo)}</div><div class="text-base font-bold text-slate-800">${h(t.titulo)}</div><div class="text-[11px] text-slate-500 mt-0.5">Elaborado por ${h(t.elaborado_por || 'Claude')} · ${nmFmt(t.elaborado_at)}</div></div>
+          <button type="button" onclick="nmPtExcel('${t.id}')" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-emerald-600 text-white hover:bg-emerald-700">⬇ Descargar Excel (con fórmulas)</button>
+          <button type="button" onclick="document.getElementById('nm-pt-modal').remove()" class="text-slate-400 hover:text-slate-700 text-lg leading-none">✕</button></div>
+        <div class="px-5 py-3 overflow-auto text-xs text-slate-700">
+          ${t.objetivo ? `<div class="mb-1"><b>Objetivo:</b> ${h(t.objetivo)}</div>` : ''}${t.fuente ? `<div class="mb-1"><b>Fuente:</b> ${h(t.fuente)}</div>` : ''}${t.conclusion ? `<div class="mb-2 p-2 rounded-lg bg-blue-50 border border-blue-100"><b>Conclusión:</b> ${h(t.conclusion)}</div>` : ''}
+          <div class="flex gap-1 mb-2">${tabs}</div>
+          <div class="overflow-auto"><table class="border-collapse text-[12px]">${cab}${rows}</table></div>
+          <div class="text-[10px] text-slate-400 mt-2">ƒ = celda con fórmula (pasa el cursor para verla). Azul = dato de entrada. En el Excel descargado las fórmulas quedan vivas.</div>
+        </div></div>`;
+    }
+    async function nmPtExcel(id) {
+      const t = (nmE.pts || []).find(x => x.id === id); if (!t) return;
+      if (!window.ExcelJS) { alert('No se pudo cargar el generador de Excel. Revisa tu conexión a internet.'); return; }
+      const wb = new ExcelJS.Workbook(); wb.creator = 'MGI Guerra · Claude'; wb.created = new Date();
+      const cli = ($im('nm-cliente').selectedOptions[0] || {}).textContent || nmE.cliente;
+      const c = wb.addWorksheet('Carátula'); c.getColumn(1).width = 26; c.getColumn(2).width = 80;
+      const fila = (a, b, neg) => { const r = c.addRow([a, b]); r.getCell(1).font = { bold: true }; if (neg) { r.getCell(2).font = { bold: true, size: 14 }; } return r; };
+      fila('Cliente', cli); fila('Año / visita', nmE.anio + ' · ' + nmE.visita); fila('Sumaria', 'RC · Nómina');
+      fila('Referencia', t.ref, true); fila('Procedimiento', t.codigo); fila('Título', t.titulo); fila('Objetivo', t.objetivo || ''); fila('Fuente de la información', t.fuente || '');
+      fila('Elaborado por', (t.elaborado_por || 'Claude') + ' · ' + nmFmt(t.elaborado_at)); fila('Revisado por', 'Pendiente'); fila('Conclusión', t.conclusion || '');
+      c.addRow([]); const l = c.addRow(['Leyenda', 'Azul = dato de entrada tomado de la información del cliente · Negro = fórmula · Gris = total / encabezado']); l.getCell(1).font = { bold: true };
+      c.eachRow(r => { r.getCell(2).alignment = { wrapText: true, vertical: 'top' }; });
+      const ESTILO = { h: { f: 'FFE8EEFC', b: true }, t: { f: 'FFF1F5F9', b: true, top: true }, ti: { b: true, sz: 14 }, no: { i: true, col: 'FF64748B' }, 'in': { col: 'FF1D4ED8' }, ok: { b: true, col: 'FF047857' } };
+      (t.hojas || []).forEach(H => {
+        const ws = wb.addWorksheet(String(H.nombre || 'Hoja').slice(0, 31).replace(/[\\\/\?\*\[\]:]/g, '-'));
+        (H.anchos || []).forEach((w, i) => { ws.getColumn(i + 1).width = w; });
+        (H.filas || []).forEach((fl, r) => (fl || []).forEach((cel, j) => {
+          const o = nmPtCelda(cel); if (o.v === undefined && !o.f) return;
+          const x = ws.getCell(r + 1, j + 1);
+          x.value = o.f ? { formula: String(o.f).replace(/^=/, ''), result: o.v } : o.v;
+          const e = ESTILO[o.e] || {};
+          if (typeof o.v === 'number' || o.f) x.numFmt = o.e === 'p' ? '0.00%' : '#,##0.00;[Red]-#,##0.00';
+          const fnt = {}; if (e.b) fnt.bold = true; if (e.i) fnt.italic = true; if (e.col) fnt.color = { argb: e.col }; if (e.sz) fnt.size = e.sz; if (Object.keys(fnt).length) x.font = fnt;
+          if (e.f) x.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: e.f } };
+          if (e.top) x.border = { top: { style: 'thin' } };
+        }));
+      });
+      const buf = await wb.xlsx.writeBuffer();
+      const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
+      a.download = (t.ref + ' ' + t.titulo + ' - ' + cli).replace(/[\\\/:*?"<>|]/g, '-') + '.xlsx'; document.body.appendChild(a); a.click(); a.remove();
+    }
+    // ----- Pestaña "Subir información": un solo pedido a Claude y el detalle de lo que ya está leído -----
+    async function nmSubirCargar() {
+      const cli = nmE.cliente, anio = Number(nmE.anio), vis = nmE.visita;
+      nmE.svId = (nmE.svId || 0) + 1; const id = nmE.svId; nmE.sv = cli ? { cargado: false, id } : null;
+      if (!cli) return;
+      if (nmE.tab === 'subir') nmSubirPintar();
+      const peT = await supabaseClient.from('pedidos_claude').select('id, created_at, estado, solicitado_por, hecho_at, hoja').eq('cliente_id', cli).eq('anio', anio).eq('visita', vis).eq('sumaria', 'RC').eq('hoja', 'nomina').order('created_at', { ascending: false });
+      let archivos = [];
+      if (!peT.error && (peT.data || []).length) {
+        const ar = await supabaseClient.from('pedidos_claude_archivos').select('id, pedido_id, nombre, ruta, tamano, tipo, subido_por, created_at, eliminado_at, etiqueta').in('pedido_id', peT.data.map(x => x.id)).order('created_at', { ascending: false });
+        archivos = (ar.data || []).map(a => ({ ...a, pedido: peT.data.find(x => x.id === a.pedido_id) }));
+      }
+      if (!nmE.sv || id !== nmE.sv.id) return;
+      nmE.sv = { id, cargado: true, error: peT.error ? (peT.error.message || String(peT.error)) : '', pedidos: peT.data || [], archivos };
+      if (nmE.tab === 'subir') nmSubirPintar();
+    }
+    function nmSubirPintar() {
+      const c = $im('nm-panel'), S = nmE.sv;
+      if (!nmE.cliente || !S) { c.innerHTML = '<p class="text-xs text-slate-500 p-4">Selecciona el cliente para comenzar.</p>'; return; }
+      if (!S.cargado) { c.innerHTML = '<p class="text-xs text-slate-500 p-4">Cargando…</p>'; return; }
+      if (S.error) { c.innerHTML = '<p class="text-xs text-red-600 font-bold p-4">No se pudo cargar: ' + escapeHtml(S.error) + '</p>'; return; }
+      const e = escapeHtml;
+      const kb = n => n == null ? '' : (n >= 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB');
+      const est = { solicitado: 'Esperando autorización', autorizado: 'Autorizado, Claude lo trabaja', hecho: 'Hecho', rechazado: 'Rechazado', cancelado: 'Cancelado' };
+      const filasA = (S.archivos || []).filter(a => !a.eliminado_at).map((a, i) => '<tr class="border-t border-slate-100 align-top"><td class="px-2 py-1.5">' + e(a.nombre) + '</td><td class="px-2 py-1.5">' + e(a.etiqueta || '') + '</td><td class="px-2 py-1.5 whitespace-nowrap text-right">' + kb(a.tamano) + '</td><td class="px-2 py-1.5 whitespace-nowrap">' + e(nombreMostrado(a.subido_por) || '') + '</td><td class="px-2 py-1.5 whitespace-nowrap">' + nmFmt(a.created_at) + '</td><td class="px-2 py-1.5">' + e(est[a.pedido && a.pedido.estado] || (a.pedido && a.pedido.estado) || '') + '</td><td class="px-2 py-1.5"><button type="button" onclick="nmArchivoBajar(' + (S.archivos || []).indexOf(a) + ')" class="text-[11px] underline text-indigo-700">Descargar</button></td></tr>').join('');
+      const detalle = '<div class="mt-3 p-3 bg-white border border-slate-200 rounded-xl text-xs text-slate-700"><div class="flex items-center justify-between gap-2 mb-1"><div class="text-[13px] font-semibold text-slate-800">Información subida para este cliente, año y visita</div><button type="button" onclick="nmSubirCargar()" class="px-2 py-1 text-[11px] font-semibold border border-slate-300 rounded-lg hover:bg-slate-50">↻ Actualizar</button></div>' + (filasA ? '<div class="overflow-x-auto"><table class="w-full text-[11px] leading-tight border-collapse" style="min-width:44rem"><thead><tr class="bg-slate-100 text-slate-700"><th class="px-2 py-1.5 text-left font-bold">Archivo</th><th class="px-2 py-1.5 text-left font-bold">Qué es</th><th class="px-2 py-1.5 text-right font-bold">Tamaño</th><th class="px-2 py-1.5 text-left font-bold">Subido por</th><th class="px-2 py-1.5 text-left font-bold">Fecha</th><th class="px-2 py-1.5 text-left font-bold">Pedido</th><th class="px-2 py-1.5"></th></tr></thead><tbody>' + filasA + '</tbody></table></div>' : '<p class="text-slate-500">Aún no se ha subido información de nómina para este cliente, año y visita.</p>') + '</div>';
+      c.innerHTML = '<div class="p-3">' + pcBarraPedido('nomina', nmE.cliente, nmE.anio, nmE.visita, 'Aquí se sube todo en un solo pedido: el mayor contable de las cuentas de nómina, los roles de pago, las planillas del IESS, el cálculo de décimos, fondo de reserva y utilidades, y los finiquitos. Claude lo lee junto y las demás pestañas leen de aquí. Cuando el pedido pase a "hecho", presiona «Actualizar».') + detalle + '</div>';
+    }
+    async function nmArchivoBajar(i) {
+      const a = ((nmE.sv || {}).archivos || [])[i]; if (!a) return;
+      const { data, error } = await supabaseClient.storage.from('pedidos-claude').createSignedUrl(a.ruta, 120, { download: a.nombre });
+      if (error || !data) { $im('nm-estado').textContent = 'No se pudo descargar: ' + ((error || {}).message || ''); return; }
+      const l = document.createElement('a'); l.href = data.signedUrl; l.download = a.nombre; document.body.appendChild(l); l.click(); l.remove();
+    }
+    // ----- Pestaña "Resultado del análisis – Claude": el informe se lee en pantalla, como un documento -----
+    async function nmResCargar() {
+      const cli = nmE.cliente, anio = Number(nmE.anio), vis = nmE.visita;
+      nmE.resId = (nmE.resId || 0) + 1; const id = nmE.resId;
+      nmE.res = cli ? { cargado: false } : null;
+      if (!cli) return;
+      if (nmE.tab === 'resultado') nmResPintar();
+      const r = await supabaseClient.from('v2_resultado').select('*').eq('cliente_id', cli).eq('anio', anio).eq('visita', vis).eq('sumaria', 'RC').eq('hoja', 'nomina').maybeSingle();
+      if (id !== nmE.resId) return;
+      nmE.res = { cargado: true, error: r.error ? (r.error.message || String(r.error)) : '', data: r.data || null };
+      if (nmE.tab === 'resultado') nmResPintar();
+      if (nmE.tab === 'cuadres') nmCuaPintar();
+      if (nmE.tab === 'conclusiones') nmConcPintar();
+      nmCuaCargarBal();
+    }
+    function nmResHtml(bloques, conIds) {
+      const e = escapeHtml, fmt = s => e(s).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+      const esNum = s => { const t = String(s || '').replace(/\*\*/g, '').trim(); return /^[-+−]?\s*[\d.,]+\s*%?$/.test(t) && !/^\d{7,}$/.test(t); };
+      let h2n = 0;
+      return (bloques || []).map(b => {
+        if (!b || !b.t) return '';
+        if (b.t === 'h2') return '<h2 ' + (conIds ? 'id="nmr-' + (h2n++) + '" ' : '') + 'class="v2r-h2">' + fmt(b.x) + '</h2>';
+        if (b.t === 'h3') return '<h3 class="v2r-h3">' + fmt(b.x) + '</h3>';
+        if (b.t === 'p') return '<p class="v2r-p">' + fmt(b.x) + '</p>';
+        if (b.t === 'sello') return '<p class="v2r-sello"><span class="pill-origen rev ic-claude">' + fmt(b.x) + '</span></p>';
+        if (b.t === 'nota') return '<div class="v2r-nota' + (b.tono === 'alerta' ? ' v2r-alerta' : '') + '">' + fmt(b.x) + '</div>';
+        if (b.t === 'ul' || b.t === 'ol') return '<' + b.t + ' class="v2r-lista">' + (b.items || []).map(i => '<li>' + fmt(i) + '</li>').join('') + '</' + b.t + '>';
+        if (b.t === 'tabla') {
+          const cab = b.cab || [], fil = b.filas || [];
+          const num = cab.map((_, j) => fil.length && fil.filter(r => String(r[j] || '').trim() !== '').length > 0 && fil.every(r => String(r[j] || '').trim() === '' || esNum(r[j]) || /^(sin soporte|por confirmar|nuevo saldo)$/i.test(String(r[j]).replace(/\*\*/g, '').trim())));
+          return '<div class="v2r-tw"><table class="v2r-t"><thead><tr>' + cab.map((c, j) => '<th' + (num[j] ? ' class="n"' : '') + '>' + fmt(c) + '</th>').join('') + '</tr></thead><tbody>' +
+            fil.map((r, i) => { const ex = b.expl && b.expl[String(i)]; return '<tr' + (b.total && i === fil.length - 1 ? ' class="tot"' : '') + '>' + cab.map((_, j) => '<td' + (num[j] ? ' class="n"' : '') + '>' + fmt(r[j] == null ? '' : r[j]) + (ex && j === num.findIndex(n => !n) ? ' <button type="button" class="v2r-i" onclick="nmToggleExp(this)" title="Ver la explicación">' + IC_OJO + '</button>' : '') + '</td>').join('') + '</tr>' + (ex ? '<tr class="v2r-exp" style="' + (conIds ? 'display:none' : '') + '"><td colspan="' + cab.length + '"><div>' + fmt(ex).replace(/\n/g, '<br>') + '</div></td></tr>' : ''); }).join('') + '</tbody></table></div>';
+        }
+        return '';
+      }).join('');
+    }
+    const NMR_CSS = '.v2r-i{margin-left:6px;padding:1px 5px;border-radius:6px;border:none;background:transparent;cursor:pointer;white-space:nowrap;vertical-align:middle}.v2r-i:hover{background:#e8f3ec}.v2r-exp td{background:#f4f8fe;padding:0!important;border-top:0!important}.v2r-exp td>div{margin:6px 12px 10px;padding:10px 14px;border-left:3px solid #9dbcec;background:#eef4fd;border-radius:6px;font-size:13px;line-height:1.55;color:#1e3a6e;white-space:normal}.v2t-cab{display:flex;justify-content:space-between;align-items:center;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#64748b;padding:0 8px 8px}.v2t-bar{height:3px;background:#e2e8f0;border-radius:3px;margin:0 8px 12px;overflow:hidden}#nmt-barra{height:100%;width:0;background:#9dbcec;transition:width .15s}.v2t-it{display:flex;align-items:flex-start;gap:9px;padding:8px 10px;margin:2px 0;border-radius:8px;border-left:3px solid transparent;font-size:12.5px;line-height:1.35;color:#475569;text-decoration:none}.v2t-it:hover{background:#f1f5f9;color:#1e293b}.v2t-it.on{background:#e3edfb;border-left-color:#9dbcec;color:#1e3a6e;font-weight:700}.v2t-num{flex:none;width:20px;height:20px;border-radius:50%;background:#e2e8f0;color:#475569;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;margin-top:1px}.v2t-it.on .v2t-num{background:#bcd3f5;color:#1e3a6e}.v2t-cod{flex:none;font-size:10px;font-weight:700;letter-spacing:.02em;padding:2px 6px;border-radius:6px;background:#e8f0fc;color:#2f5fb3;margin-top:1px;white-space:nowrap}.v2t-it.on .v2t-cod{background:#bcd3f5;color:#1e3a6e}.v2t-tx{flex:1}.v2r{font-family:FlechaGrande,Arial,Helvetica,Liberation Sans,sans-serif;color:#1f2937;line-height:1.65;font-size:14px}.v2r-h1{font-size:26px;font-weight:700;line-height:1.25;margin:0 0 4px;font-family:FlechaGrande,Arial,Helvetica,Liberation Sans,sans-serif}.v2r-meta{font-size:12px;color:#64748b;margin-bottom:14px}.v2r-h2{font-weight:700;font-size:19px;margin:30px 0 8px;padding-top:6px;border-top:1px solid #e2e8f0;color:#111827}.v2r-h3{font-weight:700;font-size:15px;margin:20px 0 6px;color:#1f2937}.v2r-p{margin:8px 0}.v2r-sello{margin:6px 0 14px}.v2r-lista{margin:8px 0 8px 22px}.v2r-lista li{margin:6px 0}ul.v2r-lista{list-style:disc}ol.v2r-lista{list-style:decimal}.v2r-nota{margin:12px 0;padding:10px 14px;border-left:3px solid #9dbcec;background:#eef4fd;font-size:14px}.v2r-alerta{border-color:#d97706;background:#fffbeb}.v2r-tw{margin:12px 0;overflow-x:auto;border:1px solid #e2e8f0;border-radius:8px}.v2r-t{width:100%;border-collapse:collapse;font-size:13px;line-height:1.45}.v2r-t th{background:#f1f5f9;text-align:left;font-weight:700;padding:8px 10px;border-bottom:1px solid #cbd5e1;white-space:nowrap}.v2r-t td{padding:7px 10px;border-top:1px solid #eef2f6;vertical-align:top}.v2r-t .n{text-align:right;white-space:nowrap}.v2r-t tr.tot td{font-weight:700;background:#f8fafc;border-top:2px solid #cbd5e1}';
+    function nmResPintar() {
+      const c = $im('nm-panel'), R = nmE.res;
+      if (!nmE.cliente || !R) { c.innerHTML = '<p class="text-xs text-slate-500 p-4">Selecciona el cliente para comenzar.</p>'; return; }
+      if (!R.cargado) { c.innerHTML = '<p class="text-xs text-slate-500 p-4">Cargando…</p>'; return; }
+      if (R.error) { c.innerHTML = '<p class="text-xs text-red-600 font-bold p-4">No se pudo cargar: ' + escapeHtml(/does not exist|schema cache/i.test(R.error) ? 'falta la tabla v2_resultado en Supabase.' : R.error) + '</p>'; return; }
+      if (!R.data || !(R.data.bloques || []).length) { c.innerHTML = '<div class="p-8 text-center text-sm text-slate-600 space-y-2"><p>Aún no hay resultado del análisis para este cliente, año y visita.</p><p class="text-xs text-slate-500">Cuando Claude termine el pedido, su informe aparecerá aquí para leerlo en pantalla. Mientras tanto puede hacer o revisar el pedido en «Subir información».</p></div>'; return; }
+      const d = R.data, bl = d.bloques;
+      const h2s = bl.filter(b => b.t === 'h2');
+      const toc = h2s.map((b, i) => {
+        const m = String(b.x).match(/^((?:RC-\d+)(?:\s+y\s+RC-\d+)?)\s+(.*)$/);
+        const marca = m ? '<span class="v2t-cod">' + escapeHtml(m[1].replace(/\s+y\s+/, ' · ')) + '</span>' : '<span class="v2t-num">' + (i + 1) + '</span>';
+        return '<a href="#" id="nmt-' + i + '" onclick="nmResIr(' + i + ');return false" class="v2t-it">' + marca + '<span class="v2t-tx">' + escapeHtml(m ? m[2] : b.x) + '</span></a>';
+      }).join('');
+      c.innerHTML = '<style>' + NMR_CSS + '</style><div class="flex gap-0 bg-slate-50" style="height:80vh"><nav class="hidden lg:block shrink-0 overflow-y-auto border-r border-slate-200 bg-white" style="width:346px;padding:16px 12px"><div class="v2t-cab"><span>Contenido</span><span id="nmt-pct">0%</span></div><div class="v2t-bar"><div id="nmt-barra"></div></div>' + toc + '</nav>' +
+        '<div id="nm-res-scroll" class="flex-1 overflow-y-auto p-3 sm:p-6"><article class="v2r mx-auto bg-white border border-slate-200 rounded-xl shadow-sm px-5 sm:px-10 py-8" style="max-width:920px"><div class="flex justify-end gap-3 mb-2 text-xs"><button type="button" onclick="nmResImprimir()" class="font-bold hover:underline" style="color:#449964">⬇ Imprimir / guardar PDF</button></div><h1 class="v2r-h1">' + escapeHtml(d.titulo || 'Resultado del análisis') + '</h1><div class="v2r-meta">Elaborado por ' + escapeHtml(d.elaborado_por || 'Claude') + (d.elaborado_at ? ' · ' + nmFmt(d.elaborado_at) : '') + '</div>' + nmResHtml(bl, true) + '</article></div></div>';
+      const sc = document.getElementById('nm-res-scroll'); if (sc) { sc.onscroll = nmResSpy; nmResSpy(); }
+    }
+    function nmResSpy() {
+      const sc = document.getElementById('nm-res-scroll'); if (!sc) return;
+      let act = 0; for (let i = 0; ; i++) { const el = document.getElementById('nmr-' + i); if (!el) break; if (el.offsetTop - 60 <= sc.scrollTop) act = i; }
+      document.querySelectorAll('.v2t-it').forEach((a, i) => a.classList.toggle('on', i === act));
+      const max = sc.scrollHeight - sc.clientHeight, pct = max > 0 ? Math.round(sc.scrollTop * 100 / max) : 0;
+      const b = document.getElementById('nmt-barra'), t = document.getElementById('nmt-pct'); if (b) b.style.width = pct + '%'; if (t) t.textContent = pct + '%';
+      const on = document.getElementById('nmt-' + act); if (on && on.parentNode && on.offsetTop < on.parentNode.scrollTop + 40 || (on && on.offsetTop + on.offsetHeight > on.parentNode.scrollTop + on.parentNode.clientHeight - 20)) on.scrollIntoView({ block: 'nearest' });
+    }
+    function nmToggleExp(btn) { const tr = btn.closest('tr'), ex = tr && tr.nextElementSibling; if (ex && ex.classList.contains('v2r-exp')) { const ab = ex.style.display === 'none'; ex.style.display = ab ? '' : 'none'; btn.style.background = ab ? '#d6ecdf' : ''; } }
+    function nmResIr(i) { const el = document.getElementById('nmr-' + i), sc = document.getElementById('nm-res-scroll'); if (el && sc) sc.scrollTo({ top: el.offsetTop - 20, behavior: 'smooth' }); }
+    function nmResImprimir() {
+      const R = nmE.res && nmE.res.data; if (!R) return;
+      const f = document.createElement('iframe'); f.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0'; document.body.appendChild(f);
+      const doc = f.contentWindow.document; doc.open();
+      doc.write('<!doctype html><html><head><meta charset="utf-8"><title>' + escapeHtml(R.titulo || 'Resultado del análisis') + '</title><style>body{margin:24px}' + NMR_CSS + '.v2r-sello{display:block}@media print{.v2r-tw{overflow:visible}}</style></head><body><article class="v2r"><h1 class="v2r-h1">' + escapeHtml(R.titulo || '') + '</h1>' + nmResHtml(R.bloques, false) + '</article></body></html>');
+      doc.close(); setTimeout(() => { try { f.contentWindow.focus(); f.contentWindow.print(); } catch (e) { } setTimeout(() => f.remove(), 2000); }, 300);
+    }
+    // ----- Pestaña "Resumen de cuadres y cruces": los cuadros del informe, cruzados al instante con la sumaria -----
+    const NMC_TOL = 1; // diferencia máxima (USD) para considerar que cuadra
+    function nmCuaEstado(f, sum) {
+      const n = x => (x === null || x === undefined || x === '' || !Number.isFinite(Number(x))) ? null : Number(x);
+      const may = n(f.mayor), aud = n(f.aud), tiene = Array.isArray(f.cuentas) && f.cuentas.length;
+      const base = tiene ? sum : may;                       // lo que se compara contra el análisis
+      const dif = (base !== null && aud !== null) ? Math.round((base - aud) * 100) / 100 : null;
+      const difMay = (tiene && sum !== null && may !== null) ? Math.round((sum - may) * 100) / 100 : null; // sumaria vs mayor
+      let est;
+      if (tiene && sum === null) est = 'nosum';
+      else if (difMay !== null && Math.abs(difMay) > NMC_TOL) est = 'dif';
+      else if (aud === null) est = 'sinsoporte';
+      else if (Math.abs(dif) <= NMC_TOL) est = 'cuadra';
+      else if (f.expl) est = 'expl';
+      else est = 'dif';
+      return { est, dif, difMay, base, may, aud, tiene };
+    }
+    const NMC_PILL = {
+      cuadra: ['✓ Cuadra', '#e7f6ec', '#1d6b3a'], expl: ['Diferencia explicada', '#fdf3dc', '#8a5a00'], dif: ['⚠ Diferencia', '#fde8e8', '#b42318'],
+      sinsoporte: ['○ Sin soporte', '#eef1f5', '#475467'], nosum: ['⚠ No está en la sumaria', '#fde8e8', '#b42318']
+    };
+    async function nmCuaCargarBal() {
+      const cli = nmE.cliente, anio = Number(nmE.anio), vis = nmE.visita; const id = nmE.resId;
+      nmE.bal = cli ? { cargado: false } : null; if (!cli) return;
+      let data = [], err = '';
+      for (let d = 0; ; d += 1000) {
+        const r = await supabaseClient.from('balance_comprobacion').select('codigo, cuenta, saldo').eq('cliente_id', cli).eq('anio', anio).eq('visita', vis).eq('sumaria', 'RC').range(d, d + 999);
+        if (r.error) { err = r.error.message || String(r.error); break; }
+        data.push(...(r.data || [])); if (!r.data || r.data.length < 1000) break;
+      }
+      if (id !== nmE.resId) return;
+      const m = {}, af = {}; data.forEach(x => { const k = String(x.codigo || '').trim(); if (k) { m[k] = { nombre: x.cuenta || '', saldo: (m[k] ? m[k].saldo : 0) + (Number(x.saldo) || 0), sumaria: 'RC' }; af[k] = 1; } });
+      // cuentas de los cuadros que están en otras sumarias (por ejemplo, costo de ventas)
+      const cu = (nmE.res && nmE.res.data && nmE.res.data.cuadres) || [], otras = [...new Set(cu.flatMap(q => (q.filas || []).flatMap(f => f.cuentas || [])).map(k => String(k).trim()).filter(k => k && !af[k]))];
+      if (otras.length) {
+        const r2 = await supabaseClient.from('balance_comprobacion').select('codigo, cuenta, saldo, sumaria').eq('cliente_id', cli).eq('anio', anio).eq('visita', vis).in('codigo', otras);
+        if (r2.error) err = err || (r2.error.message || String(r2.error));
+        (r2.data || []).forEach(x => { const k = String(x.codigo || '').trim(); if (k) m[k] = { nombre: x.cuenta || '', saldo: (m[k] ? m[k].saldo : 0) + (Number(x.saldo) || 0), sumaria: x.sumaria || '' }; });
+      }
+      if (id !== nmE.resId) return;
+      nmE.bal = { cargado: true, error: err, m, af };
+      if (nmE.tab === 'cuadres') nmCuaPintar();
+      if (nmE.tab === 'conclusiones') nmConcPintar();
+    }
+    function nmIrSeccion(ref) {
+      const bl = ((nmE.res && nmE.res.data && nmE.res.data.bloques) || []).filter(b => b.t === 'h2');
+      const i = bl.findIndex(b => String(b.x).toLowerCase().includes(String(ref).toLowerCase()));
+      nmE.tab = 'resultado'; nmPintar(); if (i >= 0) setTimeout(() => nmResIr(i), 50);
+    }
+    function nmCuaPintar() {
+      const c = $im('nm-panel'), R = nmE.res, B = nmE.bal, fm = formatoNumeroAnexo, e = escapeHtml;
+      if (!nmE.cliente || !R) { c.innerHTML = '<p class="text-xs text-slate-500 p-4">Selecciona el cliente para comenzar.</p>'; return; }
+      if (!R.cargado || !B || !B.cargado) { c.innerHTML = '<p class="text-xs text-slate-500 p-4">Cargando…</p>'; return; }
+      const cu = (R.data && Array.isArray(R.data.cuadres)) ? R.data.cuadres : [];
+      if (!cu.length) { c.innerHTML = '<div class="p-8 text-center text-sm text-slate-600 space-y-2"><p>Aún no hay cuadres para este cliente, año y visita.</p><p class="text-xs text-slate-500">Cuando Claude termine el análisis, aquí aparecerán los cuadros del informe cruzados con la sumaria.</p></div>'; return; }
+      const bal = B.m || {}, usadas = {}, cont = { cuadra: 0, expl: 0, dif: 0, sinsoporte: 0, nosum: 0 };
+      const cel = (x, cls) => '<td class="p-3 border-r border-slate-200 text-right whitespace-nowrap ' + (cls || '') + '">' + (x === null || x === undefined ? '<span class="text-slate-300">—</span>' : fm(x)) + '</td>';
+      const R2 = x => Math.round(x * 100) / 100;
+      let nTit = 1; // la cobertura se muestra primero y lleva el 1
+      const tarjComp = q => {
+        const filas = q.filas || [], cuentas = Array.isArray(q.cuentas) ? q.cuentas : [], cols = Array.isArray(q.cols) ? q.cols : [];
+        cuentas.forEach(k => { (usadas[k] = usadas[k] || []).push(q.titulo); });
+        const total = R2(filas.reduce((t, f) => t + (Number(f.v) || 0), 0));
+        const enSum = cuentas.map(k => bal[k]).filter(Boolean);
+        const sum = cuentas.length && enSum.length ? R2(enSum.reduce((t, x) => t + x.saldo, 0)) : null;
+        const hayBase = cuentas.length ? sum !== null : (q.esperado !== undefined && q.esperado !== null);
+        const base = cuentas.length ? sum : (hayBase ? Number(q.esperado) : null);
+        const dif = base === null ? null : R2(base - total);
+        let est = base === null ? (cuentas.length ? 'nosum' : 'sinsoporte') : (Math.abs(dif) <= NMC_TOL ? 'cuadra' : (q.expl ? 'expl' : 'dif'));
+        cont[est]++;
+        const P = NMC_PILL[est], extraNum = cols.map((_, j) => filas.length && filas.every(f => typeof (f.x || [])[j] === 'number'));
+        const thx = cols.map((c, j) => '<th class="p-3 border-r border-slate-200 ' + (extraNum[j] ? 'text-right' : '') + '">' + e(c) + '</th>').join('');
+        const exBtn = f => f.explicacion ? ' <button type="button" class="v2r-i" onclick="nmToggleExp(this)" title="Ver la explicación">' + IC_OJO + '</button>' : '';
+        const exTr = f => f.explicacion ? '<tr class="v2r-exp" style="display:none"><td colspan="' + (cols.length + 2) + '"><div>' + e(f.explicacion).replace(/\n/g, '<br>') + '</div></td></tr>' : '';
+        const fila = f => '<tr class="align-top"><td class="p-3 border-r border-slate-200 text-[12px] text-slate-800">' + e(f.c || '') + exBtn(f) + (f.nota ? '<div class="mt-1 text-[11px] text-slate-500">' + e(f.nota) + '</div>' : '') + '</td>' + cols.map((_, j) => { const v = (f.x || [])[j]; return '<td class="p-3 border-r border-slate-200 whitespace-nowrap ' + (typeof v === 'number' ? 'text-right' : '') + '">' + (typeof v === 'number' ? fm(v) : e(v == null ? '' : v)) + '</td>'; }).join('') + '<td class="p-3 text-right whitespace-nowrap">' + fm(Number(f.v) || 0) + '</td></tr>' + exTr(f);
+        const sumX = cols.map((_, j) => extraNum[j] ? '<td class="p-3 border-r border-slate-200 text-right font-bold">' + fm(R2(filas.reduce((t, f) => t + f.x[j], 0))) + '</td>' : '<td class="p-3 border-r border-slate-200"></td>').join('');
+        const fin = (txt, val, cls, extra) => '<tr style="background:#f8fafc" class="' + (cls || '') + '"><td class="p-3 border-r border-slate-200 text-[12px] font-bold text-slate-800" colspan="1">' + txt + (extra || '') + '</td>' + cols.map(() => '<td class="p-3 border-r border-slate-200"></td>').join('') + '<td class="p-3 text-right whitespace-nowrap font-bold">' + val + '</td></tr>';
+        const nA = Array.isArray(q.ajustes) ? q.ajustes : [];
+        const ajHtml = nA.length ? nA.map(a => '<tr><td class="p-3 border-r border-slate-200 text-[12px] text-slate-600">' + e(a.c || '') + exBtn(a) + '</td>' + cols.map(() => '<td class="p-3 border-r border-slate-200"></td>').join('') + '<td class="p-3 text-right whitespace-nowrap text-slate-600">' + fm(Number(a.v) || 0) + '</td></tr>' + exTr(a)).join('') + fin('Saldo ajustado (sumaria + ajustes propuestos)', fm(R2((sum !== null ? sum : total) + nA.reduce((t, a) => t + (Number(a.v) || 0), 0)))) : '';
+        const compLbl = cuentas.length ? 'Según sumaria (' + cuentas.map(e).join(', ') + ')' : 'Debe coincidir con: ' + e(q.esperado_c || 'valor esperado');
+        const pie = (cols.length && extraNum.some(Boolean) ? '' : fin(e(q.total_c || 'Saldo según composición'), fm(total))) + (hayBase ? fin(compLbl, fm(base), '') : '') + (q.mayor !== undefined && q.mayor !== null ? fin('Según mayor contable', fm(Number(q.mayor))) : '') +
+          '<tr style="background:#f8fafc"><td class="p-3 border-r border-slate-200 text-[12px] font-bold text-slate-800">Diferencia' + (q.expl && est === 'expl' ? '<div class="mt-1 text-[11px] font-normal" style="color:#8a5a00">' + e(q.expl) + '</div>' : '') + '</td>' + cols.map(() => '<td class="p-3 border-r border-slate-200"></td>').join('') + '<td class="p-3 text-right whitespace-nowrap"><b style="color:' + (dif === null ? '#94a3b8' : Math.abs(dif) <= NMC_TOL ? '#1d6b3a' : '#b42318') + '">' + (dif === null ? '—' : fm(dif)) + '</b> <span style="display:inline-block;margin-left:8px;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:700;background:' + P[1] + ';color:' + P[2] + '">' + P[0] + '</span></td></tr>' + ajHtml;
+        return '<div class="border border-slate-200 rounded-xl shadow-sm bg-white overflow-hidden"><div class="px-4 py-3 border-b border-slate-200 bg-slate-100 flex items-center justify-between gap-2"><div class="text-base font-bold text-slate-800">' + (++nTit) + '. ' + e(q.titulo || '') + '</div>' + (q.ref ? '<a href="#" onclick="nmIrSeccion(\'' + e(q.ref).replace(/'/g, '') + '\');return false" class="text-[11px] hover:underline" style="color:#3b6fc4">ver en el informe ›</a>' : '') + '</div><div class="overflow-x-auto"><table class="w-full text-left text-xs text-slate-700 border-collapse"><thead class="bg-slate-100 text-slate-600 text-[10px] font-bold border-b border-slate-200"><tr><th class="p-3 border-r border-slate-200 min-w-[260px]">Concepto</th>' + thx + '<th class="p-3 text-right">' + e(q.col_v || 'Importe (USD)') + '</th></tr></thead><tbody class="divide-y divide-slate-200">' + filas.map(fila).join('') + (cols.length && extraNum.some(Boolean) ? '<tr style="background:#f8fafc"><td class="p-3 border-r border-slate-200 text-[12px] font-bold">Total</td>' + sumX + '<td class="p-3 text-right font-bold whitespace-nowrap">' + fm(total) + '</td></tr>' : '') + pie + '</tbody></table></div></div>';
+      };
+      const tarjetas = cu.map(q => {
+        if (q.tipo === 'composicion') return tarjComp(q);
+        const filas = (q.filas || []).map(f => {
+          const cuentas = Array.isArray(f.cuentas) ? f.cuentas : [];
+          cuentas.forEach(k => { (usadas[k] = usadas[k] || []).push(q.titulo); });
+          const enSum = cuentas.map(k => bal[k]).filter(Boolean), falta = cuentas.filter(k => !bal[k]);
+          const sum = cuentas.length ? (enSum.length ? Math.round(enSum.reduce((t, x) => t + x.saldo, 0) * 100) / 100 : null) : null;
+          const r = nmCuaEstado(f, cuentas.length && falta.length === cuentas.length ? null : sum);
+          cont[r.est]++;
+          const P = NMC_PILL[r.est];
+          const aj = Number.isFinite(Number(f.ajuste)) && f.ajuste !== null && f.ajuste !== '' && sum !== null ? '<div class="mt-1 text-[11px] text-slate-500">Ajuste propuesto <b>' + fm(f.ajuste) + '</b> → saldo ajustado <b>' + fm(Math.round((sum + Number(f.ajuste)) * 100) / 100) + '</b></div>' : '';
+          const ref = f.ref ? ' <a href="#" onclick="nmIrSeccion(\'' + e(f.ref).replace(/'/g, '') + '\');return false" class="text-[11px] hover:underline" style="color:#3b6fc4" title="Ver en el informe de Claude">ver ' + e(f.ref) + ' ›</a>' : '';
+          const dm = r.difMay !== null && Math.abs(r.difMay) > NMC_TOL ? '<div class="mt-1 text-[11px]" style="color:#b42318">Sumaria vs mayor: ' + fm(r.difMay) + '</div>' : '';
+          const ex = f.explicacion ? ' <button type="button" class="v2r-i" onclick="nmToggleExp(this)" title="Ver la explicación">' + IC_OJO + '</button>' : '';
+          const exRow = f.explicacion ? '<tr class="v2r-exp" style="display:none"><td colspan="7"><div>' + e(f.explicacion).replace(/\n/g, '<br>') + '</div></td></tr>' : '';
+          return '<tr class="align-top"><td class="p-3 border-r border-slate-200 text-[12px] text-slate-800">' + e(f.c || '') + ex + ref + (f.nota ? '<div class="mt-1 text-[11px] text-slate-500">' + e(f.nota) + '</div>' : '') + (r.est === 'expl' ? '<div class="mt-1 text-[11px]" style="color:#8a5a00">' + e(f.expl) + '</div>' : '') + aj + dm + '</td>' +
+            '<td class="p-3 border-r border-slate-200 text-[11px] text-slate-600 whitespace-nowrap">' + (cuentas.length ? cuentas.map(k => e(k) + (bal[k] ? (bal[k].sumaria && bal[k].sumaria !== 'RC' ? ' <span class="text-slate-400">· sumaria ' + e(bal[k].sumaria) + '</span>' : '') : ' <span style="color:#b42318">(no está)</span>')).join('<br>') : '<span class="text-slate-300">sin cuenta indicada</span>') + '</td>' +
+            cel(cuentas.length ? sum : null, 'font-semibold') + cel(r.may) + cel(r.aud) +
+            '<td class="p-3 border-r border-slate-200 text-right whitespace-nowrap font-bold" style="color:' + (r.dif === null ? '#94a3b8' : Math.abs(r.dif) <= NMC_TOL ? '#1d6b3a' : '#b42318') + '">' + (r.dif === null ? '—' : fm(r.dif)) + '</td>' +
+            '<td class="p-3"><span style="display:inline-block;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:700;background:' + P[1] + ';color:' + P[2] + '">' + P[0] + '</span></td></tr>' + exRow;
+        }).join('');
+        return '<div class="border border-slate-200 rounded-xl shadow-sm bg-white overflow-hidden"><div class="px-4 py-3 border-b border-slate-200 bg-slate-100 flex items-center justify-between gap-2"><div class="text-base font-bold text-slate-800">' + (++nTit) + '. ' + e(q.titulo || '') + '</div>' + (q.ref ? '<a href="#" onclick="nmIrSeccion(\'' + e(q.ref).replace(/'/g, '') + '\');return false" class="text-[11px] hover:underline" style="color:#3b6fc4">ver en el informe ›</a>' : '') + '</div><div class="overflow-x-auto"><table class="w-full text-left text-xs text-slate-700 border-collapse"><thead class="bg-slate-100 text-slate-600 text-[10px] font-bold border-b border-slate-200"><tr><th class="p-3 border-r border-slate-200 min-w-[240px]">Concepto</th><th class="p-3 border-r border-slate-200 min-w-[120px]">Cuenta(s)</th><th class="p-3 border-r border-slate-200 text-right">Según sumaria</th><th class="p-3 border-r border-slate-200 text-right">Según mayor</th><th class="p-3 border-r border-slate-200 text-right">Análisis de Claude</th><th class="p-3 border-r border-slate-200 text-right" title="Sumaria (o mayor, si la cuenta no está en la sumaria) menos el análisis de Claude">Diferencia</th><th class="p-3">Estado</th></tr></thead><tbody class="divide-y divide-slate-200">' + filas + '</tbody></table></div></div>';
+      }).join('');
+      // Cobertura: toda cuenta de la sumaria debe estar cruzada en algún cuadro
+      const codsAF = Object.keys(bal).filter(k => (B.af || {})[k]).sort(), codsOtras = Object.keys(usadas).filter(k => bal[k] && !(B.af || {})[k]).sort(), cods = codsAF.concat(codsOtras);
+      const sinCruce = codsAF.filter(k => !usadas[k]);
+      const cob = '<div class="border border-slate-200 rounded-xl shadow-sm bg-white overflow-hidden"><div class="px-4 py-3 border-b border-slate-200 bg-slate-100 flex items-center justify-between"><div class="text-base font-bold text-slate-800">1. Cobertura de las sumarias cruzadas</div><span style="display:inline-block;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:700;background:' + (sinCruce.length ? '#fde8e8' : '#e7f6ec') + ';color:' + (sinCruce.length ? '#b42318' : '#1d6b3a') + '">' + (cods.length ? (sinCruce.length ? '⚠ ' + sinCruce.length + ' cuenta(s) sin cruce' : '✓ Todas las cuentas están cruzadas') : 'Sin sumaria cargada') + '</span></div><div class="overflow-x-auto"><table class="w-full text-left text-xs text-slate-700 border-collapse"><thead class="bg-slate-100 text-slate-600 text-[10px] font-bold border-b border-slate-200"><tr><th class="p-3 border-r border-slate-200">Sumaria</th><th class="p-3 border-r border-slate-200">Cuenta</th><th class="p-3 border-r border-slate-200">Nombre</th><th class="p-3 border-r border-slate-200 text-right">Saldo en la sumaria</th><th class="p-3">Se cruza en</th></tr></thead><tbody class="divide-y divide-slate-200">' +
+        (cods.map(k => '<tr><td class="p-3 border-r border-slate-200 whitespace-nowrap font-semibold">' + e(bal[k].sumaria || 'RC') + '</td><td class="p-3 border-r border-slate-200 whitespace-nowrap">' + e(k) + '</td><td class="p-3 border-r border-slate-200">' + e(bal[k].nombre) + '</td><td class="p-3 border-r border-slate-200 text-right whitespace-nowrap">' + fm(bal[k].saldo) + '</td><td class="p-3 ' + (usadas[k] ? 'text-slate-600' : '') + '">' + (usadas[k] ? e([...new Set(usadas[k])].join(' · ')) : '<b style="color:#b42318">Sin cruce: pedir a Claude que lo analice</b>') + '</td></tr>').join('') || '<tr><td colspan="5" class="p-4 text-center text-slate-400">No hay balance de comprobación cargado para esta visita.</td></tr>') + '</tbody></table></div></div>';
+      const chip = (n, t, P) => '<span style="display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:99px;font-size:12px;font-weight:700;background:' + P[1] + ';color:' + P[2] + '"><span style="font-size:15px">' + n + '</span>' + t + '</span>';
+      const resumen = '<div class="flex flex-wrap items-center gap-2">' + chip(cont.cuadra, 'cuadran', NMC_PILL.cuadra) + chip(cont.expl, 'explicadas', NMC_PILL.expl) + chip(cont.dif + cont.nosum, 'con diferencia', NMC_PILL.dif) + chip(cont.sinsoporte, 'sin soporte', NMC_PILL.sinsoporte) + '<span class="text-[11px] text-slate-500 ml-1">Tolerancia: ' + fm(NMC_TOL) + ' · la sumaria se lee en vivo del balance de comprobación</span></div>';
+      c.innerHTML = '<style>' + NMR_CSS + '</style><div class="p-4 space-y-4 bg-slate-50">' + resumen + cob + tarjetas + '</div>';
+    }
+    // ===== Conclusiones de la cuenta (v2): por concluir, To/Do-Quick Lett-Opinión, ajustes, revelaciones y conclusión =====
+    const NM_CUENTA = 'nomina';
+    const NM_DEST = { todo: 'To/Do', quicklett: 'Quick Lett', opinion: 'Opinión' };
+    function nmConcK(s) { return String(s == null ? '' : s).replace(/[^\w.-]/g, '_'); }
+    async function nmConcCargar() {
+      const cli = nmE.cliente;
+      if (!cli) { nmE.conc = null; return; }
+      const id = (nmE.concId = (nmE.concId || 0) + 1);
+      nmE.conc = { cargado: false, datos: {}, id: null, error: '' };
+      const r = await supabaseClient.from('v2_conclusion').select('*').eq('cliente_id', cli).eq('anio', Number(nmE.anio)).eq('visita', nmE.visita).eq('sumaria', 'RC').eq('hoja', 'nomina').maybeSingle();
+      if (id !== nmE.concId) return;
+      nmE.conc = { cargado: true, error: r.error ? (r.error.message || String(r.error)) : '', datos: (r.data && r.data.datos) || {}, id: r.data ? r.data.id : null };
+      if (nmE.tab === 'conclusiones') nmConcPintar();
+    }
+    // Aplica un cambio a una copia de los datos del auditor y lo guarda; devuelve true si quedó guardado
+    async function nmConcGuardar(mut) {
+      const C = nmE.conc; if (!C || !C.cargado) return false;
+      const datos = JSON.parse(JSON.stringify(C.datos || {})); mut(datos);
+      const fila = { cliente_id: nmE.cliente, anio: Number(nmE.anio), visita: nmE.visita, sumaria: 'RC', hoja: 'nomina', datos, actualizado_por: nombreUsuarioActivo() || null, updated_at: new Date().toISOString() };
+      const { data, error } = await supabaseClient.from('v2_conclusion').upsert(fila, { onConflict: 'cliente_id,anio,visita,sumaria,hoja' }).select().single();
+      if (error) { $im('nm-estado').textContent = 'No se pudo guardar: ' + (error.message || error); return false; }
+      C.datos = data.datos || datos; C.id = data.id; $im('nm-estado').textContent = '';
+      return true;
+    }
+    async function nmConcSet(grupo, id, campo, valor) { if (await nmConcGuardar(d => { d[grupo] = d[grupo] || {}; d[grupo][id] = { ...(d[grupo][id] || {}), [campo]: valor }; })) nmConcPintar(); }
+    async function nmConcNuevo(tipo) {
+      const g = n => { const el = $im(n); return el ? el.value.trim() : ''; };
+      if (tipo === 'pc') {
+        const asunto = g('nc-pc-asunto'), falta = g('nc-pc-falta'); if (!asunto) { alert('Escribe el asunto.'); return; }
+        if (await nmConcGuardar(d => { (d.pcExtra = d.pcExtra || []).push({ id: 'x' + Date.now(), asunto, falta, por: nombreUsuarioActivo() || '' }); })) nmConcPintar();
+      } else if (tipo === 'env') {
+        const texto = g('nc-env-texto'); if (!texto) { alert('Escribe el punto.'); return; }
+        if (await nmConcGuardar(d => { (d.envExtra = d.envExtra || []).push({ id: 'x' + Date.now(), texto, origen: 'Auditor', por: nombreUsuarioActivo() || '' }); })) nmConcPintar();
+      } else {
+        const tema = g('nc-rev-tema'), que = g('nc-rev-que'), norma = g('nc-rev-norma'); if (!tema) { alert('Escribe el tema.'); return; }
+        if (await nmConcGuardar(d => { (d.revExtra = d.revExtra || []).push({ id: 'x' + Date.now(), tema, que, norma }); })) nmConcPintar();
+      }
+    }
+    async function nmConcQuitar(tipo, id) {
+      if (!await confirmarApp('¿Quitar este punto de la lista?')) return;
+      const campo = { pc: 'pcExtra', env: 'envExtra', rev: 'revExtra' }[tipo];
+      if (await nmConcGuardar(d => { d[campo] = (d[campo] || []).filter(x => x.id !== id); })) nmConcPintar();
+    }
+    // Lleva un punto al consolidado «To/Do - Quick Lett - Opinión» (tabla criterio_auditor_cuentas, como el Criterio final de los demás análisis)
+    async function nmConcEnviar(id, destino) {
+      const C = nmE.conc; if (!C || !C.cargado) return;
+      const cl = (nmE.res && nmE.res.data && nmE.res.data.conclusiones) || {};
+      const x = (cl.envios || []).concat((C.datos.envExtra || [])).find(k => k.id === id); if (!x) return;
+      if (C.datos.envios && C.datos.envios[id] && C.datos.envios[id].destino) return;
+      const quien = nombreUsuarioActivo();
+      if (!quien) { alert('Ingresa con tu usuario para enviar el punto.'); return; }
+      if (!await confirmarApp('¿Enviar este punto a ' + NM_DEST[destino] + '?\n\n' + x.texto + '\n\nSe verá en el consolidado «To/Do - Quick Lett - Opinión» (' + nmE.anio + ').')) return;
+      const cli = nmE.cliente, anio = Number(nmE.anio), vis = nmE.visita;
+      const { data: ex, error: e1 } = await supabaseClient.from('criterio_auditor_cuentas').select('*').eq('cliente_id', cli).eq('anio', anio).eq('cuenta', NM_CUENTA).eq('visita', vis).maybeSingle();
+      if (e1) { alert('No se pudo leer el consolidado: ' + (e1.message || e1)); return; }
+      const linea = '• [' + NM_DEST[destino] + '] ' + x.texto;
+      const previo = String((ex && ex.criterio) || '').trim();
+      const marcas = String((ex && ex.conclusion) || '').split(SEP_CONCLUSION).map(m => m.trim()).filter(Boolean);
+      if (!marcas.includes(NM_DEST[destino])) marcas.push(NM_DEST[destino]);
+      const fila = { cliente_id: cli, anio, cuenta: NM_CUENTA, visita: vis, conclusion: marcas.join(SEP_CONCLUSION), criterio: previo.includes(linea) ? previo : (previo ? previo + '\n' : '') + linea, auditor: (ex && ex.auditor) || quien, actualizado_por: quien, updated_at: new Date().toISOString() };
+      const r = await upsertConFallbackActualizado('criterio_auditor_cuentas', fila);
+      if (r.error) { alert('No se pudo enviar: ' + (r.error.message || r.error)); return; }
+      const ok = await nmConcGuardar(d => { d.envios = d.envios || {}; d.envios[id] = { ...(d.envios[id] || {}), destino, por: quien, cuando: new Date().toISOString() }; });
+      if (!ok) { alert('Se envió a ' + NM_DEST[destino] + ', pero no se pudo marcar como enviado en esta lista.'); return; }
+      bitacoraClaude('Envió punto de Nómina a ' + NM_DEST[destino], x.texto.slice(0, 120), cli, String(anio));
+      nmConcPintar();
+    }
+    async function nmConcCriterio() {
+      const quien = nombreUsuarioActivo(); if (!quien) { alert('Ingresa con tu usuario para guardar la conclusión.'); return; }
+      const t = ($im('nc-crit') || {}).value || '';
+      if (await nmConcGuardar(d => { d.conclusion_auditor = t; d.conclusion_por = quien; d.conclusion_at = new Date().toISOString(); })) { bitacoraClaude('Guardó conclusión del auditor', 'Nómina (RC)', nmE.cliente, String(nmE.anio)); nmConcPintar(); }
+    }
+    async function nmConcMarca(campo, poner) {
+      const quien = nombreUsuarioActivo(); if (!quien) { alert('Ingresa con tu usuario.'); return; }
+      if (poner && campo === 'ratificado' && !String((nmE.conc.datos || {}).conclusion_auditor || '').trim()) { alert('Primero escribe y guarda la conclusión del auditor.'); return; }
+      if (await nmConcGuardar(d => { d[campo + '_por'] = poner ? quien : null; d[campo + '_at'] = poner ? new Date().toISOString() : null; })) { bitacoraClaude((poner ? 'Marcó ' : 'Quitó ') + campo + ' las conclusiones de Inventarios', 'Nómina (RC)', nmE.cliente, String(nmE.anio)); nmConcPintar(); }
+    }
+    // ----- Verificaciones de Nómina: automáticas (se recalculan con lo que hay cargado) y evaluaciones del auditor -----
+    const NM_ESTADOS = [['pendiente', 'Pendiente'], ['cumple', 'Cumple'], ['nocumple', 'No cumple'], ['noaplica', 'No aplica']];
+    const NM_VERIF_MANUALES = [
+      ['roles', 'El resumen de roles de pago por mes cuadra con el mayor contable y con la sumaria', 'NIC 19.11', 'RC-03'],
+      ['ir', 'Se recalculó el impuesto a la renta en relación de dependencia en una muestra de colaboradores', 'LRTI', 'RC-04'],
+      ['expedientes', 'Los expedientes de los colaboradores respaldan sueldo, afiliación y beneficios pagados', 'NIA 500', 'RC-05'],
+      ['soportes', 'Se determinó la necesidad de revisar la documentación soporte de las partidas relevantes', 'NIA 500', 'RC-07'],
+      ['corte', 'El corte de gastos es correcto: no hay gastos del período sin registrar', 'NIC 1.27', 'RC-09'],
+      ['relacionadas', 'Se identificaron los gastos con partes relacionadas y se evaluó su revelación', 'NIC 24', 'RC-10'],
+      ['bonos', 'Se evaluaron bonos, pagos basados en acciones y beneficios a la gerencia', 'NIC 19 / NIIF 2', 'RC-11'],
+      ['clasificacion', 'Los gastos se clasifican según NIIF 18', 'NIIF 18', 'RC-12']
+    ];
+    function nmEstProc(p) { const f = nmE.filas[p.codigo] || {}; return f.estado === 'hecho' || f.estado === 'na' || f.estado === 'pendiente' ? f.estado : (nmTienePt(p) ? 'hecho' : ''); }
+    function nmTienePt(p) { return (nmE.pts || []).some(t => t.codigo === p.codigo) || ((nmE.filas[p.codigo] || {}).pt || []).length > 0; }
+    function nmVerifAuto() {
+      const R = nmE.res, B = nmE.bal; if (!R || !R.cargado || !B || !B.cargado) return null;
+      const bal = B.m || {}, cu = (R.data && Array.isArray(R.data.cuadres)) ? R.data.cuadres : [], R2 = x => Math.round(x * 100) / 100, fm = formatoNumeroAnexo, out = [], usadas = {};
+      const lista = (a, n) => a.slice(0, n).join(', ') + (a.length > n ? ' y ' + (a.length - n) + ' más' : '');
+      cu.forEach(q => {
+        const ests = [];
+        if (q.tipo === 'composicion') {
+          const cuentas = Array.isArray(q.cuentas) ? q.cuentas : []; cuentas.forEach(k => { usadas[k] = 1; });
+          const total = R2((q.filas || []).reduce((t, f) => t + (Number(f.v) || 0), 0)), enSum = cuentas.map(k => bal[k]).filter(Boolean);
+          const sum = cuentas.length && enSum.length ? R2(enSum.reduce((t, x) => t + x.saldo, 0)) : null;
+          const base = cuentas.length ? sum : ((q.esperado !== undefined && q.esperado !== null) ? Number(q.esperado) : null);
+          const dif = base === null ? null : R2(base - total);
+          ests.push([base === null ? (cuentas.length ? 'nosum' : 'sinsoporte') : (Math.abs(dif) <= NMC_TOL ? 'cuadra' : (q.expl ? 'expl' : 'dif')), q.titulo || 'Composición', dif]);
+        } else (q.filas || []).forEach(f => {
+          const cuentas = Array.isArray(f.cuentas) ? f.cuentas : []; cuentas.forEach(k => { usadas[k] = 1; });
+          const enSum = cuentas.map(k => bal[k]).filter(Boolean), falta = cuentas.filter(k => !bal[k]);
+          const sum = cuentas.length ? (enSum.length ? R2(enSum.reduce((t, x) => t + x.saldo, 0)) : null) : null;
+          const r = nmCuaEstado(f, cuentas.length && falta.length === cuentas.length ? null : sum);
+          ests.push([r.est, f.c || '', r.dif]);
+        });
+        if (!ests.length) return;
+        const malos = ests.filter(x => x[0] === 'dif' || x[0] === 'nosum' || x[0] === 'sinsoporte'), expl = ests.filter(x => x[0] === 'expl'), ok = ests.filter(x => x[0] === 'cuadra');
+        const det = ok.length + ' de ' + ests.length + ' concepto(s) cuadran' + (expl.length ? '; ' + expl.length + ' con diferencia explicada' : '') + (malos.length ? '. Por revisar: ' + lista(malos.map(x => x[1] + (x[2] !== null && x[2] !== undefined ? ' (' + fm(x[2]) + ')' : x[0] === 'sinsoporte' ? ' (sin soporte)' : ' (sin sumaria)')), 3) : '');
+        out.push(['El cuadro «' + (q.titulo || '') + '» cuadra con la sumaria, el mayor y el análisis de Claude', malos.length ? 'rev' : (expl.length ? 'info' : 'ok'), det, q.ref || '']);
+      });
+      const codsAF = Object.keys(bal).filter(k => (B.af || {})[k]).sort(), sinCruce = codsAF.filter(k => !usadas[k]);
+      out.push(['Todas las cuentas de la sumaria están cruzadas en algún cuadro', !codsAF.length ? 'info' : (sinCruce.length ? 'rev' : 'ok'), !codsAF.length ? 'Sin sumaria cargada' : (sinCruce.length ? sinCruce.length + ' cuenta(s) sin cruce: ' + lista(sinCruce, 6) : 'Las ' + codsAF.length + ' cuentas están cruzadas'), '']);
+      const procs = nmE.procs || [], pts = nmE.pts || [];
+      const est = p => { const f = nmE.filas[p.codigo] || {}; return f.estado === 'hecho' || f.estado === 'na' || f.estado === 'pendiente' ? f.estado : ((pts.some(t => t.codigo === p.codigo) || (f.pt || []).length) ? 'hecho' : ''); };
+      const sinPt = procs.filter(p => est(p) !== 'na' && !pts.some(t => t.codigo === p.codigo) && !((nmE.filas[p.codigo] || {}).pt || []).length).map(p => p.codigo);
+      out.push(['Cada procedimiento del programa tiene su papel de trabajo', sinPt.length ? 'rev' : 'ok', sinPt.length ? sinPt.length + ' sin papel de trabajo: ' + lista(sinPt, 8) : 'Todos tienen papel de trabajo', 'RC']);
+      const sinCon = procs.filter(p => { const f = nmE.filas[p.codigo] || {}; return est(p) !== 'na' && !(f.conclusion || (pts.find(t => t.codigo === p.codigo) || {}).conclusion); }).map(p => p.codigo);
+      out.push(['Cada procedimiento tiene su conclusión', sinCon.length ? 'rev' : 'ok', sinCon.length ? sinCon.length + ' sin conclusión: ' + lista(sinCon, 8) : 'Todos tienen conclusión', 'RC']);
+      const sinEst = procs.filter(p => est(p) !== 'hecho' && est(p) !== 'na').map(p => p.codigo);
+      out.push(['Todos los procedimientos están marcados como Hecho o N/A', sinEst.length ? 'rev' : 'ok', sinEst.length ? sinEst.length + ' pendiente(s): ' + lista(sinEst, 8) : 'Todos marcados', 'RC']);
+      const sinRev = procs.filter(p => est(p) !== 'na' && !(nmE.filas[p.codigo] || {}).revisado_at).map(p => p.codigo);
+      out.push(['Todos los procedimientos están revisados por el auditor', sinRev.length ? 'rev' : 'ok', sinRev.length ? sinRev.length + ' sin revisar: ' + lista(sinRev, 8) : 'Todos revisados', 'RC']);
+      return out;
+    }
+    async function nmVerifEditar(k, campo, valor) {
+      if (await nmConcGuardar(d => { d.verif = d.verif || {}; d.verif[k] = { ...(d.verif[k] || {}), [campo]: valor }; })) { if (campo === 'e') nmConcPintar(); }
+    }
+    function nmConcPintar() {
+      const c = $im('nm-panel'), R = nmE.res, C = nmE.conc, e = escapeHtml, fm = formatoNumeroAnexo;
+      if (!nmE.cliente || !R) { c.innerHTML = '<p class="text-xs text-slate-500 p-4">Selecciona el cliente para comenzar.</p>'; return; }
+      if (!R.cargado || !C || !C.cargado) { c.innerHTML = '<p class="text-xs text-slate-500 p-4">Cargando…</p>'; return; }
+      if (C.error) { c.innerHTML = '<p class="text-xs text-red-600 font-bold p-4">No se pudo cargar: ' + e(/does not exist|schema cache/i.test(C.error) ? 'falta la tabla v2_conclusion en Supabase.' : C.error) + '</p>'; return; }
+      const cl = (R.data && R.data.conclusiones) || null, D = C.datos || {};
+      if (!cl) { c.innerHTML = '<div class="p-8 text-center text-sm text-slate-600 space-y-2"><p>Aún no hay conclusiones para este cliente, año y visita.</p><p class="text-xs text-slate-500">Cuando Claude termine el análisis, aquí aparecerán los puntos por concluir, los ajustes, las revelaciones y su conclusión.</p></div>'; return; }
+      const H2 = 'font-bold text-slate-800 text-base border-b border-slate-200 mt-6 mb-2 pb-1';
+      const TH = 'p-3 border-r border-slate-200', TD = 'px-3 py-2 align-top border-b border-slate-100';
+      const INP = 'w-full px-2 py-1 border border-slate-300 rounded-lg text-xs outline-none focus:ring-2 focus:ring-indigo-500 bg-white';
+      const ABR = 'onchange';
+      const SEL = (opc, val, fn) => '<select class="' + INP + '" onchange="' + fn + '">' + opc.map(([v, t]) => '<option value="' + e(v) + '"' + (v === val ? ' selected' : '') + '>' + e(t) + '</option>').join('') + '</select>';
+      const quitar = (tipo, id) => '<button type="button" onclick="nmConcQuitar(\'' + tipo + '\',\'' + e(nmConcK(id)) + '\')" class="text-slate-400 hover:text-red-600 text-xs" title="Quitar">✕</button>';
+      // 1. Por concluir: un renglón por programa, con lo que falta resolver (mismo formato que Bancos)
+      const pcsAll = (cl.por_concluir || []).map(x => ({ ...x, id: nmConcK(x.id), mio: false })).concat((D.pcExtra || []).map(x => ({ ...x, ref: '', mio: true })));
+      const cerrado = x => ((D.pc || {})[x.id] || {}).estado === 'cerrado';
+      const procsPc = nmE.procs || [], mapaPc = new Map();
+      const getPc = cod => { if (!mapaPc.has(cod)) mapaPc.set(cod, { cod, proc: procsPc.find(p => p.codigo === cod) || null, pend: false, sinPt: false, items: [], evals: [] }); return mapaPc.get(cod); };
+      procsPc.forEach(p => { const st = nmEstProc(p); if (st === 'na') return; if (st !== 'hecho') getPc(p.codigo).pend = true; if (!nmTienePt(p)) getPc(p.codigo).sinPt = true; });
+      NM_VERIF_MANUALES.forEach(([k, t, ref, cod]) => { const ev = (((D.verif || {})[k] || {}).e) || 'pendiente'; if (ev === 'pendiente' || ev === 'nocumple') getPc(cod).evals.push({ t, ev }); });
+      pcsAll.filter(x => !cerrado(x)).forEach(x => getPc(x.ref || '—').items.push(x));
+      const gruposPc = [...mapaPc.values()].filter(g => g.pend || g.sinPt || g.items.length || g.evals.length).sort((x, y) => String(x.cod).localeCompare(String(y.cod), 'es', { numeric: true }));
+      const nPc = gruposPc.length;
+      const filasPc = gruposPc.map(g => {
+        const x = g.proc;
+        const proc = x ? (x.titulo ? '<div class="font-bold text-slate-800 mb-0.5">' + e(x.titulo) + '</div>' : '') + '<div class="text-[11px] text-slate-400">' + e(x.tipo_procedimiento || '') + '</div>' + e(x.procedimiento || '') : (g.items[0] ? '<span class="font-bold text-slate-800">' + e(g.items[0].asunto || '') + '</span>' : '<span class="text-slate-400">—</span>');
+        const est = (g.proc ? (g.pend ? '<span class="text-amber-700 font-semibold">Pendiente</span>' : '<span class="text-emerald-700 font-semibold">Hecho</span>') : '<span class="text-amber-700 font-semibold">Abierto</span>') + (g.evals.length ? '<div class="mt-1"><button type="button" onclick="document.getElementById(\'nc-s4\').scrollIntoView({behavior:\'smooth\'})" class="text-[11px] underline text-amber-700 font-semibold">' + g.evals.length + (g.evals.length === 1 ? ' verificación abierta' : ' verificaciones abiertas') + '</button></div>' : '');
+        const bul = [];
+        if (g.sinPt) bul.push('• Sin papel de trabajo');
+        g.items.forEach(x => bul.push('• ' + e(x.asunto || '') + (x.falta ? ': ' + e(x.falta) : '') + ' <button type="button" onclick="nmConcSet(\'pc\',\'' + e(x.id) + '\',\'estado\',\'cerrado\')" class="text-[11px] underline text-indigo-700 font-semibold ml-1">Cerrar</button>' + (x.mio ? ' ' + quitar('pc', x.id) : '')));
+        return '<tr class="border-b border-slate-100 align-top"><td class="p-2 font-semibold">' + (g.proc ? '<button type="button" onclick="nmIrProg(\'' + e(g.cod) + '\')" class="underline text-indigo-700 font-semibold" title="Ir a este procedimiento en el Programa">' + e(g.cod) + '</button>' : e(g.cod)) + '</td><td class="p-2">' + proc + '</td><td class="p-2">' + est + '</td><td class="p-2">' + (bul.length ? bul.map(b => '<div class="mb-1">' + b + '</div>').join('') : '<span class="text-slate-400">—</span>') + '</td></tr>';
+      }).join('');
+      const cerrados = pcsAll.filter(cerrado);
+      // 2. To/Do - Quick Lett - Opinión
+      const envs = (cl.envios || []).map(x => ({ ...x, id: nmConcK(x.id), mio: false })).concat((D.envExtra || []).map(x => ({ ...x, mio: true })));
+      const nEnv = envs.filter(x => { const q = (D.envios || {})[x.id] || {}; return !q.destino && !q.na; }).length;
+      const btnD = (id, d, sug) => '<button type="button" onclick="nmConcEnviar(\'' + e(id) + '\',\'' + d + '\')" class="px-2.5 py-1 text-xs rounded-lg transition border font-medium ' + (sug === d ? 'border-indigo-400 text-indigo-700 bg-indigo-50 hover:bg-indigo-100' : 'border-slate-300 text-slate-700 hover:bg-slate-100') + '">' + NM_DEST[d] + '</button>';
+      const filasEnv = envs.map(x => { const s = (D.envios || {})[x.id] || {};
+        return '<tr><td class="' + TD + ' text-slate-500 whitespace-nowrap">' + envOrigenHtml(x) + '</td><td class="' + TD + '" style="min-width:20rem">' + e(x.texto || '') + (x.mio ? ' ' + quitar('env', x.id) : '') + '</td><td class="' + TD + ' whitespace-nowrap">' +
+          (s.destino ? '<span class="text-slate-600">Enviado a <b>' + NM_DEST[s.destino] + '</b>' + (s.por ? ' · ' + e(nombreMostrado(s.por)) : '') + (s.cuando ? ' · ' + e(nmFmt(s.cuando)) : '') + '</span>' : s.na ? '<span class="text-slate-400">—</span>' : '<div class="flex gap-2">' + btnD(x.id, 'todo', x.sugerido) + btnD(x.id, 'quicklett', x.sugerido) + btnD(x.id, 'opinion', x.sugerido) + '</div>') + '</td>' +
+          '<td class="' + TD + ' text-center"><input type="checkbox" ' + (s.na ? 'checked ' : '') + (s.destino ? 'disabled ' : '') + 'onchange="nmConcSet(\'envios\',\'' + e(x.id) + '\',\'na\',this.checked)" title="Este punto no aplica"></td>' +
+          '<td class="' + TD + '" style="min-width:13rem"><input type="text" value="' + e(s.coment || '') + '" placeholder="Comentario" onchange="nmConcSet(\'envios\',\'' + e(x.id) + '\',\'coment\',this.value)" class="' + INP + '"></td></tr>'; }).join('');
+      // 3. Ajustes
+      const ajs = cl.ajustes || [], ESTAJ = [['propuesto', 'Propuesto'], ['aceptado', 'Aceptado por el cliente'], ['noreg', 'No registrado']];
+      const tot = { d: 0, h: 0, r: 0, m: 0 };
+      const filasAj = ajs.map(a => { const n = nmConcK(a.n), s = (D.ajEstado || {})[n] || 'propuesto', ls = Array.isArray(a.asiento) && a.asiento.length ? a.asiento : [{ cuenta: '', debe: a.monto, haber: 0 }];
+        tot.m += Number(a.monto) || 0; tot.r += Number(a.efecto_resultados) || 0;
+        return ls.map((l, i) => { tot.d += Number(l.debe) || 0; tot.h += Number(l.haber) || 0;
+          return '<tr>' + (i === 0 ? '<td class="' + TD + ' font-bold text-slate-800" rowspan="' + ls.length + '">' + e(a.n) + '</td>' : '') + '<td class="' + TD + '">' + e(l.cuenta || '') + '</td><td class="' + TD + ' text-right whitespace-nowrap">' + (Number(l.debe) ? fm(l.debe) : '') + '</td><td class="' + TD + ' text-right whitespace-nowrap">' + (Number(l.haber) ? fm(l.haber) : '') + '</td>' +
+            (i === 0 ? '<td class="' + TD + '" rowspan="' + ls.length + '" style="min-width:14rem">' + e(a.concepto || '') + '</td><td class="' + TD + ' text-right whitespace-nowrap" rowspan="' + ls.length + '">' + (Number(a.efecto_resultados) ? fm(a.efecto_resultados) : '0,00') + '</td><td class="' + TD + '" rowspan="' + ls.length + '" style="min-width:16rem">' + e(a.efecto_tributario || '') + '</td><td class="' + TD + '" rowspan="' + ls.length + '" style="min-width:9rem">' + SEL(ESTAJ, s, 'nmConcAj(\'' + e(n) + '\',this.value)') + '</td>' : '') + '</tr>'; }).join(''); }).join('');
+      // 4. Verificaciones
+      const aut = nmVerifAuto(), VM = D.verif || {};
+      const COL = { ok: 'text-emerald-700', rev: 'text-amber-700', info: 'text-slate-500' }, TX = { ok: 'Cumple', rev: 'Revisar', info: 'Informativo' };
+      const lnkV = ref => !ref ? '<span class="text-slate-400">—</span>' : (/^RC/.test(ref) ? '<span class="font-semibold">' + e(ref) + '</span>' : '<a href="#" onclick="nmIrSeccion(\'' + e(ref).replace(/'/g, '') + '\');return false" class="hover:underline" style="color:#3b6fc4">ver ' + e(ref) + ' ›</a>');
+      const nAutoRev = aut ? aut.filter(x => x[1] === 'rev').length : 0, nManPend = NM_VERIF_MANUALES.filter(x => ['pendiente', 'nocumple'].includes((VM[x[0]] || {}).e || 'pendiente')).length, nVer = nAutoRev + nManPend;
+      const filasAut = aut ? aut.map(x => '<tr><td class="' + TD + ' whitespace-nowrap text-[12px]">' + lnkV(x[3]) + '</td><td class="' + TD + '" style="min-width:18rem">' + e(x[0]) + '</td><td class="' + TD + ' font-bold whitespace-nowrap ' + COL[x[1]] + '">' + TX[x[1]] + '</td><td class="' + TD + ' text-slate-600" style="min-width:16rem">' + e(x[2]) + '</td></tr>').join('') : '<tr><td colspan="4" class="p-4 text-center text-slate-400">Cargando las verificaciones…</td></tr>';
+      const filasMan = NM_VERIF_MANUALES.map(([k, t, ref, cod]) => { const v = VM[k] || { e: 'pendiente', n: '' };
+        return '<tr><td class="' + TD + ' whitespace-nowrap font-semibold text-[12px]">' + e(cod) + '</td><td class="' + TD + '" style="min-width:18rem">' + e(t) + '<div class="text-[10px] text-slate-400">' + e(ref) + '</div></td><td class="' + TD + '" style="min-width:9rem">' + SEL(NM_ESTADOS, v.e || 'pendiente', 'nmVerifEditar(\'' + k + '\',\'e\',this.value)') + '</td><td class="' + TD + '" style="min-width:16rem"><input class="' + INP + '" value="' + e(v.n || '') + '" placeholder="Comentario o papel de trabajo" onchange="nmVerifEditar(\'' + k + '\',\'n\',this.value)"></td></tr>'; }).join('');
+      const nEval = NM_VERIF_MANUALES.filter(x => ((VM[x[0]] || {}).e || 'pendiente') !== 'pendiente').length;
+      const THB = 'bg-slate-100 text-slate-600 text-[10px] font-bold border-b border-slate-200';
+      const verifHtml = conclH2('nc-s4', '2. Verificaciones', nVer + ' por resolver', nVer ? 'alerta' : 'ok', false) + '<div class="text-xs font-bold text-slate-700 mb-1">Verificaciones automáticas (se recalculan con los cuadres, la sumaria y el programa)</div>' +
+        '<div class="overflow-x-auto"><table class="w-full text-xs border-collapse"><thead class="' + THB + '"><tr><th class="' + TH + '">Referencia</th><th class="' + TH + '">Verificación</th><th class="' + TH + '">Resultado</th><th class="' + TH + '">Detalle</th></tr></thead><tbody>' + filasAut + '</tbody></table></div>' +
+        '<div class="text-xs font-bold text-slate-700 mt-4 mb-1">Evaluaciones del auditor (se guardan por cliente, año y visita): ' + nEval + ' de ' + NM_VERIF_MANUALES.length + ' evaluadas</div>' +
+        '<div class="overflow-x-auto"><table class="w-full text-xs border-collapse"><thead class="' + THB + '"><tr><th class="' + TH + '">Programa</th><th class="' + TH + '">Verificación</th><th class="' + TH + '">Estado</th><th class="' + TH + '">Comentario o papel de trabajo</th></tr></thead><tbody>' + filasMan + '</tbody></table></div>';
+      // 5. Revelaciones
+      const revs = (cl.revelaciones || []).map(x => ({ ...x, id: nmConcK(x.id), mio: false })).concat((D.revExtra || []).map(x => ({ ...x, mio: true })));
+      const nRev = revs.filter(x => ((D.rev || {})[x.id] || {}).notas !== 'si').length;
+      const filasRev = revs.map(x => { const s = (D.rev || {})[x.id] || {}, k = e(x.id);
+        return '<tr><td class="' + TD + ' font-medium text-slate-800" style="min-width:11rem">' + e(x.tema || '') + (x.mio ? ' ' + quitar('rev', x.id) : '') + '</td><td class="' + TD + '" style="min-width:18rem">' + e(x.que || '') + '</td><td class="' + TD + ' text-slate-600" style="min-width:8rem">' + e(x.norma || '') + '</td><td class="' + TD + '" style="min-width:8rem">' + SEL([['', 'Por confirmar'], ['si', 'Sí'], ['no', 'No']], s.notas || '', 'nmConcSet(\'rev\',\'' + k + '\',\'notas\',this.value)') + '</td></tr>'; }).join('');
+      // 5. Conclusión
+      const prep = R.data.elaborado_at ? 'Claude (' + e(nmFmt(R.data.elaborado_at)) + ')' : 'Claude';
+      const marca = (campo, txt) => D[campo + '_por'] ? '<b>' + e(nombreMostrado(D[campo + '_por'])) + '</b> · ' + e(nmFmt(D[campo + '_at'])) + ' <button type="button" onclick="nmConcMarca(\'' + campo + '\',false)" class="text-slate-400 hover:text-red-600 ml-1" title="Quitar">✕</button>' : '<button type="button" onclick="nmConcMarca(\'' + campo + '\',true)" class="px-2.5 py-1 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-100 font-medium">' + txt + '</button>';
+      const add = (ph, id, extra) => '<input id="' + id + '" class="' + INP + '" placeholder="' + ph + '"' + (extra || '') + '>';
+      c.innerHTML = '<div class="p-4 text-sm text-slate-700 max-w-6xl">' +
+        conclTarjetas([
+          { t: 'Por concluir', n: nPc, sub: 'por decidir', estado: nPc ? 'alerta' : 'ok', go: "document.getElementById('nc-s1').scrollIntoView({behavior:'smooth'})" },
+          { t: 'Verificaciones', n: nVer, sub: 'por resolver', estado: nVer ? 'alerta' : 'ok', go: "document.getElementById('nc-s4').scrollIntoView({behavior:'smooth'})" },
+          { t: 'To/Do · Quick Lett · Opinión', n: nEnv, sub: 'por enviar', estado: nEnv ? 'alerta' : 'ok', go: "document.getElementById('nc-s2').scrollIntoView({behavior:'smooth'})" },
+          { t: 'Ajustes propuestos', n: ajs.length ? 'USD ' + fm(tot.m) : '—', sub: ajs.length ? ajs.length + ' asiento(s)' : 'sin asiento', estado: ajs.length ? 'alerta' : 'neutro', go: "document.getElementById('nc-s3').scrollIntoView({behavior:'smooth'})" },
+          { t: 'Revelaciones', n: nRev, sub: 'por confirmar', estado: nRev ? 'alerta' : 'ok', go: "document.getElementById('nc-s5').scrollIntoView({behavior:'smooth'})" },
+          { t: 'Conclusión y ratificación', n: D.ratificado_por ? 'Ratificada' : D.revisado_por ? 'Revisada' : 'Por ratificar', sub: D.ratificado_por ? 'listo' : D.revisado_por ? 'falta ratificar' : 'falta el visto bueno', estado: D.ratificado_por ? 'ok' : 'alerta', go: "document.getElementById('nc-s6').scrollIntoView({behavior:'smooth'})" }
+        ]) +
+        '<p class="text-sm text-slate-600 mb-2">Lo que hay que decidir o hacer, en orden de urgencia. Claude lo propone y el auditor lo completa; todo se guarda al cambiarlo.</p>' +
+        conclH2('nc-s1', '1. Por concluir', nPc + ' por decidir', nPc ? 'alerta' : 'ok', false) +
+        (nPc ? '<div class="font-bold text-slate-800 mb-2 text-sm">Programas por concluir (' + nPc + ')</div><div class="overflow-x-auto border border-slate-200 rounded-xl"><table class="w-full text-left text-xs border-collapse"><thead class="bg-slate-100 text-slate-600 font-bold border-b border-slate-200"><tr><th class="p-2 w-20">Programa</th><th class="p-2 min-w-[320px]">Procedimiento</th><th class="p-2 w-40">Estado</th><th class="p-2 min-w-[300px]">Por resolver</th></tr></thead><tbody>' + filasPc + '</tbody></table></div>' : '<div class="p-4 text-center text-emerald-700 text-sm font-semibold">Nada pendiente: todos los procedimientos están hechos y no quedan puntos por concluir.</div>') +
+        (cerrados.length ? '<div class="text-[11px] text-slate-500 mt-2">Cerrados: ' + cerrados.map(x => e(x.asunto || '') + ' <button type="button" onclick="nmConcSet(\'pc\',\'' + e(x.id) + '\',\'estado\',\'abierto\')" class="underline text-indigo-700">Reabrir</button>').join(' · ') + '</div>' : '') +
+        '<div class="flex flex-wrap gap-2 mt-2 items-center"><div style="width:14rem">' + add('Asunto', 'nc-pc-asunto') + '</div><div style="flex:1;min-width:16rem">' + add('Qué falta', 'nc-pc-falta') + '</div><button type="button" onclick="nmConcNuevo(\'pc\')" class="px-3 py-1 text-xs rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-100 font-medium">+ Agregar</button></div>' +
+        verifHtml +
+        conclH2('nc-s2', '3. To/Do · Quick Lett · Opinión', nEnv + ' por enviar', nEnv ? 'alerta' : 'ok', false) +
+        '<p class="text-xs text-slate-500 mb-2">Envía cada punto a To/Do, Quick Lett u Opinión: pasa al consolidado «To/Do - Quick Lett - Opinión» de este cliente y año (menú Auditoría/Análisis Claves). Al enviarlo queda marcado aquí. El botón resaltado es lo que sugiere Claude.</p>' +
+        '<div class="overflow-x-auto"><table class="w-full text-xs border-collapse"><thead class="bg-slate-100 text-slate-600 text-[10px] font-bold border-b border-slate-200"><tr><th class="' + TH + '">Origen</th><th class="' + TH + '">Punto</th><th class="' + TH + '">Enviar a</th><th class="' + TH + '">No aplica</th><th class="' + TH + '">Comentario</th></tr></thead><tbody>' + (filasEnv || '<tr><td colspan="5" class="' + TD + ' text-slate-400">Sin puntos.</td></tr>') + '</tbody></table></div>' +
+        '<div class="flex flex-wrap gap-2 mt-2 items-center"><div style="flex:1;min-width:20rem">' + add('Otro punto del auditor', 'nc-env-texto') + '</div><button type="button" onclick="nmConcNuevo(\'env\')" class="px-3 py-1 text-xs rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-100 font-medium">+ Agregar</button></div>' +
+        conclH2('nc-s3', '4. Ajustes propuestos', ajs.length ? ajs.length + ' asiento(s)' : 'sin asiento', ajs.length ? 'alerta' : 'neutro', false) +
+        '<div class="overflow-x-auto"><table class="w-full text-xs border-collapse"><thead class="bg-slate-100 text-slate-600 text-[10px] font-bold border-b border-slate-200"><tr><th class="' + TH + '">N.º</th><th class="' + TH + '">Cuenta</th><th class="' + TH + ' text-right">Débito</th><th class="' + TH + ' text-right">Crédito</th><th class="' + TH + '">Concepto</th><th class="' + TH + ' text-right">Efecto en resultados</th><th class="' + TH + '">Efecto tributario</th><th class="' + TH + '">Estado</th></tr></thead><tbody>' + (filasAj || '<tr><td colspan="8" class="' + TD + ' text-slate-400">Claude no propone ajustes.</td></tr>') +
+        (ajs.length ? '<tr class="font-bold bg-slate-50"><td class="' + TD + '" colspan="2">Total</td><td class="' + TD + ' text-right">' + fm(tot.d) + '</td><td class="' + TD + ' text-right">' + fm(tot.h) + '</td><td class="' + TD + '"></td><td class="' + TD + ' text-right">' + fm(tot.r) + '</td><td class="' + TD + '" colspan="2"></td></tr>' : '') + '</tbody></table></div>' +
+        conclH2('nc-s5', '5. Revelaciones', nRev + ' por confirmar', nRev ? 'alerta' : 'ok', false) +
+        '<div class="overflow-x-auto"><table class="w-full text-xs border-collapse"><thead class="bg-slate-100 text-slate-600 text-[10px] font-bold border-b border-slate-200"><tr><th class="' + TH + '">Tema</th><th class="' + TH + '">Qué debe revelarse</th><th class="' + TH + '">Norma</th><th class="' + TH + '">¿Está en las notas?</th></tr></thead><tbody>' + (filasRev || '<tr><td colspan="4" class="' + TD + ' text-slate-400">Sin revelaciones.</td></tr>') + '</tbody></table></div>' +
+        '<div class="flex flex-wrap gap-2 mt-2 items-center"><div style="width:12rem">' + add('Tema', 'nc-rev-tema') + '</div><div style="flex:1;min-width:14rem">' + add('Qué debe revelarse', 'nc-rev-que') + '</div><div style="width:10rem">' + add('Norma', 'nc-rev-norma') + '</div><button type="button" onclick="nmConcNuevo(\'rev\')" class="px-3 py-1 text-xs rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-100 font-medium">+ Agregar</button></div>' +
+        conclH2('nc-s6', '6. Conclusión y ratificación', D.ratificado_por ? 'ratificada' : 'por ratificar', D.ratificado_por ? 'ok' : 'alerta', false) +
+        '<div class="grid gap-4" style="grid-template-columns:repeat(auto-fit,minmax(20rem,1fr))"><div><div class="text-xs font-bold text-slate-600 mb-1">Conclusión de Claude</div><div class="p-3 border border-slate-200 rounded-lg bg-slate-50 leading-relaxed whitespace-pre-wrap">' + e(cl.conclusion || '') + '</div></div>' +
+        '<div><div class="text-xs font-bold text-slate-600 mb-1">Conclusión del auditor</div><textarea id="nc-crit" rows="7" class="w-full p-3 border border-slate-300 rounded-lg text-sm leading-relaxed outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Escribe aquí la conclusión del auditor...">' + e(D.conclusion_auditor || '') + '</textarea><div class="flex flex-wrap items-center gap-3 mt-2"><button type="button" onclick="nmConcCriterio()" class="px-3 py-1.5 text-xs rounded-lg transition bg-slate-200 text-slate-900 hover:bg-slate-300 font-semibold">Guardar conclusión</button><span class="text-xs text-slate-500">' + (D.conclusion_por ? 'Guardado por ' + e(nombreMostrado(D.conclusion_por)) + ' · ' + e(nmFmt(D.conclusion_at)) : '') + '</span></div></div></div>' +
+        '<div class="flex flex-wrap items-center gap-x-6 gap-y-2 mt-4 text-xs text-slate-600"><span>Preparado por: <b>' + prep + '</b></span><span>Revisado por: ' + marca('revisado', 'Marcar revisado') + '</span><span>Ratificado por: ' + marca('ratificado', 'Ratificar') + '</span></div></div>';
+    }
+    async function nmConcAj(n, v) { if (await nmConcGuardar(d => { d.ajEstado = d.ajEstado || {}; d.ajEstado[n] = v; })) nmConcPintar(); }
+    async function nmGuardar(codigo, cambios) {
+      const actual = nmE.filas[codigo] || {};
+      const fila = { cliente_id: nmE.cliente, anio: Number(nmE.anio), visita: nmE.visita, sumaria: 'RC', hoja: 'nomina', codigo, ...cambios, actualizado_por: nombreUsuarioActivo() || null, updated_at: new Date().toISOString() };
+      const { data, error } = await supabaseClient.from('v2_programa').upsert(fila, { onConflict: 'cliente_id,anio,visita,sumaria,hoja,codigo' }).select().single();
+      if (error) { $im('nm-estado').textContent = 'No se pudo guardar: ' + (error.message || error); return false; }
+      nmE.filas[codigo] = { ...actual, ...data };
+      const u = $im('nm-actualizado'); u.value = nombreMostrado(data.actualizado_por) || '';
+      $im('nm-estado').textContent = '';
+      return true;
+    }
+    async function nmRevisar(codigo, marcar) {
+      const ok = await nmGuardar(codigo, marcar ? { revisado_por: nombreUsuarioActivo() || null, revisado_at: new Date().toISOString() } : { revisado_por: null, revisado_at: null });
+      if (ok) nmPintar();
+    }
+    async function nmPtSubir(codigo, inp) {
+      const file = inp.files && inp.files[0]; if (!file) return;
+      const limpio = file.name.replace(/[^\w.\-]+/g, '_');
+      const ruta = `${nmE.cliente}/${nmE.anio}_${nmE.visita}/${codigo}/${Date.now()}_${limpio}`;
+      $im('nm-estado').textContent = 'Subiendo…';
+      const up = await supabaseClient.storage.from('papeles-v2').upload(ruta, file, { upsert: false });
+      if (up.error) { $im('nm-estado').textContent = 'No se pudo subir: ' + up.error.message; return; }
+      const pt = ((nmE.filas[codigo] || {}).pt || []).concat([{ ref: '', nombre: file.name, ruta, tipo: file.type || '', por: nombreUsuarioActivo() || '', en: new Date().toISOString() }]);
+      if (await nmGuardar(codigo, { pt })) nmPintar();
+    }
+    async function nmPtBajar(codigo, i) {
+      const t = ((nmE.filas[codigo] || {}).pt || [])[i]; if (!t) return;
+      const { data, error } = await supabaseClient.storage.from('papeles-v2').createSignedUrl(t.ruta, 120, { download: t.nombre });
+      if (error || !data) { $im('nm-estado').textContent = 'No se pudo descargar: ' + ((error || {}).message || ''); return; }
+      const a = document.createElement('a'); a.href = data.signedUrl; a.download = t.nombre; document.body.appendChild(a); a.click(); a.remove();
+    }
+    async function nmPtQuitar(codigo, i) {
+      const lista = ((nmE.filas[codigo] || {}).pt || []).slice(), t = lista[i]; if (!t) return;
+      if (!confirm('¿Quitar el papel de trabajo "' + t.nombre + '"?')) return;
+      lista.splice(i, 1);
+      if (await nmGuardar(codigo, { pt: lista })) { supabaseClient.storage.from('papeles-v2').remove([t.ruta]); nmPintar(); }
     }
     async function abrirImport() {
       asegurarClientesEn('im-cliente');
