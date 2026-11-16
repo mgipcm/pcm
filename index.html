@@ -15526,9 +15526,18 @@ ${cont.innerHTML}
     const CB_H2 = 'font-bold text-slate-800 text-base border-b border-slate-200 mt-6 mb-2 pb-1 px-3';
     function cbHtmlCuadres() {
       if (!cbE.cuentas.length) return pcHtmlAviso('AA', cbE.cliente, cbE.anio, cbE.visita, 'bancos');
-      return '<div class="pb-4"><h2 id="cb-sec-libros" class="' + CB_H2 + '" style="margin-top:12px">1. Comparación con libros</h2>' + cbHtmlLibros() +
-        '<h2 id="cb-sec-resumen" class="' + CB_H2 + '">2. Resumen de conciliaciones</h2>' + cbHtmlResumen() +
+      return '<div class="pb-4">' + conclH2('cb-sec-libros', '1. Comparación con libros', '', 'neutro', true) + cbHtmlLibros() +
+        conclH2('cb-sec-resumen', '2. Resumen de conciliaciones', '', 'neutro') + cbHtmlResumen() +
         '<div class="px-3">' + cbHtmlMemo() + '</div></div>';
+    }
+    // ----- Título de sección con número en círculo, franja suave y contador a la derecha -----
+    function conclH2(id, titulo, cont, estado, primero) {
+      const m = /^(\d+)\.\s*(.*)$/.exec(titulo) || [0, '', titulo];
+      const C = { alerta: ['#fff7ed', '#fdba74', '#c2410c'], ok: ['#f0fdf4', '#86efac', '#15803d'], neutro: ['#f1f5f9', '#cbd5e1', '#475569'] }[estado || 'neutro'];
+      return '<h2 id="' + id + '" style="display:flex;align-items:center;gap:10px;margin:' + (primero ? '10px' : '28px') + ' 0 10px;padding:8px 12px;background:#eceff3;border-left:4px solid #334155;border-radius:6px;font-size:15px;font-weight:700;color:#1e293b">' +
+        (m[1] ? '<span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:999px;background:#334155;color:#fff;font-size:12px;font-weight:700;flex:none">' + m[1] + '</span>' : '') +
+        '<span>' + m[2] + '</span>' +
+        (cont ? '<span style="margin-left:auto;font-size:11px;font-weight:600;padding:2px 10px;border-radius:999px;background:' + C[0] + ';border:1px solid ' + C[1] + ';color:' + C[2] + ';white-space:nowrap">' + cont + '</span>' : '') + '</h2>';
     }
     // ----- Tarjetas de estado de "Conclusiones de la cuenta" (compartidas por Bancos e Inventarios v2) -----
     function conclTarjetaClic(el) {
@@ -15562,12 +15571,12 @@ ${cont.innerHTML}
         { t: 'Conclusión y ratificación', n: e1 === 'revisado' ? 'Ratificada' : 'Por ratificar', sub: e1 === 'revisado' ? 'listo' : 'falta el visto bueno', estado: e1 === 'revisado' ? 'ok' : 'alerta', go: go('cb-sec-concl') }
       ]) +
         '<p class="text-sm text-slate-600 mb-2">Lo que hay que decidir o hacer. Claude lo propone y el auditor lo completa.</p>' +
-        '<h2 id="cb-sec-concluir" class="' + CB_H2.replace(' px-3', '') + '">1. Por concluir</h2>' + cbHtmlConcluir() +
-        '<h2 id="cb-sec-todo" class="' + CB_H2.replace(' px-3', '') + '">2. To/Do · Quick Lett · Opinión</h2>' + cbHtmlConclEnvios() +
-        '<h2 id="cb-sec-ajustes" class="' + CB_H2.replace(' px-3', '') + '">3. Ajustes propuestos</h2>' + cbHtmlConclAjustes() +
-        '<h2 id="cb-sec-verif" class="' + CB_H2.replace(' px-3', '') + '">4. Verificaciones</h2><div class="border border-slate-200 rounded-xl overflow-hidden">' + cbHtmlVerif() + '</div>' +
-        '<h2 id="cb-sec-revel" class="' + CB_H2.replace(' px-3', '') + '">5. Revelaciones</h2><div class="border border-slate-200 rounded-xl">' + cbHtmlRevel() + '</div>' +
-        '<h2 id="cb-sec-concl" class="' + CB_H2.replace(' px-3', '') + '">6. Conclusión y ratificación</h2>' + cbHtmlConclCriterio() + cbHtmlRatificacion() + '</div>';
+        conclH2('cb-sec-concluir', '1. Por concluir', P.grupos.length + ' por decidir', P.grupos.length ? 'alerta' : 'ok', false) + '' + cbHtmlConcluir() +
+        conclH2('cb-sec-todo', '2. To/Do · Quick Lett · Opinión', nEnvB + ' por enviar', nEnvB ? 'alerta' : 'ok', false) + '' + cbHtmlConclEnvios() +
+        conclH2('cb-sec-ajustes', '3. Ajustes propuestos', t.debe ? 'USD ' + formatoNumeroAnexo(t.debe) : 'sin asiento', t.debe ? 'alerta' : 'neutro', false) + '' + cbHtmlConclAjustes() +
+        conclH2('cb-sec-verif', '4. Verificaciones', P.ver.length + ' por resolver', P.ver.length ? 'alerta' : 'ok', false) + '<div class="border border-slate-200 rounded-xl overflow-hidden">' + cbHtmlVerif() + '</div>' +
+        conclH2('cb-sec-revel', '5. Revelaciones', nRev + ' de 2 completadas', nRev >= 2 ? 'ok' : 'alerta', false) + '<div class="border border-slate-200 rounded-xl">' + cbHtmlRevel() + '</div>' +
+        conclH2('cb-sec-concl', '6. Conclusión y ratificación', e1 === 'revisado' ? 'ratificada' : 'por ratificar', e1 === 'revisado' ? 'ok' : 'alerta', false) + '' + cbHtmlConclCriterio() + cbHtmlRatificacion() + '</div>';
     }
     function cbRender() {
       flechasLados('sec-concil', 'cb-panel');
@@ -20061,7 +20070,7 @@ ${cont.innerHTML}
         return '<tr><td class="' + TD + ' whitespace-nowrap font-semibold text-[12px]">' + e(cod) + '</td><td class="' + TD + '" style="min-width:18rem">' + e(t) + '<div class="text-[10px] text-slate-400">' + e(ref) + '</div></td><td class="' + TD + '" style="min-width:9rem">' + SEL(V2_ESTADOS, v.e || 'pendiente', 'v2VerifEditar(\'' + k + '\',\'e\',this.value)') + '</td><td class="' + TD + '" style="min-width:16rem"><input class="' + INP + '" value="' + e(v.n || '') + '" placeholder="Comentario o papel de trabajo" onchange="v2VerifEditar(\'' + k + '\',\'n\',this.value)"></td></tr>'; }).join('');
       const nEval = V2_VERIF_MANUALES.filter(x => ((VM[x[0]] || {}).e || 'pendiente') !== 'pendiente').length;
       const THB = 'bg-slate-100 text-slate-600 text-[10px] font-bold border-b border-slate-200';
-      const verifHtml = '<h2 id="vc-s4" class="' + H2 + '">4. Verificaciones</h2><div class="text-xs font-bold text-slate-700 mb-1">Verificaciones automáticas (se recalculan con los cuadres, la sumaria y el programa)</div>' +
+      const verifHtml = conclH2('vc-s4', '4. Verificaciones', nVer + ' por resolver', nVer ? 'alerta' : 'ok', false) + '<div class="text-xs font-bold text-slate-700 mb-1">Verificaciones automáticas (se recalculan con los cuadres, la sumaria y el programa)</div>' +
         '<div class="overflow-x-auto"><table class="w-full text-xs border-collapse"><thead class="' + THB + '"><tr><th class="' + TH + '">Referencia</th><th class="' + TH + '">Verificación</th><th class="' + TH + '">Resultado</th><th class="' + TH + '">Detalle</th></tr></thead><tbody>' + filasAut + '</tbody></table></div>' +
         '<div class="text-xs font-bold text-slate-700 mt-4 mb-1">Evaluaciones del auditor (se guardan por cliente, año y visita): ' + nEval + ' de ' + V2_VERIF_MANUALES.length + ' evaluadas</div>' +
         '<div class="overflow-x-auto"><table class="w-full text-xs border-collapse"><thead class="' + THB + '"><tr><th class="' + TH + '">Programa</th><th class="' + TH + '">Verificación</th><th class="' + TH + '">Estado</th><th class="' + TH + '">Comentario o papel de trabajo</th></tr></thead><tbody>' + filasMan + '</tbody></table></div>';
@@ -20084,22 +20093,22 @@ ${cont.innerHTML}
           { t: 'Conclusión y ratificación', n: D.ratificado_por ? 'Ratificada' : D.revisado_por ? 'Revisada' : 'Por ratificar', sub: D.ratificado_por ? 'listo' : D.revisado_por ? 'falta ratificar' : 'falta el visto bueno', estado: D.ratificado_por ? 'ok' : 'alerta', go: "document.getElementById('vc-s6').scrollIntoView({behavior:'smooth'})" }
         ]) +
         '<p class="text-sm text-slate-600 mb-2">Lo que hay que decidir o hacer, en orden de urgencia. Claude lo propone y el auditor lo completa; todo se guarda al cambiarlo.</p>' +
-        '<h2 id="vc-s1" class="' + H2 + '">1. Por concluir</h2>' +
+        conclH2('vc-s1', '1. Por concluir', nPc + ' por decidir', nPc ? 'alerta' : 'ok', false) +
         (nPc ? '<div class="font-bold text-slate-800 mb-2 text-sm">Programas por concluir (' + nPc + ') · <button type="button" onclick="v2IrTab(\'programa\')" class="underline text-indigo-700 font-bold">ir al Programa de trabajo</button> · <button type="button" onclick="document.getElementById(\'vc-s4\').scrollIntoView({behavior:\'smooth\'})" class="underline text-indigo-700 font-bold">ir a Verificaciones</button></div><div class="overflow-x-auto border border-slate-200 rounded-xl"><table class="w-full text-left text-xs border-collapse"><thead class="bg-slate-100 text-slate-600 font-bold border-b border-slate-200"><tr><th class="p-2 w-20">Programa</th><th class="p-2 min-w-[320px]">Procedimiento</th><th class="p-2 w-28">Estado</th><th class="p-2 min-w-[300px]">Por resolver</th></tr></thead><tbody>' + filasPc + '</tbody></table></div>' : '<div class="p-4 text-center text-emerald-700 text-sm font-semibold">Nada pendiente: todos los procedimientos están hechos y no quedan puntos por concluir.</div>') +
         (cerrados.length ? '<div class="text-[11px] text-slate-500 mt-2">Cerrados: ' + cerrados.map(x => e(x.asunto || '') + ' <button type="button" onclick="v2ConcSet(\'pc\',\'' + e(x.id) + '\',\'estado\',\'abierto\')" class="underline text-indigo-700">Reabrir</button>').join(' · ') + '</div>' : '') +
         '<div class="flex flex-wrap gap-2 mt-2 items-center"><div style="width:14rem">' + add('Asunto', 'vc-pc-asunto') + '</div><div style="flex:1;min-width:16rem">' + add('Qué falta', 'vc-pc-falta') + '</div><button type="button" onclick="v2ConcNuevo(\'pc\')" class="px-3 py-1 text-xs rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-100 font-medium">+ Agregar</button></div>' +
-        '<h2 id="vc-s2" class="' + H2 + '">2. To/Do · Quick Lett · Opinión</h2>' +
+        conclH2('vc-s2', '2. To/Do · Quick Lett · Opinión', nEnv + ' por enviar', nEnv ? 'alerta' : 'ok', false) +
         '<p class="text-xs text-slate-500 mb-2">Envía cada punto a To/Do, Quick Lett u Opinión: pasa al consolidado «To/Do - Quick Lett - Opinión» de este cliente y año (menú Auditoría/Análisis Claves). Al enviarlo queda marcado aquí. El botón resaltado es lo que sugiere Claude.</p>' +
         '<div class="overflow-x-auto"><table class="w-full text-xs border-collapse"><thead class="bg-slate-100 text-slate-600 text-[10px] font-bold border-b border-slate-200"><tr><th class="' + TH + '">Origen</th><th class="' + TH + '">Punto</th><th class="' + TH + '">Enviar a</th></tr></thead><tbody>' + (filasEnv || '<tr><td colspan="3" class="' + TD + ' text-slate-400">Sin puntos.</td></tr>') + '</tbody></table></div>' +
         '<div class="flex flex-wrap gap-2 mt-2 items-center"><div style="flex:1;min-width:20rem">' + add('Otro punto del auditor', 'vc-env-texto') + '</div><button type="button" onclick="v2ConcNuevo(\'env\')" class="px-3 py-1 text-xs rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-100 font-medium">+ Agregar</button></div>' +
-        '<h2 id="vc-s3" class="' + H2 + '">3. Ajustes propuestos</h2>' +
+        conclH2('vc-s3', '3. Ajustes propuestos', ajs.length ? ajs.length + ' asiento(s)' : 'sin asiento', ajs.length ? 'alerta' : 'neutro', false) +
         '<div class="overflow-x-auto"><table class="w-full text-xs border-collapse"><thead class="bg-slate-100 text-slate-600 text-[10px] font-bold border-b border-slate-200"><tr><th class="' + TH + '">N.º</th><th class="' + TH + '">Cuenta</th><th class="' + TH + ' text-right">Débito</th><th class="' + TH + ' text-right">Crédito</th><th class="' + TH + '">Concepto</th><th class="' + TH + ' text-right">Efecto en resultados</th><th class="' + TH + '">Efecto tributario</th><th class="' + TH + '">Estado</th></tr></thead><tbody>' + (filasAj || '<tr><td colspan="8" class="' + TD + ' text-slate-400">Claude no propone ajustes.</td></tr>') +
         (ajs.length ? '<tr class="font-bold bg-slate-50"><td class="' + TD + '" colspan="2">Total</td><td class="' + TD + ' text-right">' + fm(tot.d) + '</td><td class="' + TD + ' text-right">' + fm(tot.h) + '</td><td class="' + TD + '"></td><td class="' + TD + ' text-right">' + fm(tot.r) + '</td><td class="' + TD + '" colspan="2"></td></tr>' : '') + '</tbody></table></div>' +
         verifHtml +
-        '<h2 id="vc-s5" class="' + H2 + '">5. Revelaciones</h2>' +
+        conclH2('vc-s5', '5. Revelaciones', nRev + ' por confirmar', nRev ? 'alerta' : 'ok', false) +
         '<div class="overflow-x-auto"><table class="w-full text-xs border-collapse"><thead class="bg-slate-100 text-slate-600 text-[10px] font-bold border-b border-slate-200"><tr><th class="' + TH + '">Tema</th><th class="' + TH + '">Qué debe revelarse</th><th class="' + TH + '">Norma</th><th class="' + TH + '">¿Está en las notas?</th></tr></thead><tbody>' + (filasRev || '<tr><td colspan="4" class="' + TD + ' text-slate-400">Sin revelaciones.</td></tr>') + '</tbody></table></div>' +
         '<div class="flex flex-wrap gap-2 mt-2 items-center"><div style="width:12rem">' + add('Tema', 'vc-rev-tema') + '</div><div style="flex:1;min-width:14rem">' + add('Qué debe revelarse', 'vc-rev-que') + '</div><div style="width:10rem">' + add('Norma', 'vc-rev-norma') + '</div><button type="button" onclick="v2ConcNuevo(\'rev\')" class="px-3 py-1 text-xs rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-100 font-medium">+ Agregar</button></div>' +
-        '<h2 id="vc-s6" class="' + H2 + '">6. Conclusión y ratificación</h2>' +
+        conclH2('vc-s6', '6. Conclusión y ratificación', D.ratificado_por ? 'ratificada' : 'por ratificar', D.ratificado_por ? 'ok' : 'alerta', false) +
         '<div class="grid gap-4" style="grid-template-columns:repeat(auto-fit,minmax(20rem,1fr))"><div><div class="text-xs font-bold text-slate-600 mb-1">Conclusión de Claude</div><div class="p-3 border border-slate-200 rounded-lg bg-slate-50 leading-relaxed whitespace-pre-wrap">' + e(cl.conclusion || '') + '</div></div>' +
         '<div><div class="text-xs font-bold text-slate-600 mb-1">Conclusión del auditor</div><textarea id="vc-crit" rows="7" class="w-full p-3 border border-slate-300 rounded-lg text-sm leading-relaxed outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Escribe aquí la conclusión del auditor...">' + e(D.conclusion_auditor || '') + '</textarea><div class="flex flex-wrap items-center gap-3 mt-2"><button type="button" onclick="v2ConcCriterio()" class="px-3 py-1.5 text-xs rounded-lg transition bg-slate-200 text-slate-900 hover:bg-slate-300 font-semibold">Guardar conclusión</button><span class="text-xs text-slate-500">' + (D.conclusion_por ? 'Guardado por ' + e(nombreMostrado(D.conclusion_por)) + ' · ' + e(v2Fmt(D.conclusion_at)) : '') + '</span></div></div></div>' +
         '<div class="flex flex-wrap items-center gap-x-6 gap-y-2 mt-4 text-xs text-slate-600"><span>Preparado por: <b>' + prep + '</b></span><span>Revisado por: ' + marca('revisado', 'Marcar revisado') + '</span><span>Ratificado por: ' + marca('ratificado', 'Ratificar') + '</span></div></div>';
