@@ -18775,7 +18775,7 @@ ${cont.innerHTML}
         const rev = f.revisado_at ? `<div class="font-semibold text-emerald-700">✔ ${h(nombreMostrado(f.revisado_por) || '')}</div><div class="text-[10px] text-slate-400 mt-0.5">${nmFmt(f.revisado_at)}</div><button type="button" onclick="nmRevisar('${k}',false)" class="text-[10px] text-slate-400 hover:underline mt-1">Quitar revisión</button>` : `<button type="button" onclick="nmRevisar('${k}',true)" class="px-2.5 py-1 text-[11px] font-semibold border border-slate-300 rounded-lg bg-white hover:bg-slate-50">Marcar revisado</button>`;
         filas += `<tr id="nm-prog-${k}" class="align-top">
           <td class="p-3 border-r border-slate-200 font-semibold text-slate-700 whitespace-nowrap">${k}</td>
-          <td class="p-3 border-r border-slate-200 text-slate-700 leading-relaxed text-[12px]">${p.titulo ? `<div class="font-bold text-slate-800 mb-0.5 text-[13px]">${h(p.titulo)}</div>` : ''}${h(p.procedimiento || '')}</td>
+          <td class="p-3 border-r border-slate-200 text-slate-700 leading-relaxed text-[12px]">${p.titulo ? `<div class="font-bold text-slate-800 mb-0.5 text-[13px]">${h(p.titulo)}</div>` : ''}${h(p.procedimiento || '')}${p.codigo === 'RC-02' ? `<div class="mt-1.5"><button type="button" onclick="nmIrConsolidado()" class="text-[11px] font-bold hover:underline" style="color:#449964">Abrir el consolidado de gastos de nómina →</button></div>` : ''}</td>
           <td class="p-3 border-r border-slate-200 text-[12px]" >${nmNorma(p)}</td>
           <td class="p-3 border-r border-slate-200 whitespace-nowrap text-[12px]">${elab}${estH}</td>
           <td class="p-3 border-r border-slate-200 whitespace-nowrap text-[12px]">${rev}</td>
@@ -19015,6 +19015,14 @@ ${cont.innerHTML}
       ['Deterioros y provisiones', /deterioro|provision|incobrab|baja|obsolesc/],
       ['Costo de ventas e inventarios', /costo|mercaderia|inventario|reversion|compras/]
     ];
+    const NMK_SUB = [
+      ['Aportes al IESS', /aporte|iess|patronal/],
+      ['Beneficios sociales (décimos, fondos de reserva, vacaciones, utilidades)', /decimo|fondo.{0,3}reserva|vacacion|utilidad|participacion/],
+      ['Indemnizaciones, desahucio y jubilación', /indemniz|desahucio|jubilaci/],
+      ['Bonos e incentivos', /bono|incentivo|bonific|comision/],
+      ['Remuneraciones (sueldos, salarios y horas extra)', /sueldo|salario|horas.{0,3}extra|remuneraci|nomina/]
+    ];
+    function nmSubtipoNomina(nombre) { const t = quitarAcentosAnexo(String(nombre || '')).toLowerCase(); for (const [n, re] of NMK_SUB) if (re.test(t)) return n; return 'Otros beneficios al personal (uniformes, capacitación, alimentación, movilización)'; }
     function nmTipoGasto(nombre) { const t = quitarAcentosAnexo(String(nombre || '')).toLowerCase(); for (const [n, re] of NMK_TIPOS) if (re.test(t)) return n; return 'Otros gastos'; }
     async function nmConsAbrir() {
       const key = [nmE.cliente, nmE.anio, nmE.visita].join('|');
@@ -19030,22 +19038,23 @@ ${cont.innerHTML}
       if (!nmE.cons || nmE.cons.key !== k0) return;
       Object.assign(nmE.cons, { cargado: true, filas: data, error: err }); nmCuaPintar();
     }
+    function nmIrConsolidado() { nmE.tab = 'cuadres'; nmPintar(); nmConsAbrir(); }
     function nmConsCerrar() { if (nmE.cons) nmE.cons.abierto = false; nmCuaPintar(); }
     function nmConsDatos() {
       const mapa = {};
       (nmE.cons.filas || []).forEach(x => { const k = x.sumaria + '|' + String(x.codigo || '').trim(); const o = mapa[k] || (mapa[k] = { sumaria: x.sumaria, codigo: String(x.codigo || '').trim(), cuenta: x.cuenta || '', saldo: 0 }); o.saldo += Number(x.saldo) || 0; });
-      const lista = Object.values(mapa).map(o => ({ ...o, saldo: Math.round(o.saldo * 100) / 100, tipo: nmTipoGasto(o.cuenta) }));
+      const lista = Object.values(mapa).filter(o => nmTipoGasto(o.cuenta) === 'Sueldos y beneficios a empleados').map(o => ({ ...o, saldo: Math.round(o.saldo * 100) / 100, tipo: nmSubtipoNomina(o.cuenta) }));
       lista.sort((a, b) => NMK_SUMS.indexOf(a.sumaria) - NMK_SUMS.indexOf(b.sumaria) || String(a.codigo).localeCompare(String(b.codigo), 'es', { numeric: true }));
       return lista;
     }
     function nmConsNombreSum(sm) { const c = (catalogoCuentas || []).find(k => k.sumaria === sm); return c ? c.cuenta : sm; }
     function nmConsPintar() {
       const c = $im('nm-panel'), fm = formatoNumeroAnexo, e = escapeHtml, K = nmE.cons;
-      const barra = '<div class="flex items-center justify-between gap-2 flex-wrap mb-3"><div class="text-sm font-bold text-slate-800">Consolidado de gastos</div><div class="flex items-center gap-3"><button type="button" onclick="nmConsExcel()" class="text-xs font-bold hover:underline" style="color:#449964">Descargar en Excel</button><button type="button" onclick="nmConsCerrar()" class="text-xs font-bold text-slate-600 hover:underline">← Volver a los cuadres</button></div></div>';
+      const barra = '<div class="flex items-center justify-between gap-2 flex-wrap mb-3"><div class="text-sm font-bold text-slate-800">Consolidado de gastos de nómina</div><div class="flex items-center gap-3"><button type="button" onclick="nmConsExcel()" class="text-xs font-bold hover:underline" style="color:#449964">Descargar en Excel</button><button type="button" onclick="nmConsCerrar()" class="text-xs font-bold text-slate-600 hover:underline">← Volver a los cuadres</button></div></div>';
       if (!K.cargado) { c.innerHTML = '<div class="p-4">' + barra + '<p class="text-xs text-slate-500">Cargando el balance…</p></div>'; return; }
       if (K.error) { c.innerHTML = '<div class="p-4">' + barra + '<p class="text-xs text-red-600 font-bold">No se pudo cargar: ' + e(K.error) + '</p></div>'; return; }
       const L = nmConsDatos();
-      if (!L.length) { c.innerHTML = '<div class="p-4">' + barra + '<p class="text-xs text-slate-500">No hay cuentas de costos y gastos (sumarias RB, RC, RD y RE) en el balance de este cliente, año y visita.</p></div>'; return; }
+      if (!L.length) { c.innerHTML = '<div class="p-4">' + barra + '<p class="text-xs text-slate-500">No hay cuentas de nómina (sueldos, beneficios, aportes) en costos y gastos (sumarias RB, RC, RD y RE) del balance de este cliente, año y visita.</p></div>'; return; }
       const R2 = x => Math.round(x * 100) / 100, th = 'p-3 border-r border-slate-200', td = 'p-3 border-r border-slate-200 text-right whitespace-nowrap', tc = 'p-3 border-r border-slate-200 text-[12px] text-slate-800';
       const sums = NMK_SUMS.filter(sm => L.some(x => x.sumaria === sm));
       const tipos = [...new Set(L.map(x => x.tipo))].sort((a, b) => R2(L.filter(x => x.tipo === b).reduce((t, x) => t + x.saldo, 0)) - R2(L.filter(x => x.tipo === a).reduce((t, x) => t + x.saldo, 0)));
@@ -19056,7 +19065,7 @@ ${cont.innerHTML}
       const det = sums.map(sm => { const Ls = L.filter(x => x.sumaria === sm); return '<div class="border border-slate-200 rounded-xl shadow-sm bg-white overflow-x-auto mb-4"><div class="px-4 py-3 border-b border-slate-200 bg-slate-100 text-sm font-bold text-slate-800">' + e(nmConsNombreSum(sm)) + '</div><table class="w-full text-left text-xs"><thead><tr class="bg-slate-50 border-b border-slate-200"><th class="' + th + '">Código</th><th class="' + th + '">Cuenta</th><th class="' + th + '">Tipo de gasto</th><th class="p-3 text-right">Saldo</th></tr></thead><tbody>' +
         Ls.map(x => '<tr class="border-b border-slate-100"><td class="' + tc + '">' + e(x.codigo) + '</td><td class="' + tc + '">' + e(x.cuenta) + '</td><td class="' + tc + ' text-slate-500">' + e(x.tipo) + '</td><td class="p-3 text-right whitespace-nowrap">' + fm(x.saldo) + '</td></tr>').join('') +
         '<tr style="background:#f8fafc"><td class="' + tc + ' font-bold" colspan="3">Subtotal ' + e(nmConsNombreSum(sm)) + '</td><td class="p-3 text-right font-bold whitespace-nowrap">' + fm(tot(Ls)) + '</td></tr></tbody></table></div>'; }).join('');
-      c.innerHTML = '<div class="p-4">' + barra + '<p class="text-[11px] text-slate-500 mb-3">Se arma con el balance de comprobación del cliente: costos (RB), gastos de administración (RC), de ventas (RD) y financieros (RE), acumulados por tipo de gasto según el nombre de cada cuenta. Revisa la clasificación y las cuentas en «Otros gastos». Total consolidado: ' + fm(totalGen) + '.</p>' + matriz + det + '</div>';
+      c.innerHTML = '<div class="p-4">' + barra + '<p class="text-[11px] text-slate-500 mb-3">Se arma con el balance de comprobación del cliente, solo con las cuentas de nómina de costos (RB), administración (RC), ventas (RD) y financieros (RE), acumuladas por tipo según el nombre de cada cuenta. Las pruebas de nómina se referencian sobre este consolidado. Revisa que ninguna cuenta de nómina haya quedado fuera. Total consolidado: ' + fm(totalGen) + '.</p>' + matriz + det + '</div>';
     }
     async function nmConsExcel() {
       if (!window.ExcelJS) { alert('No se pudo cargar el generador de Excel. Revisa tu conexión a internet.'); return; }
@@ -19066,13 +19075,13 @@ ${cont.innerHTML}
       const info = [['Cliente', nmE.cliente], ['Año', nmE.anio], ['Visita', nmE.visita], ['Preparado por', (typeof nombreUsuarioActivo === 'function' && nombreUsuarioActivo()) || '']];
       const porTipo = [['Tipo de gasto', ...sums.map(nmConsNombreSum), 'Total'], ...tipos.map(t => [t, ...sums.map(sm => R2(L.filter(x => x.tipo === t && x.sumaria === sm).reduce((a, x) => a + x.saldo, 0))), R2(L.filter(x => x.tipo === t).reduce((a, x) => a + x.saldo, 0))]), ['Total costos y gastos', ...sums.map(sm => R2(L.filter(x => x.sumaria === sm).reduce((a, x) => a + x.saldo, 0))), R2(L.reduce((a, x) => a + x.saldo, 0))]];
       const detalle = [['Sumaria', 'Código', 'Cuenta', 'Tipo de gasto', 'Saldo'], ...L.map(x => [nmConsNombreSum(x.sumaria), x.codigo, x.cuenta, x.tipo, x.saldo])];
-      const hojas = [{ nombre: 'Por tipo de gasto', aoa: porTipo, anchos: [{ wch: 36 }, ...sums.map(() => ({ wch: 22 })), { wch: 18 }], op: { titulo: 'Consolidado de gastos por tipo', info, totales: [] } }, { nombre: 'Detalle por cuenta', aoa: detalle, anchos: [{ wch: 30 }, { wch: 14 }, { wch: 42 }, { wch: 34 }, { wch: 16 }], op: { titulo: 'Consolidado de gastos: detalle', info, totales: [] } }];
-      try { await arrXlsxConFormato(hojas, 'Consolidado de gastos', 'Consolidado_de_gastos_' + String(nmE.cliente).replace(/[^A-Za-z0-9]+/g, '_') + '_' + nmE.anio + '.xlsx'); } catch (er) { alert('No se pudo armar el Excel: ' + (er.message || er)); }
+      const hojas = [{ nombre: 'Por tipo de gasto', aoa: porTipo, anchos: [{ wch: 36 }, ...sums.map(() => ({ wch: 22 })), { wch: 18 }], op: { titulo: 'Consolidado de gastos de nómina por tipo', info, totales: [] } }, { nombre: 'Detalle por cuenta', aoa: detalle, anchos: [{ wch: 30 }, { wch: 14 }, { wch: 42 }, { wch: 34 }, { wch: 16 }], op: { titulo: 'Consolidado de gastos de nómina: detalle', info, totales: [] } }];
+      try { await arrXlsxConFormato(hojas, 'Consolidado de gastos de nómina', 'Consolidado_nomina_' + String(nmE.cliente).replace(/[^A-Za-z0-9]+/g, '_') + '_' + nmE.anio + '.xlsx'); } catch (er) { alert('No se pudo armar el Excel: ' + (er.message || er)); }
     }
     function nmCuaPintar() {
       if (nmE.cons && nmE.cons.abierto && nmE.cliente) { nmConsPintar(); return; }
       nmCuaPintarBase();
-      const c = $im('nm-panel'); if (c && nmE.cliente) c.insertAdjacentHTML('afterbegin', '<div class="flex justify-end px-4 pt-3"><button type="button" onclick="nmConsAbrir()" class="px-3 py-1.5 rounded-lg text-xs font-bold text-white" style="background:#449964" title="Consolida los costos y gastos del balance y los acumula por tipo de gasto">Consolidado de gastos</button></div>');
+      const c = $im('nm-panel'); if (c && nmE.cliente) c.insertAdjacentHTML('afterbegin', '<div class="flex justify-end px-4 pt-3"><button type="button" onclick="nmConsAbrir()" class="px-3 py-1.5 rounded-lg text-xs font-bold text-white" style="background:#449964" title="Consolida los gastos de nómina del balance y los acumula por tipo">Consolidado de gastos</button></div>');
     }
     function nmCuaPintarBase() {
       const c = $im('nm-panel'), R = nmE.res, B = nmE.bal, fm = formatoNumeroAnexo, e = escapeHtml;
