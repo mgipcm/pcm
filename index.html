@@ -13634,7 +13634,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
         const sa = document.getElementById('cb-anio');
         if (sa) { if (![...sa.options].some(o => o.value === String(r.anio))) sa.add(new Option('Año ' + r.anio, String(r.anio))); sa.value = String(r.anio); }
         const sv = document.getElementById('cb-visita'); if (sv) sv.value = r.visita === 'preliminar' ? 'preliminar' : 'final';
-        cbE.tab = 'libros'; cbCargar();
+        cbE.tab = 'programa'; cbCargar();
         return;
       }
       if (r.cuenta === 'inventarios_v2') {
@@ -14802,7 +14802,7 @@ ${cont.innerHTML}
       ['nd', '(+) Notas de débito no registradas'],
       ['otra', '(±) Otras partidas']
     ];
-    const CB_TABS = [['libros', '1. Comparación con libros'], ['resumen', '2. Resumen de conciliaciones'], ['claude', '3. Análisis de Claude'], ['revel', '4. Revelaciones'], ['verif', '5. Verificaciones'], ['programa', '6. Programa de trabajo'], ['concluir', '7. Por concluir']];
+    const CB_TABS = [['programa', 'Programa'], ['subir', 'Subir información'], ['claude', 'Resultado del análisis – Claude'], ['cuadres', 'Resumen de cuadres y cruces'], ['conclusiones', 'Conclusiones de la cuenta']];
     const CB_VERIF_MANUALES = [
       ['todas', 'Todas las cuentas bancarias y de ahorro del cliente están en el resumen, incluidas las cerradas durante el año', 'Programa AA-04', 'AA-04'],
       ['firmas', 'Se obtuvieron y archivaron las firmas autorizadas de las cuentas bancarias', 'Programa AA-03', 'AA-03'],
@@ -14815,7 +14815,7 @@ ${cont.innerHTML}
       ['restr', 'Se indagó si existen restricciones al efectivo (garantías, endosos, avales) y se obtuvo el soporte para la revelación', 'NIC 7 párr. 48', 'AA-12']
     ];
     const CB_ESTADOS = [['pendiente', 'Pendiente'], ['cumple', 'Cumple'], ['nocumple', 'No cumple'], ['noaplica', 'No aplica']];
-    const cbE = { cliente: '', anio: '', visita: 'final', corte: '', cuentas: [], config: {}, programa: [], plantilla: null, analisis: null, tab: 'libros', det: null, act: null, org: null, cargaId: 0, tmp: null };
+    const cbE = { cliente: '', anio: '', visita: 'final', corte: '', cuentas: [], config: {}, programa: [], plantilla: null, analisis: null, tab: 'programa', det: null, sv: null, act: null, org: null, cargaId: 0, tmp: null };
     const $cb = id => document.getElementById(id);
     const cbN = v => { const x = arrNum(v); return Number.isFinite(x) ? x : 0; };
     const cbFmt = n => { const v = r2f(n); return v === 0 ? '–' : formatoNumeroAnexo(v); };
@@ -14833,7 +14833,7 @@ ${cont.innerHTML}
     async function cbCargar() {
       const cli = $cb('cb-cliente').value, anio = $cb('cb-anio').value, vis = $cb('cb-visita').value;
       const llaveAnt = cbE.cliente + '|' + cbE.anio + '|' + cbE.visita, borradorAnt = (cbE.draft && llaveAnt === cli + '|' + anio + '|' + vis) ? cbE.draft : null;
-      Object.assign(cbE, { cliente: cli, anio, visita: vis, cuentas: [], config: {}, programa: [], analisis: null, det: null, act: null, crit: null, draft: null });
+      Object.assign(cbE, { cliente: cli, anio, visita: vis, cuentas: [], config: {}, programa: [], analisis: null, det: null, act: null, crit: null, draft: null, sv: null });
       const aviso = $cb('cb-aviso'), esp = $cb('cb-espacio');
       if (!cli) { aviso.classList.remove('hidden'); esp.classList.add('hidden'); cbSync(); return; }
       aviso.classList.add('hidden'); esp.classList.remove('hidden');
@@ -14854,7 +14854,7 @@ ${cont.innerHTML}
       cbE.ctx = await traerContextoRiesgo(cli, anio, vis);
       if (id !== cbE.cargaId) return;
       if (!cbE.plantilla && !r3.error) { const cont = {}; cbE.plantilla = (r3.data || []).map(x => { cont[x.codigo] = (cont[x.codigo] || 0) + 1; return { ...x, k: cont[x.codigo] > 1 ? x.codigo + '#' + cont[x.codigo] : x.codigo }; }); (cbE.plantilla || []).forEach(x => { if (x.id && !programasPlantilla.some(y => y.id === x.id)) programasPlantilla.push(x); }); }
-      cbSync(); cbRender();
+      cbSync(); cbRender(); cbSubirCargar();
     }
     function cbSync() {
       const f = $cb('cb-fecha'); if (f) f.value = cbE.corte || '';
@@ -14901,7 +14901,13 @@ ${cont.innerHTML}
     }
 
     // ---- Edición ----
-    function cbTab(t) { cbE.tab = t; cbRender(); }
+    // Los nombres de pestañas anteriores llevan a la pestaña nueva y a su sección
+    function cbTab(t) {
+      const A = { libros: ['cuadres', 'cb-sec-libros'], resumen: ['cuadres', 'cb-sec-resumen'], verif: ['conclusiones', 'cb-sec-verif'], revel: ['conclusiones', 'cb-sec-revel'], concluir: ['conclusiones', 'cb-sec-concluir'] };
+      let anc = null; if (A[t]) { anc = A[t][1]; t = A[t][0]; }
+      cbE.tab = t; cbRender(); if (anc) setTimeout(() => cbIrSec(anc), 30);
+    }
+    function cbIrSec(id) { const el = document.getElementById(id); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
     function cbRenderConScroll() { const p = $cb('cb-panel'), st = p ? p.scrollTop : 0; cbRender(); if (p) p.scrollTop = st; }
     function cbAgregarCuenta() { cbE.cuentas.push({ id: cbId(), banco: '', cuenta: '', tipo: 'Corriente', moneda: 'USD', saldo_estado: '', saldo_libros: '', partidas: [] }); cbGuardar(); cbRenderConScroll(); }
     async function cbQuitarCuenta(cid) { const c = cbE.cuentas.find(x => x.id === cid); if (!c) return; if (!await confirmarApp('¿Quitar la cuenta "' + cbNombre(c) + '" y todas sus partidas?')) return; cbE.cuentas = cbE.cuentas.filter(x => x.id !== cid); if (cbE.det && cbE.det.cid === cid) cbE.det = null; cbGuardar(); cbRenderConScroll(); }
@@ -15048,7 +15054,7 @@ ${cont.innerHTML}
         '<div>' + tit('Procedimiento') + lista(m.procedimiento) + '</div>' +
         '<div>' + tit('Fuente de la información') + lista(m.fuente) + '</div>' +
         '<div>' + tit('Responsable de la información') + '<input class="' + CB_INN + '" style="text-align:left" value="' + escapeHtml(m.resp) + '" placeholder="Nombre y cargo de quien entregó la información" onchange="cbSetTexto(\'memo\', \'resp\', this)"></div>' +
-        '<div>' + tit('Conclusión') + cbHtmlConclusion() + '</div></div></div>';
+        '<div>' + tit('Conclusión') + (m.concl ? '<div class="whitespace-pre-wrap">' + escapeHtml(m.concl) + '</div>' : '<div class="text-slate-400">Aún no hay conclusión.</div>') + '<button type="button" onclick="cbTab(\'conclusiones\')" class="mt-1 underline text-indigo-700 font-bold">Ir a Conclusiones de la cuenta</button></div></div></div>';
     }
 
     // ===== Conclusión del auditor (igual que en Inversiones); alimenta Pendientes: To/Do, Quick Lett y Opinión =====
@@ -15076,13 +15082,24 @@ ${cont.innerHTML}
         return { marcadas: g.marcadas, criterio: g.criterio || '', asiento: asientoDesdeGuardado({ glosa: (g.asiento || {}).glosa, lineas: ((g.asiento || {}).lineas || []).map(l => ({ cuenta: l.cuenta, debe: parsearNumeroAnexo(l.debe), haber: parsearNumeroAnexo(l.haber) })) }), prop: null, original: null, msg: '', meta: true };
       } catch (e) { return null; }
     }
-    function cbHtmlConclusion() {
-      const D = cbDr(), c = cbE.crit;
+    // La conclusión se reparte en bloques de la pestaña «Conclusiones de la cuenta»: marcas (To/Do · Quick Lett · Opinión), ajustes y criterio
+    function cbHtmlConclMarcas() {
+      const D = cbDr();
       const opciones = [...CONCLUSIONES_AUDITOR, ...D.marcadas.filter(m => !CONCLUSIONES_AUDITOR.includes(m))];
       const lista = opciones.map(o => '<label class="flex items-start gap-2 py-1 px-1.5 rounded hover:bg-slate-50 cursor-pointer text-xs text-slate-800 font-medium leading-snug"><input type="checkbox" ' + (D.marcadas.includes(o) ? 'checked ' : '') + 'onchange="cbConclMarcar(this, \'' + escapeHtml(o).replace(/'/g, "\\'") + '\')" class="mt-0.5 h-3.5 w-3.5 shrink-0 accent-indigo-600"><span>' + escapeHtml(o) + (CONCLUSIONES_AUDITOR.includes(o) ? '' : ' (anterior)') + '</span></label>').join('');
+      return '<div class="space-y-2" style="text-align:left"><p class="text-[11px] text-slate-500">Marca una o varias. Lo que marques aparece en el resumen de To/Do, Quick Lett y Opinión del menú. Se guarda con «Guardar criterio final», al final de esta pestaña.</p><div class="border border-slate-300 rounded-lg bg-white p-1.5 space-y-0.5 shadow-xs max-w-3xl">' + lista + '</div></div>';
+    }
+    function cbHtmlConclAjustes() {
+      const D = cbDr();
       const filas = D.asiento.lineas.map((x, i) => '<tr class="border-b border-slate-200"><td class="p-1.5"><input type="text" value="' + escapeHtml(x.cuenta) + '" oninput="cbAsLinea(' + i + ', \'cuenta\', this.value)" placeholder="Código y nombre de la cuenta" class="w-full p-1.5 border border-slate-300 rounded text-xs outline-none focus:ring-2 focus:ring-indigo-500"></td>' +
         ['debe', 'haber'].map(k => '<td class="p-1.5"><input type="text" inputmode="decimal" value="' + escapeHtml(x[k]) + '" oninput="cbAsLinea(' + i + ', \'' + k + '\', this.value)" onblur="cbAsFormato(this, ' + i + ', \'' + k + '\')" placeholder="0.00" class="w-full p-1.5 border border-slate-300 rounded text-xs text-right outline-none focus:ring-2 focus:ring-indigo-500"></td>').join('') +
         '<td class="p-1.5 text-center">' + (D.asiento.lineas.length > 2 ? '<button type="button" onclick="cbAsQuitar(' + i + ')" class="text-[11px] font-bold text-rose-600 hover:underline">Quitar</button>' : '') + '</td></tr>').join('');
+      return '<div class="space-y-2 max-w-3xl" style="text-align:left"><p class="text-[11px] text-slate-500">Asiento de ajuste propuesto (Debe / Haber). Se guarda con «Guardar criterio final».</p><div class="border border-slate-300 rounded-lg bg-white overflow-x-auto"><table class="w-full text-xs border-collapse min-w-[520px]"><thead class="bg-slate-100 text-slate-600 text-[10px] font-bold border-b border-slate-200"><tr class="text-left"><th class="p-3 border-r border-slate-200">Cuenta contable</th><th class="p-3 border-r border-slate-200 text-right w-[22%]">Debe</th><th class="p-3 border-r border-slate-200 text-right w-[22%]">Haber</th><th class="p-3 w-[10%]"></th></tr></thead><tbody>' + filas + '</tbody><tfoot id="cb-as-tot"></tfoot></table></div>' +
+        '<div class="flex flex-wrap items-center justify-between gap-2"><button type="button" onclick="cbAsAgregar()" class="px-2.5 py-1 bg-white text-slate-700 hover:bg-slate-50 border border-slate-400 rounded text-[11px] font-bold transition">+ Agregar línea</button><p id="cb-as-cuadre" class="text-[11px] font-bold"></p></div>' +
+        '<input type="text" value="' + escapeHtml(D.asiento.glosa || '') + '" oninput="cbDr().asiento.glosa = this.value; cbDraftPersistir()" placeholder="Glosa o concepto del asiento (opcional)" class="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-indigo-500 outline-none"></div>';
+    }
+    function cbHtmlConclCriterio() {
+      const D = cbDr(), c = cbE.crit;
       const meta = c ? 'Última actualización: ' + formatoFechaContrato(c.updated_at) + ((c.actualizado_por || c.auditor) ? ' · Actualizado por: ' + escapeHtml(c.actualizado_por || c.auditor) : '') : 'Aún no se ha registrado el criterio final.';
       const BTN = 'px-3 py-1.5 rounded-lg text-[11px] transition disabled:opacity-60 bg-slate-100 text-slate-800 hover:bg-slate-200 font-medium';
       const BTN2 = 'px-3 py-1.5 bg-white text-slate-700 hover:bg-slate-100 border border-slate-400 rounded-lg text-[11px] font-bold transition';
@@ -15092,18 +15109,24 @@ ${cont.innerHTML}
           (D.prop.obs.length ? '<div class="border border-amber-400 bg-amber-50 rounded-lg p-2.5"><p class="text-[11px] font-bold text-amber-800 mb-1">Por revisar: no concuerda o falta algo</p><ul class="list-disc pl-4 text-[11px] text-amber-900 space-y-0.5">' + D.prop.obs.map(o => '<li>' + escapeHtml(o) + '</li>').join('') + '</ul></div>' : '') +
           '<div class="flex flex-wrap gap-2"><button type="button" onclick="cbRedUsar()" class="px-3 py-1.5 bg-white text-slate-700 hover:bg-emerald-50 border border-emerald-600 rounded-lg text-[11px] font-bold transition">Usar esta redacción</button><button type="button" onclick="cbRedDescartar()" class="' + BTN2 + '">Descartar</button></div></div>';
       }
-      return '<div class="space-y-3 not-italic" style="text-align:left"><p class="text-[11px] text-slate-500">Conclusión del auditor responsable. El análisis de Claude es solo un apoyo y no reemplaza este criterio. Lo que marques aquí aparece en el resumen de To/Do, Quick Lett y Opinión del menú.</p>' +
-        '<div><label class="block text-xs font-bold text-slate-600 mb-1">Conclusión (marca una o varias)</label><div class="border border-slate-300 rounded-lg bg-white p-1.5 space-y-0.5 shadow-xs">' + lista + '</div></div>' +
+      return '<div class="space-y-3 max-w-3xl" style="text-align:left"><p class="text-[11px] text-slate-500">Conclusión del auditor responsable. El análisis de Claude es solo un apoyo y no reemplaza este criterio.</p>' +
         '<div><label class="block text-xs font-bold text-slate-600 mb-1">Criterio y fundamento</label><textarea id="cb-crit" rows="7" oninput="cbCritEscribe(this)" placeholder="Describe el trabajo realizado, los hallazgos, los ajustes propuestos y el fundamento de tu conclusión..." class="w-full p-2.5 border border-slate-300 rounded-lg text-xs outline-none focus:ring-2 focus:ring-indigo-500 bg-white leading-relaxed text-slate-800" style="min-height:140px;background:#fff">' + escapeHtml(D.criterio) + '</textarea>' +
         '<div class="flex flex-wrap items-center gap-2 mt-2"><button type="button" id="cb-btn-mejorar" onclick="cbRedMejorar()" class="hidden ' + BTN + '">Mejorar redacción con Claude</button><span id="cb-red-msg" class="text-[11px] text-slate-500">' + escapeHtml(D.msg || '') + '</span></div>' + prop +
         (D.original !== null ? '<div class="mt-2"><button type="button" onclick="cbRedVolver()" class="' + BTN2 + '">Volver a mi texto original</button><span class="text-[11px] text-slate-500 ml-1">Recuerda pulsar "Guardar criterio final" para conservar el cambio.</span></div>' : '') + '</div>' +
-        '<div class="space-y-2"><label class="block text-xs font-bold text-slate-600">Asiento de ajuste propuesto (Debe / Haber)</label><div class="border border-slate-300 rounded-lg bg-white overflow-x-auto"><table class="w-full text-xs border-collapse min-w-[520px]"><thead><tr class="bg-slate-50 text-slate-600 text-left"><th class="p-2 border-b border-slate-200">Cuenta contable</th><th class="p-2 border-b border-slate-200 text-right w-[22%]">Debe</th><th class="p-2 border-b border-slate-200 text-right w-[22%]">Haber</th><th class="p-2 border-b border-slate-200 w-[10%]"></th></tr></thead><tbody>' + filas + '</tbody><tfoot id="cb-as-tot"></tfoot></table></div>' +
-        '<div class="flex flex-wrap items-center justify-between gap-2"><button type="button" onclick="cbAsAgregar()" class="px-2.5 py-1 bg-white text-slate-700 hover:bg-slate-50 border border-slate-400 rounded text-[11px] font-bold transition">+ Agregar línea</button><p id="cb-as-cuadre" class="text-[11px] font-bold"></p></div>' +
-        '<input type="text" value="' + escapeHtml(D.asiento.glosa || '') + '" oninput="cbDr().asiento.glosa = this.value; cbDraftPersistir()" placeholder="Glosa o concepto del asiento (opcional)" class="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-indigo-500 outline-none"></div>' +
         '<div class="flex flex-wrap items-center gap-3"><button type="button" id="cb-btn-crit" onclick="cbCritGuardar()" class="px-5 py-2.5 rounded-lg text-xs transition disabled:opacity-60 bg-slate-200 text-slate-900 hover:bg-slate-300 font-semibold">Guardar criterio final</button><button type="button" onclick="cbCritRestablecer()" class="' + BTN2 + '">Restablecer texto predeterminado</button></div>' +
-        '<p id="cb-crit-msg" class="text-xs text-slate-500 min-h-[1rem]"></p><p class="text-[11px] text-slate-500">' + meta + '</p></div>' +
-        '';
+        '<p id="cb-crit-msg" class="text-xs text-slate-500 min-h-[1rem]"></p><p class="text-[11px] text-slate-500">' + meta + '</p></div>';
     }
+    function cbHtmlRatificacion() {
+      const o = cbE.org, e = estadoOrigen(o), a = cbE.analisis, h = escapeHtml;
+      const prep = '<b>Claude</b>' + (a && a.created_at ? ' · ' + h(v2Fmt(a.created_at)) : '');
+      let rat;
+      if (!o) rat = '<span class="text-slate-500">Aún no hay trabajo de Claude cargado para este cliente, año y visita.</span>';
+      else if (e === 'revisado') rat = '✔ Ratificado por <b>' + h(nombreMostrado(o.revisado_por) || '') + '</b>' + (o.revisado_at ? ' · ' + h(v2Fmt(o.revisado_at)) : '');
+      else if (e === 'modificado') rat = 'Modificado por <b>' + h(nombreMostrado(o.revisado_por) || '') + '</b>' + (o.revisado_at ? ' · ' + h(v2Fmt(o.revisado_at)) : '');
+      else rat = '<button type="button" onclick="cbRatificarSec()" class="px-2.5 py-1 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-100 font-medium">Ratificar el trabajo de Claude</button>';
+      return '<div class="mt-4 p-3 bg-white border border-slate-200 rounded-xl text-xs text-slate-700 max-w-3xl space-y-1"><div class="text-[13px] font-semibold text-slate-800">Ratificación</div><div>Elaborado por: ' + prep + '</div><div>Ratificación del auditor: ' + rat + '</div></div>';
+    }
+    async function cbRatificarSec() { if (!cbE.org) return; await cbRatificar(); cbRenderConScroll(); }
     function cbAsTotales() {
       const D = cbDr(); let debe = 0, haber = 0;
       D.asiento.lineas.forEach(x => { debe += parsearNumeroAnexo(x.debe) || 0; haber += parsearNumeroAnexo(x.haber) || 0; });
@@ -15220,12 +15243,12 @@ ${cont.innerHTML}
       const bal = cbE.config.balance, hayBal = bal !== undefined && bal !== '', dBal = hayBal ? r2f(t.libros - cbN(bal)) : null;
       h += '<div class="mt-4 grid grid-cols-1 md:grid-cols-3 md:items-end gap-3 max-w-3xl"><div><label class="flex items-end min-h-[30px] font-semibold text-slate-600 mb-1">Saldo según balance (sumaria AA, hoja Bancos)</label><input class="' + CB_INN + '" inputmode="decimal" value="' + (hayBal ? cbIn(bal) : '') + '" onchange="cbSetConfig(\'balance\', this)"></div><div><label class="flex items-end min-h-[30px] font-semibold text-slate-600 mb-1">Total en libros</label><div class="h-7 px-1.5 flex items-center justify-end border border-slate-200 rounded bg-slate-50 font-bold">' + cbFmt(t.libros) + '</div></div><div><label class="flex items-end min-h-[30px] font-semibold text-slate-600 mb-1">Diferencia libros − balance</label><div class="h-7 px-1.5 flex items-center justify-end border border-slate-200 rounded bg-slate-50 font-bold ' + (hayBal ? (Math.abs(dBal) > tol ? 'text-amber-700' : 'text-emerald-700') : 'text-slate-400') + '">' + (hayBal ? cbFmt(dBal) : 'Falta el saldo') + '</div></div></div>';
       h += '<div class="mt-3 grid grid-cols-1 md:grid-cols-3 gap-3 max-w-3xl"><div><label class="flex items-end min-h-[30px] font-semibold text-slate-600 mb-1">Tolerancia de diferencia</label><input class="' + CB_INN + '" inputmode="decimal" value="' + (cbE.config.tol === undefined ? 1 : cbE.config.tol) + '" onchange="cbSetConfig(\'tol\', this)"></div><div><label class="flex items-end min-h-[30px] font-semibold text-slate-600 mb-1">Días para considerar una partida antigua</label><input class="' + CB_INN + '" inputmode="numeric" value="' + (cbE.config.dias === undefined ? 90 : cbE.config.dias) + '" onchange="cbSetConfig(\'dias\', this)"><div class="text-[10px] text-slate-500 mt-0.5">Puedes cambiarlo; las partidas con más días desde su fecha hasta el corte se marcan para revisar en la pestaña Verificaciones.</div></div></div></div>';
-      h += cbHtmlMemo() + '</div>';
+      h += '</div>';
       return h;
     }
     function cbHtmlVerif() {
       const col = { ok: 'text-emerald-700', rev: 'text-amber-700', info: 'text-slate-500' }, tx = { ok: 'Cumple', rev: 'Revisar', info: 'Informativo' };
-      const lnk = cod => '<button type="button" onclick="cbTab(\'programa\')" class="underline text-indigo-700 font-bold" title="Ir al programa de trabajo (pestaña 6)">' + cod + '</button>';
+      const lnk = cod => '<button type="button" onclick="cbTab(\'programa\')" class="underline text-indigo-700 font-bold" title="Ir al Programa">' + cod + '</button>';
       const aut = cbVerifAuto();
       let h = '<div class="px-2 py-1 text-[11px] font-bold text-slate-700 bg-slate-100 border-b border-slate-200">Verificaciones automáticas (se recalculan con las cuentas cargadas)</div>';
       if (!aut.length) h += pcHtmlAviso('AA', cbE.cliente, cbE.anio, cbE.visita, 'bancos');
@@ -15258,7 +15281,7 @@ ${cont.innerHTML}
       const h2 = 'font-bold text-slate-800 text-base border-b border-slate-200 mt-5 mb-2 pb-1';
       return '<div class="p-4 text-sm text-slate-700"><div class="marca-origen ' + cls + '"><b>Claude</b><span>Análisis de Claude · ' + a.anio + ' · ' + (a.visita === 'preliminar' ? 'Visita preliminar' : 'Visita final') + ' · ' + escapeHtml(textoOrigen(a)) + '</span>' + (e === 'pendiente' ? '<button type="button" onclick="cbMarcarRevisado()">Marcar como revisado</button>' : '') + '</div>' +
         '<div class="mt-3 leading-relaxed text-sm text-slate-700">' + renderTextoResumenContrato(a.analisis || '') + '</div>' +
-        '<h2 class="' + h2 + '">Criterio final</h2><p class="text-xs text-slate-500 mb-2">Ahora el criterio final, la conclusión (Quick Lett, Opinión, To/Do) y el asiento de ajuste se registran en el Memorándum, en la pestaña 2. Allí quedan unidos al resumen de pendientes.</p><button type="button" onclick="cbTab(\'libros\')" class="' + CB_BTN + '">Ir al Memorándum</button></div>';
+        '<h2 class="' + h2 + '">Criterio final</h2><p class="text-xs text-slate-500 mb-2">El criterio final, la conclusión (To/Do, Quick Lett, Opinión) y el asiento de ajuste se registran en «Conclusiones de la cuenta», junto con lo que queda por concluir.</p><button type="button" onclick="cbTab(\'conclusiones\')" class="' + CB_BTN + '">Ir a Conclusiones de la cuenta</button></div>';
     }
     async function cbMarcarRevisado() {
       const a = cbE.analisis; if (!a) return; const quien = nombreUsuarioActivo();
@@ -15398,21 +15421,93 @@ ${cont.innerHTML}
       });
       if (mejor) mejor.scrollBy({ left: dir * Math.max(300, mejor.clientWidth * 0.6), behavior: 'smooth' });
     }
+    // ----- Subir información: qué hay leído y los archivos que se subieron para Bancos -----
+    async function cbSubirCargar() {
+      const cli = cbE.cliente, anio = Number(cbE.anio), vis = cbE.visita;
+      cbE.svId = (cbE.svId || 0) + 1; const id = cbE.svId;
+      if (!cli) { cbE.sv = null; return; }
+      cbE.sv = { cargado: false, id }; if (cbE.tab === 'subir') cbRender();
+      const peT = await supabaseClient.from('pedidos_claude').select('id, created_at, estado, solicitado_por, hecho_at, hoja').eq('cliente_id', cli).eq('anio', anio).eq('visita', vis).eq('sumaria', 'AA').eq('hoja', 'bancos').order('created_at', { ascending: false });
+      let archivos = [];
+      if (!peT.error && (peT.data || []).length) {
+        const ar = await supabaseClient.from('pedidos_claude_archivos').select('id, pedido_id, nombre, ruta, tamano, tipo, subido_por, created_at, eliminado_at, etiqueta').in('pedido_id', peT.data.map(x => x.id)).order('created_at', { ascending: false });
+        archivos = (ar.data || []).map(a => ({ ...a, pedido: peT.data.find(x => x.id === a.pedido_id) }));
+      }
+      if (!cbE.sv || id !== cbE.sv.id) return;
+      cbE.sv = { id, cargado: true, error: peT.error ? (peT.error.message || String(peT.error)) : '', archivos };
+      if (cbE.tab === 'subir') cbRender();
+    }
+    async function cbArchivoBajar(i) {
+      const a = ((cbE.sv || {}).archivos || [])[i]; if (!a) return;
+      const { data, error } = await supabaseClient.storage.from('pedidos-claude').createSignedUrl(a.ruta, 120, { download: a.nombre });
+      if (error || !data) { cbMsg('No se pudo descargar: ' + ((error || {}).message || ''), 'text-red-600 font-bold'); return; }
+      const l = document.createElement('a'); l.href = data.signedUrl; l.download = a.nombre; document.body.appendChild(l); l.click(); l.remove();
+    }
+    function cbHtmlSubir() {
+      const S = cbE.sv, e = escapeHtml, L = cbE.cuentas;
+      if (!cbE.cliente) return '<p class="text-xs text-slate-500 p-4">Selecciona el cliente para comenzar.</p>';
+      const fch = f => { const m = String(f || '').match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? m[3] + '/' + m[2] + '/' + m[1] : ''; };
+      const fila = (nombre, ok, det) => '<tr class="border-b border-slate-100"><td class="px-2 py-1.5 w-6 text-center">' + (ok ? '<span class="text-emerald-700 font-bold">✓</span>' : '<span class="text-slate-400">○</span>') + '</td><td class="px-2 py-1.5">' + nombre + '</td><td class="px-2 py-1.5 ' + (ok ? 'text-slate-700' : 'text-slate-400') + '">' + det + '</td></tr>';
+      const conStd = L.some(c => String(c.saldo_estado === undefined ? '' : c.saldo_estado) !== ''), conLib = L.some(c => String(c.saldo_libros === undefined ? '' : c.saldo_libros) !== '');
+      const nPart = L.reduce((n, c) => n + (c.partidas || []).length, 0), bal = cbE.config.balance, hayBal = bal !== undefined && bal !== '';
+      const estado = '<div class="mt-3 p-3 bg-white border border-slate-200 rounded-xl text-xs text-slate-700"><div class="flex items-center justify-between gap-2 mb-1"><div class="text-[13px] font-semibold text-slate-800">Qué hay leído de este cliente, año y visita</div><button type="button" onclick="cbSubirCargar()" class="px-2 py-1 text-[11px] font-semibold border border-slate-300 rounded-lg hover:bg-slate-50">↻ Actualizar</button></div><div class="overflow-x-auto"><table class="text-[11px] leading-tight border-collapse w-full" style="min-width:34rem"><tbody>' +
+        fila('Conciliaciones bancarias', L.length > 0, L.length ? L.length + ' cuenta(s)' + (cbE.act && cbE.act.en ? ' · actualizado el ' + fch(cbE.act.en) : '') : 'Aún no leídas') +
+        fila('Saldos según estado de cuenta', conStd, conStd ? 'Cargados' : 'Aún no leídos') +
+        fila('Saldos en libros (mayor contable)', conLib, conLib ? 'Cargados' : 'Aún no leídos') +
+        fila('Partidas conciliatorias', nPart > 0, nPart ? nPart + ' partida(s)' : 'Aún no leídas') +
+        fila('Saldo según balance (sumaria AA)', hayBal, hayBal ? cbFmt(bal) : 'Aún no indicado') +
+        '</tbody></table></div></div>';
+      const kb = n => n == null ? '' : (n >= 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB');
+      const est = { solicitado: 'Esperando autorización', autorizado: 'Autorizado, Claude lo trabaja', hecho: 'Hecho', rechazado: 'Rechazado', cancelado: 'Cancelado' };
+      let detalle;
+      if (!S) detalle = '';
+      else if (!S.cargado) detalle = '<p class="text-xs text-slate-500 mt-3">Cargando los archivos…</p>';
+      else if (S.error) detalle = '<p class="text-xs text-red-600 font-bold mt-3">No se pudo cargar la lista de archivos: ' + e(S.error) + '</p>';
+      else {
+        const filasA = (S.archivos || []).map((a, i) => '<tr class="border-t border-slate-100 align-top"><td class="px-2 py-1.5">' + e(a.nombre) + '</td><td class="px-2 py-1.5">' + e(a.etiqueta || '') + '</td><td class="px-2 py-1.5 whitespace-nowrap text-right">' + kb(a.tamano) + '</td><td class="px-2 py-1.5 whitespace-nowrap">' + e(nombreMostrado(a.subido_por) || '') + '</td><td class="px-2 py-1.5 whitespace-nowrap">' + v2Fmt(a.created_at) + '</td><td class="px-2 py-1.5">' + e(est[a.pedido && a.pedido.estado] || (a.pedido && a.pedido.estado) || '') + '</td><td class="px-2 py-1.5 whitespace-nowrap">' + (a.eliminado_at ? '<span class="text-slate-400">Ya eliminado (se guardan ' + DIAS_ARCHIVOS_PEDIDO + ' días)</span>' : '<button type="button" onclick="cbArchivoBajar(' + i + ')" class="text-indigo-700 hover:underline font-semibold">Descargar</button>') + '</td></tr>').join('');
+        detalle = '<div class="mt-3 p-3 bg-white border border-slate-200 rounded-xl text-xs text-slate-700"><div class="text-[13px] font-semibold text-slate-800 mb-1">Información subida para este cliente, año y visita</div>' + ((S.archivos || []).length ? '<div class="overflow-x-auto"><table class="w-full text-[11px] leading-tight border-collapse" style="min-width:44rem"><thead><tr class="bg-slate-100 text-slate-700"><th class="px-2 py-1.5 text-left font-bold">Archivo</th><th class="px-2 py-1.5 text-left font-bold">Qué es</th><th class="px-2 py-1.5 text-right font-bold">Tamaño</th><th class="px-2 py-1.5 text-left font-bold">Subido por</th><th class="px-2 py-1.5 text-left font-bold">Fecha</th><th class="px-2 py-1.5 text-left font-bold">Pedido</th><th class="px-2 py-1.5"></th></tr></thead><tbody>' + filasA + '</tbody></table></div>' : '<p class="text-slate-500">Aún no se ha subido ningún archivo. Haga el pedido con «Pedir a Claude».</p>') + '</div>';
+      }
+      const e1 = estadoOrigen(cbE.org), sello = e1 ? '<div class="mt-3">' + pillOrigen(cbE.org).replace('class="pill-origen', 'class="ic-claude pill-origen') + '</div>' : '';
+      const barra = '<div class="mt-3 p-3 bg-white border border-slate-200 rounded-xl space-y-2 text-xs text-slate-700"><div class="text-[13px] font-semibold text-slate-800 ic-claude ic-tomate">Ingreso de información: todo se pide a Claude</div><p class="text-slate-600">Aquí se suben las conciliaciones bancarias y los estados de cuenta en un solo pedido. Claude los lee junto y las demás pestañas leen de aquí. Lo que subas se agrega a lo que ya está cargado. Cuando el pedido pase a "hecho", presiona «Actualizar».</p><div class="flex flex-wrap items-center gap-2"><button type="button" onclick="pcIrAPedido(\'AA\', cbE.cliente, cbE.anio, cbE.visita, \'bancos\', \'cb-subida\')" class="px-3 py-1.5 rounded-lg text-xs transition bg-slate-200 text-slate-900 hover:bg-slate-300 font-semibold ic-claude">Pedir a Claude (conciliaciones y estados de cuenta)</button></div></div>';
+      return '<div class="p-3">' + sello + barra + detalle + estado + '</div>';
+    }
+    // ----- Resumen de cuadres y cruces: comparación con libros, resumen de conciliaciones y memorándum -----
+    const CB_H2 = 'font-bold text-slate-800 text-base border-b border-slate-200 mt-6 mb-2 pb-1 px-3';
+    function cbHtmlCuadres() {
+      if (!cbE.cuentas.length) return pcHtmlAviso('AA', cbE.cliente, cbE.anio, cbE.visita, 'bancos');
+      return '<div class="pb-4"><h2 id="cb-sec-libros" class="' + CB_H2 + '" style="margin-top:12px">1. Comparación con libros</h2>' + cbHtmlLibros() +
+        '<h2 id="cb-sec-resumen" class="' + CB_H2 + '">2. Resumen de conciliaciones</h2>' + cbHtmlResumen() +
+        '<div class="px-3">' + cbHtmlMemo() + '</div></div>';
+    }
+    // ----- Conclusiones de la cuenta: por concluir, To/Do · Quick Lett · Opinión, ajustes, verificaciones, revelaciones y conclusión -----
+    function cbHtmlConclusiones() {
+      if (cbE.plantilla === null) return '<div class="p-8 text-center text-slate-400 text-sm">Cargando...</div>';
+      const P = cbPorConcluir(), D = cbDr(), t = cbAsTotales(), R = cbE.config.revel || {};
+      const nRev = ['restr', 'otras'].filter(k => String(R[k] || '').trim()).length, e1 = estadoOrigen(cbE.org);
+      const chip = (tt, n, id) => '<a href="#" onclick="cbIrSec(\'' + id + '\');return false" class="px-3 py-1.5 rounded-full border border-slate-300 bg-white text-xs text-slate-700 hover:bg-slate-50"><b>' + tt + '</b>: ' + n + '</a>';
+      return '<div class="p-4 text-sm text-slate-700 max-w-6xl"><div class="flex flex-wrap gap-2 mb-2">' +
+        chip('Por concluir', P.grupos.length, 'cb-sec-concluir') + chip('To/Do · Quick Lett · Opinión', D.marcadas.length + ' marcada(s)', 'cb-sec-todo') + chip('Ajustes', t.debe ? 'USD ' + formatoNumeroAnexo(t.debe) : 'sin asiento', 'cb-sec-ajustes') + chip('Verificaciones', P.ver.length + ' por resolver', 'cb-sec-verif') + chip('Revelaciones', nRev + ' de 2 completadas', 'cb-sec-revel') + chip('Conclusión', e1 === 'revisado' ? 'ratificada' : 'por ratificar', 'cb-sec-concl') + '</div>' +
+        '<p class="text-xs text-slate-500">Lo que hay que decidir o hacer. Claude lo propone y el auditor lo completa.</p>' +
+        '<h2 id="cb-sec-concluir" class="' + CB_H2.replace(' px-3', '') + '">1. Por concluir</h2>' + cbHtmlConcluir() +
+        '<h2 id="cb-sec-todo" class="' + CB_H2.replace(' px-3', '') + '">2. To/Do · Quick Lett · Opinión</h2>' + cbHtmlConclMarcas() +
+        '<h2 id="cb-sec-ajustes" class="' + CB_H2.replace(' px-3', '') + '">3. Ajustes propuestos</h2>' + cbHtmlConclAjustes() +
+        '<h2 id="cb-sec-verif" class="' + CB_H2.replace(' px-3', '') + '">4. Verificaciones</h2><div class="border border-slate-200 rounded-xl overflow-hidden">' + cbHtmlVerif() + '</div>' +
+        '<h2 id="cb-sec-revel" class="' + CB_H2.replace(' px-3', '') + '">5. Revelaciones</h2><div class="border border-slate-200 rounded-xl">' + cbHtmlRevel() + '</div>' +
+        '<h2 id="cb-sec-concl" class="' + CB_H2.replace(' px-3', '') + '">6. Conclusión y ratificación</h2>' + cbHtmlConclCriterio() + cbHtmlRatificacion() + '</div>';
+    }
     function cbRender() {
       flechasLados('sec-concil', 'cb-panel');
       const tabs = $cb('cb-tabs'); if (!tabs) return;
       try { pintarHojasAA(); } catch (e) { }
       const _pc = cbPorConcluir(), _npc = _pc.grupos.length;
-      tabs.innerHTML = CB_TABS.map(([t, n]) => '<button type="button" onclick="cbTab(\'' + t + '\')" class="px-3 py-1.5 text-xs transition rounded-lg ' + (cbE.tab === t ? 'bg-slate-200 text-slate-900 font-semibold' : 'text-slate-600 hover:bg-slate-100 font-medium') + '">' + n + (t === 'concluir' && _npc ? ' (' + _npc + ')' : '') + '</button>').join('') + '<button type="button" onclick="pcIrAPedido(\'AA\', cbE.cliente, cbE.anio, cbE.visita, \'bancos\', \'cb-subida\')" class="ml-auto px-3 py-1.5 rounded-lg text-xs bg-slate-800 text-white hover:bg-slate-700 font-semibold" title="Sube conciliaciones o estados de cuenta: se agregan a lo que ya está cargado">⬆ Subir conciliaciones</button><button type="button" onclick="cbDescargar()" class="px-1 py-1.5 text-xs font-bold bg-transparent border-0 hover:underline transition" style="color:#449964">⬇ Descargar todo (Excel)</button>';
+      tabs.innerHTML = CB_TABS.map(([t, n]) => '<button type="button" onclick="cbTab(\'' + t + '\')" class="px-3 py-1.5 text-xs transition rounded-lg ' + (cbE.tab === t ? 'bg-slate-200 text-slate-900 font-semibold' : 'text-slate-600 hover:bg-slate-100 font-medium') + '">' + n + (t === 'conclusiones' && _npc ? ' (' + _npc + ')' : '') + '</button>').join('') + '<button type="button" onclick="cbDescargar()" class="ml-auto px-1 py-1.5 text-xs font-bold bg-transparent border-0 hover:underline transition" style="color:#449964">⬇ Descargar todo (Excel)</button>';
       const p = $cb('cb-panel'), n = $cb('cb-notas');
       const nota = (tit, items) => '<div class="mb-2"><div class="font-bold text-slate-700">' + tit + '</div><ul class="list-disc pl-5">' + items.map(i => '<li>' + i + '</li>').join('') + '</ul></div>';
-      if (cbE.tab === 'resumen') { p.innerHTML = cbHtmlResumen(); n.innerHTML = nota('Cómo se calcula', ['Saldo conciliado = saldo según estado de cuenta − cheques girados y no cobrados + depósitos en tránsito − notas de crédito no registradas + notas de débito no registradas ± otras partidas.', 'La diferencia es el saldo conciliado menos el saldo en libros; debe ser cero o estar dentro de la tolerancia.', 'En cheques, depósitos y notas, ingresa los valores en positivo; el signo lo aplica la herramienta. En "Otras" ingresa el valor con su signo.']); }
-      else if (cbE.tab === 'libros') { p.innerHTML = cbHtmlLibros(); n.innerHTML = ''; }
-      else if (cbE.tab === 'verif') { p.innerHTML = cbHtmlVerif(); n.innerHTML = nota('Cómo se usa', ['Las verificaciones automáticas se recalculan con los datos de la pestaña 2.', 'Las evaluaciones del auditor quedan guardadas por cliente y año, y cada una indica el procedimiento del programa al que pertenece.']); }
-      else if (cbE.tab === 'revel') { p.innerHTML = cbHtmlRevel(); n.innerHTML = nota('Referencia', ['NIC 7 párr. 45-48: componentes del efectivo y revelación de saldos significativos no disponibles para uso del grupo.']); }
+      if (cbE.tab === 'cuadres') { p.innerHTML = cbHtmlCuadres(); n.innerHTML = nota('Cómo se calcula', ['Saldo conciliado = saldo según estado de cuenta − cheques girados y no cobrados + depósitos en tránsito − notas de crédito no registradas + notas de débito no registradas ± otras partidas.', 'La diferencia es el saldo conciliado menos el saldo en libros; debe ser cero o estar dentro de la tolerancia.', 'En cheques, depósitos y notas, ingresa los valores en positivo; el signo lo aplica la herramienta. En "Otras" ingresa el valor con su signo.']); }
+      else if (cbE.tab === 'subir') { p.innerHTML = cbHtmlSubir(); n.innerHTML = ''; }
+      else if (cbE.tab === 'conclusiones') { p.innerHTML = cbHtmlConclusiones(); n.innerHTML = nota('Referencias', ['Las verificaciones automáticas se recalculan con los datos de «Resumen de cuadres y cruces». Las evaluaciones del auditor quedan guardadas por cliente y año.', 'NIC 7 párr. 45-48: componentes del efectivo y revelación de saldos significativos no disponibles para uso del grupo.']); }
       else if (cbE.tab === 'claude') { p.innerHTML = cbHtmlClaude(); n.innerHTML = ''; }
-      else if (cbE.tab === 'concluir') { p.innerHTML = cbHtmlConcluir(); n.innerHTML = nota('Qué muestra', ['Cada programa aparece una sola vez, con su procedimiento y las verificaciones que le faltan por resolver. Cuando no queda nada, la cuenta está lista para revisión final.']); }
-      else { p.innerHTML = cbHtmlPrograma(); n.innerHTML = nota('Cómo se usa', ['Marca cada procedimiento como Hecho e indica dónde está el papel de trabajo. Queda registrado quién lo hizo.']); }
+      else { p.innerHTML = cbHtmlPrograma(); n.innerHTML = nota('Cómo se usa', ['Marca cada procedimiento como Hecho, Pendiente o N/A, adjunta el papel de trabajo y deja tu comentario. Claude figura como quien lo elaboró y tú como quien lo revisa.']); }
       try { cbAsPintar(); } catch (e) { }
     }
     // Hoja con el formato de los papeles de trabajo (títulos grises, miles con decimales, totales con línea)
