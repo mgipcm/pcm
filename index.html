@@ -15409,17 +15409,17 @@ ${cont.innerHTML}
       const sec = document.getElementById(secId); if (!sec || document.getElementById('fl-' + secId)) return;
       const d = document.createElement('div'); d.id = 'fl-' + secId; d.style.cssText = 'position:fixed;right:14px;top:50%;transform:translateY(-50%);z-index:40;display:flex;flex-direction:column;gap:6px';
       const bt = (t, dir, tit) => '<button type="button" onclick="flechasDesplazar(\'' + panelId + '\',' + dir + ')" title="' + tit + '" style="width:34px;height:34px;border-radius:999px;background:#475569;color:#fff;font-size:18px;line-height:1;box-shadow:0 2px 6px rgba(0,0,0,.3);opacity:.9">' + t + '</button>';
-      d.innerHTML = bt('›', 1, 'Desplazar a la derecha') + bt('‹', -1, 'Desplazar a la izquierda');
+      d.innerHTML = bt('‹', -1, 'Desplazar a la izquierda') + bt('›', 1, 'Desplazar a la derecha');
       sec.appendChild(d);
     }
     function flechasDesplazar(panelId, dir) {
       const pn = document.getElementById(panelId); if (!pn) return;
-      const vh = window.innerHeight; let mejor = null, area = 0;
-      [pn, ...pn.querySelectorAll('.overflow-x-auto, .overflow-auto')].forEach(c => {
-        if (c.scrollWidth <= c.clientWidth + 2) return;
-        const r = c.getBoundingClientRect(), v = Math.min(r.bottom, vh) - Math.max(r.top, 0); if (v > area || !mejor) { area = v; mejor = c; }
-      });
-      if (mejor) mejor.scrollBy({ left: dir * Math.max(300, mejor.clientWidth * 0.6), behavior: 'smooth' });
+      const vh = window.innerHeight;
+      const anchas = [pn, ...pn.querySelectorAll('.overflow-x-auto, .overflow-auto')].filter(c => c.scrollWidth > c.clientWidth + 2);
+      // Se mueven juntas todas las tablas anchas que se ven en pantalla, para que no queden desalineadas
+      let uso = anchas.filter(c => { const r = c.getBoundingClientRect(); return Math.min(r.bottom, vh) - Math.max(r.top, 0) > 0; });
+      if (!uso.length) uso = anchas.slice(0, 1);
+      uso.forEach(c => c.scrollBy({ left: dir * Math.max(300, c.clientWidth * 0.6), behavior: 'smooth' }));
     }
     // ----- Subir información: qué hay leído y los archivos que se subieron para Bancos -----
     async function cbSubirCargar() {
@@ -19732,7 +19732,7 @@ ${cont.innerHTML}
       const bal = B.m || {}, usadas = {}, cont = { cuadra: 0, expl: 0, dif: 0, sinsoporte: 0, nosum: 0 };
       const cel = (x, cls) => '<td class="p-3 border-r border-slate-200 text-right whitespace-nowrap ' + (cls || '') + '">' + (x === null || x === undefined ? '<span class="text-slate-300">—</span>' : fm(x)) + '</td>';
       const R2 = x => Math.round(x * 100) / 100;
-      let nTit = 0;
+      let nTit = 1; // la cobertura se muestra primero y lleva el 1
       const tarjComp = q => {
         const filas = q.filas || [], cuentas = Array.isArray(q.cuentas) ? q.cuentas : [], cols = Array.isArray(q.cols) ? q.cols : [];
         cuentas.forEach(k => { (usadas[k] = usadas[k] || []).push(q.titulo); });
@@ -19784,7 +19784,7 @@ ${cont.innerHTML}
       // Cobertura: toda cuenta de la sumaria debe estar cruzada en algún cuadro
       const codsAF = Object.keys(bal).filter(k => (B.af || {})[k]).sort(), codsOtras = Object.keys(usadas).filter(k => bal[k] && !(B.af || {})[k]).sort(), cods = codsAF.concat(codsOtras);
       const sinCruce = codsAF.filter(k => !usadas[k]);
-      const cob = '<div class="border border-slate-200 rounded-xl shadow-sm bg-white overflow-hidden"><div class="px-4 py-3 border-b border-slate-200 bg-slate-100 flex items-center justify-between"><div class="text-base font-bold text-slate-800">' + (++nTit) + '. Cobertura de las sumarias cruzadas</div><span style="display:inline-block;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:700;background:' + (sinCruce.length ? '#fde8e8' : '#e7f6ec') + ';color:' + (sinCruce.length ? '#b42318' : '#1d6b3a') + '">' + (cods.length ? (sinCruce.length ? '⚠ ' + sinCruce.length + ' cuenta(s) sin cruce' : '✓ Todas las cuentas están cruzadas') : 'Sin sumaria cargada') + '</span></div><div class="overflow-x-auto"><table class="w-full text-left text-xs text-slate-700 border-collapse"><thead class="bg-slate-100 text-slate-600 text-[10px] font-bold border-b border-slate-200"><tr><th class="p-3 border-r border-slate-200">Sumaria</th><th class="p-3 border-r border-slate-200">Cuenta</th><th class="p-3 border-r border-slate-200">Nombre</th><th class="p-3 border-r border-slate-200 text-right">Saldo en la sumaria</th><th class="p-3">Se cruza en</th></tr></thead><tbody class="divide-y divide-slate-200">' +
+      const cob = '<div class="border border-slate-200 rounded-xl shadow-sm bg-white overflow-hidden"><div class="px-4 py-3 border-b border-slate-200 bg-slate-100 flex items-center justify-between"><div class="text-base font-bold text-slate-800">1. Cobertura de las sumarias cruzadas</div><span style="display:inline-block;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:700;background:' + (sinCruce.length ? '#fde8e8' : '#e7f6ec') + ';color:' + (sinCruce.length ? '#b42318' : '#1d6b3a') + '">' + (cods.length ? (sinCruce.length ? '⚠ ' + sinCruce.length + ' cuenta(s) sin cruce' : '✓ Todas las cuentas están cruzadas') : 'Sin sumaria cargada') + '</span></div><div class="overflow-x-auto"><table class="w-full text-left text-xs text-slate-700 border-collapse"><thead class="bg-slate-100 text-slate-600 text-[10px] font-bold border-b border-slate-200"><tr><th class="p-3 border-r border-slate-200">Sumaria</th><th class="p-3 border-r border-slate-200">Cuenta</th><th class="p-3 border-r border-slate-200">Nombre</th><th class="p-3 border-r border-slate-200 text-right">Saldo en la sumaria</th><th class="p-3">Se cruza en</th></tr></thead><tbody class="divide-y divide-slate-200">' +
         (cods.map(k => '<tr><td class="p-3 border-r border-slate-200 whitespace-nowrap font-semibold">' + e(bal[k].sumaria || 'AF') + '</td><td class="p-3 border-r border-slate-200 whitespace-nowrap">' + e(k) + '</td><td class="p-3 border-r border-slate-200">' + e(bal[k].nombre) + '</td><td class="p-3 border-r border-slate-200 text-right whitespace-nowrap">' + fm(bal[k].saldo) + '</td><td class="p-3 ' + (usadas[k] ? 'text-slate-600' : '') + '">' + (usadas[k] ? e([...new Set(usadas[k])].join(' · ')) : '<b style="color:#b42318">Sin cruce: pedir a Claude que lo analice</b>') + '</td></tr>').join('') || '<tr><td colspan="5" class="p-4 text-center text-slate-400">No hay balance de comprobación cargado para esta visita.</td></tr>') + '</tbody></table></div></div>';
       const chip = (n, t, P) => '<span style="display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:99px;font-size:12px;font-weight:700;background:' + P[1] + ';color:' + P[2] + '"><span style="font-size:15px">' + n + '</span>' + t + '</span>';
       const resumen = '<div class="flex flex-wrap items-center gap-2">' + chip(cont.cuadra, 'cuadran', V2C_PILL.cuadra) + chip(cont.expl, 'explicadas', V2C_PILL.expl) + chip(cont.dif + cont.nosum, 'con diferencia', V2C_PILL.dif) + chip(cont.sinsoporte, 'sin soporte', V2C_PILL.sinsoporte) + '<span class="text-[11px] text-slate-500 ml-1">Tolerancia: ' + fm(V2C_TOL) + ' · la sumaria se lee en vivo del balance de comprobación</span></div>';
