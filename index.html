@@ -5606,7 +5606,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       const num = v => (v === null || v === undefined || v === '') ? '' : formatoNumeroAnexo(v);
       const l = lineas.map(x => ({ cuenta: x.cuenta || '', debe: num(x.debe), haber: num(x.haber) }));
       while (l.length < 2) l.push({ cuenta: '', debe: '', haber: '' });
-      return { glosa: (a && a.glosa) || '', lineas: l };
+      return { glosa: (a && a.glosa) || '', estado: (a && a.estado) || 'propuesto', lineas: l };
     }
     function asientoParaGuardar() {
       const lineas = asientoEstado.lineas
@@ -15162,14 +15162,40 @@ ${cont.innerHTML}
       bitacoraClaude('Envió punto de Bancos a ' + CB_DEST[destino], x.texto.slice(0, 120), cli, String(anio));
       cbRenderConScroll();
     }
+    const CB_EST_AJ = [['propuesto', 'Propuesto'], ['aceptado', 'Aceptado por el cliente'], ['noreg', 'No registrado']];
+    // Cuentas contables del balance de comprobación del cliente, para elegirlas de una lista
+    async function cbCargarCatalogo() {
+      const llave = cbE.cliente + '|' + cbE.anio + '|' + cbE.visita; if (!cbE.cliente || !cbE.anio) return;
+      cbE.catLlave = llave; cbE.catCuentas = [];
+      try {
+        const vistos = new Map();
+        for (let desde = 0; desde < 20000; desde += 1000) {
+          const { data, error } = await supabaseClient.from('balance_comprobacion').select('codigo, cuenta, visita').eq('cliente_id', cbE.cliente).eq('anio', Number(cbE.anio)).order('orden', { ascending: true }).range(desde, desde + 999);
+          if (error || !data || !data.length) break;
+          data.forEach(f => { if (f.visita && cbE.visita && f.visita !== cbE.visita && cbE.visita !== 'preliminar') return; const t = ((f.codigo ? String(f.codigo).trim() + ' · ' : '') + String(f.cuenta || '').trim()).trim(); if (t) vistos.set(t, 1); });
+          if (data.length < 1000) break;
+        }
+        if (cbE.catLlave === llave) cbE.catCuentas = [...vistos.keys()];
+      } catch (e) { }
+      const dl = document.getElementById('cb-cat-cuentas'); if (dl) dl.innerHTML = cbE.catCuentas.map(t => '<option value="' + escapeHtml(t) + '"></option>').join('');
+      document.querySelectorAll('[data-cb-cuenta]').forEach(el => cbCuentaRevisar(el));
+    }
+    function cbCuentaRevisar(el) {
+      const cat = cbE.catCuentas || [], v = String(el.value || '').trim();
+      const fuera = cat.length && v && !cat.includes(v);
+      el.style.borderColor = fuera ? '#f59e0b' : ''; el.title = fuera ? 'Esta cuenta no está en el balance de comprobación del cliente. Elige una de la lista.' : '';
+    }
     function cbHtmlConclAjustes() {
       const D = cbDr();
-      const filas = D.asiento.lineas.map((x, i) => '<tr class="border-b border-slate-200"><td class="p-1.5"><input type="text" value="' + escapeHtml(x.cuenta) + '" oninput="cbAsLinea(' + i + ', \'cuenta\', this.value)" placeholder="Código y nombre de la cuenta" class="w-full p-1.5 border border-slate-300 rounded text-xs outline-none focus:ring-2 focus:ring-indigo-500"></td>' +
+      if (cbE.catLlave !== cbE.cliente + '|' + cbE.anio + '|' + cbE.visita) cbCargarCatalogo();
+      const filas = D.asiento.lineas.map((x, i) => '<tr class="border-b border-slate-200"><td class="p-1.5"><input type="text" value="' + escapeHtml(x.cuenta) + '" list="cb-cat-cuentas" data-cb-cuenta="1" oninput="cbAsLinea(' + i + ', \'cuenta\', this.value); cbCuentaRevisar(this)" onchange="cbCuentaRevisar(this)" placeholder="Escribe o elige la cuenta del balance" class="w-full p-1.5 border border-slate-300 rounded text-xs outline-none focus:ring-2 focus:ring-indigo-500"></td>' +
         ['debe', 'haber'].map(k => '<td class="p-1.5"><input type="text" inputmode="decimal" value="' + escapeHtml(x[k]) + '" oninput="cbAsLinea(' + i + ', \'' + k + '\', this.value)" onblur="cbAsFormato(this, ' + i + ', \'' + k + '\')" placeholder="0.00" class="w-full p-1.5 border border-slate-300 rounded text-xs text-right outline-none focus:ring-2 focus:ring-indigo-500"></td>').join('') +
         '<td class="p-1.5 text-center">' + (D.asiento.lineas.length > 2 ? '<button type="button" onclick="cbAsQuitar(' + i + ')" class="text-[11px] font-bold text-rose-600 hover:underline">Quitar</button>' : '') + '</td></tr>').join('');
       return '<div class="space-y-2 max-w-3xl" style="text-align:left"><p class="text-[11px] text-slate-500">Asiento de ajuste propuesto (Debe / Haber). Se guarda con «Guardar criterio final»; si tiene valores, se marca «Ajustes propuestos» en el consolidado.</p><div class="border border-slate-300 rounded-lg bg-white overflow-x-auto"><table class="w-full text-xs border-collapse min-w-[520px]"><thead class="bg-slate-100 text-slate-600 text-[10px] font-bold border-b border-slate-200"><tr class="text-left"><th class="p-3 border-r border-slate-200">Cuenta contable</th><th class="p-3 border-r border-slate-200 text-right w-[22%]">Debe</th><th class="p-3 border-r border-slate-200 text-right w-[22%]">Haber</th><th class="p-3 w-[10%]"></th></tr></thead><tbody>' + filas + '</tbody><tfoot id="cb-as-tot"></tfoot></table></div>' +
         '<div class="flex flex-wrap items-center justify-between gap-2"><button type="button" onclick="cbAsAgregar()" class="px-2.5 py-1 bg-white text-slate-700 hover:bg-slate-50 border border-slate-400 rounded text-[11px] font-bold transition">+ Agregar línea</button><p id="cb-as-cuadre" class="text-[11px] font-bold"></p></div>' +
-        '<input type="text" value="' + escapeHtml(D.asiento.glosa || '') + '" oninput="cbDr().asiento.glosa = this.value; cbDraftPersistir()" placeholder="Glosa o concepto del asiento (opcional)" class="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-indigo-500 outline-none"></div>';
+        '<input type="text" value="' + escapeHtml(D.asiento.glosa || '') + '" oninput="cbDr().asiento.glosa = this.value; cbDraftPersistir()" placeholder="Glosa o concepto del asiento (opcional)" class="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-indigo-500 outline-none">' +
+        '<div class="flex flex-wrap items-center gap-2"><label class="text-[11px] font-bold text-slate-600">Estado del ajuste</label><select onchange="cbDr().asiento.estado = this.value; cbDraftPersistir(); cbRenderConScroll()" class="p-1.5 border border-slate-300 rounded-lg text-xs bg-white">' + CB_EST_AJ.map(([k, n]) => '<option value="' + k + '"' + ((D.asiento.estado || 'propuesto') === k ? ' selected' : '') + '>' + n + '</option>').join('') + '</select></div>' +
+        '<datalist id="cb-cat-cuentas">' + (cbE.catCuentas || []).map(t => '<option value="' + escapeHtml(t) + '"></option>').join('') + '</datalist></div>';
     }
     function cbHtmlConclCriterio() {
       const D = cbDr(), c = cbE.crit;
@@ -15281,13 +15307,13 @@ ${cont.innerHTML}
     function cbRedVolver() { const D = cbDr(); if (D.original === null) return; D.criterio = D.original; D.original = null; D.msg = 'Se recuperó tu texto original.'; cbRenderConScroll(); }
     function cbAsParaGuardar() {
       const lineas = cbDr().asiento.lineas.map(x => ({ cuenta: String(x.cuenta || '').trim(), debe: parsearNumeroAnexo(x.debe), haber: parsearNumeroAnexo(x.haber) })).filter(x => x.cuenta || x.debe !== null || x.haber !== null);
-      return { glosa: String(cbDr().asiento.glosa || '').trim(), lineas };
+      return { glosa: String(cbDr().asiento.glosa || '').trim(), estado: cbDr().asiento.estado || 'propuesto', lineas };
     }
     async function cbCritGuardar() {
       const D = cbDr(), quien = nombreUsuarioActivo(), ta = $cb('cb-crit'); if (ta) D.criterio = ta.value;
       if (!cbE.cliente || !cbE.anio) { alert('Primero selecciona el cliente y el año.'); return; }
       if (!quien) { alert('Tu sesión no está activa. Vuelve a ingresar al sistema para guardar el criterio final.'); return; }
-      if (D.marcadas.length === 0) { alert('Antes de guardar, envía al menos un punto a To/Do, Quick Lett u Opinión (sección 2), o agrega el tuyo.'); return; }
+      if (D.marcadas.length === 0) { alert('Antes de guardar, envía al menos un punto a To/Do, Quick Lett u Opinión, o agrega el tuyo.'); return; }
       const t = cbAsTotales();
       if (t.debe !== 0 && !D.marcadas.includes('Ajustes propuestos')) D.marcadas.push('Ajustes propuestos');
       if ((t.debe !== 0 || t.haber !== 0) && t.dif !== 0 && !await confirmarApp('El asiento de ajuste no cuadra: el Debe y el Haber tienen una diferencia de ' + formatoNumeroAnexo(t.dif) + '.\n\n¿Quieres guardar de todas formas?')) return;
@@ -15590,7 +15616,7 @@ ${cont.innerHTML}
         { t: 'Por concluir', n: P.grupos.length, sub: 'por decidir', estado: P.grupos.length ? 'alerta' : 'ok', go: go('cb-sec-concluir') },
         { t: 'Verificaciones', n: P.ver.length, sub: 'por resolver', estado: P.ver.length ? 'alerta' : 'ok', go: go('cb-sec-verif') },
         { t: 'To/Do · Quick Lett · Opinión', n: nEnvB, sub: 'por enviar', estado: nEnvB ? 'alerta' : 'ok', go: go('cb-sec-todo') },
-        { t: 'Ajustes propuestos', n: t.debe ? 'USD ' + formatoNumeroAnexo(t.debe) : '—', sub: t.debe ? 'asiento propuesto' : 'sin asiento', estado: t.debe ? 'alerta' : 'neutro', go: go('cb-sec-ajustes') },
+        { t: 'Ajustes propuestos', n: t.debe ? 'USD ' + formatoNumeroAnexo(t.debe) : '—', sub: t.debe ? (CB_EST_AJ.find(k => k[0] === (cbDr().asiento.estado || 'propuesto')) || ['', 'propuesto'])[1].toLowerCase() : 'sin asiento', estado: t.debe ? ((cbDr().asiento.estado || 'propuesto') === 'propuesto' ? 'alerta' : (cbDr().asiento.estado === 'aceptado' ? 'ok' : 'neutro')) : 'neutro', go: go('cb-sec-ajustes') },
         { t: 'Revelaciones', n: nRev + ' de 2', sub: 'completadas', estado: nRev >= 2 ? 'ok' : 'alerta', go: go('cb-sec-revel') },
         { t: 'Conclusión y ratificación', n: e1 === 'revisado' ? 'Ratificada' : 'Por ratificar', sub: e1 === 'revisado' ? 'listo' : 'falta el visto bueno', estado: e1 === 'revisado' ? 'ok' : 'alerta', go: go('cb-sec-concl') }
       ]) +
