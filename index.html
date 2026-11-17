@@ -18924,7 +18924,7 @@ ${cont.innerHTML}
       const d = R.data, bl = d.bloques;
       const h2s = bl.filter(b => b.t === 'h2');
       const toc = h2s.map((b, i) => {
-        const m = String(b.x).match(/^((?:RC-\d+)(?:\s+y\s+RC-\d+)?)\s+(.*)$/);
+        const m = String(b.x).match(/^((?:RC-\d+(?:\.\d+)?)(?:\s+y\s+RC-\d+(?:\.\d+)?)?)\s+(.*)$/);
         const marca = m ? '<span class="v2t-cod">' + escapeHtml(m[1].replace(/\s+y\s+/, ' · ')) + '</span>' : '<span class="v2t-num">' + (i + 1) + '</span>';
         return '<a href="#" id="nmt-' + i + '" onclick="nmResIr(' + i + ');return false" class="v2t-it">' + marca + '<span class="v2t-tx">' + escapeHtml(m ? m[2] : b.x) + '</span></a>';
       }).join('');
