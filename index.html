@@ -19164,7 +19164,7 @@ ${cont.innerHTML}
       c.querySelectorAll('.nmc td.text-right').forEach(td => { const t = td.textContent.trim(); if (/^[-−(]/.test(t) && /\d/.test(t)) td.style.color = '#b42318'; });
     }
     function nmCobAlt(h) { const t = h.nextElementSibling, ab = t.style.display === 'none'; t.style.display = ab ? 'block' : 'none'; const ch = h.querySelector('.nmc-chev'); if (ch) ch.textContent = ab ? '▾' : '▸'; }
-    const NMC_CSS = '.nmc table{font-variant-numeric:tabular-nums}.nmc .p-3{padding:.45rem .75rem}.nmc thead th{font-size:11px;color:#475569;background:#eef2f6;letter-spacing:.01em}.nmc tbody tr:nth-child(even):not(.v2r-exp){background:#fafbfd}.nmc tbody tr:hover:not(.v2r-exp){background:#eef4fb}.nmc tbody tr[style*="f8fafc"]{border-top:1px solid #cbd5e1}.nmc>div.border{box-shadow:0 1px 3px rgba(15,23,42,.08)}';
+    const NMC_CSS = '.nmc table{font-variant-numeric:tabular-nums}.nmc .p-3{padding:.45rem .75rem}.nmc thead th{font-size:11px;color:#475569;background:#eef2f6;letter-spacing:.01em}.nmc tbody tr[style*="f8fafc"]{border-top:1px solid #cbd5e1}.nmc>div.border{box-shadow:0 1px 3px rgba(15,23,42,.08)}';
     // ===== Conclusiones de la cuenta (v2): por concluir, To/Do-Quick Lett-Opinión, ajustes, revelaciones y conclusión =====
     const NM_CUENTA = 'nomina';
     const NM_DEST = { todo: 'To/Do', quicklett: 'Quick Lett', opinion: 'Opinión' };
