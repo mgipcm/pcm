@@ -18953,15 +18953,18 @@ ${cont.innerHTML}
     const NMC_TOL = 1; // diferencia máxima (USD) para considerar que cuadra
     function nmCuaEstado(f, sum) {
       const n = x => (x === null || x === undefined || x === '' || !Number.isFinite(Number(x))) ? null : Number(x);
-      const may = n(f.mayor), aud = n(f.aud), tiene = Array.isArray(f.cuentas) && f.cuentas.length;
+      const may = n(f.mayor), tiene = Array.isArray(f.cuentas) && f.cuentas.length;
       const base = tiene ? sum : may;                       // lo que se compara contra el análisis
+      const aj = n(f.ajuste), hayAj = aj !== null && Math.abs(aj) > NMC_TOL && base !== null;
+      const aud = hayAj ? Math.round((base + aj) * 100) / 100 : n(f.aud);   // con ajuste: el saldo que debería tener la cuenta
       const dif = (base !== null && aud !== null) ? Math.round((base - aud) * 100) / 100 : null;
       const difMay = (tiene && sum !== null && may !== null) ? Math.round((sum - may) * 100) / 100 : null; // sumaria vs mayor
       let est;
       if (tiene && sum === null) est = 'nosum';
       else if (difMay !== null && Math.abs(difMay) > NMC_TOL) est = 'dif';
+      else if (hayAj) est = 'ajuste';
       else if (aud === null) est = 'sinsoporte';
-      else if (Math.abs(dif) <= NMC_TOL) est = (n(f.ajuste) !== null && Math.abs(n(f.ajuste)) > NMC_TOL) ? 'ajuste' : 'cuadra';
+      else if (Math.abs(dif) <= NMC_TOL) est = 'cuadra';
       else if (f.expl) est = 'expl';
       else est = 'dif';
       return { est, dif, difMay, base, may, aud, tiene };
@@ -19156,7 +19159,7 @@ ${cont.innerHTML}
       const tarjetas = cu.map(q => {
         if (q.tipo === 'matriz') return tarjMatriz(q);
         if (q.tipo === 'composicion') return tarjComp(q);
-        const sinCl = /^RC-02\b/.test(q.titulo || '') && (q.filas || []).length > 0 && (q.filas || []).every(f => f.aud === null || f.aud === undefined || f.aud === '' || (f.mayor !== null && f.mayor !== undefined && Math.abs(Number(f.aud) - Number(f.mayor)) < 0.005));
+        const sinCl = /^RC-02\b/.test(q.titulo || '') && (q.filas || []).length > 0 && !(q.filas || []).some(f => Number(f.ajuste)) && (q.filas || []).every(f => f.aud === null || f.aud === undefined || f.aud === '' || (f.mayor !== null && f.mayor !== undefined && Math.abs(Number(f.aud) - Number(f.mayor)) < 0.005));
         const NC = sinCl ? 5 : 6;
         const filas = (q.filas || []).map(f => {
           const cuentas = Array.isArray(f.cuentas) ? f.cuentas : [];
