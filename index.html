@@ -19092,6 +19092,7 @@ ${cont.innerHTML}
     }
     function nmCuaPintar() { nmCuaPintarBase(); }
     function nmCtaAlt(b) { const tr = b.closest('tr'); let n = tr && tr.nextElementSibling; if (n && n.classList.contains('v2r-exp')) n = n.nextElementSibling; if (n && n.classList.contains('nmc-cta')) { const ab = n.style.display === 'none'; n.style.display = ab ? '' : 'none'; const ch = b.querySelector('.nmc-chev2'); if (ch) ch.textContent = ab ? '▾' : '▸'; } }
+    function nmGrpAlt(b, g) { const tb = b.closest('tbody'), rs = tb ? tb.querySelectorAll('tr.' + g) : []; if (!rs.length) return; const ab = rs[0].style.display === 'none'; rs.forEach(r => { r.style.display = ab ? '' : 'none'; }); }
     function nmCuaPintarBase() {
       const c = $im('nm-panel'), R = nmE.res, B = nmE.bal, fm = formatoNumeroAnexo, e = escapeHtml;
       if (!nmE.cliente || !R) { c.innerHTML = '<p class="text-xs text-slate-500 p-4">Selecciona el cliente para comenzar.</p>'; return; }
@@ -19139,7 +19140,20 @@ ${cont.innerHTML}
           '<tr class="tot"><td>Diferencia' + (q.expl && est === 'expl' ? btnN : '') + '</td>' + vac + '<td class="n"><span style="color:' + colDif(dif) + '">' + (dif === null ? '—' : fmE(dif)) + '</span> &nbsp; ' + pill(P) + '</td></tr>' + (q.expl && est === 'expl' ? filaNotas([e(q.expl)], nc) : '') + ajHtml;
         return caja((++nTit) + '. ' + (q.titulo || ''), q.ref, '<table class="v2r-t"><thead><tr><th>Concepto</th>' + cols.map((c, j) => th(e(c), extraNum[j])).join('') + th(e(q.col_v || 'Importe (USD)'), true) + '</tr></thead><tbody>' + filas.map(fila).join('') + (conSumas ? '' : '') + pie + '</tbody></table>');
       };
+      let nGrp = 0;
+      const tarjMatriz = q => {
+        const cols = Array.isArray(q.cols) ? q.cols : [], filas = q.filas || [];
+        const celdas = (v, est) => cols.map((_, j) => '<td class="n"' + (est ? ' style="' + est + '"' : '') + '>' + ((v || [])[j] === null || (v || [])[j] === undefined ? '<span style="color:#cbd5e1">—</span>' : fmE(v[j])) + '</td>').join('');
+        const cuerpo = filas.map(f => {
+          const g = 'nmc-g' + (++nGrp), det = Array.isArray(f.det) ? f.det : [];
+          const btn = det.length ? '<button type="button" class="v2r-i" onclick="nmGrpAlt(this,\'' + g + '\')" title="Ver los empleados (' + det.length + ')">' + ojoC + '</button>' : '';
+          return '<tr' + (f.tot ? ' class="tot"' : '') + '><td style="white-space:nowrap">' + e(f.c || '') + btn + '</td>' + celdas(f.v) + '</tr>' +
+            det.map(d => '<tr class="' + g + '" style="display:none;background:#f4f8fe"><td style="white-space:nowrap;padding-left:26px;font-size:12px;color:#1e3a6e">' + e(d.c || '') + '</td>' + celdas(d.v, 'font-size:12px;color:#1e3a6e') + '</tr>').join('');
+        }).join('');
+        return caja((++nTit) + '. ' + (q.titulo || ''), null, '<table class="v2r-t"><thead><tr><th>Concepto</th>' + cols.map(c => th(e(c), true)).join('') + '</tr></thead><tbody>' + cuerpo + '</tbody></table>');
+      };
       const tarjetas = cu.map(q => {
+        if (q.tipo === 'matriz') return tarjMatriz(q);
         if (q.tipo === 'composicion') return tarjComp(q);
         const filas = (q.filas || []).map(f => {
           const cuentas = Array.isArray(f.cuentas) ? f.cuentas : [];
