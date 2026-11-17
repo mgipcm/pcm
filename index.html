@@ -19107,13 +19107,16 @@ ${cont.innerHTML}
       const num = x => (x === null || x === undefined) ? '<span style="color:#cbd5e1">—</span>' : fmE(x);
       const th = (t, d) => '<th' + (d ? ' style="text-align:right"' : '') + '>' + t + '</th>';
       const colDif = d => d === null ? '#94a3b8' : (Math.abs(d) <= NMC_TOL ? '#1d6b3a' : RCOL);
-      const pill = P => '<span style="display:inline-block;padding:0 8px;border-radius:99px;font-size:11px;font-weight:700;line-height:18px;white-space:nowrap;background:' + P[1] + ';color:' + P[2] + '">' + P[0] + '</span>';
+      const pill = P => '<span style="font-weight:700;white-space:nowrap;color:' + P[2] + '">' + P[0] + '</span>';
+      const ojoC = IC_OJO.replace('#449964', '#3b6fc4'), ojoI = IC_OJO.replace('#449964', '#d97706');
+      const btnC = n => '<button type="button" class="v2r-i" onclick="nmCtaAlt(this)" title="Ver las cuentas (' + n + ')">' + ojoC + '</button>';
+      const btnI = r => r ? '<button type="button" class="v2r-i" onclick="nmIrSeccion(\'' + e(r).replace(/'/g, '') + '\')" title="Ver ' + e(r) + ' en el informe">' + ojoI + '</button>' : '';
+      const btnN = '<button type="button" class="v2r-i" onclick="nmToggleExp(this)" title="Ver las notas">' + IC_OJO + '</button>';
+      const filaNotas = (lineas, n) => lineas.length ? '<tr class="v2r-exp" style="display:none"><td colspan="' + n + '"><div>' + lineas.join('<br>') + '</div></td></tr>' : '';
       const refLink = (r, txt) => r ? ' <a href="#" onclick="nmIrSeccion(\'' + e(r).replace(/'/g, '') + '\');return false" style="color:#3b6fc4;font-size:12px" class="hover:underline">' + txt + '</a>' : '';
       let nTit = 1; // la cobertura se muestra primero y lleva el 1
-      const caja = (titulo, ref, html) => '<div class="v2r-h3" style="margin:22px 0 6px;display:flex;justify-content:space-between;gap:8px"><span>' + e(titulo) + '</span>' + refLink(ref, 'ver en el informe ›') + '</div><div class="v2r-tw">' + html + '</div>';
-      const exBtn = f => f.explicacion ? ' <button type="button" class="v2r-i" onclick="nmToggleExp(this)" title="Ver la explicación">' + IC_OJO + '</button>' : '';
-      const exTr = (f, n) => f.explicacion ? '<tr class="v2r-exp" style="display:none"><td colspan="' + n + '"><div>' + e(f.explicacion).replace(/\n/g, '<br>') + '</div></td></tr>' : '';
-      const nota = t => t ? '<div style="font-size:12px;color:#64748b;margin-top:2px">' + t + '</div>' : '';
+      const caja = (titulo, ref, html) => '<div class="v2r-h3" style="margin:22px 0 6px;display:flex;justify-content:space-between;gap:8px"><span>' + e(titulo) + '</span></div><div class="v2r-tw">' + html + '</div>';
+      const lin = f => { const L = []; if (f.nota) L.push(e(f.nota)); if (f.explicacion) L.push(e(f.explicacion).replace(/\n/g, '<br>')); return L; };
       const tarjComp = q => {
         const filas = q.filas || [], cuentas = Array.isArray(q.cuentas) ? q.cuentas : [], cols = Array.isArray(q.cols) ? q.cols : [];
         cuentas.forEach(k => { (usadas[k] = usadas[k] || []).push(q.titulo); });
@@ -19127,15 +19130,15 @@ ${cont.innerHTML}
         cont[est]++;
         const P = NMC_PILL[est], extraNum = cols.map((_, j) => filas.length && filas.every(f => typeof (f.x || [])[j] === 'number'));
         const nc = cols.length + 2, vac = cols.map(() => '<td></td>').join('');
-        const fila = f => '<tr><td>' + e(f.c || '') + exBtn(f) + nota(f.nota ? e(f.nota) : '') + '</td>' + cols.map((_, j) => { const v = (f.x || [])[j]; return typeof v === 'number' ? '<td class="n">' + fmE(v) + '</td>' : '<td>' + e(v == null ? '' : v) + '</td>'; }).join('') + '<td class="n">' + fmE(Number(f.v) || 0) + '</td></tr>' + exTr(f, nc);
+        const fila = f => '<tr><td>' + e(f.c || '') + (lin(f).length ? btnN : '') + '</td>' + cols.map((_, j) => { const v = (f.x || [])[j]; return typeof v === 'number' ? '<td class="n">' + fmE(v) + '</td>' : '<td>' + e(v == null ? '' : v) + '</td>'; }).join('') + '<td class="n">' + fmE(Number(f.v) || 0) + '</td></tr>' + filaNotas(lin(f), nc);
         const sumX = cols.map((_, j) => extraNum[j] ? '<td class="n">' + fmE(R2(filas.reduce((t, f) => t + f.x[j], 0))) + '</td>' : '<td></td>').join('');
         const fin = (txt, val) => '<tr class="tot"><td>' + txt + '</td>' + vac + '<td class="n">' + val + '</td></tr>';
         const nA = Array.isArray(q.ajustes) ? q.ajustes : [];
-        const ajHtml = nA.length ? nA.map(a => '<tr><td style="color:#475569">' + e(a.c || '') + exBtn(a) + '</td>' + vac + '<td class="n" style="color:#475569">' + fmE(Number(a.v) || 0) + '</td></tr>' + exTr(a, nc)).join('') + fin('Saldo ajustado (sumaria + ajustes propuestos)', fmE(R2((sum !== null ? sum : total) + nA.reduce((t, a) => t + (Number(a.v) || 0), 0)))) : '';
+        const ajHtml = nA.length ? nA.map(a => '<tr><td style="color:#475569">' + e(a.c || '') + (lin(a).length ? btnN : '') + '</td>' + vac + '<td class="n" style="color:#475569">' + fmE(Number(a.v) || 0) + '</td></tr>' + filaNotas(lin(a), nc)).join('') + fin('Saldo ajustado (sumaria + ajustes propuestos)', fmE(R2((sum !== null ? sum : total) + nA.reduce((t, a) => t + (Number(a.v) || 0), 0)))) : '';
         const compLbl = cuentas.length ? 'Según sumaria (' + (cuentas.length > 2 ? cuentas.length + ' cuentas' : cuentas.map(e).join(', ')) + ')' : 'Debe coincidir con: ' + e(q.esperado_c || 'valor esperado');
         const conSumas = cols.length && extraNum.some(Boolean);
         const pie = (conSumas ? '<tr class="tot"><td>Total</td>' + sumX + '<td class="n">' + fmE(total) + '</td></tr>' : fin(e(q.total_c || 'Saldo según composición'), fmE(total))) + (hayBase ? fin(compLbl, fmE(base)) : '') + (q.mayor !== undefined && q.mayor !== null ? fin('Según mayor contable', fmE(Number(q.mayor))) : '') +
-          '<tr class="tot"><td>Diferencia' + (q.expl && est === 'expl' ? nota('<span style="color:#8a5a00;font-weight:400">' + e(q.expl) + '</span>') : '') + '</td>' + vac + '<td class="n"><span style="color:' + colDif(dif) + '">' + (dif === null ? '—' : fmE(dif)) + '</span> ' + pill(P) + '</td></tr>' + ajHtml;
+          '<tr class="tot"><td>Diferencia' + (q.expl && est === 'expl' ? btnN : '') + '</td>' + vac + '<td class="n"><span style="color:' + colDif(dif) + '">' + (dif === null ? '—' : fmE(dif)) + '</span> &nbsp; ' + pill(P) + '</td></tr>' + (q.expl && est === 'expl' ? filaNotas([e(q.expl)], nc) : '') + ajHtml;
         return caja((++nTit) + '. ' + (q.titulo || ''), q.ref, '<table class="v2r-t"><thead><tr><th>Concepto</th>' + cols.map((c, j) => th(e(c), extraNum[j])).join('') + th(e(q.col_v || 'Importe (USD)'), true) + '</tr></thead><tbody>' + filas.map(fila).join('') + (conSumas ? '' : '') + pie + '</tbody></table>');
       };
       const tarjetas = cu.map(q => {
@@ -19148,11 +19151,12 @@ ${cont.innerHTML}
           const r = nmCuaEstado(f, cuentas.length && falta.length === cuentas.length ? null : sum);
           cont[r.est]++;
           const P = NMC_PILL[r.est];
-          const ctas = !cuentas.length ? '' : cuentas.length <= 2 ? ' <span style="color:#64748b">(' + cuentas.map(e).join(', ') + ')</span>' + (falta.length ? ' <span style="color:' + RCOL + '">(no está en la sumaria)</span>' : '') : ' <button type="button" onclick="nmCtaAlt(this)" style="color:#3b6fc4;border:0;background:none;padding:0;font:inherit;cursor:pointer" title="Ver todas las cuentas">(' + cuentas.length + ' cuentas <span class="nmc-chev2">▸</span>)</button>' + (falta.length ? ' <span style="color:' + RCOL + '">(' + falta.length + ' no está)</span>' : '');
-          const ctaRow = cuentas.length > 2 ? '<tr class="nmc-cta" style="display:none"><td colspan="6" style="background:#f8fafc"><div style="padding:2px 4px 4px;font-size:12px;color:#475569">' + cuentas.map(k => '<div style="display:flex;gap:14px;padding:2px 0"><span style="min-width:110px">' + e(k) + '</span><span style="flex:1">' + (bal[k] ? e(bal[k].nombre || '') + (bal[k].sumaria && bal[k].sumaria !== 'RC' ? ' <span style="color:#94a3b8">· sumaria ' + e(bal[k].sumaria) + '</span>' : '') : '<span style="color:' + RCOL + '">(no está en la sumaria)</span>') + '</span><span style="min-width:100px;text-align:right">' + (bal[k] ? fmE(bal[k].saldo) : '') + '</span></div>').join('') + '</div></td></tr>' : '';
-          const aj = Number.isFinite(Number(f.ajuste)) && f.ajuste !== null && f.ajuste !== '' && sum !== null ? nota('Ajuste propuesto <b>' + fmE(f.ajuste) + '</b> → saldo ajustado <b>' + fmE(R2(sum + Number(f.ajuste))) + '</b>') : '';
-          const dm = r.difMay !== null && Math.abs(r.difMay) > NMC_TOL ? nota('<span style="color:' + RCOL + '">Sumaria vs mayor: ' + fmE(r.difMay) + '</span>') : '';
-          return '<tr><td>' + e(f.c || '') + ctas + exBtn(f) + refLink(f.ref, 'ver ' + e(f.ref || '') + ' ›') + nota(f.nota ? e(f.nota) : '') + (r.est === 'expl' ? nota('<span style="color:#8a5a00">' + e(f.expl) + '</span>') : '') + aj + dm + '</td><td class="n">' + num(cuentas.length ? sum : null) + '</td><td class="n">' + num(r.may) + '</td><td class="n">' + num(r.aud) + '</td><td class="n" style="font-weight:700;color:' + colDif(r.dif) + '">' + (r.dif === null ? '—' : fmE(r.dif)) + '</td><td>' + pill(P) + '</td></tr>' + exTr(f, 6) + ctaRow;
+          const notas = []; if (f.nota) notas.push(e(f.nota)); if (f.explicacion) notas.push(e(f.explicacion).replace(/\n/g, '<br>'));
+          if (r.est === 'expl' && f.expl) notas.push('<span style="color:#8a5a00">' + e(f.expl) + '</span>');
+          if (sum !== null && Number.isFinite(Number(f.ajuste)) && f.ajuste !== null && f.ajuste !== '') notas.push('Ajuste propuesto <b>' + fmE(f.ajuste) + '</b> → saldo ajustado <b>' + fmE(R2(sum + Number(f.ajuste))) + '</b>');
+          if (r.difMay !== null && Math.abs(r.difMay) > NMC_TOL) notas.push('<span style="color:' + RCOL + '">Sumaria vs mayor: ' + fmE(r.difMay) + '</span>');
+          const ctaRow = cuentas.length ? '<tr class="nmc-cta" style="display:none"><td colspan="6" style="background:#f4f8fe;padding:0"><div style="margin:6px 12px 10px;padding:8px 14px;border-left:3px solid #9dbcec;background:#eef4fd;border-radius:6px;font-size:13px;line-height:1.5;color:#1e3a6e">' + cuentas.map(k => '<div style="display:flex;gap:14px;padding:1px 0"><span style="min-width:110px">' + e(k) + '</span><span style="flex:1">' + (bal[k] ? e(bal[k].nombre || '') + (bal[k].sumaria && bal[k].sumaria !== 'RC' ? ' <span style="color:#64748b">· sumaria ' + e(bal[k].sumaria) + '</span>' : '') : '<span style="color:' + RCOL + '">(no está en la sumaria)</span>') + '</span><span style="min-width:100px;text-align:right">' + (bal[k] ? fmE(bal[k].saldo) : '') + '</span></div>').join('') + '</div></td></tr>' : '';
+          return '<tr><td>' + e(f.c || '') + (cuentas.length ? btnC(cuentas.length) : '') + btnI(f.ref) + (notas.length ? btnN : '') + '</td><td class="n">' + num(cuentas.length ? sum : null) + '</td><td class="n">' + num(r.may) + '</td><td class="n">' + num(r.aud) + '</td><td class="n" style="color:' + colDif(r.dif) + '">' + (r.dif === null ? '—' : fmE(r.dif)) + '</td><td>' + pill(P) + '</td></tr>' + filaNotas(notas, 6) + ctaRow;
         }).join('');
         return caja((++nTit) + '. ' + (q.titulo || ''), q.ref, '<table class="v2r-t"><thead><tr><th>Concepto</th>' + th('Según sumaria', true) + th('Según mayor', true) + th('Análisis de Claude', true) + th('Diferencia', true) + '<th>Estado</th></tr></thead><tbody>' + filas + '</tbody></table>');
       }).join('');
