@@ -18934,14 +18934,14 @@ ${cont.innerHTML}
     }
     function nmResSpy() {
       const sc = document.getElementById('nm-res-scroll'); if (!sc) return;
-      let act = 0; for (let i = 0; ; i++) { const el = document.getElementById('nmr-' + i); if (!el) break; if (el.offsetTop - 60 <= sc.scrollTop) act = i; }
+      let act = 0; for (let i = 0; ; i++) { const el = document.getElementById('nmr-' + i); if (!el) break; if (el.getBoundingClientRect().top - sc.getBoundingClientRect().top <= 90) act = i; }
       document.querySelectorAll('.v2t-it').forEach((a, i) => a.classList.toggle('on', i === act));
       const max = sc.scrollHeight - sc.clientHeight, pct = max > 0 ? Math.round(sc.scrollTop * 100 / max) : 0;
       const b = document.getElementById('nmt-barra'), t = document.getElementById('nmt-pct'); if (b) b.style.width = pct + '%'; if (t) t.textContent = pct + '%';
       const on = document.getElementById('nmt-' + act); if (on && on.parentNode && on.offsetTop < on.parentNode.scrollTop + 40 || (on && on.offsetTop + on.offsetHeight > on.parentNode.scrollTop + on.parentNode.clientHeight - 20)) on.scrollIntoView({ block: 'nearest' });
     }
     function nmToggleExp(btn) { const tr = btn.closest('tr'), ex = tr && tr.nextElementSibling; if (ex && ex.classList.contains('v2r-exp')) { const ab = ex.style.display === 'none'; ex.style.display = ab ? '' : 'none'; btn.style.background = ab ? '#d6ecdf' : ''; } }
-    function nmResIr(i) { const el = document.getElementById('nmr-' + i), sc = document.getElementById('nm-res-scroll'); if (el && sc) sc.scrollTo({ top: el.offsetTop - 20, behavior: 'smooth' }); }
+    function nmResIr(i) { const el = document.getElementById('nmr-' + i), sc = document.getElementById('nm-res-scroll'); if (el && sc) sc.scrollTo({ top: sc.scrollTop + el.getBoundingClientRect().top - sc.getBoundingClientRect().top - 20, behavior: 'smooth' }); }
     function nmResImprimir() {
       const R = nmE.res && nmE.res.data; if (!R) return;
       const f = document.createElement('iframe'); f.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0'; document.body.appendChild(f);
