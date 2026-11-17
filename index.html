@@ -19034,21 +19034,22 @@ ${cont.innerHTML}
       return nmTipoGasto(nombre) === 'Sueldos y beneficios a empleados' ? 'Otros beneficios' : null;
     }
     function nmTipoGasto(nombre) { const t = quitarAcentosAnexo(String(nombre || '')).toLowerCase(); for (const [n, re] of NMK_TIPOS) if (re.test(t)) return n; return 'Otros gastos'; }
-    async function nmConsAbrir() {
+    async function nmConsCargar() {
       const key = [nmE.cliente, nmE.anio, nmE.visita].join('|');
-      if (!nmE.cons || nmE.cons.key !== key) nmE.cons = { key, cargado: false, filas: [], error: '' };
-      nmE.cons.abierto = true; nmCuaPintar();
-      if (nmE.cons.cargado) return;
-      const k0 = nmE.cons.key; let data = [], err = '';
+      if (nmE.cons && nmE.cons.key === key) return;
+      nmE.cons = { key, cargado: false, filas: [], error: '' };
+      const k0 = key; let data = [], err = '';
       for (let d = 0; ; d += 1000) {
         const r = await supabaseClient.from('balance_comprobacion').select('codigo, cuenta, saldo, sumaria').eq('cliente_id', nmE.cliente).eq('anio', Number(nmE.anio)).eq('visita', nmE.visita).in('sumaria', NMK_SUMS).range(d, d + 999);
         if (r.error) { err = r.error.message || String(r.error); break; }
         data.push(...(r.data || [])); if (!r.data || r.data.length < 1000) break;
       }
       if (!nmE.cons || nmE.cons.key !== k0) return;
-      Object.assign(nmE.cons, { cargado: true, filas: data, error: err }); nmCuaPintar();
+      Object.assign(nmE.cons, { cargado: true, filas: data, error: err });
+      if (nmE.tab === 'cuadres') nmCuaPintar();
     }
-    function nmIrConsolidado() { nmE.tab = 'cuadres'; nmPintar(); nmConsAbrir(); }
+    function nmConsAbrir() { nmE.tab = 'cuadres'; nmCuaPintar(); }
+    function nmIrConsolidado() { nmE.tab = 'cuadres'; nmPintar(); }
     function nmConsCerrar() { if (nmE.cons) nmE.cons.abierto = false; nmCuaPintar(); }
     function nmConsDatos() {
       const mapa = {};
@@ -19089,15 +19090,12 @@ ${cont.innerHTML}
       const hojas = [{ nombre: 'Por rubro', aoa: porRubro, anchos: [{ wch: 42 }, { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 18 }], op: { titulo: 'Consolidado de gastos de nómina por rubro', info, totales: [] } }, { nombre: 'Detalle por cuenta', aoa: detalle, anchos: [{ wch: 36 }, { wch: 16 }, { wch: 14 }, { wch: 42 }, { wch: 16 }], op: { titulo: 'Consolidado de gastos de nómina: detalle', info, totales: [] } }];
       try { await arrXlsxConFormato(hojas, 'Consolidado de gastos de nómina', 'Consolidado_nomina_' + String(nmE.cliente).replace(/[^A-Za-z0-9]+/g, '_') + '_' + nmE.anio + '.xlsx'); } catch (er) { alert('No se pudo armar el Excel: ' + (er.message || er)); }
     }
-    function nmCuaPintar() {
-      if (nmE.cons && nmE.cons.abierto && nmE.cliente) { nmConsPintar(); return; }
-      nmCuaPintarBase();
-      const c = $im('nm-panel'); if (c && nmE.cliente) c.insertAdjacentHTML('afterbegin', '<div class="flex justify-end px-4 pt-3"><button type="button" onclick="nmConsAbrir()" class="px-3 py-1.5 rounded-lg text-xs font-bold text-white" style="background:#449964" title="Consolida los gastos de nómina del balance y los acumula por tipo">Consolidado de gastos</button></div>');
-    }
+    function nmCuaPintar() { nmCuaPintarBase(); }
     function nmCtaAlt(b) { const tr = b.closest('tr'); let n = tr && tr.nextElementSibling; if (n && n.classList.contains('v2r-exp')) n = n.nextElementSibling; if (n && n.classList.contains('nmc-cta')) { const ab = n.style.display === 'none'; n.style.display = ab ? '' : 'none'; const ch = b.querySelector('.nmc-chev2'); if (ch) ch.textContent = ab ? '▾' : '▸'; } }
     function nmCuaPintarBase() {
       const c = $im('nm-panel'), R = nmE.res, B = nmE.bal, fm = formatoNumeroAnexo, e = escapeHtml;
       if (!nmE.cliente || !R) { c.innerHTML = '<p class="text-xs text-slate-500 p-4">Selecciona el cliente para comenzar.</p>'; return; }
+      nmConsCargar();
       if (!R.cargado || !B || !B.cargado) { c.innerHTML = '<p class="text-xs text-slate-500 p-4">Cargando…</p>'; return; }
       const cu = (R.data && Array.isArray(R.data.cuadres)) ? R.data.cuadres : [];
       if (!cu.length) { c.innerHTML = '<div class="p-8 text-center text-sm text-slate-600 space-y-2"><p>Aún no hay cuadres para este cliente, año y visita.</p><p class="text-xs text-slate-500">Cuando Claude termine el análisis, aquí aparecerán los cuadros del informe cruzados con la sumaria.</p></div>'; return; }
@@ -19160,12 +19158,25 @@ ${cont.innerHTML}
         }).join('');
         return caja((++nTit) + '. ' + (q.titulo || ''), q.ref, '<table class="v2r-t"><thead><tr><th>Concepto</th>' + th('Según sumaria', true) + th('Según mayor', true) + th('Análisis de Claude', true) + th('Diferencia', true) + '<th>Estado</th></tr></thead><tbody>' + filas + '</tbody></table>');
       }).join('');
-      // Cobertura: toda cuenta de la sumaria debe estar cruzada en algún cuadro
-      const codsAF = Object.keys(bal).filter(k => (B.af || {})[k]).sort(), codsOtras = Object.keys(usadas).filter(k => bal[k] && !(B.af || {})[k]).sort(), cods = codsAF.concat(codsOtras);
-      const sinCruce = codsAF.filter(k => !usadas[k]);
-      const cobPill = '<span style="display:inline-block;padding:0 10px;border-radius:99px;font-size:11px;font-weight:700;line-height:20px;background:' + (sinCruce.length ? '#fde8e8' : '#e7f6ec') + ';color:' + (sinCruce.length ? RCOL : '#1d6b3a') + '">' + (cods.length ? (sinCruce.length ? '⚠ ' + sinCruce.length + ' cuenta(s) sin cruce' : '✓ Todas las cuentas están cruzadas') : 'Sin sumaria cargada') + '</span>';
-      const cob = '<div class="v2r-h3" style="margin:6px 0 6px;display:flex;justify-content:space-between;align-items:center;gap:8px"><span>1. Cobertura de las sumarias cruzadas</span>' + cobPill + '</div><div class="v2r-tw"><table class="v2r-t"><thead><tr><th>Sumaria</th><th>Cuenta</th><th>Nombre</th>' + th('Saldo en la sumaria', true) + '<th>Se cruza en</th></tr></thead><tbody>' +
-        (cods.map(k => '<tr><td style="font-weight:700;white-space:nowrap">' + e(bal[k].sumaria || 'RC') + '</td><td style="white-space:nowrap">' + e(k) + '</td><td>' + e(bal[k].nombre) + '</td><td class="n">' + fmE(bal[k].saldo) + '</td><td>' + (usadas[k] ? e([...new Set(usadas[k])].join(' · ')) : '<b style="color:' + RCOL + '">Sin cruce: pedir a Claude que lo analice</b>') + '</td></tr>').join('') || '<tr><td colspan="5" style="text-align:center;color:#94a3b8">No hay balance de comprobación cargado para esta visita.</td></tr>') + '</tbody></table></div>';
+      // Consolidado de costos y gastos de nómina (costo, administración, ventas y financieros), tomado del balance
+      const KC = nmE.cons;
+      let cobCuerpo;
+      if (!KC || !KC.cargado) cobCuerpo = '<tr><td colspan="6" style="color:#64748b">Cargando el balance…</td></tr>';
+      else if (KC.error) cobCuerpo = '<tr><td colspan="6" style="color:' + RCOL + '">No se pudo cargar: ' + e(KC.error) + '</td></tr>';
+      else {
+        const LC = nmConsDatos();
+        if (!LC.length) cobCuerpo = '<tr><td colspan="6" style="color:#64748b">No hay cuentas de nómina en costos y gastos (sumarias RB, RC, RD y RE) del balance de este cliente, año y visita.</td></tr>';
+        else {
+          const MC = nmConsMatriz(LC), z = x => x ? fmE(x) : '<span style="color:#cbd5e1">—</span>';
+          cobCuerpo = MC.filas.map(f => {
+            const cs = LC.filter(x => x.rubro === f.rubro);
+            const fila = '<tr><td>' + e(f.rubro) + (cs.length ? btnC(cs.length) : '') + '</td>' + f.v.map(x => '<td class="n">' + z(x) + '</td>').join('') + '<td class="n" style="font-weight:700">' + z(f.total) + '</td></tr>';
+            const det = cs.length ? '<tr class="nmc-cta" style="display:none"><td colspan="6" style="background:#f4f8fe;padding:0"><div style="margin:6px 12px 10px;padding:8px 14px;border-left:3px solid #9dbcec;background:#eef4fd;border-radius:6px;font-size:13px;line-height:1.5;color:#1e3a6e">' + cs.map(x => '<div style="display:flex;gap:14px;padding:1px 0"><span style="min-width:110px">' + e(x.codigo) + '</span><span style="flex:1">' + e(x.cuenta) + ' <span style="color:#64748b">· ' + e((NMK_COLS.find(k2 => k2[0] === x.sumaria) || [, x.sumaria])[1]) + '</span></span><span style="min-width:100px;text-align:right">' + fmE(x.saldo) + '</span></div>').join('') + '</div></td></tr>' : '';
+            return fila + det;
+          }).join('') + '<tr class="tot"><td>Total nómina</td>' + MC.tv.map(x => '<td class="n">' + fmE(x) + '</td>').join('') + '<td class="n">' + fmE(MC.total) + '</td></tr>';
+        }
+      }
+      const cob = '<div class="v2r-h3" style="margin:6px 0 6px;display:flex;justify-content:space-between;align-items:center;gap:8px"><span>1. Consolidado de gastos de nómina</span><button type="button" onclick="nmConsExcel()" style="color:#449964;font-size:12px;font-weight:700;border:0;background:none;cursor:pointer" class="hover:underline">Descargar en Excel</button></div><div class="v2r-tw"><table class="v2r-t"><thead><tr><th>Rubro</th>' + NMK_COLS.map(([, nm]) => th(nm, true)).join('') + th('Total', true) + '</tr></thead><tbody>' + cobCuerpo + '</tbody></table></div>';
       const chip = (n, t, P) => '<span style="display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:99px;font-size:12px;font-weight:700;background:' + P[1] + ';color:' + P[2] + '"><span style="font-size:14px">' + n + '</span>' + t + '</span>';
       const resumen = '<div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:6px">' + chip(cont.cuadra, 'cuadran', NMC_PILL.cuadra) + chip(cont.expl, 'explicadas', NMC_PILL.expl) + chip(cont.dif + cont.nosum, 'con diferencia', NMC_PILL.dif) + chip(cont.sinsoporte, 'sin soporte', NMC_PILL.sinsoporte) + '<span style="font-size:11px;color:#64748b;margin-left:4px">Tolerancia: ' + fmE(NMC_TOL) + ' · la sumaria se lee en vivo del balance de comprobación</span></div>';
       c.innerHTML = '<style>' + NMR_CSS + '</style><div class="p-3 sm:p-6 bg-slate-50"><div class="v2r mx-auto" style="max-width:1100px;background:#f6f6f4;border:1px solid #dfdfdb;border-radius:12px;padding:18px 28px 26px">' + resumen + cob + tarjetas + '</div></div>';
