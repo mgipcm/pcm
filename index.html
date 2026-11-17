@@ -1134,13 +1134,13 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
         <table class="w-full text-left text-xs text-slate-700 border-collapse">
           <thead class="bg-slate-100 text-slate-600 text-[10px] font-bold border-b border-slate-200">
             <tr>
-              <th class="px-3 py-1.5 border-r border-slate-200 min-w-[90px]">Código</th>
-              <th class="px-3 py-1.5 border-r border-slate-200 min-w-[120px] w-32">Tipo</th>
-              <th class="px-3 py-1.5 border-r border-slate-200 min-w-[360px] w-full">Procedimiento</th>
-              <th class="px-3 py-1.5 border-r border-slate-200 min-w-[170px]">Norma de referencia</th>
-              <th class="px-3 py-1.5 border-r border-slate-200 min-w-[150px] w-40">Alcance</th>
-              <th class="px-3 py-1.5 border-r border-slate-200 w-40">Tamaño de empresa</th>
-              <th class="px-3 py-1.5 w-24 text-center">Vigente</th>
+              <th class="p-3 border-r border-slate-200 min-w-[90px]">Código</th>
+              <th class="p-3 border-r border-slate-200 min-w-[120px] w-32">Tipo</th>
+              <th class="p-3 border-r border-slate-200 min-w-[360px] w-full">Procedimiento</th>
+              <th class="p-3 border-r border-slate-200 min-w-[170px]">Norma de referencia</th>
+              <th class="p-3 border-r border-slate-200 min-w-[150px] w-40">Alcance</th>
+              <th class="p-3 border-r border-slate-200 w-40">Tamaño de empresa</th>
+              <th class="p-3 w-24 text-center">Vigente</th>
             </tr>
           </thead>
           <tbody id="pg-filas" class="divide-y divide-slate-200"></tbody>
@@ -4008,15 +4008,15 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       let ult = null, html = '';
       lista.forEach(r => {
         const kg = r.sumaria + '|' + (r.hoja || '');
-        if ((!s || r.hoja) && kg !== ult) { html += '<tr><td colspan="7" class="px-3 py-1 bg-slate-100 text-slate-700 font-bold">' + escapeHtml(nombreSum(r.sumaria) + (r.hoja ? (r.sumaria === 'RC' ? ' · ' : ' · Hoja ') + pcNombreHoja(r.hoja) : '')) + '</td></tr>'; ult = kg; }
+        if ((!s || r.hoja) && kg !== ult) { html += '<tr><td colspan="7" class="px-3 py-2 bg-slate-100 text-slate-700 font-bold">' + escapeHtml(nombreSum(r.sumaria) + (r.hoja ? (r.sumaria === 'RC' ? ' · ' : ' · Hoja ') + pcNombreHoja(r.hoja) : '')) + '</td></tr>'; ult = kg; }
         html += '<tr class="align-top' + (r.activo ? '' : ' opacity-50') + '">' +
-          '<td class="px-2 py-1 border-r border-slate-200"><input type="text" value="' + escapeHtml(r.codigo || '') + '" onchange="guardarCampoPlantilla(' + r.id + ',\'codigo\',this.value)" class="w-full p-1 border border-slate-200 rounded outline-none bg-white"></td>' +
-          '<td class="px-2 py-1 border-r border-slate-200"><input type="text" value="' + escapeHtml(r.tipo_procedimiento || '') + '" onchange="guardarCampoPlantilla(' + r.id + ',\'tipo_procedimiento\',this.value)" class="w-full p-1 border border-slate-200 rounded outline-none bg-white"></td>' +
-          '<td class="px-2 py-1 border-r border-slate-200"><input type="text" value="' + escapeHtml(r.titulo || '') + '" placeholder="Título corto (ej. Revisión analítica)" onchange="guardarCampoPlantilla(' + r.id + ',\'titulo\',this.value)" class="w-full p-1 mb-1 border border-slate-200 rounded outline-none bg-white font-bold"><textarea rows="2" onchange="guardarCampoPlantilla(' + r.id + ',\'procedimiento\',this.value)" class="w-full p-1 border border-slate-200 rounded outline-none bg-white leading-relaxed">' + escapeHtml(r.procedimiento || '') + '</textarea></td>' +
-          '<td class="px-2 py-1 border-r border-slate-200">' + celdaNorma(r) + '</td>' +
-          '<td class="px-2 py-1 border-r border-slate-200"><select onchange="guardarCampoPlantilla(' + r.id + ',\'alcance\',this.value)" class="w-full p-1 border border-slate-200 rounded outline-none bg-white text-[11px]"><option value="Base"' + ((r.alcance || 'Base') === 'Base' ? ' selected' : '') + '>Base</option><option value="Solo riesgo alto"' + (r.alcance === 'Solo riesgo alto' ? ' selected' : '') + '>Solo riesgo alto</option></select></td>' +
-          '<td class="px-2 py-1 border-r border-slate-200 text-[11px]">' + ['Gran dimensión', 'Mediana', 'Pequeña'].map(t => '<label class="flex items-center gap-1 whitespace-nowrap"><input type="checkbox" data-tam="' + r.id + '" value="' + t + '"' + (String(r.tamanos || '').includes(t) ? ' checked' : '') + ' onchange="guardarTamanoPlantilla(' + r.id + ')"> ' + t + '</label>').join('') + '</td>' +
-          '<td class="px-2 py-1 text-center"><input type="checkbox" ' + (r.activo ? 'checked' : '') + ' onchange="guardarCampoPlantilla(' + r.id + ',\'activo\',this.checked)"></td></tr>';
+          '<td class="p-2 border-r border-slate-200"><input type="text" value="' + escapeHtml(r.codigo || '') + '" onchange="guardarCampoPlantilla(' + r.id + ',\'codigo\',this.value)" class="w-full p-1 border border-slate-200 rounded outline-none bg-white"></td>' +
+          '<td class="p-2 border-r border-slate-200"><input type="text" value="' + escapeHtml(r.tipo_procedimiento || '') + '" onchange="guardarCampoPlantilla(' + r.id + ',\'tipo_procedimiento\',this.value)" class="w-full p-1 border border-slate-200 rounded outline-none bg-white"></td>' +
+          '<td class="p-2 border-r border-slate-200"><input type="text" value="' + escapeHtml(r.titulo || '') + '" placeholder="Título corto (ej. Revisión analítica)" onchange="guardarCampoPlantilla(' + r.id + ',\'titulo\',this.value)" class="w-full p-1 mb-1 border border-slate-200 rounded outline-none bg-white font-bold"><textarea rows="3" onchange="guardarCampoPlantilla(' + r.id + ',\'procedimiento\',this.value)" class="w-full p-1 border border-slate-200 rounded outline-none bg-white leading-relaxed">' + escapeHtml(r.procedimiento || '') + '</textarea></td>' +
+          '<td class="p-2 border-r border-slate-200">' + celdaNorma(r) + '</td>' +
+          '<td class="p-2 border-r border-slate-200"><select onchange="guardarCampoPlantilla(' + r.id + ',\'alcance\',this.value)" class="w-full p-1 border border-slate-200 rounded outline-none bg-white text-[11px]"><option value="Base"' + ((r.alcance || 'Base') === 'Base' ? ' selected' : '') + '>Base</option><option value="Solo riesgo alto"' + (r.alcance === 'Solo riesgo alto' ? ' selected' : '') + '>Solo riesgo alto</option></select></td>' +
+          '<td class="p-2 border-r border-slate-200 text-[11px]">' + ['Gran dimensión', 'Mediana', 'Pequeña'].map(t => '<label class="flex items-center gap-1 whitespace-nowrap"><input type="checkbox" data-tam="' + r.id + '" value="' + t + '"' + (String(r.tamanos || '').includes(t) ? ' checked' : '') + ' onchange="guardarTamanoPlantilla(' + r.id + ')"> ' + t + '</label>').join('') + '</td>' +
+          '<td class="p-2 text-center"><input type="checkbox" ' + (r.activo ? 'checked' : '') + ' onchange="guardarCampoPlantilla(' + r.id + ',\'activo\',this.checked)"></td></tr>';
       });
       tb.innerHTML = html;
     }
