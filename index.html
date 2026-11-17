@@ -18961,14 +18961,15 @@ ${cont.innerHTML}
       if (tiene && sum === null) est = 'nosum';
       else if (difMay !== null && Math.abs(difMay) > NMC_TOL) est = 'dif';
       else if (aud === null) est = 'sinsoporte';
-      else if (Math.abs(dif) <= NMC_TOL) est = 'cuadra';
+      else if (Math.abs(dif) <= NMC_TOL) est = (n(f.ajuste) !== null && Math.abs(n(f.ajuste)) > NMC_TOL) ? 'ajuste' : 'cuadra';
       else if (f.expl) est = 'expl';
       else est = 'dif';
       return { est, dif, difMay, base, may, aud, tiene };
     }
     const NMC_PILL = {
       cuadra: ['✓ Cuadra', '#e7f6ec', '#1d6b3a'], expl: ['Diferencia explicada', '#fdf3dc', '#8a5a00'], dif: ['⚠ Diferencia', '#fde8e8', '#b42318'],
-      sinsoporte: ['○ Sin soporte', '#eef1f5', '#475467'], nosum: ['⚠ No está en la sumaria', '#fde8e8', '#b42318']
+      sinsoporte: ['○ Sin soporte', '#eef1f5', '#475467'], nosum: ['⚠ No está en la sumaria', '#fde8e8', '#b42318'],
+      ajuste: ['Ajuste propuesto', '#fdf3dc', '#8a5a00']
     };
     async function nmCuaCargarBal() {
       const cli = nmE.cliente, anio = Number(nmE.anio), vis = nmE.visita; const id = nmE.resId;
@@ -19100,7 +19101,7 @@ ${cont.innerHTML}
       if (!R.cargado || !B || !B.cargado) { c.innerHTML = '<p class="text-xs text-slate-500 p-4">Cargando…</p>'; return; }
       const cu = (R.data && Array.isArray(R.data.cuadres)) ? R.data.cuadres : [];
       if (!cu.length) { c.innerHTML = '<div class="p-8 text-center text-sm text-slate-600 space-y-2"><p>Aún no hay cuadres para este cliente, año y visita.</p><p class="text-xs text-slate-500">Cuando Claude termine el análisis, aquí aparecerán los cuadros del informe cruzados con la sumaria.</p></div>'; return; }
-      const bal = B.m || {}, usadas = {}, cont = { cuadra: 0, expl: 0, dif: 0, sinsoporte: 0, nosum: 0 };
+      const bal = B.m || {}, usadas = {}, cont = { cuadra: 0, expl: 0, dif: 0, sinsoporte: 0, nosum: 0, ajuste: 0 };
       const R2 = x => Math.round(x * 100) / 100, RCOL = '#b42318';
       const fmE = n => Number(n).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
       const num = x => (x === null || x === undefined) ? '<span style="color:#cbd5e1">—</span>' : fmE(x);
@@ -19165,7 +19166,7 @@ ${cont.innerHTML}
           const r = nmCuaEstado(f, cuentas.length && falta.length === cuentas.length ? null : sum);
           cont[r.est]++;
           const P = NMC_PILL[r.est];
-          const notas = []; if (f.nota) notas.push(e(f.nota)); if (f.explicacion) notas.push(e(f.explicacion).replace(/\n/g, '<br>'));
+          const notas = []; const md = t => e(t).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>'); if (f.nota) notas.push(md(f.nota)); if (f.explicacion) notas.push(md(f.explicacion).replace(/\n/g, '<br>'));
           if (r.est === 'expl' && f.expl) notas.push('<span style="color:#8a5a00">' + e(f.expl) + '</span>');
           if (sum !== null && Number.isFinite(Number(f.ajuste)) && f.ajuste !== null && f.ajuste !== '') notas.push('Ajuste propuesto <b>' + fmE(f.ajuste) + '</b> → saldo ajustado <b>' + fmE(R2(sum + Number(f.ajuste))) + '</b>');
           if (r.difMay !== null && Math.abs(r.difMay) > NMC_TOL) notas.push('<span style="color:' + RCOL + '">Sumaria vs mayor: ' + fmE(r.difMay) + '</span>');
@@ -19194,7 +19195,7 @@ ${cont.innerHTML}
       }
       const cob = '<div class="v2r-h3" style="margin:6px 0 6px;display:flex;justify-content:space-between;align-items:center;gap:8px"><span>1. Consolidado de gastos de nómina</span><button type="button" onclick="nmConsExcel()" style="color:#449964;font-size:12px;font-weight:700;border:0;background:none;cursor:pointer" class="hover:underline">Descargar en Excel</button></div><div class="v2r-tw"><table class="v2r-t"><thead><tr><th>Rubro</th>' + NMK_COLS.map(([, nm]) => th(nm, true)).join('') + th('Total', true) + '</tr></thead><tbody>' + cobCuerpo + '</tbody></table></div>';
       const chip = (n, t, P) => '<span style="display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:99px;font-size:12px;font-weight:700;background:' + P[1] + ';color:' + P[2] + '"><span style="font-size:14px">' + n + '</span>' + t + '</span>';
-      const resumen = '<div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:6px">' + chip(cont.cuadra, 'cuadran', NMC_PILL.cuadra) + chip(cont.expl, 'explicadas', NMC_PILL.expl) + chip(cont.dif + cont.nosum, 'con diferencia', NMC_PILL.dif) + chip(cont.sinsoporte, 'sin soporte', NMC_PILL.sinsoporte) + '<span style="font-size:11px;color:#64748b;margin-left:4px">Tolerancia: ' + fmE(NMC_TOL) + ' · la sumaria se lee en vivo del balance de comprobación</span></div>';
+      const resumen = '<div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:6px">' + chip(cont.cuadra, 'cuadran', NMC_PILL.cuadra) + chip(cont.expl, 'explicadas', NMC_PILL.expl) + chip(cont.dif + cont.nosum, 'con diferencia', NMC_PILL.dif) + chip(cont.ajuste, 'con ajuste propuesto', NMC_PILL.ajuste) + chip(cont.sinsoporte, 'sin soporte', NMC_PILL.sinsoporte) + '<span style="font-size:11px;color:#64748b;margin-left:4px">Tolerancia: ' + fmE(NMC_TOL) + ' · la sumaria se lee en vivo del balance de comprobación</span></div>';
       c.innerHTML = '<style>' + NMR_CSS + '</style><div class="p-3 sm:p-6 bg-slate-50"><div class="v2r mx-auto" style="max-width:1100px;background:#f6f6f4;border:1px solid #dfdfdb;border-radius:12px;padding:18px 28px 26px">' + resumen + cob + tarjetas + '</div></div>';
     }
 // ===== Conclusiones de la cuenta (v2): por concluir, To/Do-Quick Lett-Opinión, ajustes, revelaciones y conclusión =====
