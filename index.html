@@ -19095,7 +19095,7 @@ ${cont.innerHTML}
       const c = $im('nm-panel'); if (c && nmE.cliente) c.insertAdjacentHTML('afterbegin', '<div class="flex justify-end px-4 pt-3"><button type="button" onclick="nmConsAbrir()" class="px-3 py-1.5 rounded-lg text-xs font-bold text-white" style="background:#449964" title="Consolida los gastos de nómina del balance y los acumula por tipo">Consolidado de gastos</button></div>');
     }
     function nmCuaPintarBase() {
-      const c = $im('nm-panel'), R = nmE.res, B = nmE.bal, fm = formatoNumeroAnexo, e = escapeHtml;
+      const c = $im('nm-panel'), R = nmE.res, B = nmE.bal, fm = n => Number(n).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }), e = escapeHtml;
       if (!nmE.cliente || !R) { c.innerHTML = '<p class="text-xs text-slate-500 p-4">Selecciona el cliente para comenzar.</p>'; return; }
       if (!R.cargado || !B || !B.cargado) { c.innerHTML = '<p class="text-xs text-slate-500 p-4">Cargando…</p>'; return; }
       const cu = (R.data && Array.isArray(R.data.cuadres)) ? R.data.cuadres : [];
@@ -19164,7 +19164,7 @@ ${cont.innerHTML}
       c.querySelectorAll('.nmc td.text-right').forEach(td => { const t = td.textContent.trim(); if (/^[-−(]/.test(t) && /\d/.test(t)) td.style.color = '#b42318'; });
     }
     function nmCobAlt(h) { const t = h.nextElementSibling, ab = t.style.display === 'none'; t.style.display = ab ? 'block' : 'none'; const ch = h.querySelector('.nmc-chev'); if (ch) ch.textContent = ab ? '▾' : '▸'; }
-    const NMC_CSS = '.nmc table{font-variant-numeric:tabular-nums}.nmc .p-3{padding:.45rem .75rem}.nmc thead th{font-size:11px;color:#475569;background:#eef2f6;letter-spacing:.01em}.nmc tbody tr[style*="f8fafc"]{border-top:1px solid #cbd5e1}.nmc>div.border{box-shadow:0 1px 3px rgba(15,23,42,.08)}';
+    const NMC_CSS = '.nmc table{border-collapse:collapse;font-size:13px;line-height:1.4}.nmc table .p-3{padding:6px 10px!important}.nmc .border-r{border-right-width:0!important}.nmc thead th{background:#f1f5f9!important;color:#1f2937!important;font-size:13px!important;font-weight:700;letter-spacing:0;white-space:nowrap;border-bottom:1px solid #cbd5e1}.nmc tbody tr{border-top:1px solid #eef2f6!important}.nmc tbody tr[style*="f8fafc"] td{font-weight:700;border-top:2px solid #cbd5e1}.nmc td.text-right{font-size:13px}.nmc>div.border{border-color:#e2e8f0;border-radius:8px;box-shadow:none}.nmc>div.border>div:first-child{background:#fff!important;border-bottom:1px solid #e2e8f0}.nmc .text-base{font-size:15px}.nmc td{vertical-align:top}';
     // ===== Conclusiones de la cuenta (v2): por concluir, To/Do-Quick Lett-Opinión, ajustes, revelaciones y conclusión =====
     const NM_CUENTA = 'nomina';
     const NM_DEST = { todo: 'To/Do', quicklett: 'Quick Lett', opinion: 'Opinión' };
