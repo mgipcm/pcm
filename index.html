@@ -4715,12 +4715,18 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       for (const [i, f] of archivos.entries()) {
         const pf = await pcPrepararArchivo(f);
         const ruta = ins.id + '/' + Date.now() + '_' + pf.nombre.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^A-Za-z0-9._-]+/g, '_');
-        const { error: eu } = await supabaseClient.storage.from('pedidos-claude').upload(ruta, pf.blob, { contentType: pf.tipo });
+        msg.textContent = 'Subiendo archivo ' + (i + 1) + ' de ' + archivos.length + ': ' + f.name + '…';
+        let eu = null;
+        for (let intento = 1; intento <= 3; intento++) {
+          const r = await supabaseClient.storage.from('pedidos-claude').upload(ruta, pf.blob, { contentType: pf.tipo, upsert: true });
+          eu = r.error; if (!eu) break;
+          if (intento < 3) { msg.textContent = 'Reintentando «' + f.name + '» (' + (intento + 1) + ' de 3)…'; await new Promise(ok => setTimeout(ok, 1500 * intento)); }
+        }
         if (eu) { falla.push(f.name + ' (' + (eu.message || eu) + ')'); continue; }
         const { error: ea } = await supabaseClient.from('pedidos_claude_archivos').insert([{ pedido_id: ins.id, nombre: pf.nombre, ruta, tamano: pf.tamano, tipo: pf.tipo, subido_por: nombreUsuarioActivo(), etiqueta: pcEtiquetasElegidas[i] }]);
         if (ea) falla.push(f.name + ' (' + (ea.message || ea) + ')');
       }
-      if (falla.length) { err('El pedido se creó, pero no se subieron: ' + falla.join('; ') + '. Cancela el pedido y vuelve a enviarlo.'); cargarPedidosClaude(); return; }
+      if (falla.length) { err('El pedido se creó con los archivos que sí se subieron, pero estos no: ' + falla.join('; ') + '. No hace falta cancelar: en «Mis pedidos» usa «Agregar archivos» en ese pedido para subir solo los que faltan (suele ser un corte de internet).'); cargarPedidosClaude(); return; }
       msg.textContent = 'Pedido enviado. Avisando por correo al Socio y al Supervisor…';
       const av = await avisarPedidoCorreo(ins.id, 'solicitado');
       msg.textContent = 'Pedido enviado con ' + archivos.length + ' archivo(s). Quedó en "Pedidos y aprobaciones" esperando la autorización del Socio o Supervisor. ' + av;
