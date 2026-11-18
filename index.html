@@ -18951,6 +18951,16 @@ ${cont.innerHTML}
     }
     // ----- Pestaña "Resumen de cuadres y cruces": los cuadros del informe, cruzados al instante con la sumaria -----
     const NMC_TOL = 1; // diferencia máxima (USD) para considerar que cuadra
+    // Signo: el balance de comprobación trae los pasivos en negativo. Si el mayor (y el análisis) vienen con el signo contrario pero el mismo valor, se leen con el signo del balance.
+    function nmCuaSigno(f, sum) {
+      if (sum === null || sum === undefined || sum === 0) return f;
+      const my = Number(f.mayor);
+      if (f.mayor === null || f.mayor === undefined || f.mayor === '' || !Number.isFinite(my) || my === 0) return f;
+      if (Math.sign(my) === Math.sign(sum) || Math.abs(Math.abs(my) - Math.abs(sum)) > NMC_TOL) return f;
+      const fx = Object.assign({}, f, { mayor: -my }), au = Number(f.aud);
+      if (f.aud !== null && f.aud !== undefined && f.aud !== '' && Number.isFinite(au) && Math.sign(au) === Math.sign(my)) fx.aud = -au;
+      return fx;
+    }
     function nmCuaEstado(f, sum) {
       const n = x => (x === null || x === undefined || x === '' || !Number.isFinite(Number(x))) ? null : Number(x);
       const may = n(f.mayor), tiene = Array.isArray(f.cuentas) && f.cuentas.length;
@@ -19168,7 +19178,7 @@ ${cont.innerHTML}
           cuentas.forEach(k => { (usadas[k] = usadas[k] || []).push(q.titulo); });
           const enSum = cuentas.map(k => bal[k]).filter(Boolean), falta = cuentas.filter(k => !bal[k]);
           const sum = cuentas.length ? (enSum.length ? R2(enSum.reduce((t, x) => t + x.saldo, 0)) : null) : null;
-          const r = nmCuaEstado(f, cuentas.length && falta.length === cuentas.length ? null : sum);
+          const r = nmCuaEstado(nmCuaSigno(f, sum), cuentas.length && falta.length === cuentas.length ? null : sum);
           cont[r.est]++;
           const P = NMC_PILL[r.est];
           const notas = []; const md = t => e(t).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>'); if (f.nota) notas.push(md(f.nota)); if (f.explicacion) notas.push(md(f.explicacion).replace(/\n/g, '<br>'));
@@ -19310,7 +19320,7 @@ ${cont.innerHTML}
           const cuentas = Array.isArray(f.cuentas) ? f.cuentas : []; cuentas.forEach(k => { usadas[k] = 1; });
           const enSum = cuentas.map(k => bal[k]).filter(Boolean), falta = cuentas.filter(k => !bal[k]);
           const sum = cuentas.length ? (enSum.length ? R2(enSum.reduce((t, x) => t + x.saldo, 0)) : null) : null;
-          const r = nmCuaEstado(f, cuentas.length && falta.length === cuentas.length ? null : sum);
+          const r = nmCuaEstado(nmCuaSigno(f, sum), cuentas.length && falta.length === cuentas.length ? null : sum);
           ests.push([r.est, f.c || '', r.dif]);
         });
         if (!ests.length) return;
