@@ -18951,6 +18951,59 @@ ${cont.innerHTML}
     }
     // ----- Pestaña "Resumen de cuadres y cruces": los cuadros del informe, cruzados al instante con la sumaria -----
     const NMC_TOL = 1; // diferencia máxima (USD) para considerar que cuadra
+    // ----- Cuadros que salen del propio informe de Claude -----
+    // Una tabla del informe puede traer la marca "cuadre" (un objeto o una lista de objetos): {titulo, ref, c, mayor, aud, filas:{"0":{cuentas,nota,ajuste,ref}}}.
+    // c, mayor y aud son los números de columna de la tabla. La app arma con eso el cuadro del resumen y le agrega la sumaria leída del balance.
+    function nmNumEs(t) {
+      if (typeof t === 'number') return Number.isFinite(t) ? t : null;
+      if (t === null || t === undefined) return null;
+      const x = String(t).replace(/\s/g, '').replace(/\./g, '').replace(',', '.');
+      return (x !== '' && x !== '-' && Number.isFinite(Number(x))) ? Number(x) : null;
+    }
+    function nmCuadresDeInforme(bloques) {
+      const out = [];
+      (Array.isArray(bloques) ? bloques : []).forEach(b => {
+        if (!b || b.t !== 'tabla' || !b.cuadre) return;
+        (Array.isArray(b.cuadre) ? b.cuadre : [b.cuadre]).forEach(c => {
+          if (!c || c.mayor === undefined || c.mayor === null) return;
+          const iC = Number.isInteger(c.c) ? c.c : 0, ex = c.filas || {}, filas = [];
+          (b.filas || []).forEach((f, i) => {
+            const nom = String((f || [])[iC] == null ? '' : f[iC]);
+            if (/^total\b/i.test(nom.trim())) return;
+            const ext = ex[String(i)] || {}, row = { c: nom, ref: ext.ref || c.ref, mayor: nmNumEs(f[c.mayor]), aud: Number.isInteger(c.aud) ? nmNumEs(f[c.aud]) : null };
+            if (Array.isArray(ext.cuentas)) row.cuentas = ext.cuentas;
+            if (ext.nota) row.nota = ext.nota;
+            if (ext.ajuste !== undefined && ext.ajuste !== null) row.ajuste = ext.ajuste;
+            const ee = (b.expl || {})[String(i)]; if (ee) row.expl = ee;
+            filas.push(row);
+          });
+          out.push({ titulo: c.titulo || 'Cuadro', ref: c.ref, filas, deInforme: true });
+        });
+      });
+      return out;
+    }
+    // Lista final de cuadros: los explícitos (consolidado y los de siempre) más los que salen del informe; si un título está en las dos partes manda el del informe.
+    function nmCuadresTodos(data) {
+      const exp = (data && Array.isArray(data.cuadres)) ? data.cuadres : [], inf = nmCuadresDeInforme(data && data.bloques);
+      if (!inf.length) return exp;
+      const tit = q => String(q.titulo || '').trim().toLowerCase(), enInf = new Set(inf.map(tit));
+      const matriz = exp.filter(q => q.tipo === 'matriz'), resto = exp.filter(q => q.tipo !== 'matriz' && !enInf.has(tit(q)));
+      return [...matriz, ...inf, ...resto];
+    }
+    // Cuadros que siempre debe haber en Nómina (cualquier cliente). Si falta alguno, el resumen lo avisa.
+    const NMC_ESPERADOS = [
+      ['Consolidado de la nómina (roles de pago)', q => q.tipo === 'matriz' || /consolidado de la n[oó]mina/i.test(q.titulo || '')],
+      ['RC-02 Consolidado de gastos contra el balance', q => /RC-02(?![.\d])/.test(q.titulo || '')],
+      ['RC-03 Roles de pago contra el gasto del mayor', q => /RC-03(?![.\d])/.test(q.titulo || '')],
+      ['RC-03.2 Aporte patronal', q => /RC-03\.2/.test(q.titulo || '') && /patronal/i.test(q.titulo || '')],
+      ['RC-03.2 Aporte personal', q => /RC-03\.2/.test(q.titulo || '') && /personal/i.test(q.titulo || '')],
+      ['RC-03.2 Décimo tercer sueldo', q => /RC-03\.2/.test(q.titulo || '') && /d[eé]cimo tercer/i.test(q.titulo || '')],
+      ['RC-03.2 Décimo cuarto sueldo', q => /RC-03\.2/.test(q.titulo || '') && /d[eé]cimo cuarto/i.test(q.titulo || '')],
+      ['RC-03.2 Fondo de reserva', q => /RC-03\.2/.test(q.titulo || '') && /fondo de reserva/i.test(q.titulo || '')],
+      ['RC-13 Pasivos laborales e IESS', q => /RC-13/.test(q.titulo || '')],
+      ['RC-14 Fondo de reserva', q => /RC-14/.test(q.titulo || '')],
+      ['RC-15 Anticipos y préstamos a empleados', q => /RC-15/.test(q.titulo || '')]
+    ];
     // Signo: el balance de comprobación trae los pasivos en negativo. Si el mayor (y el análisis) vienen con el signo contrario pero el mismo valor, se leen con el signo del balance.
     function nmCuaSigno(f, sum) {
       if (sum === null || sum === undefined || sum === 0) return f;
@@ -18996,7 +19049,7 @@ ${cont.innerHTML}
       if (id !== nmE.resId) return;
       const m = {}, af = {}; data.forEach(x => { const k = String(x.codigo || '').trim(); if (k) { m[k] = { nombre: x.cuenta || '', saldo: (m[k] ? m[k].saldo : 0) + (Number(x.saldo) || 0), sumaria: 'RC' }; af[k] = 1; } });
       // cuentas de los cuadros que están en otras sumarias (por ejemplo, costo de ventas)
-      const cu = (nmE.res && nmE.res.data && nmE.res.data.cuadres) || [], otras = [...new Set(cu.flatMap(q => (q.filas || []).flatMap(f => f.cuentas || [])).map(k => String(k).trim()).filter(k => k && !af[k]))];
+      const cu = nmCuadresTodos(nmE.res && nmE.res.data), otras = [...new Set(cu.flatMap(q => (q.filas || []).flatMap(f => f.cuentas || [])).map(k => String(k).trim()).filter(k => k && !af[k]))];
       if (otras.length) {
         const r2 = await supabaseClient.from('balance_comprobacion').select('codigo, cuenta, saldo, sumaria').eq('cliente_id', cli).eq('anio', anio).eq('visita', vis).in('codigo', otras);
         if (r2.error) err = err || (r2.error.message || String(r2.error));
@@ -19112,7 +19165,7 @@ ${cont.innerHTML}
       if (!nmE.cliente || !R) { c.innerHTML = '<p class="text-xs text-slate-500 p-4">Selecciona el cliente para comenzar.</p>'; return; }
       nmConsCargar();
       if (!R.cargado || !B || !B.cargado) { c.innerHTML = '<p class="text-xs text-slate-500 p-4">Cargando…</p>'; return; }
-      const cu = (R.data && Array.isArray(R.data.cuadres)) ? R.data.cuadres : [];
+      const cu = nmCuadresTodos(R.data);
       if (!cu.length) { c.innerHTML = '<div class="p-8 text-center text-sm text-slate-600 space-y-2"><p>Aún no hay cuadres para este cliente, año y visita.</p><p class="text-xs text-slate-500">Cuando Claude termine el análisis, aquí aparecerán los cuadros del informe cruzados con la sumaria.</p></div>'; return; }
       const bal = B.m || {}, usadas = {}, cont = { cuadra: 0, expl: 0, dif: 0, sinsoporte: 0, nosum: 0, ajuste: 0 };
       const R2 = x => Math.round(x * 100) / 100, RCOL = '#b42318';
@@ -19171,7 +19224,7 @@ ${cont.innerHTML}
         // Si un cuadro marcado como composición trae filas con saldo propio (mayor/aud/cuentas) y ningún importe v, se pinta como cuadro de filas
         const esFilasComp = q.tipo === 'composicion' && (q.filas || []).length > 0 && !(q.filas || []).some(f => f.v !== undefined && f.v !== null) && (q.filas || []).some(f => f.aud !== undefined || f.mayor !== undefined);
         if (q.tipo === 'composicion' && !esFilasComp) return tarjComp(q);
-        const sinCl = /^RC-02\b/.test(q.titulo || '') && (q.filas || []).length > 0 && !(q.filas || []).some(f => Number(f.ajuste)) && (q.filas || []).every(f => f.aud === null || f.aud === undefined || f.aud === '' || (f.mayor !== null && f.mayor !== undefined && Math.abs(Number(f.aud) - Number(f.mayor)) < 0.005));
+        const sinCl = /RC-02(?![.\d])/.test(q.titulo || '') && (q.filas || []).length > 0 && !(q.filas || []).some(f => Number(f.ajuste)) && (q.filas || []).every(f => f.aud === null || f.aud === undefined || f.aud === '' || (f.mayor !== null && f.mayor !== undefined && Math.abs(Number(f.aud) - Number(f.mayor)) < 0.005));
         const NC = sinCl ? 5 : 6;
         const filas = (q.filas || []).map(f => {
           const cuentas = Array.isArray(f.cuentas) ? f.cuentas : [];
@@ -19182,7 +19235,7 @@ ${cont.innerHTML}
           cont[r.est]++;
           const P = NMC_PILL[r.est];
           const notas = []; const md = t => e(t).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>'); if (f.nota) notas.push(md(f.nota)); if (f.explicacion) notas.push(md(f.explicacion).replace(/\n/g, '<br>'));
-          if (r.est === 'expl' && f.expl) notas.push('<span style="color:#8a5a00">' + e(f.expl) + '</span>');
+          if (r.est === 'expl' && f.expl) notas.push('<span style="color:#8a5a00">' + md(f.expl).replace(/\n/g, '<br>') + '</span>');
           if (sum !== null && Number.isFinite(Number(f.ajuste)) && f.ajuste !== null && f.ajuste !== '') notas.push('Ajuste propuesto <b>' + fmE(f.ajuste) + '</b> → saldo ajustado <b>' + fmE(R2(sum + Number(f.ajuste))) + '</b>');
           if (r.difMay !== null && Math.abs(r.difMay) > NMC_TOL) notas.push('<span style="color:' + RCOL + '">Sumaria vs mayor: ' + fmE(r.difMay) + '</span>');
           const ctaRow = cuentas.length ? '<tr class="nmc-cta" style="display:none"><td colspan="'+NC+'" style="background:#f4f8fe;padding:0"><div style="margin:6px 12px 10px;padding:8px 14px;border-left:3px solid #9dbcec;background:#eef4fd;border-radius:6px;font-size:13px;line-height:1.5;color:#1e3a6e">' + cuentas.map(k => '<div style="display:flex;gap:14px;padding:1px 0"><span style="min-width:110px">' + e(k) + '</span><span style="flex:1">' + (bal[k] ? e(bal[k].nombre || '') + (bal[k].sumaria && bal[k].sumaria !== 'RC' ? ' <span style="color:#64748b">· sumaria ' + e(bal[k].sumaria) + '</span>' : '') : '<span style="color:' + RCOL + '">(no está en la sumaria)</span>') + '</span><span style="min-width:100px;text-align:right">' + (bal[k] ? fmE(bal[k].saldo) : '') + '</span></div>').join('') + '</div></td></tr>' : '';
@@ -19211,7 +19264,9 @@ ${cont.innerHTML}
       const cob = '<div class="v2r-h3" style="margin:6px 0 6px;display:flex;justify-content:space-between;align-items:center;gap:8px"><span>1. Consolidado de gastos de nómina</span><button type="button" onclick="nmConsExcel()" style="color:#449964;font-size:12px;font-weight:700;border:0;background:none;cursor:pointer" class="hover:underline">Descargar en Excel</button></div><div class="v2r-tw"><table class="v2r-t"><thead><tr><th>Rubro</th>' + NMK_COLS.map(([, nm]) => th(nm, true)).join('') + th('Total', true) + '</tr></thead><tbody>' + cobCuerpo + '</tbody></table></div>';
       const chip = (n, t, P) => '<span style="display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:99px;font-size:12px;font-weight:700;background:' + P[1] + ';color:' + P[2] + '"><span style="font-size:14px">' + n + '</span>' + t + '</span>';
       const resumen = '<div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:6px">' + chip(cont.cuadra, 'cuadran', NMC_PILL.cuadra) + chip(cont.expl, 'explicadas', NMC_PILL.expl) + chip(cont.dif + cont.nosum, 'con diferencia', NMC_PILL.dif) + chip(cont.ajuste, 'con ajuste propuesto', NMC_PILL.ajuste) + chip(cont.sinsoporte, 'sin soporte', NMC_PILL.sinsoporte) + '<span style="font-size:11px;color:#64748b;margin-left:4px">Tolerancia: ' + fmE(NMC_TOL) + ' · la sumaria se lee en vivo del balance de comprobación</span></div>';
-      c.innerHTML = '<style>' + NMR_CSS + '</style><div class="p-3 sm:p-6 bg-slate-50"><div class="v2r mx-auto" style="max-width:1100px;background:#f6f6f4;border:1px solid #dfdfdb;border-radius:12px;padding:18px 28px 26px">' + resumen + cob + tarjetas + '</div></div>';
+      const faltan = NMC_ESPERADOS.filter(x => !cu.some(x[1])).map(x => x[0]);
+      const faltanHtml = faltan.length ? '<div style="margin:14px 0;padding:10px 14px;border:1px dashed #d97706;background:#fffbeb;border-radius:8px;font-size:13px;color:#8a5a00"><b>No generado:</b> faltan ' + faltan.length + ' cuadro(s) que siempre debe haber en Nómina: ' + faltan.map(e).join('; ') + '. Se completan al volver a procesar el pedido o al agregarlos en el análisis de Claude.</div>' : '';
+      c.innerHTML = '<style>' + NMR_CSS + '</style><div class="p-3 sm:p-6 bg-slate-50"><div class="v2r mx-auto" style="max-width:1100px;background:#f6f6f4;border:1px solid #dfdfdb;border-radius:12px;padding:18px 28px 26px">' + resumen + cob + tarjetas + faltanHtml + '</div></div>';
     }
 // ===== Conclusiones de la cuenta (v2): por concluir, To/Do-Quick Lett-Opinión, ajustes, revelaciones y conclusión =====
     const NM_CUENTA = 'nomina';
@@ -19305,7 +19360,7 @@ ${cont.innerHTML}
     function nmTienePt(p) { return (nmE.pts || []).some(t => t.codigo === p.codigo) || ((nmE.filas[p.codigo] || {}).pt || []).length > 0; }
     function nmVerifAuto() {
       const R = nmE.res, B = nmE.bal; if (!R || !R.cargado || !B || !B.cargado) return null;
-      const bal = B.m || {}, cu = (R.data && Array.isArray(R.data.cuadres)) ? R.data.cuadres : [], R2 = x => Math.round(x * 100) / 100, fm = formatoNumeroAnexo, out = [], usadas = {};
+      const bal = B.m || {}, cu = nmCuadresTodos(R.data), R2 = x => Math.round(x * 100) / 100, fm = formatoNumeroAnexo, out = [], usadas = {};
       const lista = (a, n) => a.slice(0, n).join(', ') + (a.length > n ? ' y ' + (a.length - n) + ' más' : '');
       cu.forEach(q => {
         const ests = [];
