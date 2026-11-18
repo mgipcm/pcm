@@ -19047,7 +19047,8 @@ ${cont.innerHTML}
       ['RC-03.2 Décimo tercer sueldo', q => /RC-03\.2/.test(q.titulo || '') && /d[eé]cimo tercer/i.test(q.titulo || '')],
       ['RC-03.2 Décimo cuarto sueldo', q => /RC-03\.2/.test(q.titulo || '') && /d[eé]cimo cuarto/i.test(q.titulo || '')],
       ['RC-03.2 Fondo de reserva', q => /RC-03\.2/.test(q.titulo || '') && /fondo de reserva/i.test(q.titulo || '')],
-      ['RC-13 Pasivos laborales e IESS', q => /RC-13/.test(q.titulo || '')],
+      ['RC-13 Pasivos laborales e IESS', q => /RC-13(?![.\d])/.test(q.titulo || '')],
+      ['RC-13.4 Vacaciones pendientes', q => /RC-13\.4/.test(q.titulo || '')],
       ['RC-14 Fondo de reserva', q => /RC-14/.test(q.titulo || '')],
       ['RC-15 Anticipos y préstamos a empleados', q => /RC-15/.test(q.titulo || '')]
     ];
@@ -19282,7 +19283,7 @@ ${cont.innerHTML}
           cont[r.est]++;
           const P = NMC_PILL[r.est];
           const notas = []; const md = t => e(t).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>'); if (f.nota) notas.push(md(f.nota)); if (f.explicacion) notas.push(md(f.explicacion).replace(/\n/g, '<br>'));
-          if (r.est === 'expl' && f.expl) notas.push('<span style="color:#8a5a00">' + md(f.expl).replace(/\n/g, '<br>') + '</span>');
+          if ((r.est === 'expl' || r.est === 'ajuste') && f.expl) notas.push('<span style="color:#8a5a00">' + md(f.expl).replace(/\n/g, '<br>') + '</span>');
           if (sum !== null && Number.isFinite(Number(f.ajuste)) && f.ajuste !== null && f.ajuste !== '') notas.push('Ajuste propuesto <b>' + fmE(f.ajuste) + '</b> → saldo ajustado <b>' + fmE(R2(sum + Number(f.ajuste))) + '</b>');
           if (r.difMay !== null && Math.abs(r.difMay) > NMC_TOL) notas.push('<span style="color:' + RCOL + '">Sumaria vs mayor: ' + fmE(r.difMay) + '</span>');
           const ctaRow = cuentas.length ? '<tr class="nmc-cta" style="display:none"><td colspan="'+NC+'" style="background:#f4f8fe;padding:0"><div style="margin:6px 12px 10px;padding:8px 14px;border-left:3px solid #9dbcec;background:#eef4fd;border-radius:6px;font-size:13px;line-height:1.5;color:#1e3a6e">' + cuentas.map(k => '<div style="display:flex;gap:14px;padding:1px 0"><span style="min-width:110px">' + e(k) + '</span><span style="flex:1">' + (bal[k] ? e(bal[k].nombre || '') + (bal[k].sumaria && bal[k].sumaria !== 'RC' ? ' <span style="color:#64748b">· sumaria ' + e(bal[k].sumaria) + '</span>' : '') : '<span style="color:' + RCOL + '">(no está en la sumaria)</span>') + '</span><span style="min-width:100px;text-align:right">' + (bal[k] ? fmE(bal[k].saldo) : '') + '</span></div>').join('') + '</div></td></tr>' : '';
