@@ -18966,9 +18966,23 @@ ${cont.innerHTML}
     }
     function nmCuadresDeInforme(bloques) {
       const out = [];
+      let ultTit = '';
       (Array.isArray(bloques) ? bloques : []).forEach(b => {
-        if (!b || b.t !== 'tabla' || !b.cuadre) return;
-        (Array.isArray(b.cuadre) ? b.cuadre : [b.cuadre]).forEach(c => {
+        if (b && (b.t === 'h2' || b.t === 'h3')) ultTit = String(b.x || '').trim();
+        if (!b || b.t !== 'tabla') return;
+        let marcas = b.cuadre;
+        // Tabla comparativa sin marca: se incluye sola con la columna anterior a «Diferencia» contra la anterior a esa
+        if (!marcas && Array.isArray(b.cab) && Array.isArray(b.filas)) {
+          const inf = [];
+          b.cab.forEach((h, j) => {
+            if (j < 2 || !/^diferencia/i.test(String(h).trim())) return;
+            const hay = b.filas.some(f => !/^total\b/i.test(String((f || [])[0] == null ? '' : f[0]).trim()) && nmNumEs((f || [])[j - 1]) !== null && nmNumEs((f || [])[j - 2]) !== null);
+            if (hay) inf.push({ c: 0, aud: j - 1, mayor: j - 2, ref: (ultTit.match(/RC-\d+(\.\d+)?/) || [''])[0], titulo: (ultTit || 'Cuadro') + (b.cab.filter(x => /^diferencia/i.test(String(x).trim())).length > 1 ? ' (' + String(b.cab[j - 1]).trim() + ' contra ' + String(b.cab[j - 2]).trim() + ')' : ''), _auto: true });
+          });
+          if (inf.length) marcas = inf;
+        }
+        if (!marcas) return;
+        (Array.isArray(marcas) ? marcas : [marcas]).forEach(c => {
           if (!c || c.mayor === undefined || c.mayor === null) return;
           const iC = Number.isInteger(c.c) ? c.c : 0, ex = c.filas || {}, filas = [];
           (b.filas || []).forEach((f, i) => {
@@ -18981,7 +18995,7 @@ ${cont.innerHTML}
             const ee = (b.expl || {})[String(i)]; if (ee) row.expl = ee;
             filas.push(row);
           });
-          out.push({ titulo: c.titulo || 'Cuadro', ref: c.ref, filas, deInforme: true });
+          out.push({ titulo: c.titulo || 'Cuadro', ref: c.ref, filas, deInforme: true, auto: !!c._auto });
         });
       });
       return out;
@@ -18989,6 +19003,9 @@ ${cont.innerHTML}
     // Lista final de cuadros: los explícitos (consolidado y los de siempre) más los que salen del informe; si un título está en las dos partes manda el del informe.
     function nmCuadresTodos(data) {
       const exp = (data && Array.isArray(data.cuadres)) ? data.cuadres : [], inf = nmCuadresDeInforme(data && data.bloques);
+      const refDe = t => (String(t || '').match(/RC-\d+(\.\d+)?/) || [''])[0];
+      const refExp = new Set(exp.filter(q => q.tipo !== 'matriz').map(q => refDe(q.titulo)).filter(Boolean));
+      for (let k = inf.length - 1; k >= 0; k--) if (inf[k].auto && refExp.has(refDe(inf[k].titulo))) inf.splice(k, 1);
       if (!inf.length) return exp;
       const tit = q => String(q.titulo || '').trim().toLowerCase(), enInf = new Set(inf.map(tit));
       const matriz = exp.filter(q => q.tipo === 'matriz'), resto = exp.filter(q => q.tipo !== 'matriz' && !enInf.has(tit(q)));
