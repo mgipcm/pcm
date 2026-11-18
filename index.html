@@ -4747,7 +4747,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
 
     // ===== Tipos de documento por cuenta y lista de qué subir =====
     const PC_ETIQ = {
-      'RC:nomina': ['Mayor contable completo', 'Mayor contable de nómina', 'Mayores de pasivos laborales y IESS por pagar', 'Mayor de anticipos a empleados', 'Rol de pagos (por mes y por persona)', 'Planilla del IESS', 'Listado de personal con fecha de ingreso', 'Décimos y fondo de reserva', 'Utilidades a trabajadores', 'Finiquitos y liquidaciones', 'Formulario 107', 'Contrato o expediente del colaborador', 'Otro'],
+      'RC:nomina': ['Planilla de fondos de reserva del IESS', 'Planilla de préstamos hipotecarios del IESS', 'Planilla de préstamos quirografarios del IESS', 'Mayor contable completo', 'Mayor contable de nómina', 'Mayores de pasivos laborales y IESS por pagar', 'Mayor de anticipos a empleados', 'Rol de pagos (por mes y por persona)', 'Planilla del IESS', 'Listado de personal con fecha de ingreso', 'Décimos y fondo de reserva', 'Utilidades a trabajadores', 'Finiquitos y liquidaciones', 'Formulario 107', 'Contrato o expediente del colaborador', 'Otro'],
       'AA:bancos': ['Conciliación bancaria', 'Estado de cuenta', 'Confirmación bancaria', 'Firmas autorizadas', 'Otro'],
       'AA:caja': ['Acta de arqueo de caja', 'Detalle de fondos y caja chica', 'Documento de soporte', 'Otro'],
       'AA:equivalentes': ['Certificado o póliza de inversión', 'Estado de cuenta', 'Confirmación de la institución', 'Detalle de equivalentes de efectivo', 'Otro'],
@@ -17492,6 +17492,7 @@ ${cont.innerHTML}
           '- **Roles de pago contra el mayor (RC-03):** cruza cada rubro de los roles con el gasto del mayor, con el resumen por mes y el detalle por empleado.',
           '- **Recálculo por mes (RC-03.2):** vuelve a calcular el aporte patronal (12,15 %), el aporte personal (9,45 %), el décimo tercero, el décimo cuarto y el fondo de reserva, y los compara con lo que muestran los roles.',
           '- **Planillas del IESS (RC-03.3):** compara la base y los aportes de las planillas con los roles.',
+          '- **Fondos de reserva y préstamos del IESS (RC-14.1, RC-14.2, RC-13.5, RC-13.6):** compara lo acreditado y lo pagado al IESS con los roles y el mayor, y con las planillas de fondos de reserva y de préstamos hipotecarios y quirografarios si se subieron.',
           '- **Pasivos laborales (RC-13):** reconstruye cada pasivo del personal (décimos, fondo de reserva, préstamos del IESS, multas, impuesto a la renta de empleados, IESS por pagar, participación de trabajadores y liquidaciones) y lo compara con el mayor y la sumaria.',
           '- **Vacaciones pendientes:** estima el pasivo no provisionado con una fila por colaborador (días pendientes, sueldo y valor) y la compara con el balance.',
           '- **Fondo de reserva (RC-14) y anticipos a empleados (RC-15):** cruza el gasto y el pasivo del fondo, y el movimiento de los préstamos y anticipos con la sumaria.',
