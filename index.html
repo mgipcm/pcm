@@ -1183,6 +1183,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label class="block text-xs font-semibold text-slate-600 mb-1">Documentación para el análisis (uno o varios archivos, máx. 200 MB cada uno)</label>
+            <div id="pc-tipo-previo" class="mb-2"></div>
             <input type="file" id="pc-archivos" multiple onchange="pcAgregarSeleccion(this)" class="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs sm:text-sm outline-none">
             <div id="pc-checklist" class="mt-2 text-[11px] text-slate-600"></div>
             <div id="pc-lista-arch" class="mt-2 space-y-1"></div>
@@ -4788,9 +4789,10 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
     }
     let pcEtiquetasElegidas = [];
     let pcArchivosSel = [];
+    let pcTipoPrevio = '';
     function pcAgregarSeleccion(inp) {
       const nuevos = [...(inp.files || [])];
-      nuevos.forEach(f => { if (!pcArchivosSel.some(x => x.name === f.name && x.size === f.size)) pcArchivosSel.push(f); });
+      nuevos.forEach(f => { if (!pcArchivosSel.some(x => x.name === f.name && x.size === f.size)) { pcArchivosSel.push(f); if (pcTipoPrevio) pcEtiquetasElegidas[pcArchivosSel.length - 1] = pcTipoPrevio; } });
       inp.value = '';
       pcArchivosElegidos();
     }
@@ -4807,6 +4809,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       { const cc2 = document.getElementById('pc-ctas-caja'); if (cc2) cc2.classList.toggle('hidden', !(valorAnalisis('pc-sumaria') === 'AF' && valorAnalisis('pc-hoja') === 'venta')); }
       const fs = pcArchivosSel, et = pcEtiquetas(valorAnalisis('pc-sumaria'), valorAnalisis('pc-hoja')), prev = pcEtiquetasElegidas;
       pcEtiquetasElegidas = fs.map((f, i) => (et.includes(prev[i]) ? prev[i] : pcEtiquetaSugerida(f.name, et)));
+      { const tp = document.getElementById('pc-tipo-previo'); if (tp) { if (!et.includes(pcTipoPrevio)) pcTipoPrevio = ''; tp.innerHTML = '<label class="block text-xs font-semibold text-slate-600 mb-1">Tipo de los archivos que vas a subir (elígelo primero y todos los que selecciones quedan con ese tipo)</label><select onchange="pcTipoPrevio = this.value" class="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs sm:text-sm outline-none"><option value="">— Sin elegir: lo defino archivo por archivo —</option>' + et.map(x => '<option value="' + escapeHtml(x) + '"' + (pcTipoPrevio === x ? ' selected' : '') + '>' + escapeHtml(x) + '</option>').join('') + '</select>'; } }
       const lista = document.getElementById('pc-lista-arch');
       if (lista) lista.innerHTML = (fs.length > 1 ? '<div class="flex flex-wrap items-center gap-2 text-[11px] pb-1 mb-1 border-b border-slate-200"><span class="font-bold">Poner el mismo tipo a todos:</span><select onchange="if (this.value) { pcEtiquetasElegidas = pcArchivosSel.map(() => this.value); pcArchivosElegidos(); }" class="p-1 border border-slate-300 rounded text-[11px] bg-white"><option value="">— Elige el tipo —</option>' + et.map(x => '<option value="' + escapeHtml(x) + '">' + escapeHtml(x) + '</option>').join('') + '</select></div>' : '') + fs.map((f, i) => '<div class="flex flex-wrap items-center gap-2 text-[11px]"><span class="flex-1 min-w-[10rem] break-all">📎 ' + escapeHtml(f.name) + ' <span class="text-slate-400">(' + tamanoLegible(f.size) + ')</span></span><select onchange="pcEtiquetasElegidas[' + i + '] = this.value; pcChecklist()" class="p-1 border border-slate-300 rounded text-[11px] bg-white"><option value="">— Elige el tipo —</option>' + et.map(x => '<option value="' + escapeHtml(x) + '"' + (pcEtiquetasElegidas[i] === x ? ' selected' : '') + '>' + escapeHtml(x) + '</option>').join('') + '</select><button type="button" onclick="pcQuitarArchivo(' + i + ')" class="px-2 py-0.5 rounded border border-slate-300 text-slate-600 hover:bg-slate-100" title="Quitar este archivo">✕ Quitar</button></div>').join('');
       pcChecklist();
