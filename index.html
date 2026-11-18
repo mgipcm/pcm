@@ -19049,6 +19049,9 @@ ${cont.innerHTML}
       ['RC-03.2 Fondo de reserva', q => /RC-03\.2/.test(q.titulo || '') && /fondo de reserva/i.test(q.titulo || '')],
       ['RC-13 Pasivos laborales e IESS', q => /RC-13(?![.\d])/.test(q.titulo || '')],
       ['RC-13.4 Vacaciones pendientes', q => /RC-13\.4/.test(q.titulo || '')],
+      ['RC-03.3 Roles contra planillas del IESS', q => /RC-03\.3/.test(q.titulo || '')],
+      ['RC-14.1 y RC-14.2 Fondo de reserva con el IESS', q => /RC-14\.[12]/.test(q.titulo || '')],
+      ['RC-13.5 y RC-13.6 Préstamos del IESS', q => /RC-13\.[56]/.test(q.titulo || '')],
       ['RC-14 Fondo de reserva', q => /RC-14/.test(q.titulo || '')],
       ['RC-15 Anticipos y préstamos a empleados', q => /RC-15/.test(q.titulo || '')]
     ];
