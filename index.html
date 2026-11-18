@@ -18126,36 +18126,83 @@ ${cont.innerHTML}
           <div class="text-[10px] text-slate-400 mt-2">ƒ = celda con fórmula (pasa el cursor para verla). Azul = dato de entrada. En el Excel descargado las fórmulas quedan vivas.</div>
         </div></div>`;
     }
-    async function v2PtExcel(id) {
-      const t = (v2E.pts || []).find(x => x.id === id); if (!t) return;
-      if (!window.ExcelJS) { alert('No se pudo cargar el generador de Excel. Revisa tu conexión a internet.'); return; }
-      const wb = new ExcelJS.Workbook(); wb.creator = 'MGI Guerra · Claude'; wb.created = new Date();
-      const cli = ($im('v2-cliente').selectedOptions[0] || {}).textContent || v2E.cliente;
-      const c = wb.addWorksheet('Carátula'); c.getColumn(1).width = 26; c.getColumn(2).width = 80;
-      const fila = (a, b, neg) => { const r = c.addRow([a, b]); r.getCell(1).font = { bold: true }; if (neg) { r.getCell(2).font = { bold: true, size: 14 }; } return r; };
-      fila('Cliente', cli); fila('Año / visita', v2E.anio + ' · ' + v2E.visita); fila('Sumaria', 'AF · Inventarios · Inventario para la venta');
-      fila('Referencia', t.ref, true); fila('Procedimiento', t.codigo); fila('Título', t.titulo); fila('Objetivo', t.objetivo || ''); fila('Fuente de la información', t.fuente || '');
-      fila('Elaborado por', (t.elaborado_por || 'Claude') + ' · ' + v2Fmt(t.elaborado_at)); fila('Revisado por', 'Pendiente'); fila('Conclusión', t.conclusion || '');
-      c.addRow([]); const l = c.addRow(['Leyenda', 'Azul = dato de entrada tomado de la información del cliente · Negro = fórmula · Gris = total / encabezado']); l.getCell(1).font = { bold: true };
-      c.eachRow(r => { r.getCell(2).alignment = { wrapText: true, vertical: 'top' }; });
-      const ESTILO = { h: { f: 'FFE8EEFC', b: true }, t: { f: 'FFF1F5F9', b: true, top: true }, ti: { b: true, sz: 14 }, no: { i: true, col: 'FF64748B' }, 'in': { col: 'FF1D4ED8' }, ok: { b: true, col: 'FF047857' } };
-      (t.hojas || []).forEach(H => {
-        const ws = wb.addWorksheet(String(H.nombre || 'Hoja').slice(0, 31).replace(/[\\\/\?\*\[\]:]/g, '-'));
-        (H.anchos || []).forEach((w, i) => { ws.getColumn(i + 1).width = w; });
-        (H.filas || []).forEach((fl, r) => (fl || []).forEach((cel, j) => {
-          const o = v2PtCelda(cel); if (o.v === undefined && !o.f) return;
-          const x = ws.getCell(r + 1, j + 1);
-          x.value = o.f ? { formula: String(o.f).replace(/^=/, ''), result: o.v } : o.v;
-          const e = ESTILO[o.e] || {};
-          if (typeof o.v === 'number' || o.f) x.numFmt = o.e === 'p' ? '0.00%' : '#,##0.00;[Red]-#,##0.00';
-          const fnt = {}; if (e.b) fnt.bold = true; if (e.i) fnt.italic = true; if (e.col) fnt.color = { argb: e.col }; if (e.sz) fnt.size = e.sz; if (Object.keys(fnt).length) x.font = fnt;
-          if (e.f) x.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: e.f } };
-          if (e.top) x.border = { top: { style: 'thin' } };
-        }));
+    // ----- Descarga del papel de trabajo (común a Inventarios y Nómina): con formato; si falla, versión simple; si falla, avisa con el motivo -----
+    function ptLimpiaTexto(x) { return typeof x === 'string' ? x.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, '') : x; }
+    function ptNombresHojas(t) {
+      const usados = new Set();
+      return (t.hojas || []).map((H, i) => {
+        let n = ptLimpiaTexto(String(H.nombre || 'Hoja ' + (i + 1))).slice(0, 31).replace(/[\\\/\?\*\[\]:]/g, '-').trim() || 'Hoja ' + (i + 1);
+        let u = n, k = 2; while (usados.has(u.toLowerCase()) || u.toLowerCase() === 'carátula') { const suf = ' (' + k++ + ')'; u = n.slice(0, 31 - suf.length) + suf; }
+        usados.add(u.toLowerCase()); return u;
       });
-      const buf = await wb.xlsx.writeBuffer();
-      const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
-      a.download = (t.ref + ' ' + t.titulo + ' - ' + cli).replace(/[\\\/:*?"<>|]/g, '-') + '.xlsx'; document.body.appendChild(a); a.click(); a.remove();
+    }
+    function ptBajarArchivo(blob, nombre) {
+      const url = URL.createObjectURL(blob), a = document.createElement('a'); a.href = url; a.download = nombre; a.style.display = 'none'; document.body.appendChild(a); a.click();
+      setTimeout(() => { a.remove(); URL.revokeObjectURL(url); }, 4000);
+    }
+    async function ptExcelComun(t, cli, sumariaTxt, anioVisita, fechaElab) {
+      const nombreArch = (String(t.ref || '') + ' ' + String(t.titulo || '') + ' - ' + cli).replace(/[\\\/:*?"<>|\r\n\t]/g, '-').replace(/\s+/g, ' ').trim().slice(0, 120) + '.xlsx';
+      const nombres = ptNombresHojas(t);
+      const celdaDe = c => (c !== null && typeof c === 'object') ? c : { v: c };
+      const valor = o => { let v = o.v; if (typeof v === 'number' && !isFinite(v)) v = null; return ptLimpiaTexto(v); };
+      const caratula = [['Cliente', cli], ['Año / visita', anioVisita], ['Sumaria', sumariaTxt], ['Referencia', t.ref || ''], ['Procedimiento', t.codigo || ''], ['Título', t.titulo || ''], ['Objetivo', t.objetivo || ''], ['Fuente de la información', t.fuente || ''], ['Elaborado por', (t.elaborado_por || 'Claude') + ' · ' + fechaElab], ['Revisado por', 'Pendiente'], ['Conclusión', t.conclusion || '']].map(r => r.map(ptLimpiaTexto));
+      let errorFormato = null;
+      if (window.ExcelJS) {
+        try {
+          const wb = new ExcelJS.Workbook(); wb.creator = 'MGI Guerra · Claude'; wb.created = new Date();
+          const c = wb.addWorksheet('Carátula'); c.getColumn(1).width = 26; c.getColumn(2).width = 80;
+          caratula.forEach((fl, i) => { const r = c.addRow(fl); r.getCell(1).font = { bold: true }; if (i === 3) r.getCell(2).font = { bold: true, size: 14 }; });
+          c.addRow([]); const l = c.addRow(['Leyenda', 'Azul = dato de entrada tomado de la información del cliente · Negro = fórmula · Gris = total / encabezado']); l.getCell(1).font = { bold: true };
+          c.eachRow(r => { r.getCell(2).alignment = { wrapText: true, vertical: 'top' }; });
+          const ESTILO = { h: { f: 'FFE8EEFC', b: true }, t: { f: 'FFF1F5F9', b: true, top: true }, ti: { b: true, sz: 14 }, no: { i: true, col: 'FF64748B' }, 'in': { col: 'FF1D4ED8' }, ok: { b: true, col: 'FF047857' } };
+          (t.hojas || []).forEach((H, hi) => {
+            const ws = wb.addWorksheet(nombres[hi]);
+            (H.anchos || []).forEach((w, i) => { if (typeof w === 'number' && w > 0) ws.getColumn(i + 1).width = w; });
+            (H.filas || []).forEach((fl, r) => (Array.isArray(fl) ? fl : []).forEach((cel, j) => {
+              const o = celdaDe(cel), v = valor(o); if ((v === undefined || v === null) && !o.f) return;
+              const x = ws.getCell(r + 1, j + 1);
+              x.value = o.f ? { formula: String(o.f).replace(/^=/, ''), result: v === null ? undefined : v } : v;
+              const e = ESTILO[o.e] || {};
+              if (typeof v === 'number' || o.f) x.numFmt = o.e === 'p' ? '0.00%' : '#,##0.00;[Red]-#,##0.00';
+              const fnt = {}; if (e.b) fnt.bold = true; if (e.i) fnt.italic = true; if (e.col) fnt.color = { argb: e.col }; if (e.sz) fnt.size = e.sz; if (Object.keys(fnt).length) x.font = fnt;
+              if (e.f) x.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: e.f } };
+              if (e.top) x.border = { top: { style: 'thin' } };
+            }));
+          });
+          const buf = await wb.xlsx.writeBuffer();
+          ptBajarArchivo(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), nombreArch);
+          return;
+        } catch (err) { console.error('Papel de trabajo con formato:', err); errorFormato = err; }
+      }
+      // Versión simple (sin colores) con SheetJS
+      if (window.XLSX) {
+        try {
+          const wb = XLSX.utils.book_new();
+          XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(caratula), 'Carátula');
+          (t.hojas || []).forEach((H, hi) => {
+            const ws = {}; let maxR = 0, maxC = 0;
+            (H.filas || []).forEach((fl, r) => (Array.isArray(fl) ? fl : []).forEach((cel, j) => {
+              const o = celdaDe(cel), v = valor(o); if ((v === undefined || v === null) && !o.f) return;
+              const ref = XLSX.utils.encode_cell({ r, c: j }), q = {};
+              if (typeof v === 'number') { q.t = 'n'; q.v = v; q.z = '#,##0.00'; } else if (typeof v === 'boolean') { q.t = 'b'; q.v = v; } else { q.t = 's'; q.v = v === undefined || v === null ? '' : String(v); }
+              if (o.f) q.f = String(o.f).replace(/^=/, '');
+              ws[ref] = q; if (r > maxR) maxR = r; if (j > maxC) maxC = j;
+            }));
+            ws['!ref'] = XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: maxR, c: maxC } });
+            ws['!cols'] = (H.anchos || []).map(w => ({ wch: typeof w === 'number' ? w : 12 }));
+            XLSX.utils.book_append_sheet(wb, ws, nombres[hi]);
+          });
+          XLSX.writeFile(wb, nombreArch);
+          alert('El papel de trabajo se descargó en versión simple (sin colores) porque no se pudo armar con formato.' + (errorFormato ? '\nMotivo: ' + (errorFormato.message || errorFormato) : ''));
+          return;
+        } catch (err2) { console.error('Papel de trabajo simple:', err2); alert('No se pudo descargar el papel de trabajo.\nMotivo: ' + (err2.message || err2) + (errorFormato ? '\nAntes: ' + (errorFormato.message || errorFormato) : '') + '\nAvisa al Socio con este mensaje.'); return; }
+      }
+      alert('No se pudo cargar el generador de Excel. Revisa tu conexión a internet y presiona Ctrl+F5.' + (errorFormato ? '\nMotivo: ' + (errorFormato.message || errorFormato) : ''));
+    }
+    async function v2PtExcel(id) {
+      const t = (v2E.pts || []).find(x => x.id === id); if (!t) { alert('No se encontró el papel de trabajo. Presiona «Actualizar» y vuelve a intentar.'); return; }
+      const cli = ($im('v2-cliente').selectedOptions[0] || {}).textContent || v2E.cliente;
+      await ptExcelComun(t, cli, 'AF · Inventarios · Inventario para la venta', v2E.anio + ' · ' + v2E.visita, v2Fmt(t.elaborado_at));
     }
     // ----- Pestaña "Subir información": un solo pedido a Claude y el detalle de lo que ya está leído -----
     async function v2SubirCargar() {
@@ -18818,35 +18865,9 @@ ${cont.innerHTML}
         </div></div>`;
     }
     async function nmPtExcel(id) {
-      const t = (nmE.pts || []).find(x => x.id === id); if (!t) return;
-      if (!window.ExcelJS) { alert('No se pudo cargar el generador de Excel. Revisa tu conexión a internet.'); return; }
-      const wb = new ExcelJS.Workbook(); wb.creator = 'MGI Guerra · Claude'; wb.created = new Date();
+      const t = (nmE.pts || []).find(x => x.id === id); if (!t) { alert('No se encontró el papel de trabajo. Presiona «Actualizar» y vuelve a intentar.'); return; }
       const cli = ($im('nm-cliente').selectedOptions[0] || {}).textContent || nmE.cliente;
-      const c = wb.addWorksheet('Carátula'); c.getColumn(1).width = 26; c.getColumn(2).width = 80;
-      const fila = (a, b, neg) => { const r = c.addRow([a, b]); r.getCell(1).font = { bold: true }; if (neg) { r.getCell(2).font = { bold: true, size: 14 }; } return r; };
-      fila('Cliente', cli); fila('Año / visita', nmE.anio + ' · ' + nmE.visita); fila('Sumaria', 'RC · Nómina');
-      fila('Referencia', t.ref, true); fila('Procedimiento', t.codigo); fila('Título', t.titulo); fila('Objetivo', t.objetivo || ''); fila('Fuente de la información', t.fuente || '');
-      fila('Elaborado por', (t.elaborado_por || 'Claude') + ' · ' + nmFmt(t.elaborado_at)); fila('Revisado por', 'Pendiente'); fila('Conclusión', t.conclusion || '');
-      c.addRow([]); const l = c.addRow(['Leyenda', 'Azul = dato de entrada tomado de la información del cliente · Negro = fórmula · Gris = total / encabezado']); l.getCell(1).font = { bold: true };
-      c.eachRow(r => { r.getCell(2).alignment = { wrapText: true, vertical: 'top' }; });
-      const ESTILO = { h: { f: 'FFE8EEFC', b: true }, t: { f: 'FFF1F5F9', b: true, top: true }, ti: { b: true, sz: 14 }, no: { i: true, col: 'FF64748B' }, 'in': { col: 'FF1D4ED8' }, ok: { b: true, col: 'FF047857' } };
-      (t.hojas || []).forEach(H => {
-        const ws = wb.addWorksheet(String(H.nombre || 'Hoja').slice(0, 31).replace(/[\\\/\?\*\[\]:]/g, '-'));
-        (H.anchos || []).forEach((w, i) => { ws.getColumn(i + 1).width = w; });
-        (H.filas || []).forEach((fl, r) => (fl || []).forEach((cel, j) => {
-          const o = nmPtCelda(cel); if (o.v === undefined && !o.f) return;
-          const x = ws.getCell(r + 1, j + 1);
-          x.value = o.f ? { formula: String(o.f).replace(/^=/, ''), result: o.v } : o.v;
-          const e = ESTILO[o.e] || {};
-          if (typeof o.v === 'number' || o.f) x.numFmt = o.e === 'p' ? '0.00%' : '#,##0.00;[Red]-#,##0.00';
-          const fnt = {}; if (e.b) fnt.bold = true; if (e.i) fnt.italic = true; if (e.col) fnt.color = { argb: e.col }; if (e.sz) fnt.size = e.sz; if (Object.keys(fnt).length) x.font = fnt;
-          if (e.f) x.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: e.f } };
-          if (e.top) x.border = { top: { style: 'thin' } };
-        }));
-      });
-      const buf = await wb.xlsx.writeBuffer();
-      const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
-      a.download = (t.ref + ' ' + t.titulo + ' - ' + cli).replace(/[\\\/:*?"<>|]/g, '-') + '.xlsx'; document.body.appendChild(a); a.click(); a.remove();
+      await ptExcelComun(t, cli, 'RC · Nómina', nmE.anio + ' · ' + nmE.visita, nmFmt(t.elaborado_at));
     }
     // ----- Pestaña "Subir información": un solo pedido a Claude y el detalle de lo que ya está leído -----
     async function nmSubirCargar() {
