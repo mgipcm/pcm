@@ -19242,6 +19242,39 @@ ${cont.innerHTML}
         NMK_RUBROS.flatMap(([n]) => L.filter(x => x.rubro === n)).map(x => '<tr class="border-b border-slate-100"><td class="' + tc + '">' + e(x.rubro) + '</td><td class="' + tc + ' text-slate-500">' + e((NMK_COLS.find(k => k[0] === x.sumaria) || [, x.sumaria])[1]) + '</td><td class="' + tc + '">' + e(x.codigo) + '</td><td class="' + tc + '">' + e(x.cuenta) + '</td><td class="px-3 py-1 text-right whitespace-nowrap">' + fm(x.saldo) + '</td></tr>').join('') + '</tbody></table></div>';
       c.innerHTML = '<div class="p-4">' + barra + '<p class="text-[11px] text-slate-500 mb-3">Se arma con el balance de comprobación: cada rubro de nómina por separado, en las cuentas de costos (RB), administración (RC), ventas (RD) y financieros (RE). Cada rubro se compara luego con los roles de pago. El rubro se decide por el nombre de la cuenta: revisa que ninguna haya quedado en otro rubro o fuera. Total: ' + fm(M.total) + '.</p>' + matriz + det + '</div>';
     }
+    // Excel con todos los cuadros del Resumen (uno por hoja), tomados tal como se ven en pantalla, con sus notas y explicaciones
+    async function nmCuaExcelTodo() {
+      if (!window.ExcelJS) { alert('No se pudo cargar el generador de Excel. Revisa tu conexión a internet y presiona Ctrl+F5.'); return; }
+      const panel = $im('nm-panel'); if (!panel) return;
+      const num = t => { const x = String(t).trim(); return /^-?\d{1,3}(\.\d{3})*,\d{2}$|^-?\d+,\d{2}$/.test(x) ? Number(x.replace(/\./g, '').replace(',', '.')) : null; };
+      const celda = tx => {
+        let t = String(tx || '').replace(/\s+/g, ' ').trim(); if (t === '—' || t === '-') return [''];
+        const m = t.match(/^(-?[\d.]+,\d{2})\s+(\S.*)$/); if (m && num(m[1]) !== null) return [num(m[1]), m[2]];
+        const n = num(t); return [n !== null ? n : t];
+      };
+      const bloques = [];
+      panel.querySelectorAll('.v2r-tw').forEach(tw => {
+        const tabla = tw.querySelector('table'); if (!tabla) return;
+        const h = tw.previousElementSibling, tit = ((h && h.querySelector('span') ? h.querySelector('span').textContent : (h ? h.textContent : '')) || 'Cuadro').replace(/\s+/g, ' ').trim();
+        const aoa = [];
+        const cab = [...tabla.querySelectorAll('thead th')].map(th => th.textContent.replace(/\s+/g, ' ').trim()); if (cab.length) { aoa.push([]); aoa.push(cab); }
+        tabla.querySelectorAll('tbody tr').forEach(tr => {
+          if (tr.classList.contains('v2r-exp')) { const t = tr.textContent.replace(/\s+/g, ' ').trim(); if (t) aoa.push(['Nota: ' + t]); return; }
+          const fila = []; [...tr.cells].forEach(td => { celda(td.textContent).forEach(v => fila.push(v)); });
+          if (fila.some(v => v !== '')) { if (tr.classList.contains('tot')) fila.tipo = 't'; aoa.push(fila); }
+        });
+        bloques.push({ tit, aoa });
+      });
+      if (!bloques.length) { alert('No hay cuadros para descargar. Espera a que termine de cargar la pantalla.'); return; }
+      const info = [['Año', nmE.anio], ['Visita', nmE.visita], ['Preparado por', (typeof nombreUsuarioActivo === 'function' && nombreUsuarioActivo()) || '']];
+      const cli = ($im('nm-cliente').selectedOptions[0] || {}).textContent || nmE.cliente;
+      const hojas = [{ nombre: 'Índice', aoa: [[], ['N.º', 'Cuadro'], ...bloques.map((b, i) => [i + 1, b.tit.replace(/^\d+\.\s*/, '')])], anchos: [{ wch: 8 }, { wch: 110 }], op: { titulo: 'Resumen de cuadres y cruces: índice', info, ent: [0] } }];
+      bloques.forEach((b, i) => {
+        const corto = b.tit.replace(/^\d+\.\s*/, '').replace(/[\\\/?*\[\]:]/g, '').slice(0, 24).trim();
+        hojas.push({ nombre: String(i + 1).padStart(2, '0') + ' ' + corto, aoa: b.aoa, anchos: [{ wch: 46 }], op: { titulo: b.tit, info } });
+      });
+      try { await arrXlsxConFormato(hojas, cli, 'Cuadres_y_cruces_nomina_' + String(nmE.cliente).replace(/[^A-Za-z0-9]+/g, '_') + '_' + nmE.anio + '.xlsx'); } catch (er) { alert('No se pudo armar el Excel: ' + (er.message || er)); }
+    }
     async function nmConsExcel() {
       if (!window.ExcelJS) { alert('No se pudo cargar el generador de Excel. Revisa tu conexión a internet.'); return; }
       const L = nmConsDatos(); if (!L.length) { alert('No hay datos para descargar.'); return; }
@@ -19358,7 +19391,7 @@ ${cont.innerHTML}
       }
       const cob = '<div class="v2r-h3" style="margin:6px 0 6px;display:flex;justify-content:space-between;align-items:center;gap:8px"><span>1. Consolidado de gastos de nómina</span><button type="button" onclick="nmConsExcel()" style="color:#449964;font-size:12px;font-weight:700;border:0;background:none;cursor:pointer" class="hover:underline">Descargar en Excel</button></div><div class="v2r-tw"><table class="v2r-t"><thead><tr><th>Rubro</th>' + NMK_COLS.map(([, nm]) => th(nm, true)).join('') + th('Total', true) + '</tr></thead><tbody>' + cobCuerpo + '</tbody></table></div>';
       const chip = (n, t, P) => '<span style="display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:99px;font-size:12px;font-weight:700;background:' + P[1] + ';color:' + P[2] + '"><span style="font-size:14px">' + n + '</span>' + t + '</span>';
-      const resumen = '<div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:6px">' + chip(cont.cuadra, 'cuadran', NMC_PILL.cuadra) + chip(cont.expl, 'explicadas', NMC_PILL.expl) + chip(cont.dif + cont.nosum, 'con diferencia', NMC_PILL.dif) + chip(cont.ajuste, 'con ajuste propuesto', NMC_PILL.ajuste) + chip(cont.sinsoporte, 'sin soporte', NMC_PILL.sinsoporte) + '<span style="font-size:11px;color:#64748b;margin-left:4px">Tolerancia: ' + fmE(NMC_TOL) + ' · la sumaria se lee en vivo del balance de comprobación</span></div>';
+      const resumen = '<div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:6px">' + chip(cont.cuadra, 'cuadran', NMC_PILL.cuadra) + chip(cont.expl, 'explicadas', NMC_PILL.expl) + chip(cont.dif + cont.nosum, 'con diferencia', NMC_PILL.dif) + chip(cont.ajuste, 'con ajuste propuesto', NMC_PILL.ajuste) + chip(cont.sinsoporte, 'sin soporte', NMC_PILL.sinsoporte) + '<span style="font-size:11px;color:#64748b;margin-left:4px">Tolerancia: ' + fmE(NMC_TOL) + ' · la sumaria se lee en vivo del balance de comprobación</span><button type="button" onclick="nmCuaExcelTodo()" style="margin-left:auto;font-size:12px;font-weight:700;color:#449964" class="hover:underline" title="Baja un Excel con todos los cuadros de esta pantalla, uno por hoja">Descargar todos los cuadros en Excel</button></div>';
       const faltan = NMC_ESPERADOS.filter(x => !cu.some(x[1])).map(x => x[0]);
       const faltanHtml = faltan.length ? '<div style="margin:14px 0;padding:10px 14px;border:1px dashed #d97706;background:#fffbeb;border-radius:8px;font-size:13px;color:#8a5a00"><b>No generado:</b> faltan ' + faltan.length + ' cuadro(s) que siempre debe haber en Nómina: ' + faltan.map(e).join('; ') + '. Se completan al volver a procesar el pedido o al agregarlos en el análisis de Claude.</div>' : '';
       const ctl = nmControles(R.data, cu), ctlMal = ctl.filter(x => !x.ok), ctlBien = ctl.length - ctlMal.length;
