@@ -19158,7 +19158,9 @@ ${cont.innerHTML}
       };
       const tarjetas = cu.map(q => {
         if (q.tipo === 'matriz') return tarjMatriz(q);
-        if (q.tipo === 'composicion') return tarjComp(q);
+        // Si un cuadro marcado como composición trae filas con saldo propio (mayor/aud/cuentas) y ningún importe v, se pinta como cuadro de filas
+        const esFilasComp = q.tipo === 'composicion' && (q.filas || []).length > 0 && !(q.filas || []).some(f => f.v !== undefined && f.v !== null) && (q.filas || []).some(f => f.aud !== undefined || f.mayor !== undefined);
+        if (q.tipo === 'composicion' && !esFilasComp) return tarjComp(q);
         const sinCl = /^RC-02\b/.test(q.titulo || '') && (q.filas || []).length > 0 && !(q.filas || []).some(f => Number(f.ajuste)) && (q.filas || []).every(f => f.aud === null || f.aud === undefined || f.aud === '' || (f.mayor !== null && f.mayor !== undefined && Math.abs(Number(f.aud) - Number(f.mayor)) < 0.005));
         const NC = sinCl ? 5 : 6;
         const filas = (q.filas || []).map(f => {
