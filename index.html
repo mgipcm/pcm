@@ -17491,14 +17491,14 @@ ${cont.innerHTML}
           'El pedido lo autoriza el Socio o el Supervisor y Claude lo procesa en su siguiente revisión (se hace cada hora); la barra de avance del pedido muestra en qué etapa va. No hace falta subir nada más en las otras pestañas.',
           '',
           '## Qué hace',
-          '- **Consolidado de gastos de nómina (RC-02):** arma el gasto por rubro y por área, y lo cruza con el balance de comprobación.',
-          '- **Roles de pago contra el mayor (RC-03):** cruza cada rubro de los roles con el gasto del mayor, con el resumen por mes y el detalle por empleado.',
-          '- **Recálculo por mes (RC-03.2):** vuelve a calcular el aporte patronal (12,15 %), el aporte personal (9,45 %), el décimo tercero, el décimo cuarto y el fondo de reserva, y los compara con lo que muestran los roles.',
-          '- **Planillas del IESS (RC-03.3):** compara la base y los aportes de las planillas con los roles.',
-          '- **Fondos de reserva y préstamos del IESS (RC-14.1, RC-14.2, RC-13.5, RC-13.6):** compara lo acreditado y lo pagado al IESS con los roles y el mayor, y con las planillas de fondos de reserva y de préstamos hipotecarios y quirografarios si se subieron.',
-          '- **Pasivos laborales (RC-13):** reconstruye cada pasivo del personal (décimos, fondo de reserva, préstamos del IESS, multas, impuesto a la renta de empleados, IESS por pagar, participación de trabajadores y liquidaciones) y lo compara con el mayor y la sumaria.',
+          '- **Consolidado de gastos de nómina (RC-01):** arma el gasto por rubro y por área, y lo cruza con el balance de comprobación.',
+          '- **Roles de pago contra el mayor (RC-02):** cruza cada rubro de los roles con el gasto del mayor, con el resumen por mes y el detalle por empleado.',
+          '- **Recálculo por mes (RC-02.2):** vuelve a calcular el aporte patronal (12,15 %), el aporte personal (9,45 %), el décimo tercero, el décimo cuarto y el fondo de reserva, y los compara con lo que muestran los roles.',
+          '- **Planillas del IESS (RC-02.3):** compara la base y los aportes de las planillas con los roles.',
+          '- **Fondos de reserva y préstamos del IESS (RC-07.1, RC-07.2, RC-06.5, RC-06.6):** compara lo acreditado y lo pagado al IESS con los roles y el mayor, y con las planillas de fondos de reserva y de préstamos hipotecarios y quirografarios si se subieron.',
+          '- **Pasivos laborales (RC-06):** reconstruye cada pasivo del personal (décimos, fondo de reserva, préstamos del IESS, multas, impuesto a la renta de empleados, IESS por pagar, participación de trabajadores y liquidaciones) y lo compara con el mayor y la sumaria.',
           '- **Vacaciones pendientes:** estima el pasivo no provisionado con una fila por colaborador (días pendientes, sueldo y valor) y la compara con el balance.',
-          '- **Fondo de reserva (RC-14) y anticipos a empleados (RC-15):** cruza el gasto y el pasivo del fondo, y el movimiento de los préstamos y anticipos con la sumaria.',
+          '- **Fondo de reserva (RC-07) y anticipos a empleados (RC-08):** cruza el gasto y el pasivo del fondo, y el movimiento de los préstamos y anticipos con la sumaria.',
           '- **Ajustes propuestos, recomendaciones de control interno y pendientes:** cada diferencia viene explicada, con la cuenta y el asiento sugerido.',
           '- **Resumen de cuadres y cruces:** junta todos los cuadros en una sola pantalla con su estado (cuadra, explicada, con ajuste o con diferencia), el consolidado por empleado y el botón para ver las cuentas y las explicaciones. Incluye controles automáticos que avisan si falta un cuadro o si los totales no coinciden (por ejemplo, si falta alguien en la tabla de vacaciones).',
           '',
@@ -18779,7 +18779,7 @@ ${cont.innerHTML}
         const rev = f.revisado_at ? `<div class="font-semibold text-emerald-700">✔ ${h(nombreMostrado(f.revisado_por) || '')}</div><div class="text-[10px] text-slate-400 mt-0.5">${nmFmt(f.revisado_at)}</div><button type="button" onclick="nmRevisar('${k}',false)" class="text-[10px] text-slate-400 hover:underline mt-1">Quitar revisión</button>` : `<button type="button" onclick="nmRevisar('${k}',true)" class="px-2.5 py-1 text-[11px] font-semibold border border-slate-300 rounded-lg bg-white hover:bg-slate-50">Marcar revisado</button>`;
         filas += `<tr id="nm-prog-${k}" class="align-top">
           <td class="p-3 border-r border-slate-200 font-semibold text-slate-700 whitespace-nowrap">${k}</td>
-          <td class="p-3 border-r border-slate-200 text-slate-700 leading-relaxed text-[12px]">${p.titulo ? `<div class="font-bold text-slate-800 mb-0.5 text-[13px]">${h(p.titulo)}</div>` : ''}${h(p.procedimiento || '')}${p.codigo === 'RC-02' ? `<div class="mt-1.5"><button type="button" onclick="nmIrConsolidado()" class="text-[11px] font-bold hover:underline" style="color:#449964">Abrir el consolidado de gastos de nómina →</button></div>` : ''}</td>
+          <td class="p-3 border-r border-slate-200 text-slate-700 leading-relaxed text-[12px]">${p.titulo ? `<div class="font-bold text-slate-800 mb-0.5 text-[13px]">${h(p.titulo)}</div>` : ''}${h(p.procedimiento || '')}${p.codigo === 'RC-01' ? `<div class="mt-1.5"><button type="button" onclick="nmIrConsolidado()" class="text-[11px] font-bold hover:underline" style="color:#449964">Abrir el consolidado de gastos de nómina →</button></div>` : ''}</td>
           <td class="p-3 border-r border-slate-200 text-[12px]" >${nmNorma(p)}</td>
           <td class="p-3 border-r border-slate-200 whitespace-nowrap text-[12px]">${elab}${estH}</td>
           <td class="p-3 border-r border-slate-200 whitespace-nowrap text-[12px]">${rev}</td>
@@ -19008,7 +19008,7 @@ ${cont.innerHTML}
       for (let k = inf.length - 1; k >= 0; k--) if (inf[k].auto && refExp.has(refDe(inf[k].titulo))) inf.splice(k, 1);
       const tit = q => String(q.titulo || '').trim().toLowerCase(), enInf = new Set(inf.map(tit));
       const matriz = exp.filter(q => q.tipo === 'matriz'), resto = exp.filter(q => q.tipo !== 'matriz' && !enInf.has(tit(q)));
-      // Orden automático por número de referencia (RC-02, RC-03, RC-03.2, RC-03.3, RC-13, RC-13.4 …); los sin número van al final
+      // Orden automático por número de referencia (RC-01, RC-02, RC-02.2, RC-02.3, RC-06, RC-06.4 …); los sin número van al final
       const clave = q => { const m = String(q.titulo || '').match(/RC-(\d+)(?:\.(\d+))?/) || String(q.ref || '').match(/RC-(\d+)(?:\.(\d+))?/); return m ? [parseInt(m[1], 10), m[2] === undefined ? -1 : parseInt(m[2], 10)] : [9999, 0]; };
       const ordenados = [...inf, ...resto].map((q, i) => ({ q, i, k: clave(q) })).sort((a, b) => (a.k[0] - b.k[0]) || (a.k[1] - b.k[1]) || (a.i - b.i)).map(x => x.q);
       return [...matriz, ...ordenados];
@@ -19019,10 +19019,10 @@ ${cont.innerHTML}
       const tablas = bl.filter(b => b && b.t === 'tabla' && Array.isArray(b.filas) && Array.isArray(b.cab));
       const esTot = f => /^total\b/i.test(String((f || [])[0] == null ? '' : f[0]).trim());
       const ok = t => out.push({ ok: true, t }), mal = t => out.push({ ok: false, t });
-      // 1) Tablas marcadas de RC-03.2: fila Total que sume las filas
+      // 1) Tablas marcadas de RC-02.2: fila Total que sume las filas
       tablas.filter(b => b.cuadre).forEach(b => {
         const c0 = Array.isArray(b.cuadre) ? b.cuadre[0] : b.cuadre, tit = String((c0 && c0.titulo) || 'tabla');
-        const obliga = /RC-03\.2/.test(tit), tf = b.filas.find(esTot), filas = b.filas.filter(f => !esTot(f));
+        const obliga = /RC-02\.2/.test(tit), tf = b.filas.find(esTot), filas = b.filas.filter(f => !esTot(f));
         if (!tf) { if (obliga) mal('Falta la fila Total en «' + tit + '».'); return; }
         const malas = [];
         for (let k = 1; k < b.cab.length; k++) {
@@ -19035,7 +19035,7 @@ ${cont.innerHTML}
       // 2) Vacaciones: una fila por colaborador y total igual al citado
       const vt = tablas.find(b => /^n\.?\s*º?$/i.test(String(b.cab[0]).trim()) && b.cab.some(x => /d[ií]as pendientes/i.test(x)) && b.cab.some(x => /^valor/i.test(String(x).trim())));
       let nVac = null;
-      if (!vt) mal('Falta la tabla de vacaciones con una fila por colaborador (RC-13.4).');
+      if (!vt) mal('Falta la tabla de vacaciones con una fila por colaborador (RC-06.4).');
       else {
         const iD = vt.cab.findIndex(x => /d[ií]as pendientes/i.test(x)), iV = vt.cab.findIndex(x => /^valor/i.test(String(x).trim()));
         const filas = vt.filas.filter(f => !esTot(f)), tf = vt.filas.find(esTot);
@@ -19063,20 +19063,20 @@ ${cont.innerHTML}
     // Cuadros que siempre debe haber en Nómina (cualquier cliente). Si falta alguno, el resumen lo avisa.
     const NMC_ESPERADOS = [
       ['Consolidado de la nómina (roles de pago)', q => q.tipo === 'matriz' || /consolidado de la n[oó]mina/i.test(q.titulo || '')],
-      ['RC-02 Consolidado de gastos contra el balance', q => /RC-02(?![.\d])/.test(q.titulo || '')],
-      ['RC-03 Roles de pago contra el gasto del mayor', q => /RC-03(?![.\d])/.test(q.titulo || '')],
-      ['RC-03.2 Aporte patronal', q => /RC-03\.2/.test(q.titulo || '') && /patronal/i.test(q.titulo || '')],
-      ['RC-03.2 Aporte personal', q => /RC-03\.2/.test(q.titulo || '') && /personal/i.test(q.titulo || '')],
-      ['RC-03.2 Décimo tercer sueldo', q => /RC-03\.2/.test(q.titulo || '') && /d[eé]cimo tercer/i.test(q.titulo || '')],
-      ['RC-03.2 Décimo cuarto sueldo', q => /RC-03\.2/.test(q.titulo || '') && /d[eé]cimo cuarto/i.test(q.titulo || '')],
-      ['RC-03.2 Fondo de reserva', q => /RC-03\.2/.test(q.titulo || '') && /fondo de reserva/i.test(q.titulo || '')],
-      ['RC-13 Pasivos laborales e IESS', q => /RC-13(?![.\d])/.test(q.titulo || '')],
-      ['RC-13.4 Vacaciones pendientes', q => /RC-13\.4/.test(q.titulo || '')],
-      ['RC-03.3 Roles contra planillas del IESS', q => /RC-03\.3/.test(q.titulo || '')],
-      ['RC-14.1 y RC-14.2 Fondo de reserva con el IESS', q => /RC-14\.[12]/.test(q.titulo || '')],
-      ['RC-13.5 y RC-13.6 Préstamos del IESS', q => /RC-13\.[56]/.test(q.titulo || '')],
-      ['RC-14 Fondo de reserva', q => /RC-14/.test(q.titulo || '')],
-      ['RC-15 Anticipos y préstamos a empleados', q => /RC-15/.test(q.titulo || '')]
+      ['RC-01 Consolidado de gastos contra el balance', q => /RC-01(?![.\d])/.test(q.titulo || '')],
+      ['RC-02 Roles de pago contra el gasto del mayor', q => /RC-02(?![.\d])/.test(q.titulo || '')],
+      ['RC-02.2 Aporte patronal', q => /RC-02\.2/.test(q.titulo || '') && /patronal/i.test(q.titulo || '')],
+      ['RC-02.2 Aporte personal', q => /RC-02\.2/.test(q.titulo || '') && /personal/i.test(q.titulo || '')],
+      ['RC-02.2 Décimo tercer sueldo', q => /RC-02\.2/.test(q.titulo || '') && /d[eé]cimo tercer/i.test(q.titulo || '')],
+      ['RC-02.2 Décimo cuarto sueldo', q => /RC-02\.2/.test(q.titulo || '') && /d[eé]cimo cuarto/i.test(q.titulo || '')],
+      ['RC-02.2 Fondo de reserva', q => /RC-02\.2/.test(q.titulo || '') && /fondo de reserva/i.test(q.titulo || '')],
+      ['RC-06 Pasivos laborales e IESS', q => /RC-06(?![.\d])/.test(q.titulo || '')],
+      ['RC-06.4 Vacaciones pendientes', q => /RC-06\.4/.test(q.titulo || '')],
+      ['RC-02.3 Roles contra planillas del IESS', q => /RC-02\.3/.test(q.titulo || '')],
+      ['RC-07.1 y RC-07.2 Fondo de reserva con el IESS', q => /RC-07\.[12]/.test(q.titulo || '')],
+      ['RC-06.5 y RC-06.6 Préstamos del IESS', q => /RC-06\.[56]/.test(q.titulo || '')],
+      ['RC-07 Fondo de reserva', q => /RC-07/.test(q.titulo || '')],
+      ['RC-08 Anticipos y préstamos a empleados', q => /RC-08/.test(q.titulo || '')]
     ];
     // Signo: el balance de comprobación trae los pasivos en negativo. Si el mayor (y el análisis) vienen con el signo contrario pero el mismo valor, se leen con el signo del balance.
     function nmCuaSigno(f, sum) {
@@ -19298,7 +19298,7 @@ ${cont.innerHTML}
         // Si un cuadro marcado como composición trae filas con saldo propio (mayor/aud/cuentas) y ningún importe v, se pinta como cuadro de filas
         const esFilasComp = q.tipo === 'composicion' && (q.filas || []).length > 0 && !(q.filas || []).some(f => f.v !== undefined && f.v !== null) && (q.filas || []).some(f => f.aud !== undefined || f.mayor !== undefined);
         if (q.tipo === 'composicion' && !esFilasComp) return tarjComp(q);
-        const sinCl = /RC-02(?![.\d])/.test(q.titulo || '') && (q.filas || []).length > 0 && !(q.filas || []).some(f => Number(f.ajuste)) && (q.filas || []).every(f => f.aud === null || f.aud === undefined || f.aud === '' || (f.mayor !== null && f.mayor !== undefined && Math.abs(Number(f.aud) - Number(f.mayor)) < 0.005));
+        const sinCl = /RC-01(?![.\d])/.test(q.titulo || '') && (q.filas || []).length > 0 && !(q.filas || []).some(f => Number(f.ajuste)) && (q.filas || []).every(f => f.aud === null || f.aud === undefined || f.aud === '' || (f.mayor !== null && f.mayor !== undefined && Math.abs(Number(f.aud) - Number(f.mayor)) < 0.005));
         const NC = sinCl ? 5 : 6;
         const filas = (q.filas || []).map(f => {
           const cuentas = Array.isArray(f.cuentas) ? f.cuentas : [];
@@ -19426,13 +19426,13 @@ ${cont.innerHTML}
     // ----- Verificaciones de Nómina: automáticas (se recalculan con lo que hay cargado) y evaluaciones del auditor -----
     const NM_ESTADOS = [['pendiente', 'Pendiente'], ['cumple', 'Cumple'], ['nocumple', 'No cumple'], ['noaplica', 'No aplica']];
     const NM_VERIF_MANUALES = [
-      ['roles', 'El resumen de roles de pago por mes cuadra con el mayor contable y con la sumaria', 'NIC 19.11', 'RC-03'],
-      ['ir', 'Se recalculó el impuesto a la renta en relación de dependencia en una muestra de colaboradores', 'LRTI', 'RC-04'],
-      ['expedientes', 'Los expedientes de los colaboradores respaldan sueldo, afiliación y beneficios pagados', 'NIA 500', 'RC-05'],
-      ['pasivos', 'Los pasivos laborales (sueldos, beneficios sociales e IESS por pagar) cuadran con los roles y con el mayor', 'NIC 19.11', 'RC-13'],
-      ['fondo', 'El fondo de reserva se pagó solo a quienes tienen más de un año de servicio y se cruzó entre nómina, IESS, gasto y pasivo', 'Código del Trabajo', 'RC-14'],
-      ['anticipos', 'Los anticipos descontados en los roles cuadran con el movimiento y el saldo de las cuentas de anticipos a empleados', 'NIC 19.11', 'RC-15'],
-      ['bonos', 'Se evaluaron bonos, pagos basados en acciones y beneficios a la gerencia', 'NIC 19 / NIIF 2', 'RC-11']
+      ['roles', 'El resumen de roles de pago por mes cuadra con el mayor contable y con la sumaria', 'NIC 19.11', 'RC-02'],
+      ['ir', 'Se recalculó el impuesto a la renta en relación de dependencia en una muestra de colaboradores', 'LRTI', 'RC-03'],
+      ['expedientes', 'Los expedientes de los colaboradores respaldan sueldo, afiliación y beneficios pagados', 'NIA 500', 'RC-04'],
+      ['pasivos', 'Los pasivos laborales (sueldos, beneficios sociales e IESS por pagar) cuadran con los roles y con el mayor', 'NIC 19.11', 'RC-06'],
+      ['fondo', 'El fondo de reserva se pagó solo a quienes tienen más de un año de servicio y se cruzó entre nómina, IESS, gasto y pasivo', 'Código del Trabajo', 'RC-07'],
+      ['anticipos', 'Los anticipos descontados en los roles cuadran con el movimiento y el saldo de las cuentas de anticipos a empleados', 'NIC 19.11', 'RC-08'],
+      ['bonos', 'Se evaluaron bonos, pagos basados en acciones y beneficios a la gerencia', 'NIC 19 / NIIF 2', 'RC-05']
     ];
     function nmEstProc(p) { const f = nmE.filas[p.codigo] || {}; return f.estado === 'hecho' || f.estado === 'na' || f.estado === 'pendiente' ? f.estado : (nmTienePt(p) ? 'hecho' : ''); }
     function nmTienePt(p) { return (nmE.pts || []).some(t => t.codigo === p.codigo) || ((nmE.filas[p.codigo] || {}).pt || []).length > 0; }
