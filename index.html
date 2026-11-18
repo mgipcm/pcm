@@ -18990,6 +18990,53 @@ ${cont.innerHTML}
       const matriz = exp.filter(q => q.tipo === 'matriz'), resto = exp.filter(q => q.tipo !== 'matriz' && !enInf.has(tit(q)));
       return [...matriz, ...inf, ...resto];
     }
+    // Controles automáticos de Nómina (cualquier cliente): revisan que el análisis esté completo y que sus totales sean consistentes.
+    function nmControles(data, cu) {
+      const out = [], bl = (data && Array.isArray(data.bloques)) ? data.bloques : [];
+      const tablas = bl.filter(b => b && b.t === 'tabla' && Array.isArray(b.filas) && Array.isArray(b.cab));
+      const esTot = f => /^total\b/i.test(String((f || [])[0] == null ? '' : f[0]).trim());
+      const ok = t => out.push({ ok: true, t }), mal = t => out.push({ ok: false, t });
+      // 1) Tablas marcadas de RC-03.2: fila Total que sume las filas
+      tablas.filter(b => b.cuadre).forEach(b => {
+        const c0 = Array.isArray(b.cuadre) ? b.cuadre[0] : b.cuadre, tit = String((c0 && c0.titulo) || 'tabla');
+        const obliga = /RC-03\.2/.test(tit), tf = b.filas.find(esTot), filas = b.filas.filter(f => !esTot(f));
+        if (!tf) { if (obliga) mal('Falta la fila Total en «' + tit + '».'); return; }
+        const malas = [];
+        for (let k = 1; k < b.cab.length; k++) {
+          const tv = nmNumEs(tf[k]); if (tv === null) continue;
+          const vs = filas.map(f => nmNumEs(f[k])); if (vs.some(v => v === null)) continue;
+          if (Math.abs(vs.reduce((x, y) => x + y, 0) - tv) > 0.05) malas.push(b.cab[k]);
+        }
+        if (malas.length) mal('En «' + tit + '» el Total no suma las filas (columna ' + malas.join(', ') + ').'); else if (obliga) ok('Total de «' + tit.split(':')[0] + '»');
+      });
+      // 2) Vacaciones: una fila por colaborador y total igual al citado
+      const vt = tablas.find(b => /^n\.?\s*º?$/i.test(String(b.cab[0]).trim()) && b.cab.some(x => /d[ií]as pendientes/i.test(x)) && b.cab.some(x => /^valor/i.test(String(x).trim())));
+      let nVac = null;
+      if (!vt) mal('Falta la tabla de vacaciones con una fila por colaborador (RC-13.4).');
+      else {
+        const iD = vt.cab.findIndex(x => /d[ií]as pendientes/i.test(x)), iV = vt.cab.findIndex(x => /^valor/i.test(String(x).trim()));
+        const filas = vt.filas.filter(f => !esTot(f)), tf = vt.filas.find(esTot);
+        nVac = filas.length;
+        const sD = filas.reduce((x, f) => x + (nmNumEs(f[iD]) || 0), 0), sV = filas.reduce((x, f) => x + (nmNumEs(f[iV]) || 0), 0);
+        if (!tf) mal('La tabla de vacaciones no tiene fila Total.');
+        else if (Math.abs((nmNumEs(tf[iV]) || 0) - sV) > 0.05 || Math.abs((nmNumEs(tf[iD]) || 0) - sD) > 0.05) mal('En vacaciones, el Total no suma todas las filas (suma de filas: ' + sD + ' días y ' + fmE(sV) + ').');
+        else ok('Total de vacaciones');
+        let cit = null;
+        tablas.forEach(b => b.filas.forEach(f => { const m = /^Pendiente.*\((\d+) personas?, (\d+) d[ií]as?\)/i.exec(String((f || [])[0] || '')); if (m && b !== vt) cit = { n: +m[1], d: +m[2], v: nmNumEs(f[1]) }; }));
+        if (cit) {
+          if (cit.n !== nVac || cit.d !== sD || (cit.v !== null && Math.abs(cit.v - sV) > 0.05)) mal('Las vacaciones citadas en el resumen (' + cit.n + ' personas, ' + cit.d + ' días, ' + (cit.v === null ? '' : fmE(cit.v)) + ') no coinciden con la tabla por colaborador (' + nVac + ' personas, ' + sD + ' días, ' + fmE(sV) + '): puede faltar alguien.');
+          else ok('Vacaciones citadas = tabla por colaborador');
+        }
+      }
+      // 3) Personas: vacaciones contra los roles del último mes
+      const tp = tablas.find(b => b.cuadre && /patronal/i.test(String((Array.isArray(b.cuadre) ? b.cuadre[0] : b.cuadre).titulo || '')));
+      if (tp && nVac !== null) {
+        const fs = tp.filas.filter(f => !esTot(f)), n = fs.length ? nmNumEs(fs[fs.length - 1][1]) : null;
+        if (n !== null && n !== nVac) mal('El cuadro de vacaciones tiene ' + nVac + ' personas y los roles del último mes ' + n + '. Puede ser por salidas o ingresos; confirmar que no falte nadie.');
+        else if (n !== null) ok('Personas de vacaciones = personas de los roles');
+      }
+      return out;
+    }
     // Cuadros que siempre debe haber en Nómina (cualquier cliente). Si falta alguno, el resumen lo avisa.
     const NMC_ESPERADOS = [
       ['Consolidado de la nómina (roles de pago)', q => q.tipo === 'matriz' || /consolidado de la n[oó]mina/i.test(q.titulo || '')],
@@ -19266,7 +19313,11 @@ ${cont.innerHTML}
       const resumen = '<div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:6px">' + chip(cont.cuadra, 'cuadran', NMC_PILL.cuadra) + chip(cont.expl, 'explicadas', NMC_PILL.expl) + chip(cont.dif + cont.nosum, 'con diferencia', NMC_PILL.dif) + chip(cont.ajuste, 'con ajuste propuesto', NMC_PILL.ajuste) + chip(cont.sinsoporte, 'sin soporte', NMC_PILL.sinsoporte) + '<span style="font-size:11px;color:#64748b;margin-left:4px">Tolerancia: ' + fmE(NMC_TOL) + ' · la sumaria se lee en vivo del balance de comprobación</span></div>';
       const faltan = NMC_ESPERADOS.filter(x => !cu.some(x[1])).map(x => x[0]);
       const faltanHtml = faltan.length ? '<div style="margin:14px 0;padding:10px 14px;border:1px dashed #d97706;background:#fffbeb;border-radius:8px;font-size:13px;color:#8a5a00"><b>No generado:</b> faltan ' + faltan.length + ' cuadro(s) que siempre debe haber en Nómina: ' + faltan.map(e).join('; ') + '. Se completan al volver a procesar el pedido o al agregarlos en el análisis de Claude.</div>' : '';
-      c.innerHTML = '<style>' + NMR_CSS + '</style><div class="p-3 sm:p-6 bg-slate-50"><div class="v2r mx-auto" style="max-width:1100px;background:#f6f6f4;border:1px solid #dfdfdb;border-radius:12px;padding:18px 28px 26px">' + resumen + cob + tarjetas + faltanHtml + '</div></div>';
+      const ctl = nmControles(R.data, cu), ctlMal = ctl.filter(x => !x.ok), ctlBien = ctl.length - ctlMal.length;
+      const ctlHtml = !ctl.length ? '' : (ctlMal.length
+        ? '<div style="margin:14px 0;padding:10px 14px;border:1px dashed #d97706;background:#fffbeb;border-radius:8px;font-size:13px;color:#8a5a00"><b>Controles automáticos:</b> ' + ctlMal.length + ' por revisar' + (ctlBien ? ' y ' + ctlBien + ' correctos' : '') + '<ul style="margin:6px 0 0 18px;list-style:disc">' + ctlMal.map(x => '<li>' + e(x.t) + '</li>').join('') + '</ul></div>'
+        : '<div style="margin:14px 0;font-size:12px;color:#2f7a4d"><b>Controles automáticos:</b> ' + ctlBien + ' de ' + ctlBien + ' correctos (totales, vacaciones por colaborador y personas).</div>');
+      c.innerHTML = '<style>' + NMR_CSS + '</style><div class="p-3 sm:p-6 bg-slate-50"><div class="v2r mx-auto" style="max-width:1100px;background:#f6f6f4;border:1px solid #dfdfdb;border-radius:12px;padding:18px 28px 26px">' + resumen + cob + tarjetas + faltanHtml + ctlHtml + '</div></div>';
     }
 // ===== Conclusiones de la cuenta (v2): por concluir, To/Do-Quick Lett-Opinión, ajustes, revelaciones y conclusión =====
     const NM_CUENTA = 'nomina';
