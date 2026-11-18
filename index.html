@@ -19006,10 +19006,12 @@ ${cont.innerHTML}
       const refDe = t => (String(t || '').match(/RC-\d+(\.\d+)?/) || [''])[0];
       const refExp = new Set(exp.filter(q => q.tipo !== 'matriz').map(q => refDe(q.titulo)).filter(Boolean));
       for (let k = inf.length - 1; k >= 0; k--) if (inf[k].auto && refExp.has(refDe(inf[k].titulo))) inf.splice(k, 1);
-      if (!inf.length) return exp;
       const tit = q => String(q.titulo || '').trim().toLowerCase(), enInf = new Set(inf.map(tit));
       const matriz = exp.filter(q => q.tipo === 'matriz'), resto = exp.filter(q => q.tipo !== 'matriz' && !enInf.has(tit(q)));
-      return [...matriz, ...inf, ...resto];
+      // Orden automático por número de referencia (RC-02, RC-03, RC-03.2, RC-03.3, RC-13, RC-13.4 …); los sin número van al final
+      const clave = q => { const m = String(q.titulo || '').match(/RC-(\d+)(?:\.(\d+))?/) || String(q.ref || '').match(/RC-(\d+)(?:\.(\d+))?/); return m ? [parseInt(m[1], 10), m[2] === undefined ? -1 : parseInt(m[2], 10)] : [9999, 0]; };
+      const ordenados = [...inf, ...resto].map((q, i) => ({ q, i, k: clave(q) })).sort((a, b) => (a.k[0] - b.k[0]) || (a.k[1] - b.k[1]) || (a.i - b.i)).map(x => x.q);
+      return [...matriz, ...ordenados];
     }
     // Controles automáticos de Nómina (cualquier cliente): revisan que el análisis esté completo y que sus totales sean consistentes.
     function nmControles(data, cu) {
