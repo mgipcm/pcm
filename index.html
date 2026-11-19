@@ -19414,17 +19414,27 @@ ${cont.innerHTML}
         const bl = (R.data && R.data.bloques) || [];
         const i0 = bl.findIndex(b => b && (b.t === 'h3' || b.t === 'h2') && refIni(b.x) === ref);
         if (i0 < 0) return '';
-        const out = [];
+        const tabs = [];
         for (let k = i0 + 1; k < bl.length; k++) {
           const b = bl[k]; if (!b) continue;
           if (b.t === 'h2' || (b.t === 'h3' && refIni(b.x))) break;
-          if (b.t === 'sello') continue;
-          if (b.t === 'tabla' && (b.cab || []).some(x => /^diferencia/i.test(String(x)))) continue;
-          out.push(b);
+          if (b.t !== 'tabla') continue;
+          if ((b.cab || []).some(x => /^diferencia/i.test(String(x)))) continue;
+          tabs.push(b);
         }
-        if (!out.length) return '';
+        if (!tabs.length) return '';
         calcMostrado.add(ref);
-        return '<div style="margin:-4px 0 14px;padding:10px 16px 14px;border:1px solid #e5e7eb;border-radius:8px;background:#fff"><div style="font-size:12px;font-weight:700;color:#475569;margin-bottom:2px">Cálculo y detalle según el análisis de Claude (' + e(ref) + ')</div>' + nmResHtml(out, false) + '</div>';
+        const esN = t => /^[-+−]?\s*[\d.,]+\s*%?$/.test(String(t || '').replace(/\*\*/g, '').trim()) && !/^\d{7,}$/.test(String(t || '').trim());
+        return tabs.map((b, n) => {
+          const cab = b.cab || [], fil = b.filas || [];
+          const nu = cab.map((_, c) => fil.some(r => String(r[c] || '').trim() !== '') && fil.every(r => String(r[c] || '').trim() === '' || esN(r[c])));
+          const md = t => e(t).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
+          const cuerpo = fil.map((r, ri) => {
+            const ult = ri === fil.length - 1 && b.total;
+            return '<tr' + (ult ? ' class="tot"' : '') + '>' + cab.map((_, c) => '<td' + (nu[c] ? ' class="n"' : '') + '>' + md(r[c] == null ? '' : r[c]) + '</td>').join('') + '</tr>';
+          }).join('');
+          return caja('Cálculo de ' + ref + (tabs.length > 1 ? ' — cuadro ' + (n + 1) + ' de ' + tabs.length : ''), null, '<table class="v2r-t"><thead><tr>' + cab.map((c, ci) => th(md(c), nu[ci])).join('') + '</tr></thead><tbody>' + cuerpo + '</tbody></table>');
+        }).join('');
       };
       const tarjetas = cu.map(q => tarj1(q) + calcDe(q)).join('');
       // Consolidado de costos y gastos de nómina (costo, administración, ventas y financieros), tomado del balance
