@@ -5286,6 +5286,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
     }
     function cambiarPestanaAnalisis(p) {
       analisisEstado.pestana = p;
+      try { const t0 = document.getElementById('an-tab-comp'); if (t0 && analisisEstado.cuenta) pcCobBoton(t0.parentNode, 'analisis'); } catch (er) { }
       anexoSub(analisisEstado.sub);
       // Hojas hechas: más oscuras; hojas por llenar: más claras
       ['anexo', 'comp', 'claude', 'verif', 'programa', 'concluir'].forEach(t => {
@@ -10953,6 +10954,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
 
     function arrRender() {
       arrSyncCabecera();
+      try { const t0 = document.getElementById('ar-tab-claude'); if (t0) pcCobBoton(t0.parentNode, 'arrend'); } catch (er) { }
       ['contratos', 'hist', 'anual', 'costo', 'mensual', 'estados', 'revel', 'verif', 'concil', 'cuadre', 'claude', 'programa'].forEach(t => {
         const b = document.getElementById('ar-tab-' + t); if (!b) return;
         b.className = 'px-3 py-1.5 text-xs transition rounded-lg ' + (arrEstado.tab === t ? 'bg-slate-200 text-slate-900 font-semibold' : 'text-slate-600 hover:bg-slate-100 font-medium');
@@ -15703,7 +15705,8 @@ ${cont.innerHTML}
       const tabs = $cb('cb-tabs'); if (!tabs) return;
       try { pintarHojasAA(); } catch (e) { }
       const _pc = cbPorConcluir(), _npc = _pc.grupos.length;
-      tabs.innerHTML = CB_TABS.map(([t, n]) => '<button type="button" onclick="cbTab(\'' + t + '\')" class="px-3 py-1.5 text-xs transition rounded-lg ' + (cbE.tab === t ? 'bg-slate-200 text-slate-900 font-semibold' : 'text-slate-600 hover:bg-slate-100 font-medium') + '">' + n + (t === 'conclusiones' && _npc ? ' (' + _npc + ')' : '') + '</button>').join('') + '<button type="button" onclick="cbDescargar()" class="ml-auto px-1 py-1.5 text-xs font-bold bg-transparent border-0 hover:underline transition" style="color:#449964">⬇ Descargar todo (Excel)</button>';
+      tabs.innerHTML = CB_TABS.map(([t, n]) => '<button type="button" onclick="cbTab(\'' + t + '\')" class="px-3 py-1.5 text-xs transition rounded-lg ' + (cbE.tab === t ? 'bg-slate-200 text-slate-900 font-semibold' : 'text-slate-600 hover:bg-slate-100 font-medium') + '">' + n + (t === 'subir' ? pcCobBadgeHtml('bancos') : '') + (t === 'conclusiones' && _npc ? ' (' + _npc + ')' : '') + '</button>').join('') + '<button type="button" onclick="cbDescargar()" class="ml-auto px-1 py-1.5 text-xs font-bold bg-transparent border-0 hover:underline transition" style="color:#449964">⬇ Descargar todo (Excel)</button>';
+      pcCobBoton(tabs, 'bancos');
       const p = $cb('cb-panel'), n = $cb('cb-notas');
       const nota = (tit, items) => '<div class="mb-2"><div class="font-bold text-slate-700">' + tit + '</div><ul class="list-disc pl-5">' + items.map(i => '<li>' + i + '</li>').join('') + '</ul></div>';
       if (cbE.tab === 'cuadres') { p.innerHTML = cbHtmlCuadres(); n.innerHTML = nota('Cómo se calcula', ['Saldo conciliado = saldo según estado de cuenta − cheques girados y no cobrados + depósitos en tránsito − notas de crédito no registradas + notas de débito no registradas ± otras partidas.', 'La diferencia es el saldo conciliado menos el saldo en libros; debe ser cero o estar dentro de la tolerancia.', 'En cheques, depósitos y notas, ingresa los valores en positivo; el signo lo aplica la herramienta. En "Otras" ingresa el valor con su signo.']); }
@@ -18130,7 +18133,8 @@ ${cont.innerHTML}
     function v2Pintar() {
       flechasLados('sec-import2', 'v2-panel');
       const tb = $im('v2-tabs');
-      if (tb) tb.innerHTML = V2_TABS.map(([k, n]) => '<button type="button" onclick="v2IrTab(\'' + k + '\')" class="px-3 py-1.5 text-xs transition rounded-lg ' + (v2E.tab === k ? 'bg-slate-200 text-slate-900 font-semibold' : 'text-slate-600 hover:bg-slate-100 font-medium') + '">' + n + '</button>').join('');
+      if (tb) tb.innerHTML = V2_TABS.map(([k, n]) => '<button type="button" onclick="v2IrTab(\'' + k + '\')" class="px-3 py-1.5 text-xs transition rounded-lg ' + (v2E.tab === k ? 'bg-slate-200 text-slate-900 font-semibold' : 'text-slate-600 hover:bg-slate-100 font-medium') + '">' + n + (k === 'subir' ? pcCobBadgeHtml('inventarios') : '') + '</button>').join('');
+      if (tb) pcCobBoton(tb, 'inventarios');
       if (v2E.tab === 'subir') { v2SubirPintar(); return; }
       if (v2E.tab === 'voucheo') { v2VoucheoPintar(); return; }
       if (v2E.tab === 'resultado') { v2ResPintar(); return; }
@@ -19153,20 +19157,86 @@ ${cont.innerHTML}
       const barraInf = '<div class="flex justify-end mb-2"><button type="button" onclick="nmInformeAbrir()" class="px-3 py-1.5 text-xs font-semibold rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50" title="Qué información se subió, si se pudo leer y si Claude la analizó">Informe' + insig + '</button></div>';
       c.innerHTML = '<div class="p-3">' + barraInf + pcBarraPedido(NM_CTX.hoja, nmE.cliente, nmE.anio, nmE.visita, NM_CTX.txtSubir) + detalle + '</div>';
     }
-    // Control de la información: por cada tipo, si se subió, si se pudo leer y si Claude lo analizó (acumula todos los pedidos del cliente, año y visita)
-    function nmCobertura() {
-      if (!nmE.sv || !nmE.sv.cargado) return { filas: [], n: 0, todo: 0, otros: 0, hayRes: false };
-      const S = nmE.sv, R = nmE.res && nmE.res.data, arch = ((S && S.archivos) || []).filter(a => !a.eliminado_at), grupos = NM_CTX.cob || [];
-      const todo = arch.filter(a => a.etiqueta === PC_TODO), decl = R && Array.isArray(R.cobertura) ? R.cobertura : null;
+    // ===== Control de la información subida (común a todas las cuentas): subido, leído y analizado =====
+    const PC_COB_MOD = {
+      bancos: { t: 'Bancos', sums: ['AA'], hojas: ['bancos'], app: () => (typeof cbE !== 'undefined' && cbE.cuentas && cbE.cuentas.length > 0), g: [
+        { n: 'Estados de cuenta', req: true, et: ['Estado de cuenta'] },
+        { n: 'Conciliaciones bancarias', req: true, et: ['Conciliación bancaria'] },
+        { n: 'Confirmaciones bancarias', req: false, et: ['Confirmación bancaria'] },
+        { n: 'Firmas autorizadas', req: false, et: ['Firmas autorizadas'] }] },
+      equivalentes: { t: 'Equivalentes de efectivo', sums: ['AA'], hojas: ['equivalentes'], g: [
+        { n: 'Certificados o pólizas de inversión', req: true, et: ['Certificado o póliza de inversión'] },
+        { n: 'Estados de cuenta', req: true, et: ['Estado de cuenta'] },
+        { n: 'Confirmaciones de la institución', req: false, et: ['Confirmación de la institución'] },
+        { n: 'Detalle de equivalentes de efectivo', req: false, et: ['Detalle de equivalentes de efectivo'] }] },
+      inversiones: { t: 'Inversiones corrientes', sums: ['AB', 'AS'], g: [
+        { n: 'Certificados o pólizas de inversión', req: true, et: ['Certificado o póliza de inversión'] },
+        { n: 'Estados de cuenta', req: true, et: ['Estado de cuenta'] },
+        { n: 'Confirmaciones bancarias', req: false, et: ['Confirmación bancaria'] },
+        { n: 'Detalle o anexo de inversiones', req: false, et: ['Detalle o anexo de inversiones'] }] },
+      arrend: { t: 'Arrendamientos NIIF 16', sums: ['AOO', 'PCC', 'PLL'], g: [
+        { n: 'Contratos', req: true, et: ['Contrato'] },
+        { n: 'Adendas o renovaciones', req: false, et: ['Adenda o renovación'] },
+        { n: 'Evaluación NIIF 16', req: false, et: ['Evaluación NIIF 16'] },
+        { n: 'Facturas o soporte de pagos', req: false, et: ['Factura o soporte de pagos'] }] },
+      inventarios: { t: 'Inventarios e importaciones', sums: ['AF'], hojas: ['venta', 'import', 'kardex', 'costo_ventas'], app: () => (typeof v2E !== 'undefined' && v2E.sv && v2E.sv.cargado && !!(v2E.sv.mov || v2E.sv.kar || v2E.sv.cv)), g: [
+        { n: 'Mayor contable (completo, de inventarios o de costo de ventas)', req: true, et: ['Mayor contable completo', 'Mayor contable de inventarios', 'Mayor contable de costo de ventas'] },
+        { n: 'Kárdex', req: true, et: ['Kárdex (movimiento por producto)', 'Kárdex (saldos por producto)'] },
+        { n: 'Liquidaciones de importación', req: false, et: ['Liquidación de importación (PDF)', 'Liquidación de importación (Excel)'] },
+        { n: 'Declaraciones aduaneras (DAI / DAU)', req: false, et: ['Declaración aduanera (DAI / DAU)'] },
+        { n: 'Facturas del proveedor', req: false, et: ['Factura del proveedor'] },
+        { n: 'Balance de comprobación', req: false, et: ['Balance de comprobación'] }] }
+    };
+    const PC_COB_C = {};
+    function pcCobModActual(m) { return m === 'analisis' ? (typeof analisisEstado !== 'undefined' && analisisEstado.cuenta === 'equivalentes' ? 'equivalentes' : 'inversiones') : m; }
+    function pcCobCtx(m) {
+      m = pcCobModActual(m);
+      let c = null;
+      if (m === 'bancos') c = { cli: cbE.cliente, anio: cbE.anio, vis: cbE.visita };
+      else if (m === 'inventarios') c = { cli: v2E.cliente, anio: v2E.anio, vis: v2E.visita };
+      else if (m === 'arrend') c = { cli: valorAnalisis('ar-cliente'), anio: valorAnalisis('ar-anio'), vis: valorAnalisis('ar-visita') };
+      else c = { cli: valorAnalisis('an-cliente'), anio: valorAnalisis('an-anio'), vis: visitaAnalisis() };
+      return { m, cli: c.cli, anio: Number(c.anio), vis: c.vis || 'final', cfg: PC_COB_MOD[m] };
+    }
+    async function pcCobCargar(m0, forzar) {
+      const X = pcCobCtx(m0); if (!X.cfg || !X.cli || !X.anio) return;
+      const key = X.m + '|' + X.cli + '|' + X.anio + '|' + X.vis, previo = PC_COB_C[key];
+      if (!forzar && previo && (previo.cargando || (Date.now() - previo.t) < 60000)) return;
+      const ent = PC_COB_C[key] = { cargando: true, t: Date.now(), archivos: null, res: null };
+      try {
+        let q = supabaseClient.from('pedidos_claude').select('id, hoja').eq('cliente_id', X.cli).eq('anio', X.anio).eq('visita', X.vis).in('sumaria', X.cfg.sums);
+        if (X.cfg.hojas) q = q.in('hoja', X.cfg.hojas);
+        const pe = await q; let archivos = [];
+        if (!pe.error && (pe.data || []).length) {
+          const ar = await supabaseClient.from('pedidos_claude_archivos').select('id, nombre, etiqueta, eliminado_at').in('pedido_id', pe.data.map(x => x.id));
+          archivos = (ar.data || []).filter(a => !a.eliminado_at);
+          const mapa = {};
+          for (let i = 0; i < archivos.length; i += 150) { const tx = await supabaseClient.from('pedidos_claude_textos').select('archivo_id, error').in('archivo_id', archivos.slice(i, i + 150).map(a => a.id)); (tx.data || []).forEach(t => { mapa[t.archivo_id] = t.error || ''; }); }
+          archivos.forEach(a => { a.lectura = !(a.id in mapa) ? 'sin' : (mapa[a.id] ? 'error' : 'ok'); });
+        }
+        let rq = supabaseClient.from('v2_resultado').select('cobertura, bloques').eq('cliente_id', X.cli).eq('anio', X.anio).eq('visita', X.vis).in('sumaria', X.cfg.sums);
+        if (X.cfg.hojas) rq = rq.in('hoja', X.cfg.hojas);
+        const rs = await rq; const filas = (rs.data || []);
+        ent.res = filas.length ? { cobertura: [].concat(...filas.map(f => Array.isArray(f.cobertura) ? f.cobertura : [])) } : null;
+        if (ent.res && !ent.res.cobertura.length && !filas.some(f => Array.isArray(f.cobertura))) ent.res.cobertura = null;
+        ent.archivos = archivos;
+      } catch (er) { ent.archivos = null; }
+      ent.cargando = false; ent.t = Date.now();
+      pcCobPintarBadges();
+    }
+    function pcCobCalc(grupos, archivos, R, appFn) {
+      if (!archivos) return { filas: [], n: 0, todo: 0, otros: 0, hayRes: false, vacio: true };
+      const arch = archivos.filter(a => !a.eliminado_at), todo = arch.filter(a => a.etiqueta === PC_TODO), decl = R && Array.isArray(R.cobertura) ? R.cobertura : null;
       const norm = t => String(t || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
       let n = 0;
-      const filas = grupos.map(g => {
+      const filas = (grupos || []).map(g => {
         const f = arch.filter(a => g.et.includes(a.etiqueta));
         const ok = f.filter(a => a.lectura === 'ok').length, mal = f.filter(a => a.lectura === 'error').length, sin = f.filter(a => a.lectura === 'sin').length;
         const subido = f.length ? 'si' : (todo.length ? 'junto' : 'no');
-        const leido = !f.length ? '' : (!S || f.every(a => !a.lectura) ? '' : (ok === f.length ? 'si' : (ok ? 'parcial' : 'no')));
+        const leido = !f.length ? '' : (f.every(a => !a.lectura) ? '' : (ok === f.length ? 'si' : (ok ? 'parcial' : 'no')));
         const d = decl && decl.find(x => norm(x.tipo) === norm(g.n));
-        const an = !f.length ? '' : (d ? String(d.estado || '') : (R ? 'sd' : 'pend'));
+        let an = '';
+        if (f.length) { if (d) an = String(d.estado || ''); else if (R) an = 'sd'; else if (appFn) an = appFn() ? 'si' : 'pend'; else an = ''; }
         const obs = [];
         if (!f.length) obs.push(todo.length ? 'Podría venir dentro de un archivo marcado «Todo en un archivo».' : (g.req ? 'No se ha subido.' : 'No se subió (opcional).'));
         if (mal) obs.push(mal + ' archivo(s) no se pudieron leer: ' + f.filter(a => a.lectura === 'error').map(a => a.nombre).join(', ') + '. Vuelva a subirlos más livianos, en Excel, CSV o PDF con texto.');
@@ -19176,10 +19246,38 @@ ${cont.innerHTML}
         if (prob) n++;
         return { g, nf: f.length, ok, subido, leido, an, obs, prob };
       });
-      return { filas, n, todo: todo.length, otros: arch.filter(a => a.etiqueta !== PC_TODO && !grupos.some(g => g.et.includes(a.etiqueta))).length, hayRes: !!R };
+      return { filas, n, todo: todo.length, otros: arch.filter(a => a.etiqueta !== PC_TODO && !(grupos || []).some(g => g.et.includes(a.etiqueta))).length, hayRes: !!R, vacio: false };
     }
-    function nmInformeAbrir() {
-      const C = nmCobertura(), e = escapeHtml;
+    function pcCobDe(m0) {
+      const X = pcCobCtx(m0); if (!X.cfg) return { filas: [], n: 0, vacio: true };
+      const e = PC_COB_C[X.m + '|' + X.cli + '|' + X.anio + '|' + X.vis];
+      return e && e.archivos ? pcCobCalc(X.cfg.g, e.archivos, e.res, X.cfg.app) : { filas: [], n: 0, vacio: true };
+    }
+    function pcCobBadgeHtml(m) {
+      const n = pcCobDe(m).n;
+      return '<span class="pc-cob-bdg" data-m="' + m + '" title="Información incompleta: abra Informe" style="' + (n ? 'display:inline-block;' : 'display:none;') + 'min-width:18px;padding:0 5px;margin-left:6px;border-radius:9px;background:#dc2626;color:#fff;font-size:11px;font-weight:700;line-height:18px;text-align:center">' + (n || '') + '</span>';
+    }
+    function pcCobPintarBadges() {
+      document.querySelectorAll('.pc-cob-bdg').forEach(el => { const n = pcCobDe(el.dataset.m).n; el.textContent = n || ''; el.style.display = n ? 'inline-block' : 'none'; });
+    }
+    function pcCobBoton(contenedor, m) {
+      if (!contenedor) return;
+      let b = contenedor.querySelector('.pc-cob-btn');
+      if (!b) { b = document.createElement('button'); b.type = 'button'; b.className = 'pc-cob-btn ml-auto px-3 py-1.5 text-xs font-semibold rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50'; b.title = 'Qué información se subió, si se pudo leer y si Claude la analizó'; contenedor.appendChild(b); }
+      b.setAttribute('onclick', "pcInformeAbrir('" + m + "')"); b.innerHTML = 'Informe' + pcCobBadgeHtml(m);
+      pcCobCargar(m);
+    }
+    function pcInformeAbrir(m) {
+      const X = pcCobCtx(m); pcCobCargar(m, true);
+      pcInformeVentana(X.cfg ? X.cfg.t : '', pcCobDe(m));
+    }
+    function nmCobertura() {
+      const S = nmE.sv, R = nmE.res && nmE.res.data;
+      return pcCobCalc(NM_CTX.cob || [], S && S.cargado ? S.archivos : null, R);
+    }
+    function nmInformeAbrir() { pcInformeVentana(String(NM_CTX.titulo || '').replace(/<[^>]*>/g, '').trim(), nmCobertura()); }
+    function pcInformeVentana(titulo, C) {
+      const e = escapeHtml;
       const chip = (v, txt) => { const col = { si: '#15803d', parcial: '#b45309', no: '#b91c1c', junto: '#b45309', sd: '#64748b', pend: '#64748b' }[v] || '#64748b', t = txt || { si: 'Sí', parcial: 'Parcial', no: 'No', junto: 'Revisar', sd: 'Sin detalle', pend: 'Pendiente' }[v] || '—'; return '<span style="color:' + col + ';font-weight:600">' + t + '</span>'; };
       const celda = 'padding:3px 8px;border-bottom:1px solid #e5e7eb;vertical-align:top';
       const cuerpo = C.filas.map(r => '<tr><td style="' + celda + ';font-weight:600;color:#1e293b">' + e(r.g.n) + (r.g.req ? '' : ' <span style="font-weight:400;color:#94a3b8">(opcional)</span>') + '</td>' +
@@ -19187,11 +19285,11 @@ ${cont.innerHTML}
         '<td style="' + celda + ';white-space:nowrap">' + (r.leido ? chip(r.leido, r.leido === 'si' ? 'Sí' : (r.leido === 'parcial' ? 'Parcial (' + r.ok + ' de ' + r.nf + ')' : 'No')) : '<span style="color:#cbd5e1">—</span>') + '</td>' +
         '<td style="' + celda + ';white-space:nowrap">' + (r.an ? chip(r.an) : '<span style="color:#cbd5e1">—</span>') + '</td>' +
         '<td style="' + celda + ';color:#475569">' + (r.obs.length ? e(r.obs.join(' ')) : '') + '</td></tr>').join('');
-      const pie = [C.todo ? C.todo + ' archivo(s) subido(s) como «Todo en un archivo» (no se pueden separar por tipo).' : '', C.otros ? C.otros + ' archivo(s) de otros tipos de documento.' : '', !C.hayRes ? 'Todavía no hay análisis de Claude para este cliente, año y visita; por eso «Analizado» sale pendiente.' : ''].filter(Boolean).join(' ');
+      const pie = [C.todo ? C.todo + ' archivo(s) subido(s) como «Todo en un archivo» (no se pueden separar por tipo).' : '', C.otros ? C.otros + ' archivo(s) de otros tipos de documento.' : '', C.vacio ? 'Cargando o sin datos: seleccione cliente y año, o espere un momento y ábralo de nuevo.' : '', (!C.vacio && !C.hayRes) ? 'Todavía no hay detalle del análisis de Claude; «Analizado» se muestra solo cuando existe.' : ''].filter(Boolean).join(' ');
       const ov = document.createElement('div'); ov.id = 'nm-informe-ov';
       ov.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:9999;display:flex;align-items:flex-start;justify-content:center;padding:6vh 12px;overflow:auto';
       ov.onclick = ev => { if (ev.target === ov) ov.remove(); };
-      ov.innerHTML = '<div style="background:#fff;border-radius:12px;max-width:1040px;width:100%;box-shadow:0 20px 50px rgba(0,0,0,.3)"><div style="display:flex;justify-content:space-between;align-items:center;padding:14px 18px;border-bottom:1px solid #e5e7eb"><div><div style="font-size:15px;font-weight:700;color:#0f172a">Informe de la información: ' + e(String(NM_CTX.titulo || '').replace(/<[^>]*>/g, '').trim()) + '</div><div style="font-size:12px;color:#64748b">' + (C.n ? C.n + ' tipo(s) de información con algo incompleto' : 'Todo lo subido está leído y analizado') + '</div></div><button type="button" onclick="document.getElementById(\'nm-informe-ov\').remove()" style="font-size:20px;line-height:1;color:#64748b;background:none;border:none;cursor:pointer">×</button></div>' +
+      ov.innerHTML = '<div style="background:#fff;border-radius:12px;max-width:1040px;width:100%;box-shadow:0 20px 50px rgba(0,0,0,.3)"><div style="display:flex;justify-content:space-between;align-items:center;padding:14px 18px;border-bottom:1px solid #e5e7eb"><div><div style="font-size:15px;font-weight:700;color:#0f172a">Informe de la información: ' + e(titulo) + '</div><div style="font-size:12px;color:#64748b">' + (C.n ? C.n + ' tipo(s) de información con algo incompleto' : 'Todo lo subido está leído y analizado') + '</div></div><button type="button" onclick="document.getElementById(\'nm-informe-ov\').remove()" style="font-size:20px;line-height:1;color:#64748b;background:none;border:none;cursor:pointer">×</button></div>' +
         '<div style="padding:12px 18px 6px;overflow:auto"><table style="border-collapse:collapse;width:100%;font-size:12px"><thead><tr style="text-align:left;color:#475569"><th style="' + celda + '">Tipo de información</th><th style="' + celda + '">Subido</th><th style="' + celda + '">Leído</th><th style="' + celda + '">Analizado</th><th style="' + celda + '">Observación</th></tr></thead><tbody>' + cuerpo + '</tbody></table></div>' +
         '<div style="padding:6px 18px 14px;font-size:11px;color:#64748b">' + e(pie) + '<br>Subido y Leído salen solos de lo cargado; Analizado lo declara Claude en cada análisis. Incluye todos los pedidos de este cliente, año y visita.</div></div>';
       const previo = document.getElementById('nm-informe-ov'); if (previo) previo.remove();
