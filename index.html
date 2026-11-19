@@ -15736,7 +15736,7 @@ ${cont.innerHTML}
       add('Resumen', [cbH(['Banco', 'Cuenta', 'Moneda', 'Saldo según estado de cuenta', ...CB_TIPOS.map(x => x[1]), 'Saldo conciliado', 'Saldo en libros', 'Diferencia']), ...cbE.cuentas.map(c => [c.banco, c.cuenta, c.moneda, cbN(c.saldo_estado), ...CB_TIPOS.map(x => cbSuma(c, x[0])), cbConciliado(c), cbN(c.saldo_libros), cbDif(c)]), cbT(['Total', '', '', t.estado, ...CB_TIPOS.map(x => t[x[0]]), t.conc, t.libros, t.dif])]);
       add('Detalle de partidas', [cbH(['Banco', 'Cuenta', 'Tipo de partida', 'Fecha', 'Referencia', 'Descripción', 'Valor', 'Efecto en la conciliación', 'Rastreo posterior', 'Observación']), ...cbE.cuentas.flatMap(c => (c.partidas || []).map(p => [c.banco, c.cuenta, (CB_TIPOS.find(x => x[0] === p.tipo) || [])[1] || p.tipo, p.fecha, p.ref, p.desc, cbN(p.valor), cbEfecto(p), p.rastreo, p.nota]))]);
       const hayBal = cbE.config.balance !== undefined && cbE.config.balance !== '';
-      add('Comparación con libros', [cbH(['Banco', 'Cuenta', 'Saldo conciliado', 'Saldo en libros', 'Diferencia', 'Resultado']), ...cbE.cuentas.map(c => [c.banco, c.cuenta, cbConciliado(c), cbN(c.saldo_libros), cbDif(c), Math.abs(cbDif(c)) <= cbTol() ? 'Cuadra' : 'Revisar']), [], cbT(['Total en libros', '', '', t.libros]), cbT(['Saldo según balance (AA)', '', '', hayBal ? cbN(cbE.config.balance) : 'Sin ingresar']), cbT(['Diferencia libros − balance', '', '', hayBal ? r2f(t.libros - cbN(cbE.config.balance)) : '']), ...(() => { const m = cbMemo(); return [[], cbL(['Objetivo', m.objetivo]), cbL(['Procedimiento', m.procedimiento.join('\n')]), cbL(['Fuente de la información', m.fuente.join('\n')]), cbL(['Responsable de la información', m.resp || 'Pendiente']), ...cbFilasConclusionExcel(m)]; })()]);
+      add('Comparación con libros', [cbH(['Banco', 'Cuenta', 'Saldo conciliado', 'Saldo en libros', 'Diferencia', 'Resultado']), ...cbE.cuentas.map(c => [c.banco, c.cuenta, cbConciliado(c), cbN(c.saldo_libros), cbDif(c), Math.abs(cbDif(c)) <= cbTol() ? 'Cuadra' : 'Revisar']), [], cbT(['Total en libros', '', '', t.libros]), cbT(['Saldo según balance (AA)', '', '', hayBal ? cbN(cbE.config.balance) : 'Sin ingresar']), cbT(['Diferencia libros − balance', '', '', hayBal ? r2f(t.libros - cbN(cbE.config.balance)) : '']), ...cbFilasConclusionExcel(cbMemo()).slice(2)]);
       const resV = { ok: 'Cumple', rev: 'Revisar', info: 'Informativo' }, estV = { pendiente: 'Pendiente', cumple: 'Cumple', nocumple: 'No cumple', noaplica: 'No aplica' }, V = cbE.config.verif || {};
       add('Verificaciones', [cbH(['Programa', 'Verificaciones automáticas', 'Resultado', 'Detalle']), ...cbVerifAuto().map(([a, e, d, cod]) => [cod, a, resV[e], d]), [], cbH(['Programa', 'Evaluaciones del auditor', 'Referencia', 'Estado', 'Comentario']), ...CB_VERIF_MANUALES.map(([k, a, ref, cod]) => [cod, a, ref, estV[(V[k] || {}).e || 'pendiente'], (V[k] || {}).n || ''])]);
       const R = cbE.config.revel || {};
@@ -15752,8 +15752,19 @@ ${cont.innerHTML}
       const archivo = 'Conciliaciones_bancarias_' + String(nomCli).replace(/[^\w\- ]+/g, '').trim().replace(/\s+/g, '-') + '_' + cbE.anio + '.xlsx';
       const hoy = new Date(), fechaHoy = String(hoy.getDate()).padStart(2, '0') + '/' + String(hoy.getMonth() + 1).padStart(2, '0') + '/' + hoy.getFullYear();
       const info = [['Cliente', nomCli], ['Año', String(cbE.anio)], ['Visita', cbE.visita === 'preliminar' ? 'Preliminar' : 'Final'], ['Fecha de corte', cbE.corte || ''], ['Preparado por', nombreUsuarioActivo() || ''], ['Fecha de elaboración', fechaHoy]];
+      // Carátula estándar (primera hoja)
+      const mm = cbMemo(), DD = cbDr(), revs = cbFilasPrograma().filter(x => x.revisado_por);
+      const revNom = [...new Set(revs.map(x => nombreMostrado(x.revisado_por)).filter(Boolean))].join(', '), revFec = revs.map(x => x.revisado_at).filter(Boolean).sort().pop();
+      const dCar = {
+        titulo: 'Conciliaciones bancarias', cuenta: 'AA · Efectivo y equivalentes de efectivo · Bancos', ref: 'Conciliaciones bancarias', cliente: nomCli, anioVisita: cbE.anio + ' · ' + (cbE.visita === 'preliminar' ? 'Preliminar' : 'Final'),
+        fechaCorte: cbE.corte ? pcFechaLarga(cbE.corte) : 'Sin fecha de corte', fechaAnalisis: fechaHoy, elaboro: nombreUsuarioActivo() || '',
+        reviso: revNom ? revNom + (revFec ? ' · ' + pcFechaCorta(revFec) : '') : 'Pendiente de revisión',
+        objetivo: mm.objetivo, procedimiento: mm.procedimiento, fuente: mm.fuente, responsable: mm.resp || '',
+        conclusion: [DD.marcadas.length ? DD.marcadas.join('\n') : '', String(DD.criterio || mm.concl || '').trim() ? 'Criterio y fundamento: ' + String(DD.criterio || mm.concl).trim() : ''].filter(Boolean).join('\n')
+      };
       if (!window.ExcelJS) {
         const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(pcCaratulaFilas(dCar)), 'Carátula');
         hojas.forEach(x => XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([...info, [], ...x.filas]), x.nombre));
         XLSX.writeFile(wb, archivo); return;
       }
@@ -15761,6 +15772,7 @@ ${cont.innerHTML}
       const bl = { style: 'thin', color: { argb: 'FFBFBFBF' } };
       const bordes = { top: bl, left: bl, bottom: bl, right: bl };
       const wb = new ExcelJS.Workbook(); wb.creator = 'MGI Guerra'; wb.created = new Date();
+      pcCaratulaExcel(wb, dCar);
       hojas.forEach(x => excelAgregarHoja(wb, x, info, 'Conciliaciones bancarias'));
       const buffer = await wb.xlsx.writeBuffer();
       const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
@@ -18138,6 +18150,70 @@ ${cont.innerHTML}
           <div class="text-[10px] text-slate-400 mt-2">ƒ = celda con fórmula (pasa el cursor para verla). Azul = dato de entrada. En el Excel descargado las fórmulas quedan vivas.</div>
         </div></div>`;
     }
+    // ===== Carátula estándar de los papeles de trabajo (MGI Guerra): sale como primera hoja de todo Excel que se baja para archivar en XAAX =====
+    function pcLogoBase64() { try { const i = document.querySelector('.mgi-logo-card img'), src = i && i.getAttribute('src'); return src && /^data:image\/png;base64,/.test(src) ? src.split(',')[1] : null; } catch (e) { return null; } }
+    function pcFechaCorta(v) {
+      if (!v) return '';
+      const m = String(v).match(/^(\d{4})-(\d{2})-(\d{2})/); if (m && String(v).length <= 10) return m[3] + '/' + m[2] + '/' + m[1];
+      const d = v instanceof Date ? v : new Date(v); if (isNaN(d)) return String(v);
+      return String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0') + '/' + d.getFullYear();
+    }
+    function pcFechaLarga(v) {
+      const m = String(v || '').match(/^(\d{4})-(\d{2})-(\d{2})/); if (!m) return '';
+      const meses = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+      return Number(m[3]) + ' de ' + meses[Number(m[2]) - 1] + ' de ' + m[1];
+    }
+    // Fecha de corte del balance cargado para el cliente, año y visita (la que se ingresó al subir el balance)
+    async function pcFechaCorteBalance(cli, anio, visita) {
+      try {
+        const r = await supabaseClient.from('balance_comprobacion').select('fecha_corte').eq('cliente_id', cli).eq('anio', Number(anio)).eq('visita', visita).not('fecha_corte', 'is', null).limit(1);
+        return (r.data && r.data[0] && r.data[0].fecha_corte) || '';
+      } catch (e) { return ''; }
+    }
+    // d: { titulo, cuenta, ref, cliente, anioVisita, fechaCorte, fechaAnalisis, elaboro, reviso, objetivo, procedimiento, fuente, responsable, conclusion } (texto o lista)
+    function pcCaratulaTextos(d) {
+      const L = x => Array.isArray(x) ? x.filter(Boolean).join('\n') : String(x === undefined || x === null ? '' : x);
+      const pend = t => t || 'Pendiente';
+      return [
+        ['Objetivo', L(d.objetivo) || 'Pendiente'],
+        ['Procedimiento', L(d.procedimiento) || 'Pendiente'],
+        ['Fuente de la información', L(d.fuente) || 'Pendiente'],
+        ['Responsable de la información', pend(L(d.responsable)) === 'Pendiente' ? 'Pendiente: nombre y cargo de quien entregó la información.' : L(d.responsable)],
+        ['Conclusión', L(d.conclusion) || 'Pendiente: la escribe el auditor.']
+      ];
+    }
+    function pcCaratulaFilas(d) {
+      return [['Papel de trabajo', d.titulo || ''], ['Cliente', d.cliente || ''], ['Cuenta / sumaria', d.cuenta || ''], ['Referencia', d.ref || ''], ['Año / visita', d.anioVisita || ''],
+        ['Fecha de corte', d.fechaCorte || ''], ['Fecha de análisis', d.fechaAnalisis || ''], ['Elaboró', d.elaboro || ''], ['Revisó', d.reviso || 'Pendiente de revisión'], [], ...pcCaratulaTextos(d)];
+    }
+    function pcCaratulaExcel(wb, d) {
+      const NAVY = 'FF0B2C4D', TEAL = 'FF008F9A', GRIS = 'FFF1F5F9', MEMO = 'FFE3E3E0';
+      const bl = { style: 'thin', color: { argb: 'FFB8B8B3' } }, bordes = { top: bl, left: bl, bottom: bl, right: bl };
+      const ws = wb.addWorksheet('Carátula', { views: [{ showGridLines: false }], pageSetup: { orientation: 'portrait', fitToPage: true, fitToWidth: 1, fitToHeight: 0, paperSize: 9 } });
+      ws.columns = [{ width: 30 }, { width: 38 }, { width: 24 }, { width: 38 }];
+      for (let i = 1; i <= 4; i++) ws.getRow(i).height = 21;
+      try { const b64 = pcLogoBase64(); if (b64) { const id = wb.addImage({ base64: b64, extension: 'png' }); ws.addImage(id, { tl: { col: 0.1, row: 0.15 }, ext: { width: 215, height: 75 } }); } } catch (e) { /* sin logo */ }
+      ws.mergeCells('B1:D2'); const t1 = ws.getCell('B1'); t1.value = 'PAPEL DE TRABAJO'; t1.font = { name: 'Calibri', size: 20, bold: true, color: { argb: NAVY } }; t1.alignment = { vertical: 'middle', horizontal: 'right' };
+      ws.mergeCells('B3:D4'); const t2 = ws.getCell('B3'); t2.value = d.titulo || ''; t2.font = { name: 'Calibri', size: 12, bold: true, color: { argb: TEAL } }; t2.alignment = { vertical: 'top', horizontal: 'right', wrapText: true };
+      ws.mergeCells('A5:D5'); ws.getCell('A5').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: TEAL } }; ws.getRow(5).height = 4;
+      let r = 7;
+      const etq = c => { c.font = { bold: true, color: { argb: NAVY } }; c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: GRIS } }; c.border = bordes; c.alignment = { vertical: 'middle', horizontal: 'left' }; };
+      const val = c => { c.border = bordes; c.alignment = { vertical: 'middle', horizontal: 'left', wrapText: true }; };
+      const unica = (a, v) => { etq(ws.getCell('A' + r)); ws.getCell('A' + r).value = a; ws.mergeCells('B' + r + ':D' + r); const c = ws.getCell('B' + r); c.value = v || ''; val(c); for (const k of ['C', 'D']) ws.getCell(k + r).border = bordes; ws.getRow(r).height = Math.max(20, Math.ceil(String(v || '').length / 95) * 16); r++; };
+      const doble = (a, v, b, w) => { etq(ws.getCell('A' + r)); ws.getCell('A' + r).value = a; const c = ws.getCell('B' + r); c.value = v || ''; val(c); etq(ws.getCell('C' + r)); ws.getCell('C' + r).value = b; const e = ws.getCell('D' + r); e.value = w || ''; val(e); ws.getRow(r).height = 20; r++; };
+      unica('Cliente', d.cliente); unica('Cuenta / sumaria', d.cuenta); unica('Referencia', d.ref);
+      doble('Año / visita', d.anioVisita, 'Fecha de corte', d.fechaCorte);
+      doble('Elaboró', d.elaboro, 'Fecha de análisis', d.fechaAnalisis);
+      unica('Revisó', d.reviso || 'Pendiente de revisión');
+      r++;
+      pcCaratulaTextos(d).forEach(([tit, txt]) => {
+        ws.mergeCells('A' + r + ':D' + r); const c = ws.getCell('A' + r); c.value = tit + '.-'; c.font = { bold: true, underline: true, color: { argb: 'FF1F2937' } }; ws.getRow(r).height = 20; r++;
+        ws.mergeCells('A' + r + ':D' + r); const x = ws.getCell('A' + r); x.value = txt; x.alignment = { wrapText: true, vertical: 'top', horizontal: 'left' }; x.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: MEMO } }; x.border = bordes;
+        ws.getRow(r).height = Math.max(20, String(txt).split('\n').reduce((n, l) => n + Math.max(1, Math.ceil(l.length / 118)), 0) * 15 + 4); r += 2;
+      });
+      ws.mergeCells('A' + r + ':D' + r); const pie = ws.getCell('A' + r); pie.value = 'Documento generado por PCM Inteligente (MGI Guerra) para archivo en XAAX.'; pie.font = { italic: true, size: 9, color: { argb: 'FF64748B' } };
+      return ws;
+    }
     // ----- Descarga del papel de trabajo (común a Inventarios y Nómina): con formato; si falla, versión simple; si falla, avisa con el motivo -----
     function ptLimpiaTexto(x) { return typeof x === 'string' ? x.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, '') : x; }
     function ptNombresHojas(t) {
@@ -18157,15 +18233,30 @@ ${cont.innerHTML}
       const nombres = ptNombresHojas(t);
       const celdaDe = c => (c !== null && typeof c === 'object') ? c : { v: c };
       const valor = o => { let v = o.v; if (typeof v === 'number' && !isFinite(v)) v = null; return ptLimpiaTexto(v); };
-      const caratula = [['Cliente', cli], ['Año / visita', anioVisita], ['Sumaria', sumariaTxt], ['Referencia', t.ref || ''], ['Procedimiento', t.codigo || ''], ['Título', t.titulo || ''], ['Objetivo', t.objetivo || ''], ['Fuente de la información', t.fuente || ''], ['Elaborado por', (t.elaborado_por || 'Claude') + ' · ' + fechaElab], ['Revisado por', 'Pendiente'], ['Conclusión', t.conclusion || '']].map(r => r.map(ptLimpiaTexto));
+      // Datos de la carátula: fecha de corte del balance, quién revisó y el procedimiento del programa
+      let corte = '', prog = null, plant = null;
+      try {
+        corte = await pcFechaCorteBalance(t.cliente_id, t.anio, t.visita);
+        const pr = await supabaseClient.from('v2_programa').select('revisado_por, revisado_at, elaborado_por, elaborado_at, conclusion').eq('cliente_id', t.cliente_id).eq('anio', t.anio).eq('visita', t.visita).eq('sumaria', t.sumaria).eq('codigo', t.codigo).limit(5);
+        prog = (pr.data || []).find(x => x.revisado_at) || (pr.data || [])[0] || null;
+        const pl = await supabaseClient.from('programas_plantilla').select('procedimiento, titulo').eq('sumaria', t.sumaria).eq('codigo', t.codigo).limit(1);
+        plant = (pl.data || [])[0] || null;
+      } catch (e) { /* la carátula sale igual con lo que haya */ }
+      const dCar = {
+        titulo: (t.ref ? t.ref + ' · ' : '') + (t.titulo || ''), cuenta: sumariaTxt, ref: (t.ref || '') + (t.codigo && t.codigo !== t.ref ? ' (procedimiento ' + t.codigo + ')' : ''), cliente: cli, anioVisita,
+        fechaCorte: corte ? pcFechaLarga(corte) : 'Sin fecha de corte en el balance', fechaAnalisis: pcFechaCorta(t.elaborado_at),
+        elaboro: nombreMostrado(t.elaborado_por || 'Claude') || (typeof nombreUsuarioActivo === 'function' ? nombreUsuarioActivo() : ''),
+        reviso: prog && prog.revisado_at ? nombreMostrado(prog.revisado_por) + ' · ' + pcFechaCorta(prog.revisado_at) : 'Pendiente de revisión',
+        objetivo: t.objetivo || '', procedimiento: (plant && plant.procedimiento) || '', fuente: t.fuente || '', responsable: '', conclusion: t.conclusion || (prog && prog.conclusion) || ''
+      };
+      Object.keys(dCar).forEach(k => { dCar[k] = ptLimpiaTexto(dCar[k]); });
+      const caratula = pcCaratulaFilas(dCar).map(r => r.map(ptLimpiaTexto));
       let errorFormato = null;
       if (window.ExcelJS) {
         try {
           const wb = new ExcelJS.Workbook(); wb.creator = 'MGI Guerra · Claude'; wb.created = new Date();
-          const c = wb.addWorksheet('Carátula'); c.getColumn(1).width = 26; c.getColumn(2).width = 80;
-          caratula.forEach((fl, i) => { const r = c.addRow(fl); r.getCell(1).font = { bold: true }; if (i === 3) r.getCell(2).font = { bold: true, size: 14 }; });
-          c.addRow([]); const l = c.addRow(['Leyenda', 'Azul = dato de entrada tomado de la información del cliente · Negro = fórmula · Gris = total / encabezado']); l.getCell(1).font = { bold: true };
-          c.eachRow(r => { r.getCell(2).alignment = { wrapText: true, vertical: 'top' }; });
+          const c = pcCaratulaExcel(wb, dCar);
+          { const rl = (c.rowCount || 40) + 2; c.mergeCells('A' + rl + ':D' + rl); const lc = c.getCell('A' + rl); lc.value = 'Leyenda de las hojas: Azul = dato de entrada tomado de la información del cliente · Negro = fórmula · Gris = total / encabezado'; lc.font = { size: 9, color: { argb: 'FF475569' } }; }
           const ESTILO = { h: { f: 'FFE8EEFC', b: true }, t: { f: 'FFF1F5F9', b: true, top: true }, ti: { b: true, sz: 14 }, no: { i: true, col: 'FF64748B' }, 'in': { col: 'FF1D4ED8' }, ok: { b: true, col: 'FF047857' } };
           (t.hojas || []).forEach((H, hi) => {
             const ws = wb.addWorksheet(nombres[hi]);
