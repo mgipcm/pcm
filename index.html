@@ -6741,6 +6741,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
         const wb = new ExcelJS.Workbook();
         wb.creator = 'MGI Guerra';
         wb.created = new Date();
+        pcCaratulaExcel(wb, caratulaInversiones(calc, nombreCliente, prog));
 
         // ---------- Hoja Resumen ----------
         const ws = wb.addWorksheet('1. Anexo y cálculos', { views: [{ showGridLines: false }], pageSetup: { orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 0 } });
@@ -7034,6 +7035,19 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
     }
 
     // Versión sencilla (sin formato): se usa solo si no carga la librería de formato.
+    // Carátula estándar del anexo de inversiones corrientes / equivalentes de efectivo
+    function caratulaInversiones(calc, nombreCliente, prog) {
+      const crit = datosCriterioParaExcel(), c = analisisEstado.criterio;
+      return {
+        titulo: esEq() ? 'Anexo de equivalentes de efectivo' : 'Anexo de inversiones corrientes', cuenta: esEq() ? 'Equivalentes de efectivo' : 'Inversiones corrientes', ref: esEq() ? 'Anexo de equivalentes de efectivo' : 'Anexo de inversiones corrientes',
+        cliente: nombreCliente, anioVisita: valorAnalisis('an-anio') + ' · ' + String(etiquetaVisita()).replace('Visita ', ''),
+        fechaCorte: pcFechaLarga(calc.cierre), fechaAnalisis: pcFechaCorta(prog.fecha || new Date()),
+        elaboro: valorAnalisis('an-auditor') || (typeof nombreUsuarioActivo === 'function' && nombreUsuarioActivo()) || '',
+        reviso: (c && c.revisado_por) ? nombreMostrado(c.revisado_por) + (c.revisado_at ? ' · ' + pcFechaCorta(c.revisado_at) : '') : 'Pendiente de revisión',
+        objetivo: prog.objetivo, procedimiento: prog.procedimiento, fuente: prog.fuente, responsable: prog.responsable,
+        conclusion: [crit.conclusiones.join('; '), crit.criterio ? 'Criterio y fundamento: ' + crit.criterio : ''].filter(Boolean).join('\n')
+      };
+    }
     function descargarPapelAnexoSimple() {
       const calc = calculoActualAnexo();
       if (!calc) return;
@@ -7085,6 +7099,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
           (f.tasa === null || f.tasa === undefined) ? '' : f.tasa, (f.valor === null || f.valor === undefined) ? '' : f.valor,
           f.situacion || '', f.dias, Math.round(f.intPrev * 100) / 100, Math.round(f.intAnio * 100) / 100, Math.round(f.intAcum * 100) / 100, f.plazo, f.estado, f.nota]));
       const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(pcCaratulaFilas(caratulaInversiones(calc, nombreCliente, leerPrograma()))), 'Carátula');
       XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(resumen), 'Resumen');
       XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(detalle), 'Detalle');
       const corto = (cli && cli.nombre_corto ? cli.nombre_corto : 'cliente').replace(/[^A-Za-z0-9_-]+/g, '_');
@@ -12101,12 +12116,24 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       const rango = n => { const i = ORDEN.indexOf(n); if (i >= 0) return i; const j = ORDEN_FIN.indexOf(n); return j >= 0 ? 100 + j : 50; };
       hojas.forEach((h, i) => { h.__i = i; }); hojas.sort((a, b) => rango(a.nombre) - rango(b.nombre) || a.__i - b.__i);
       const nombreArchivo = `Arrendamientos_NIIF16_${String(cliSel).replace(/[^A-Za-z0-9]+/g, '_').slice(0, 40)}.xlsx`;
+      const fAr = (() => { const y = Number(corteX.slice(0, 4)), m = Number(corteX.slice(5, 7)); return new Date(y, m, 0); })();
+      const progAr = arrFilasPrograma(), revAr = progAr.filter(x => x.revisado_por), aAr = ORIGEN.arrend || {};
+      const dCarAr = {
+        titulo: 'Activos por derecho de uso y pasivos por arrendamiento (NIIF 16)', cuenta: 'Activos por derecho de uso y pasivos por arrendamiento', ref: 'Arrendamientos NIIF 16', cliente: cliSel,
+        anioVisita: (aAr.anio ? aAr.anio : '') + (aAr.visita ? ' · ' + (aAr.visita === 'preliminar' ? 'Preliminar' : 'Final') : ''),
+        fechaCorte: pcFechaLarga(fAr.getFullYear() + '-' + String(fAr.getMonth() + 1).padStart(2, '0') + '-' + String(fAr.getDate()).padStart(2, '0')), fechaAnalisis: pcFechaCorta(new Date()),
+        elaboro: nombreUsuarioActivo() || '', reviso: revAr.length ? [...new Set(revAr.map(x => nombreMostrado(x.revisado_por)).filter(Boolean))].join(', ') + (revAr.map(x => x.revisado_at).filter(Boolean).length ? ' · ' + pcFechaCorta(revAr.map(x => x.revisado_at).filter(Boolean).sort().pop()) : '') : 'Pendiente de revisión',
+        objetivo: 'Verificar el cálculo y la presentación de los activos por derecho de uso y de los pasivos por arrendamiento, de acuerdo con la NIIF 16.',
+        procedimiento: progAr.map(x => (x.codigo || '') + ' ' + String(x.procedimiento || '').slice(0, 110)), fuente: ['Contratos de arrendamiento cargados en la herramienta (' + K.calc.length + ')', 'Balance de comprobación / mayor contable al corte'], responsable: '',
+        conclusion: String(aAr.criterio_final || '').trim()
+      };
       if (window.ExcelJS) {
-        try { await arrXlsxConFormato(hojas, cliSel, nombreArchivo); return; }
+        try { await arrXlsxConFormato(hojas, cliSel, nombreArchivo, dCarAr); return; }
         catch (err) { console.error('No se pudo armar el Excel con formato:', err); }
       }
       if (!window.XLSX) { alert('No se pudo armar el Excel.'); return; }
       const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(pcCaratulaFilas(dCarAr)), 'Carátula');
       const fmtNum = ws => { Object.keys(ws).forEach(a => { if (a[0] !== '!' && typeof ws[a].v === 'number') ws[a].z = '#,##0.00;[Red]-#,##0.00'; }); return ws; };
       hojas.forEach(h => {
         const info = [['Cliente', cliSel], ...((h.op.info) || []).map(f => [f[0], f[2] === 'pct' ? f[1] * 100 + ' %' : (f[1] instanceof Date ? f[1].toLocaleDateString('es-EC') : f[1])]), []];
@@ -12116,7 +12143,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       XLSX.writeFile(wb, nombreArchivo);
     }
     // Excel con el formato de la firma (igual que el papel de trabajo de inversiones): colores, miles, decimales, fechas, totales con fórmulas.
-    async function arrXlsxConFormato(hojas, cliente, nombreArchivo) {
+    async function arrXlsxConFormato(hojas, cliente, nombreArchivo, caratula) {
       const TEAL = 'FF008F9A', AZUL = 'FF195999', NAVY = 'FF0B2C4D', GRIS = 'FFF1F5F9', GRIS2 = 'FFF8FAFC', BLANCO = 'FFFFFFFF', TEAL_SUAVE = 'FF48A9B2';
       const FMT_NUM = '#,##0.00;[Red]-#,##0.00', FMT_PCT = '0.00%', FMT_FECHA = 'dd/mm/yyyy';
       const borde = { style: 'thin', color: { argb: 'FFCBD5E1' } }, bordes = { top: borde, left: borde, bottom: borde, right: borde };
@@ -12124,7 +12151,8 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       const letra = n => { let t = ''; while (n > 0) { const m = (n - 1) % 26; t = String.fromCharCode(65 + m) + t; n = Math.floor((n - 1) / 26); } return t; };
       const aFecha = v => { if (v instanceof Date) return v; const t = /^\d{4}-\d{2}-\d{2}/.test(String(v || '')) ? new Date(String(v).slice(0, 10) + 'T12:00:00') : null; return t && !isNaN(t) ? t : null; };
       const wb = new ExcelJS.Workbook(); wb.creator = 'MGI Guerra'; wb.created = new Date();
-      const usados = new Set();
+      if (caratula) { try { pcCaratulaExcel(wb, caratula); } catch (e) { console.error('Carátula:', e); } }
+      const usados = new Set(['carátula']);
       hojas.forEach(h => {
         let nm = h.nombre.replace(/[\\\/?*\[\]:]/g, '').slice(0, 31) || 'Hoja', n = 2; const base = nm;
         while (usados.has(nm.toLowerCase())) nm = base.slice(0, 28) + ' ' + (n++);
@@ -18171,6 +18199,21 @@ ${cont.innerHTML}
       } catch (e) { return ''; }
     }
     // d: { titulo, cuenta, ref, cliente, anioVisita, fechaCorte, fechaAnalisis, elaboro, reviso, objetivo, procedimiento, fuente, responsable, conclusion } (texto o lista)
+    // Datos que salen del programa guardado: fecha de corte, quién revisó, lista de procedimientos y conclusión de la cuenta
+    async function pcDatosPrograma(cli, anio, visita, sumaria, hoja) {
+      const o = { corte: '', reviso: 'Pendiente de revisión', procedimiento: [], conclusion: '', elaboradoAt: '' };
+      try {
+        o.corte = await pcFechaCorteBalance(cli, anio, visita);
+        const pr = await supabaseClient.from('v2_programa').select('revisado_por, revisado_at').eq('cliente_id', cli).eq('anio', Number(anio)).eq('visita', visita).eq('sumaria', sumaria).eq('hoja', hoja);
+        const rv = (pr.data || []).filter(x => x.revisado_at);
+        if (rv.length) { const nom = [...new Set(rv.map(x => nombreMostrado(x.revisado_por)).filter(Boolean))].join(', '); o.reviso = nom + ' · ' + pcFechaCorta(rv.map(x => x.revisado_at).sort().pop()); }
+        const pl = await supabaseClient.from('programas_plantilla').select('codigo, titulo, procedimiento, orden').eq('sumaria', sumaria).eq('hoja', hoja).eq('activo', true).order('orden', { ascending: true });
+        o.procedimiento = (pl.data || []).map(x => x.codigo + (x.titulo ? ' ' + x.titulo : (x.procedimiento ? ' ' + String(x.procedimiento).slice(0, 110) : '')));
+        const cn = await supabaseClient.from('v2_conclusion').select('datos').eq('cliente_id', cli).eq('anio', Number(anio)).eq('visita', visita).eq('sumaria', sumaria).eq('hoja', hoja).maybeSingle();
+        o.conclusion = (cn.data && cn.data.datos && cn.data.datos.conclusion) || '';
+      } catch (e) { /* la carátula sale igual con lo que haya */ }
+      return o;
+    }
     function pcCaratulaTextos(d) {
       const L = x => Array.isArray(x) ? x.filter(Boolean).join('\n') : String(x === undefined || x === null ? '' : x);
       const pend = t => t || 'Pendiente';
@@ -19397,7 +19440,20 @@ ${cont.innerHTML}
         const corto = b.tit.replace(/^\d+\.\s*/, '').replace(/[\\\/?*\[\]:]/g, '').slice(0, 24).trim();
         hojas.push({ nombre: String(i + 1).padStart(2, '0') + ' ' + corto, aoa: b.aoa, anchos: [{ wch: 46 }], op: { titulo: b.tit, info } });
       });
-      try { await arrXlsxConFormato(hojas, cli, 'Cuadres_y_cruces_nomina_' + String(nmE.cliente).replace(/[^A-Za-z0-9]+/g, '_') + '_' + nmE.anio + '.xlsx'); } catch (er) { alert('No se pudo armar el Excel: ' + (er.message || er)); }
+      const carN = await nmCaratulaDatos(cli, 'Resumen de cuadres y cruces');
+      try { await arrXlsxConFormato(hojas, cli, 'Cuadres_y_cruces_' + NM_CTX.corto.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^A-Za-z0-9]+/g, '_') + '_' + String(nmE.cliente).replace(/[^A-Za-z0-9]+/g, '_') + '_' + nmE.anio + '.xlsx', carN); } catch (er) { alert('No se pudo armar el Excel: ' + (er.message || er)); }
+    }
+    // Carátula estándar de las descargas de Nómina e Impuestos (según la cuenta abierta)
+    async function nmCaratulaDatos(cli, titulo) {
+      const D = await pcDatosPrograma(nmE.cliente, nmE.anio, nmE.visita, NM_CTX.sum, NM_CTX.hoja);
+      const R = nmE.res && nmE.res.data;
+      return {
+        titulo: NM_CTX.nombre + ' · ' + titulo, cuenta: NM_CTX.nombre, ref: NM_CTX.sum + ' · ' + titulo, cliente: cli, anioVisita: nmE.anio + ' · ' + (nmE.visita === 'preliminar' ? 'Preliminar' : 'Final'),
+        fechaCorte: D.corte ? pcFechaLarga(D.corte) : 'Sin fecha de corte en el balance', fechaAnalisis: pcFechaCorta((R && R.elaborado_at) || new Date()),
+        elaboro: (typeof nombreUsuarioActivo === 'function' && nombreUsuarioActivo()) || '', reviso: D.reviso,
+        objetivo: 'Verificar la razonabilidad y la correcta presentación de ' + String(NM_CTX.nombre).replace(/^[A-Z]{2,3}\s*-\s*/, '').toLowerCase() + ', mediante los procedimientos del programa de auditoría ' + NM_CTX.sum + '.',
+        procedimiento: D.procedimiento, fuente: ['Información entregada por el cliente y cargada en la aplicación (mayores contables y documentos del pedido a Claude)', 'Balance de comprobación al corte'], responsable: '', conclusion: D.conclusion
+      };
     }
     async function nmConsExcel() {
       if (!window.ExcelJS) { alert('No se pudo cargar el generador de Excel. Revisa tu conexión a internet.'); return; }
@@ -19407,7 +19463,8 @@ ${cont.innerHTML}
       const porRubro = [['Rubro', ...NMK_COLS.map(k => k[1]), 'Total'], ...M.filas.map(f => [f.rubro, ...f.v, f.total]), ['Total nómina', ...M.tv, M.total]];
       const detalle = [['Rubro', 'Sumaria', 'Código', 'Cuenta', 'Saldo'], ...NMK_RUBROS.flatMap(([n]) => L.filter(x => x.rubro === n)).map(x => [x.rubro, (NMK_COLS.find(k => k[0] === x.sumaria) || [, x.sumaria])[1], x.codigo, x.cuenta, x.saldo])];
       const hojas = [{ nombre: 'Por rubro', aoa: porRubro, anchos: [{ wch: 42 }, { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 18 }], op: { titulo: 'Consolidado de gastos de nómina por rubro', info, totales: [] } }, { nombre: 'Detalle por cuenta', aoa: detalle, anchos: [{ wch: 36 }, { wch: 16 }, { wch: 14 }, { wch: 42 }, { wch: 16 }], op: { titulo: 'Consolidado de gastos de nómina: detalle', info, totales: [] } }];
-      try { await arrXlsxConFormato(hojas, 'Consolidado de gastos de nómina', 'Consolidado_nomina_' + String(nmE.cliente).replace(/[^A-Za-z0-9]+/g, '_') + '_' + nmE.anio + '.xlsx'); } catch (er) { alert('No se pudo armar el Excel: ' + (er.message || er)); }
+      const carC = await nmCaratulaDatos(($im('nm-cliente').selectedOptions[0] || {}).textContent || nmE.cliente, 'Consolidado de gastos de nómina');
+      try { await arrXlsxConFormato(hojas, 'Consolidado de gastos de nómina', 'Consolidado_nomina_' + String(nmE.cliente).replace(/[^A-Za-z0-9]+/g, '_') + '_' + nmE.anio + '.xlsx', carC); } catch (er) { alert('No se pudo armar el Excel: ' + (er.message || er)); }
     }
     function nmCuaPintar() { nmCuaPintarBase(); }
     function nmCtaAlt(b) { const tr = b.closest('tr'); let n = tr && tr.nextElementSibling; if (n && n.classList.contains('v2r-exp')) n = n.nextElementSibling; if (n && n.classList.contains('nmc-cta')) { const ab = n.style.display === 'none'; n.style.display = ab ? '' : 'none'; const ch = b.querySelector('.nmc-chev2'); if (ch) ch.textContent = ab ? '▾' : '▸'; } }
