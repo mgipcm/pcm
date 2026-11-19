@@ -15667,7 +15667,9 @@ ${cont.innerHTML}
       g.querySelectorAll('a').forEach(a => { a.style.boxShadow = ''; a.style.outline = ''; });
       el.style.outline = '2px solid #334155'; el.style.outlineOffset = '1px';
     }
+    let PC_CONC_ULT = null;
     function conclTarjetas(items) {
+      PC_CONC_ULT = items.reduce((t, x) => t + (x.estado === 'alerta' && x.t !== 'Ajustes propuestos' ? (typeof x.n === 'number' ? x.n : 1) : 0), 0);
       const C = { alerta: ['#fff7ed', '#fdba74', '#c2410c'], ok: ['#f0fdf4', '#86efac', '#15803d'], neutro: ['#ffffff', '#cbd5e1', '#475569'] };
       return '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(105px,1fr));gap:7px;margin-bottom:10px">' + items.map(x => {
         const c = C[x.estado] || C.neutro;
@@ -15705,7 +15707,7 @@ ${cont.innerHTML}
       const tabs = $cb('cb-tabs'); if (!tabs) return;
       try { pintarHojasAA(); } catch (e) { }
       const _pc = cbPorConcluir(), _npc = _pc.grupos.length;
-      tabs.innerHTML = CB_TABS.map(([t, n]) => '<button type="button" onclick="cbTab(\'' + t + '\')" class="px-3 py-1.5 text-xs transition rounded-lg ' + (cbE.tab === t ? 'bg-slate-200 text-slate-900 font-semibold' : 'text-slate-600 hover:bg-slate-100 font-medium') + '">' + n + (t === 'subir' ? pcCobBadgeHtml('bancos') : '') + (t === 'conclusiones' && _npc ? ' (' + _npc + ')' : '') + '</button>').join('') + '<button type="button" onclick="cbDescargar()" class="ml-auto px-1 py-1.5 text-xs font-bold bg-transparent border-0 hover:underline transition" style="color:#449964">⬇ Descargar todo (Excel)</button>';
+      tabs.innerHTML = CB_TABS.map(([t, n]) => '<button type="button" onclick="cbTab(\'' + t + '\')" class="px-3 py-1.5 text-xs transition rounded-lg ' + (cbE.tab === t ? 'bg-slate-200 text-slate-900 font-semibold' : 'text-slate-600 hover:bg-slate-100 font-medium') + '">' + n + (t === 'subir' ? pcCobBadgeHtml('bancos') : '') + (t === 'conclusiones' ? pcConcBadgeHtml('cb') : '') + '</button>').join('') + '<button type="button" onclick="cbDescargar()" class="ml-auto px-1 py-1.5 text-xs font-bold bg-transparent border-0 hover:underline transition" style="color:#449964">⬇ Descargar todo (Excel)</button>';
       pcCobBoton(tabs, 'bancos');
       const p = $cb('cb-panel'), n = $cb('cb-notas');
       const nota = (tit, items) => '<div class="mb-2"><div class="font-bold text-slate-700">' + tit + '</div><ul class="list-disc pl-5">' + items.map(i => '<li>' + i + '</li>').join('') + '</ul></div>';
@@ -18133,7 +18135,7 @@ ${cont.innerHTML}
     function v2Pintar() {
       flechasLados('sec-import2', 'v2-panel');
       const tb = $im('v2-tabs');
-      if (tb) tb.innerHTML = V2_TABS.map(([k, n]) => '<button type="button" onclick="v2IrTab(\'' + k + '\')" class="px-3 py-1.5 text-xs transition rounded-lg ' + (v2E.tab === k ? 'bg-slate-200 text-slate-900 font-semibold' : 'text-slate-600 hover:bg-slate-100 font-medium') + '">' + n + (k === 'subir' ? pcCobBadgeHtml('inventarios') : '') + '</button>').join('');
+      if (tb) tb.innerHTML = V2_TABS.map(([k, n]) => '<button type="button" onclick="v2IrTab(\'' + k + '\')" class="px-3 py-1.5 text-xs transition rounded-lg ' + (v2E.tab === k ? 'bg-slate-200 text-slate-900 font-semibold' : 'text-slate-600 hover:bg-slate-100 font-medium') + '">' + n + (k === 'subir' ? pcCobBadgeHtml('inventarios') : '') + (k === 'conclusiones' ? pcConcBadgeHtml('v2') : '') + '</button>').join('');
       if (tb) pcCobBoton(tb, 'inventarios');
       if (v2E.tab === 'subir') { v2SubirPintar(); return; }
       if (v2E.tab === 'voucheo') { v2VoucheoPintar(); return; }
@@ -18499,7 +18501,7 @@ ${cont.innerHTML}
       v2E.res = { cargado: true, error: r.error ? (r.error.message || String(r.error)) : '', data: r.data || null };
       if (v2E.tab === 'resultado') v2ResPintar();
       if (v2E.tab === 'cuadres') v2CuaPintar();
-      if (v2E.tab === 'conclusiones') v2ConcPintar();
+      if (v2E.tab === 'conclusiones') v2ConcPintar(); else pcConcPintarBadges();
       v2CuaCargarBal();
     }
     function v2ResHtml(bloques, conIds) {
@@ -18600,7 +18602,7 @@ ${cont.innerHTML}
       if (id !== v2E.resId) return;
       v2E.bal = { cargado: true, error: err, m, af };
       if (v2E.tab === 'cuadres') v2CuaPintar();
-      if (v2E.tab === 'conclusiones') v2ConcPintar();
+      if (v2E.tab === 'conclusiones') v2ConcPintar(); else pcConcPintarBadges();
     }
     function v2IrSeccion(ref) {
       const bl = ((v2E.res && v2E.res.data && v2E.res.data.bloques) || []).filter(b => b.t === 'h2');
@@ -18686,7 +18688,7 @@ ${cont.innerHTML}
       const r = await supabaseClient.from('v2_conclusion').select('*').eq('cliente_id', cli).eq('anio', Number(v2E.anio)).eq('visita', v2E.visita).eq('sumaria', 'AF').eq('hoja', 'venta').maybeSingle();
       if (id !== v2E.concId) return;
       v2E.conc = { cargado: true, error: r.error ? (r.error.message || String(r.error)) : '', datos: (r.data && r.data.datos) || {}, id: r.data ? r.data.id : null };
-      if (v2E.tab === 'conclusiones') v2ConcPintar();
+      if (v2E.tab === 'conclusiones') v2ConcPintar(); else pcConcPintarBadges();
     }
     // Aplica un cambio a una copia de los datos del auditor y lo guarda; devuelve true si quedó guardado
     async function v2ConcGuardar(mut) {
@@ -18811,8 +18813,8 @@ ${cont.innerHTML}
     async function v2VerifEditar(k, campo, valor) {
       if (await v2ConcGuardar(d => { d.verif = d.verif || {}; d.verif[k] = { ...(d.verif[k] || {}), [campo]: valor }; })) { if (campo === 'e') v2ConcPintar(); }
     }
-    function v2ConcPintar() {
-      const c = $im('v2-panel'), R = v2E.res, C = v2E.conc, e = escapeHtml, fm = formatoNumeroAnexo;
+    function v2ConcPintar(sombra) {
+      const c = sombra ? document.createElement('div') : $im('v2-panel'), R = v2E.res, C = v2E.conc, e = escapeHtml, fm = formatoNumeroAnexo;
       if (!v2E.cliente || !R) { c.innerHTML = '<p class="text-xs text-slate-500 p-4">Selecciona el cliente para comenzar.</p>'; return; }
       if (!R.cargado || !C || !C.cargado) { c.innerHTML = '<p class="text-xs text-slate-500 p-4">Cargando…</p>'; return; }
       if (C.error) { c.innerHTML = '<p class="text-xs text-red-600 font-bold p-4">No se pudo cargar: ' + e(/does not exist|schema cache/i.test(C.error) ? 'falta la tabla v2_conclusion en Supabase.' : C.error) + '</p>'; return; }
@@ -18913,6 +18915,7 @@ ${cont.innerHTML}
         '<div class="grid gap-4" style="grid-template-columns:repeat(auto-fit,minmax(20rem,1fr))"><div><div class="text-xs font-bold text-slate-600 mb-1">Conclusión de Claude</div><div class="p-3 border border-slate-200 rounded-lg bg-slate-50 leading-relaxed whitespace-pre-wrap">' + e(cl.conclusion || '') + '</div></div>' +
         '<div><div class="text-xs font-bold text-slate-600 mb-1">Conclusión del auditor</div><textarea id="vc-crit" rows="7" class="w-full p-3 border border-slate-300 rounded-lg text-sm leading-relaxed outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Escribe aquí la conclusión del auditor...">' + e(D.conclusion_auditor || '') + '</textarea><div class="flex flex-wrap items-center gap-3 mt-2"><button type="button" onclick="v2ConcCriterio()" class="px-3 py-1.5 text-xs rounded-lg transition bg-slate-200 text-slate-900 hover:bg-slate-300 font-semibold">Guardar conclusión</button><span class="text-xs text-slate-500">' + (D.conclusion_por ? 'Guardado por ' + e(nombreMostrado(D.conclusion_por)) + ' · ' + e(v2Fmt(D.conclusion_at)) : '') + '</span></div></div></div>' +
         '<div class="flex flex-wrap items-center gap-x-6 gap-y-2 mt-4 text-xs text-slate-600"><span>Preparado por: <b>' + prep + '</b></span><span>Revisado por: ' + marca('revisado', 'Marcar revisado') + '</span><span>Ratificado por: ' + marca('ratificado', 'Ratificar') + '</span></div></div>';
+      if (!sombra) pcConcPintarBadges();
     }
     async function v2ConcAj(n, v) { if (await v2ConcGuardar(d => { d.ajEstado = d.ajEstado || {}; d.ajEstado[n] = v; })) v2ConcPintar(); }
     async function v2Guardar(codigo, cambios) {
@@ -19053,7 +19056,7 @@ ${cont.innerHTML}
     function nmPintar() {
       flechasLados('sec-nomina', 'nm-panel');
       const tb = $im('nm-tabs');
-      if (tb) { const cbN = nmCobertura().n; tb.innerHTML = NM_TABS.map(([k, n]) => '<button type="button" onclick="nmIrTab(\'' + k + '\')" class="px-3 py-1.5 text-xs transition rounded-lg ' + (nmE.tab === k ? 'bg-slate-200 text-slate-900 font-semibold' : 'text-slate-600 hover:bg-slate-100 font-medium') + '">' + n + (k === 'subir' && cbN ? '<span title="Información incompleta: abra Informe" style="display:inline-block;min-width:18px;padding:0 5px;margin-left:6px;border-radius:9px;background:#dc2626;color:#fff;font-size:11px;font-weight:700;line-height:18px;text-align:center">' + cbN + '</span>' : '') + '</button>').join(''); }
+      if (tb) { const cbN = nmCobertura().n; tb.innerHTML = NM_TABS.map(([k, n]) => '<button type="button" onclick="nmIrTab(\'' + k + '\')" class="px-3 py-1.5 text-xs transition rounded-lg ' + (nmE.tab === k ? 'bg-slate-200 text-slate-900 font-semibold' : 'text-slate-600 hover:bg-slate-100 font-medium') + '">' + n + (k === 'subir' && cbN ? '<span title="Información incompleta: abra Informe" style="display:inline-block;min-width:18px;padding:0 5px;margin-left:6px;border-radius:9px;background:#dc2626;color:#fff;font-size:11px;font-weight:700;line-height:18px;text-align:center">' + cbN + '</span>' : '') + (k === 'conclusiones' ? pcConcBadgeHtml('nm') : '') + '</button>').join(''); }
       if (nmE.tab === 'subir') { nmSubirPintar(); return; }
       if (nmE.tab === 'resultado') { nmResPintar(); return; }
       if (nmE.tab === 'cuadres') { nmCuaPintar(); return; }
@@ -19188,6 +19191,23 @@ ${cont.innerHTML}
         { n: 'Balance de comprobación', req: false, et: ['Balance de comprobación'] }] }
     };
     const PC_COB_C = {};
+    // Pendientes de «Conclusiones de la cuenta» (misma suma de las tarjetas de esa pestaña, sin contar ajustes propuestos)
+    function pcConcPend(m) {
+      PC_CONC_ULT = null;
+      try {
+        if (m === 'nm') { const R = nmE.res, C = nmE.conc; if (nmE.cliente && R && R.cargado && R.data && R.data.conclusiones && C && C.cargado && !C.error) nmConcPintar(true); }
+        else if (m === 'v2') { const R = v2E.res, C = v2E.conc; if (v2E.cliente && R && R.cargado && R.data && R.data.conclusiones && C && C.cargado && !C.error) v2ConcPintar(true); }
+        else if (m === 'cb') { if (cbE.cliente && cbE.cuentas.length && cbE.plantilla !== null) cbHtmlConclusiones(); }
+      } catch (er) { PC_CONC_ULT = null; }
+      return PC_CONC_ULT || 0;
+    }
+    function pcConcBadgeHtml(m) {
+      const n = pcConcPend(m);
+      return '<span class="pc-conc-bdg" data-m="' + m + '" title="Pendientes por resolver en las conclusiones" style="' + (n ? 'display:inline-block;' : 'display:none;') + 'min-width:18px;padding:0 5px;margin-left:6px;border-radius:9px;background:#dc2626;color:#fff;font-size:11px;font-weight:700;line-height:18px;text-align:center">' + (n || '') + '</span>';
+    }
+    function pcConcPintarBadges() {
+      document.querySelectorAll('.pc-conc-bdg').forEach(el => { const n = pcConcPend(el.dataset.m); el.textContent = n || ''; el.style.display = n ? 'inline-block' : 'none'; });
+    }
     function pcCobModActual(m) { return m === 'analisis' ? (typeof analisisEstado !== 'undefined' && analisisEstado.cuenta === 'equivalentes' ? 'equivalentes' : 'inversiones') : m; }
     function pcCobCtx(m) {
       m = pcCobModActual(m);
@@ -19313,7 +19333,7 @@ ${cont.innerHTML}
       nmE.res = { cargado: true, error: r.error ? (r.error.message || String(r.error)) : '', data: r.data || null };
       if (nmE.tab === 'resultado') nmResPintar();
       if (nmE.tab === 'cuadres') nmCuaPintar();
-      if (nmE.tab === 'conclusiones') nmConcPintar();
+      if (nmE.tab === 'conclusiones') nmConcPintar(); else pcConcPintarBadges();
       if (nmE.tab === 'subir' || nmE.tab === 'programa') nmPintar();
       nmCuaCargarBal();
     }
@@ -19574,7 +19594,7 @@ ${cont.innerHTML}
       if (id !== nmE.resId) return;
       nmE.bal = { cargado: true, error: err, m, af };
       if (nmE.tab === 'cuadres') nmCuaPintar();
-      if (nmE.tab === 'conclusiones') nmConcPintar();
+      if (nmE.tab === 'conclusiones') nmConcPintar(); else pcConcPintarBadges();
     }
     function nmIrSeccion(ref) {
       const bl = ((nmE.res && nmE.res.data && nmE.res.data.bloques) || []).filter(b => b.t === 'h2');
@@ -19881,7 +19901,7 @@ ${cont.innerHTML}
       const r = await supabaseClient.from('v2_conclusion').select('*').eq('cliente_id', cli).eq('anio', Number(nmE.anio)).eq('visita', nmE.visita).eq('sumaria', NM_CTX.sum).eq('hoja', NM_CTX.hoja).maybeSingle();
       if (id !== nmE.concId) return;
       nmE.conc = { cargado: true, error: r.error ? (r.error.message || String(r.error)) : '', datos: (r.data && r.data.datos) || {}, id: r.data ? r.data.id : null };
-      if (nmE.tab === 'conclusiones') nmConcPintar();
+      if (nmE.tab === 'conclusiones') nmConcPintar(); else pcConcPintarBadges();
     }
     // Aplica un cambio a una copia de los datos del auditor y lo guarda; devuelve true si quedó guardado
     async function nmConcGuardar(mut) {
@@ -20001,8 +20021,8 @@ ${cont.innerHTML}
     async function nmVerifEditar(k, campo, valor) {
       if (await nmConcGuardar(d => { d.verif = d.verif || {}; d.verif[k] = { ...(d.verif[k] || {}), [campo]: valor }; })) { if (campo === 'e') nmConcPintar(); }
     }
-    function nmConcPintar() {
-      const c = $im('nm-panel'), R = nmE.res, C = nmE.conc, e = escapeHtml, fm = formatoNumeroAnexo;
+    function nmConcPintar(sombra) {
+      const c = sombra ? document.createElement('div') : $im('nm-panel'), R = nmE.res, C = nmE.conc, e = escapeHtml, fm = formatoNumeroAnexo;
       if (!nmE.cliente || !R) { c.innerHTML = '<p class="text-xs text-slate-500 p-4">Selecciona el cliente para comenzar.</p>'; return; }
       if (!R.cargado || !C || !C.cargado) { c.innerHTML = '<p class="text-xs text-slate-500 p-4">Cargando…</p>'; return; }
       if (C.error) { c.innerHTML = '<p class="text-xs text-red-600 font-bold p-4">No se pudo cargar: ' + e(/does not exist|schema cache/i.test(C.error) ? 'falta la tabla v2_conclusion en Supabase.' : C.error) + '</p>'; return; }
@@ -20103,6 +20123,7 @@ ${cont.innerHTML}
         '<div class="grid gap-4" style="grid-template-columns:repeat(auto-fit,minmax(20rem,1fr))"><div><div class="text-xs font-bold text-slate-600 mb-1">Conclusión de Claude</div><div class="p-3 border border-slate-200 rounded-lg bg-slate-50 leading-relaxed whitespace-pre-wrap">' + e(cl.conclusion || '') + '</div></div>' +
         '<div><div class="text-xs font-bold text-slate-600 mb-1">Conclusión del auditor</div><textarea id="nc-crit" rows="7" class="w-full p-3 border border-slate-300 rounded-lg text-sm leading-relaxed outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Escribe aquí la conclusión del auditor...">' + e(D.conclusion_auditor || '') + '</textarea><div class="flex flex-wrap items-center gap-3 mt-2"><button type="button" onclick="nmConcCriterio()" class="px-3 py-1.5 text-xs rounded-lg transition bg-slate-200 text-slate-900 hover:bg-slate-300 font-semibold">Guardar conclusión</button><span class="text-xs text-slate-500">' + (D.conclusion_por ? 'Guardado por ' + e(nombreMostrado(D.conclusion_por)) + ' · ' + e(nmFmt(D.conclusion_at)) : '') + '</span></div></div></div>' +
         '<div class="flex flex-wrap items-center gap-x-6 gap-y-2 mt-4 text-xs text-slate-600"><span>Preparado por: <b>' + prep + '</b></span><span>Revisado por: ' + marca('revisado', 'Marcar revisado') + '</span><span>Ratificado por: ' + marca('ratificado', 'Ratificar') + '</span></div></div>';
+      if (!sombra) pcConcPintarBadges();
     }
     async function nmConcAj(n, v) { if (await nmConcGuardar(d => { d.ajEstado = d.ajEstado || {}; d.ajEstado[n] = v; })) nmConcPintar(); }
     async function nmGuardar(codigo, cambios) {
