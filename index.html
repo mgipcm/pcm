@@ -4036,7 +4036,8 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       const cab = ['Código', 'Hoja', 'Tipo', 'Procedimiento', 'Norma de referencia', 'Alcance', 'Tamaño de empresa', 'Vigente'];
       const info = [['Preparado por', (typeof nombreUsuarioActivo === 'function' && nombreUsuarioActivo()) || ''], ['Procedimientos', lista.length]];
       const hojas = Object.keys(porSum).map(k => ({ nombre: k, aoa: [cab, ...porSum[k].map(r => [r.codigo || '', r.hoja ? pcNombreHoja(r.hoja) : '', r.tipo_procedimiento || '', r.procedimiento || '', r.norma || '', r.alcance || '', r.tamanos || '', r.activo ? 'Sí' : 'No'])], anchos: [{ wch: 12 }, { wch: 22 }, { wch: 22 }, { wch: 90 }, { wch: 28 }, { wch: 16 }, { wch: 30 }, { wch: 10 }], op: { titulo: 'Programa de trabajo: ' + nombreSum(k), info, totales: [] } }));
-      try { await arrXlsxConFormato(hojas, 'Programas de trabajo', 'Programa_de_trabajo_' + (todo ? 'todas_las_sumarias' : String(s).replace(/[^A-Za-z0-9]+/g, '_')) + '.xlsx'); } catch (e) { alert('No se pudo armar el Excel: ' + (e.message || e)); }
+      const dCarG = { titulo: 'Programas de trabajo de auditoría', cuenta: todo ? 'Todas las sumarias' : nombreSum(s), ref: 'Programas de trabajo', cliente: 'MGI Guerra (programa estándar de la firma, no es de un cliente)', anioVisita: '', fechaCorte: 'No aplica', fechaAnalisis: pcFechaCorta(new Date()), elaboro: (typeof nombreUsuarioActivo === 'function' && nombreUsuarioActivo()) || '', reviso: 'Pendiente de revisión', objetivo: 'Documentar los procedimientos de auditoría vigentes de la firma por sumaria, con su norma de referencia, alcance y tamaño de empresa.', procedimiento: 'Listado de procedimientos por sumaria, tomado de Configuración › Programas de trabajo.', fuente: 'Configuración › Programas de trabajo de la aplicación.', responsable: '', conclusion: '' };
+      try { await arrXlsxConFormato(hojas, 'Programas de trabajo', 'Programa_de_trabajo_' + (todo ? 'todas_las_sumarias' : String(s).replace(/[^A-Za-z0-9]+/g, '_')) + '.xlsx', dCarG); } catch (e) { alert('No se pudo armar el Excel: ' + (e.message || e)); }
     }
     let _normasDB = null;
     function normasDB() { if (!_normasDB) { try { _normasDB = JSON.parse(document.getElementById('normas-json').textContent); } catch (e) { _normasDB = { p: {}, m: {} }; } } return _normasDB; }
@@ -6719,6 +6720,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
     }
 
     // Papel de trabajo con formato: colores de la firma, miles, decimales, fechas, totales y diferencias con fórmulas.
+    const DET_OFF = 6; // filas del encabezado arriba de la hoja de detalle
     async function descargarPapelAnexo() {
       const calc = calculoActualAnexo();
       if (!calc) return;
@@ -6762,6 +6764,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
           ['Suma intereses de años anteriores al total', calc.sumarPrev ? `Sí (hasta el 31/12/${calc.anioPrev}: ${formatoNumeroAnexo(t.intPrev)})` : 'No'],
           ['Archivo', anexoEstado.archivo || ''],
           ['Preparado por', valorAnalisis('an-auditor') || ''],
+          ['Revisó', caratulaInversiones(calc, nombreCliente, prog).reviso],
           ['Actualizado por', textoActualizadoPor()],
           ['Responsable de la información', prog.responsable || ''],
           ['Fecha de elaboración', aFecha(prog.fecha)]
@@ -6939,14 +6942,15 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
         }
 
         // ---------- Hoja Detalle ----------
-        const wd = wb.addWorksheet('1a. Detalle por inversión', { views: [{ state: 'frozen', ySplit: 1, showGridLines: false }], pageSetup: { orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 0 } });
+        const wd = wb.addWorksheet('1a. Detalle por inversión', { views: [{ state: 'frozen', ySplit: 1 + DET_OFF, showGridLines: false }], pageSetup: { orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 0 } });
         const cols = [
           ['Fila', 7], ['Operación', 34], ['Emisión', 13], ['Vencimiento', 13], ['Tasa', 9], ['Valor', 16],
           ['Estado en el anexo', 16], ['Días del ejercicio', 11], ['Interés años anteriores', 17], ['Interés del ejercicio', 16],
           ['Interés acumulado', 16], ['Plazo', 9], ['Clasificación', 22], ['Observación', 46]
         ];
         wd.columns = cols.map(([h, w]) => ({ width: w }));
-        const hd = wd.getRow(1);
+        pcEncabezadoFilas(caratulaInversiones(calc, nombreCliente, prog)).forEach(([a, b], k) => { const ca = wd.getCell(k + 1, 1), cb = wd.getCell(k + 1, 2); ca.value = a; ca.font = { bold: true, color: { argb: NAVY } }; cb.value = b; cb.alignment = { horizontal: 'left' }; });
+        const hd = wd.getRow(1 + DET_OFF);
         cols.forEach(([h], i) => {
           const c = hd.getCell(i + 1);
           c.value = h;
@@ -6960,7 +6964,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
         const ETQ = { vigente: 'Vigente', vencida: 'Vencida antes del cierre', liquidada: 'Liquidada', incompleta: 'Datos incompletos', posterior: 'Posterior al cierre' };
         const sinCalculo = e => ['incompleta', 'posterior', 'liquidada'].includes(e);
         calc.filas.forEach((f, i) => {
-          const r = i + 2;
+          const r = i + 2 + DET_OFF;
           const row = wd.getRow(r);
           const vals = [
             f.fila, f.tipo || '', aFecha(f.inicio), aFecha(f.vencimiento),
@@ -6989,10 +6993,10 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
           });
         });
 
-        const ultima = calc.filas.length + 1;
+        const ultima = calc.filas.length + 1 + DET_OFF;
         const rt = ultima + 1;
         const rTot = wd.getRow(rt);
-        const sumaVig = col => `SUMIF($M$2:$M$${ultima},"Vigente",${col}2:${col}${ultima})`;
+        const sumaVig = col => `SUMIF($M$${2 + DET_OFF}:$M$${ultima},"Vigente",${col}${2 + DET_OFF}:${col}${ultima})`;
         wd.mergeCells(`A${rt}:E${rt}`);
         rTot.getCell(1).value = 'Total (inversiones vigentes)';
         [[6, 'F', t.capital], [9, 'I', t.intPrev], [10, 'J', t.intAnio], [11, 'K', t.intAcum]].forEach(([n, col, res]) => {
@@ -7006,12 +7010,12 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
           c.fill = relleno(NAVY);
           c.border = bordes;
         }
-        wd.autoFilter = { from: { row: 1, column: 1 }, to: { row: ultima, column: cols.length } };
+        wd.autoFilter = { from: { row: 1 + DET_OFF, column: 1 }, to: { row: ultima, column: cols.length } };
 
         // Hojas de control, en el mismo orden y formato que Bancos
         {
           const hoy = new Date(), fechaHoy = String(hoy.getDate()).padStart(2, '0') + '/' + String(hoy.getMonth() + 1).padStart(2, '0') + '/' + hoy.getFullYear();
-          const infoPapel = [['Cliente', nombreCliente], ['Año', String(valorAnalisis('an-anio'))], ['Visita', etiquetaVisita().replace('Visita ', '')], ['Fecha de corte', calc.cierre || ''], ['Preparado por', nombreUsuarioActivo() || ''], ['Fecha de elaboración', fechaHoy]];
+          const infoPapel = pcInfoHoja([['Cliente', nombreCliente], ['Año', String(valorAnalisis('an-anio'))], ['Visita', etiquetaVisita().replace('Visita ', '')], ['Fecha de corte', calc.cierre || ''], ['Preparado por', nombreUsuarioActivo() || ''], ['Fecha de elaboración', fechaHoy]], caratulaInversiones(calc, nombreCliente, prog));
           const resV = { ok: 'Cumple', rev: 'Revisar', info: 'Informativo' }, estV = { pendiente: 'Pendiente', cumple: 'Cumple', nocumple: 'No cumple', noaplica: 'No aplica' };
           excelAgregarHoja(wb, { nombre: '3. Verificaciones', op: {}, filas: [cbH(['Programa', 'Verificaciones automáticas', 'Resultado', 'Detalle']), ...invVerifAuto().map(([a, e, d, cod]) => [cod, a, resV[e], d]), [], cbH(['Programa', 'Evaluaciones del auditor', 'Referencia', 'Estado', 'Comentario']), ...invVerifManuales().map(([k, a, ref, cod]) => [cod, a, ref, estV[(invE.verif[k] || {}).e || 'pendiente'], (invE.verif[k] || {}).n || ''])] }, infoPapel, 'Inversiones corrientes');
           excelAgregarHoja(wb, { nombre: '4. Programa de trabajo', op: {}, filas: [cbH(['Código', 'Procedimiento', 'Dónde está hecho', 'Comentario', 'Quién lo hizo', 'Verificaciones (pestaña 3)', 'Estado']), ...invFilasPrograma().map(x => { const v = invVerifDeProc(x.codigo); return [x.codigo, x.procedimiento || '', x.donde, x.nota || '', x.quien, v.total ? (v.abiertas ? v.abiertas + ' por resolver de ' + v.total : 'Todas cerradas (' + v.total + ')') : 'Sin verificaciones', x.estado === 'hecho' ? (x.otro ? (esAnaliticaProg(x) ? 'Hecho en planificación' : 'Hecho por otro auditor') : 'Hecho') : 'Pendiente']; })] }, infoPapel, 'Inversiones corrientes');
@@ -12165,7 +12169,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
         const tit = ws.getCell('A1'); tit.value = op.titulo || h.nombre; tit.font = { name: 'Calibri', size: 14, bold: true, underline: true, color: { argb: NAVY } }; tit.alignment = { vertical: 'middle', horizontal: 'left' };
         ws.getRow(1).height = 28;
         // datos del trabajo
-        const info = [['Cliente', cliente], ...(op.info || [])];
+        const info = caratula ? pcInfoHoja(op.info || [], caratula) : [['Cliente', cliente], ...(op.info || [])];
         info.forEach((f, i) => {
           const r = 3 + i, a = ws.getCell(`A${r}`);
           a.value = f[0]; a.font = { bold: true, color: { argb: NAVY } };
@@ -12974,9 +12978,15 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       } catch (e) { console.error(e); }
       add('Parámetros', [['Parámetro', 'Valor'], ['Tramos de mora', P.tramos], ['Incumplimiento desde (días)', String(P.defDias)], ['Provisión al 100 % desde (días)', String(P.castigoDias)], ['Horizonte de la PI (meses; 0 = de vida)', String(P.horizonte)], ['Meses recientes usados (0 = todos)', String(P.ventana)], ['Meses de seguimiento de la recuperación', String(P.horizonteLgd)], ['Tasa de descuento anual %', String(P.tasaDesc)], ['Factura incumplida que desaparece', P.desaparece === 'baja' ? 'Dada de baja' : 'Cobrada'], ['Cartera antigua del primer corte en la PDI', P.incluirInicial === false ? 'No' : 'Sí'], ['PDI manual %', P.pdiManual === '' ? '(calculada)' : String(P.pdiManual)], ...P.fl.map((x, i) => ['Escenario ' + (i + 1) + ': ' + x.n, 'multiplicador ' + x.mult + ' · peso ' + x.peso + ' %'])], [{ wch: 46 }, { wch: 40 }], { sinCongelar: true, titulo: 'Parámetros utilizados', info: infoBase.slice(0, 1) });
       const nombreArchivo = `PCE_Matriz_transicion_${String(cliSel).replace(/[^A-Za-z0-9]+/g, '_').slice(0, 40)}.xlsx`;
-      if (window.ExcelJS) { try { await arrXlsxConFormato(hojas, cliSel, nombreArchivo); return; } catch (err) { console.error('No se pudo armar el Excel con formato:', err); } }
+      const dCarP = { titulo: 'Matriz de transición - Pérdida crediticia esperada (NIIF 9)', cuenta: 'Cuentas por cobrar comerciales · Pérdida crediticia esperada', ref: 'Matriz de transición - PCE', cliente: cliSel, anioVisita: '',
+        fechaCorte: pceEtqMes(R.kmax), fechaAnalisis: pcFechaCorta(new Date()), elaboro: nombreUsuarioActivo() || '', reviso: 'Pendiente de revisión',
+        objetivo: 'Estimar la pérdida crediticia esperada de la cartera con el método de la matriz de transición (NIIF 9) y verificar su registro contable e impuesto diferido.',
+        procedimiento: ['Cargamos la cartera por factura con su saldo, fecha de corte y días de vencimiento.', 'Calculamos la matriz de transición mensual, la probabilidad de incumplimiento y la pérdida dada el incumplimiento.', 'Aplicamos el factor prospectivo y calculamos la pérdida crediticia esperada por estado, cliente y factura.', 'Revisamos backtesting, estabilidad, intervalos de confianza y sensibilidad.'],
+        fuente: ['Archivo de cartera cargado en la herramienta', 'Provisión en libros informada por el auditor'], responsable: '', conclusion: '' };
+      if (window.ExcelJS) { try { await arrXlsxConFormato(hojas, cliSel, nombreArchivo, dCarP); return; } catch (err) { console.error('No se pudo armar el Excel con formato:', err); } }
       if (!window.XLSX) { alert('No se pudo armar el Excel.'); return; }
       const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(pcCaratulaFilas(dCarP)), 'Carátula');
       hojas.forEach(h => { const ws = XLSX.utils.aoa_to_sheet([['Cliente', cliSel], [], ...h.aoa]); if (h.anchos) ws['!cols'] = h.anchos; XLSX.utils.book_append_sheet(wb, ws, h.nombre.replace(/[\\\/?*\[\]:]/g, '').slice(0, 31)); });
       XLSX.writeFile(wb, nombreArchivo);
     }
@@ -13545,7 +13555,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       est.textContent = 'Guardado ✓';
     }
 
-    function descargarFlujo() {
+    async function descargarFlujo() {
       if (!window.XLSX || !flujoEstado.filas.length) return;
       recalcularFlujo();
       const fA = formatoFechaAnexo(flujoEstado.fechaAct), fP = formatoFechaAnexo(flujoEstado.fechaPrev);
@@ -13570,7 +13580,10 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
         const w2 = XLSX.utils.aoa_to_sheet(aj); w2['!cols'] = [{ wch: 6 }, { wch: 46 }, { wch: 10 }, { wch: 40 }, { wch: 16 }, { wch: 16 }, { wch: 14 }];
         XLSX.utils.book_append_sheet(wb, w2, 'Ajustes');
       }
-      XLSX.writeFile(wb, `Flujo_efectivo_${flujoEstado.cliente}_${flujoEstado.anio}.xlsx`);
+      await pcBajarSheetJS(wb, `Flujo_efectivo_${flujoEstado.cliente}_${flujoEstado.anio}.xlsx`, { titulo: 'Flujo de efectivo', cuenta: 'Estado de flujos de efectivo (método indirecto)', ref: 'Flujo de efectivo', cliente: pcNombreCli(flujoEstado.cliente), anioVisita: String(flujoEstado.anio),
+        fechaCorte: /^\d{4}-\d{2}-\d{2}/.test(String(flujoEstado.fechaAct)) ? pcFechaLarga(flujoEstado.fechaAct) : String(flujoEstado.fechaAct || ''), fechaAnalisis: pcFechaCorta(new Date()), elaboro: nombreUsuarioActivo() || '', reviso: 'Pendiente de revisión',
+        objetivo: 'Preparar el flujo de efectivo a partir de la variación de los saldos de las sumarias entre las dos fechas, con los ajustes propuestos, clasificando operación, inversión y financiamiento.',
+        procedimiento: ['Tomamos los saldos de las sumarias en las dos fechas y calculamos la variación.', 'Incorporamos los ajustes propuestos.', 'Clasificamos cada variación en operación, inversión, financiamiento o efectivo.', 'Verificamos que lo que queda sin clasificar sea cero.'], fuente: ['Balance de comprobación al ' + formatoFechaAnexo(flujoEstado.fechaAct), 'Balance de comprobación al ' + formatoFechaAnexo(flujoEstado.fechaPrev)], responsable: '', conclusion: '' });
     }
 
 
@@ -14131,7 +14144,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       await cargarBalanceSumarias();
     }
 
-    function descargarSumarias() {
+    async function descargarSumarias() {
       const prevRegs = sumEstado.prev.registros;
       if (!window.XLSX || (!sumEstado.registros.length && !prevRegs.length)) return;
       const anio = Number(valorAnalisis('su-anio'));
@@ -14169,7 +14182,9 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
         const w3 = XLSX.utils.aoa_to_sheet(detalle(prevRegs)); w3['!cols'] = [{ wch: 16 }, { wch: 50 }, { wch: 18 }, { wch: 10 }];
         XLSX.utils.book_append_sheet(wb, w3, 'Detalle ' + (anio - 1));
       }
-      XLSX.writeFile(wb, `Sumarias_${valorAnalisis('su-cliente')}_${valorAnalisis('su-anio')}_${visitaSumarias()}.xlsx`);
+      await pcBajarSheetJS(wb, `Sumarias_${valorAnalisis('su-cliente')}_${valorAnalisis('su-anio')}_${visitaSumarias()}.xlsx`, { titulo: 'Sumarias del balance de comprobación', cuenta: 'Todas las sumarias', ref: 'Sumarias', cliente: pcNombreCli(valorAnalisis('su-cliente')), anioVisita: valorAnalisis('su-anio') + ' · ' + (visitaSumarias() === 'preliminar' ? 'Preliminar' : 'Final'),
+        fechaCorte: sumEstado.fecha && /^\d{4}-\d{2}-\d{2}/.test(String(sumEstado.fecha)) ? pcFechaLarga(sumEstado.fecha) : fAct, fechaAnalisis: pcFechaCorta(new Date()), elaboro: nombreUsuarioActivo() || '', reviso: 'Pendiente de revisión',
+        objetivo: 'Agrupar los saldos del balance de comprobación por sumaria y comparar con el ejercicio anterior.', procedimiento: ['Agrupamos las cuentas del balance en las sumarias del catálogo.', 'Sumamos el saldo de cada sumaria y lo comparamos con el período anterior.'], fuente: ['Balance de comprobación al ' + fAct], responsable: '', conclusion: '' });
     }
 
     // ----- Cruce con los análisis: corto plazo = sumaria AB, largo plazo = sumaria AS, total = AB + AS -----
@@ -15779,7 +15794,7 @@ ${cont.innerHTML}
       const ordenVal = Object.values(ORDEN); hojas.sort((a, b) => (ordenVal.indexOf(a.nombre) + 1 || 99) - (ordenVal.indexOf(b.nombre) + 1 || 99));
       const archivo = 'Conciliaciones_bancarias_' + String(nomCli).replace(/[^\w\- ]+/g, '').trim().replace(/\s+/g, '-') + '_' + cbE.anio + '.xlsx';
       const hoy = new Date(), fechaHoy = String(hoy.getDate()).padStart(2, '0') + '/' + String(hoy.getMonth() + 1).padStart(2, '0') + '/' + hoy.getFullYear();
-      const info = [['Cliente', nomCli], ['Año', String(cbE.anio)], ['Visita', cbE.visita === 'preliminar' ? 'Preliminar' : 'Final'], ['Fecha de corte', cbE.corte || ''], ['Preparado por', nombreUsuarioActivo() || ''], ['Fecha de elaboración', fechaHoy]];
+      let info = [['Cliente', nomCli], ['Año', String(cbE.anio)], ['Visita', cbE.visita === 'preliminar' ? 'Preliminar' : 'Final'], ['Fecha de corte', cbE.corte || ''], ['Preparado por', nombreUsuarioActivo() || ''], ['Fecha de elaboración', fechaHoy]];
       // Carátula estándar (primera hoja)
       const mm = cbMemo(), DD = cbDr(), revs = cbFilasPrograma().filter(x => x.revisado_por);
       const revNom = [...new Set(revs.map(x => nombreMostrado(x.revisado_por)).filter(Boolean))].join(', '), revFec = revs.map(x => x.revisado_at).filter(Boolean).sort().pop();
@@ -15790,6 +15805,7 @@ ${cont.innerHTML}
         objetivo: mm.objetivo, procedimiento: mm.procedimiento, fuente: mm.fuente, responsable: mm.resp || '',
         conclusion: [DD.marcadas.length ? DD.marcadas.join('\n') : '', String(DD.criterio || mm.concl || '').trim() ? 'Criterio y fundamento: ' + String(DD.criterio || mm.concl).trim() : ''].filter(Boolean).join('\n')
       };
+      info = pcInfoHoja(info, dCar);
       if (!window.ExcelJS) {
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(pcCaratulaFilas(dCar)), 'Carátula');
@@ -16113,7 +16129,7 @@ ${cont.innerHTML}
           <td class="px-3 py-1.5 text-slate-600">${escapeHtml(r.anio || '')}</td></tr>`).join('')
         : '<tr><td colspan="6" class="p-6 text-center text-slate-400">No hay actividad con esos filtros.</td></tr>';
     }
-    function descargarHistorial() {
+    async function descargarHistorial() {
       const filas = _filtradasHistorial();
       if (!filas.length) { alert('No hay registros para descargar.'); return; }
       const datos = filas.map(r => ({
@@ -16122,7 +16138,7 @@ ${cont.innerHTML}
       }));
       const ws = XLSX.utils.json_to_sheet(datos), wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Históricos de visitas');
-      XLSX.writeFile(wb, 'Historicos_de_visitas.xlsx');
+      await pcBajarSheetJS(wb, 'Historicos_de_visitas.xlsx', { titulo: 'Históricos de visitas (actividad en la aplicación)', cuenta: 'Registro de actividad', ref: 'Históricos de visitas', cliente: 'Todos los clientes', anioVisita: '', fechaCorte: 'No aplica', fechaAnalisis: pcFechaCorta(new Date()), elaboro: nombreUsuarioActivo() || '', reviso: 'Pendiente de revisión', objetivo: 'Dejar constancia de la actividad de los usuarios en la aplicación (quién hizo qué y cuándo).', procedimiento: 'Listado del historial de acciones, según los filtros elegidos en pantalla.', fuente: 'Registro de actividad de la aplicación.', responsable: '', conclusion: '' });
     }
 
     // ===== Medidor de uso de los servicios (solo Socio y Supervisor) =====
@@ -17458,7 +17474,7 @@ ${cont.innerHTML}
       if (R.meses.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([['Cuenta', 'Nombre', ...R.meses.map(k => k), 'Total'], ...R.mensual.map(m => { const v = R.meses.map(k => { const z = m.mes.get(k); return z ? z[0] - z[1] : 0; }); return [m.cod, m.nom, ...v, v.reduce((t, x) => t + x, 0)]; })]), 'Movimiento mensual');
     }
 
-    function mayorExportar() {
+    async function mayorExportar() {
       if (!MYS.res) return;
       const R = MYS.res, wb = XLSX.utils.book_new(), K = R.kpis;
       const P = mayorParams();
@@ -17480,7 +17496,8 @@ ${cont.innerHTML}
         XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(aoa), t.titulo.replace(/[\[\]\*\?\/\\:]/g, '').slice(0, 31));
       });
       try { mayorSgHojas(wb); } catch (e) { console.error(e); }
-      XLSX.writeFile(wb, 'Analisis_mayor_' + (mayorClienteNombre() ? mayorClienteNombre().split(' (')[0].replace(/[^\w\-]+/g, '_') + '_' : '') + MYS.fuente.nombre.replace(/\.[^.]+$/, '').replace(/[^\w\-]+/g, '_') + '.xlsx');
+      await pcBajarSheetJS(wb, 'Analisis_mayor_' + (mayorClienteNombre() ? mayorClienteNombre().split(' (')[0].replace(/[^\w\-]+/g, '_') + '_' : '') + MYS.fuente.nombre.replace(/\.[^.]+$/, '').replace(/[^\w\-]+/g, '_') + '.xlsx', { titulo: 'Análisis de mayor contable', cuenta: 'Mayor contable (todas las cuentas)', ref: 'Análisis de mayor', cliente: mayorClienteNombre() || '', anioVisita: '', fechaCorte: MYM.fmtDia(K.hasta), fechaAnalisis: pcFechaCorta(new Date()), elaboro: nombreUsuarioActivo() || '', reviso: 'Pendiente de revisión',
+        objetivo: 'Analizar el libro mayor para identificar asientos inusuales y riesgos de fraude (tipos de asiento, ley de Benford, montos redondos, fechas y otros).', procedimiento: ['Cargamos el mayor contable entregado por el cliente.', 'Clasificamos los asientos por tipo y aplicamos las pruebas automáticas.', 'Listamos los asientos que requieren revisión del auditor.'], fuente: ['Mayor contable: ' + MYS.fuente.nombre], responsable: '', conclusion: '' });
     }
 
   </script>
@@ -18213,6 +18230,49 @@ ${cont.innerHTML}
         o.conclusion = (cn.data && cn.data.datos && cn.data.datos.conclusion) || '';
       } catch (e) { /* la carátula sale igual con lo que haya */ }
       return o;
+    }
+    function pcNombreCli(id) { try { const c = buscarClienteNombre(id); return c ? (c.nombre_completo || c.nombre_corto || id) : id; } catch (e) { return id; } }
+    // Las cinco líneas de encabezado que llevan todas las hojas
+    function pcEncabezadoFilas(d) { return [['Cliente', d.cliente || ''], ['Fecha de análisis', d.fechaAnalisis || ''], ['Auditoría al (fecha de corte)', d.fechaCorte || ''], ['Elaboró', d.elaboro || ''], ['Revisó', d.reviso || 'Pendiente de revisión']]; }
+    // Reemplaza las líneas repetidas de una lista de datos de hoja por el encabezado estándar
+    function pcInfoHoja(info, d) { return [...pcEncabezadoFilas(d), ...(info || []).filter(f => !/^(Cliente|Preparado por|Elaboró|Revisó|Fecha de elaboración|Fecha de análisis|Fecha de corte|Corte)$/.test(String(f[0])))]; }
+    // Baja un libro armado con SheetJS agregándole la carátula y el encabezado en cada hoja (con logo si se puede armar con formato)
+    async function pcBajarSheetJS(wbSJ, nombreArchivo, d) {
+      let celdas = 0; wbSJ.SheetNames.forEach(n => { const r = wbSJ.Sheets[n]['!ref']; if (r) { const g = XLSX.utils.decode_range(r); celdas += (g.e.r + 1) * (g.e.c + 1); } });
+      if (window.ExcelJS && celdas < 400000) {
+        try {
+          const wb = new ExcelJS.Workbook(); wb.creator = 'MGI Guerra'; wb.created = new Date();
+          pcCaratulaExcel(wb, d);
+          const usados = new Set(['carátula']);
+          wbSJ.SheetNames.forEach(nm => {
+            const S = wbSJ.Sheets[nm], aoa = XLSX.utils.sheet_to_json(S, { header: 1, raw: true, defval: '' });
+            const base = String(nm).replace(/[\\\/?*\[\]:]/g, '').slice(0, 31) || 'Hoja'; let u = base, k = 2;
+            while (usados.has(u.toLowerCase())) u = base.slice(0, 28) + ' ' + (k++); usados.add(u.toLowerCase());
+            const ws = wb.addWorksheet(u, { views: [{ showGridLines: false }] });
+            const anchos = S['!cols'] || [], ncol = aoa.reduce((m, f) => Math.max(m, f.length), 2);
+            ws.columns = Array.from({ length: ncol }, (_, i) => ({ width: (anchos[i] && anchos[i].wch) || 16 }));
+            pcEncabezadoFilas(d).forEach(([a, b], i) => { const ca = ws.getCell(i + 1, 1), cb = ws.getCell(i + 1, 2); ca.value = a; ca.font = { bold: true, color: { argb: 'FF0B2C4D' } }; cb.value = b; cb.alignment = { horizontal: 'left' }; });
+            const monedaCol = Array.from({ length: ncol }, (_, j) => aoa.some(f => typeof f[j] === 'number' && !Number.isInteger(f[j])));
+            aoa.forEach((fila, i) => {
+              const row = ws.getRow(7 + i);
+              fila.forEach((v, j) => {
+                if (v === '' || v === null || v === undefined) return;
+                const c = row.getCell(j + 1); c.value = typeof v === 'string' ? ptLimpiaTexto(v) : v;
+                if (typeof v === 'number') { c.numFmt = monedaCol[j] ? '#,##0.00;[Red]-#,##0.00' : '0'; c.alignment = { horizontal: 'right' }; }
+                if (i === 0 && fila.length > 1) { c.font = { bold: true, color: { argb: 'FF1F2937' } }; c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD9D9D9' } }; c.alignment = { vertical: 'middle', horizontal: typeof v === 'number' ? 'right' : 'left', wrapText: true }; }
+              });
+            });
+            ws.views = [{ state: 'frozen', ySplit: 7, showGridLines: false }];
+          });
+          const buf = await wb.xlsx.writeBuffer();
+          ptBajarArchivo(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), nombreArchivo);
+          return;
+        } catch (err) { console.error('Excel con carátula:', err); }
+      }
+      const wb2 = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb2, XLSX.utils.aoa_to_sheet(pcCaratulaFilas(d)), 'Carátula');
+      wbSJ.SheetNames.forEach(n => XLSX.utils.book_append_sheet(wb2, wbSJ.Sheets[n], n));
+      XLSX.writeFile(wb2, nombreArchivo);
     }
     function pcCaratulaTextos(d) {
       const L = x => Array.isArray(x) ? x.filter(Boolean).join('\n') : String(x === undefined || x === null ? '' : x);
