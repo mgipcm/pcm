@@ -19049,7 +19049,7 @@ ${cont.innerHTML}
     function nmPintar() {
       flechasLados('sec-nomina', 'nm-panel');
       const tb = $im('nm-tabs');
-      if (tb) tb.innerHTML = NM_TABS.map(([k, n]) => '<button type="button" onclick="nmIrTab(\'' + k + '\')" class="px-3 py-1.5 text-xs transition rounded-lg ' + (nmE.tab === k ? 'bg-slate-200 text-slate-900 font-semibold' : 'text-slate-600 hover:bg-slate-100 font-medium') + '">' + n + '</button>').join('');
+      if (tb) { const cbN = nmCobertura().n; tb.innerHTML = NM_TABS.map(([k, n]) => '<button type="button" onclick="nmIrTab(\'' + k + '\')" class="px-3 py-1.5 text-xs transition rounded-lg ' + (nmE.tab === k ? 'bg-slate-200 text-slate-900 font-semibold' : 'text-slate-600 hover:bg-slate-100 font-medium') + '">' + n + (k === 'subir' && cbN ? '<span title="Información incompleta: abra Informe" style="display:inline-block;min-width:18px;padding:0 5px;margin-left:6px;border-radius:9px;background:#dc2626;color:#fff;font-size:11px;font-weight:700;line-height:18px;text-align:center">' + cbN + '</span>' : '') + '</button>').join(''); }
       if (nmE.tab === 'subir') { nmSubirPintar(); return; }
       if (nmE.tab === 'resultado') { nmResPintar(); return; }
       if (nmE.tab === 'cuadres') { nmCuaPintar(); return; }
@@ -19137,7 +19137,7 @@ ${cont.innerHTML}
       }
       if (!nmE.sv || id !== nmE.sv.id) return;
       nmE.sv = { id, cargado: true, error: peT.error ? (peT.error.message || String(peT.error)) : '', pedidos: peT.data || [], archivos };
-      if (nmE.tab === 'subir') nmSubirPintar();
+      if (nmE.tab === 'subir' || nmE.tab === 'programa') nmPintar();
     }
     function nmSubirPintar() {
       const c = $im('nm-panel'), S = nmE.sv;
@@ -19155,6 +19155,7 @@ ${cont.innerHTML}
     }
     // Control de la información: por cada tipo, si se subió, si se pudo leer y si Claude lo analizó (acumula todos los pedidos del cliente, año y visita)
     function nmCobertura() {
+      if (!nmE.sv || !nmE.sv.cargado) return { filas: [], n: 0, todo: 0, otros: 0, hayRes: false };
       const S = nmE.sv, R = nmE.res && nmE.res.data, arch = ((S && S.archivos) || []).filter(a => !a.eliminado_at), grupos = NM_CTX.cob || [];
       const todo = arch.filter(a => a.etiqueta === PC_TODO), decl = R && Array.isArray(R.cobertura) ? R.cobertura : null;
       const norm = t => String(t || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
@@ -19215,7 +19216,7 @@ ${cont.innerHTML}
       if (nmE.tab === 'resultado') nmResPintar();
       if (nmE.tab === 'cuadres') nmCuaPintar();
       if (nmE.tab === 'conclusiones') nmConcPintar();
-      if (nmE.tab === 'subir' && nmE.sv && nmE.sv.cargado) nmSubirPintar();
+      if (nmE.tab === 'subir' || nmE.tab === 'programa') nmPintar();
       nmCuaCargarBal();
     }
     function nmResHtml(bloques, conIds) {
