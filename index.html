@@ -19234,6 +19234,21 @@ ${cont.innerHTML}
           });
           if (inf.length) marcas = inf;
         }
+        // Tabla de movimiento por mes con «Saldo final» y, más abajo, una fila de comparación (Formulario, Según…, Libros, Balance): se pinta completa con una fila de diferencia
+        if (!marcas && Array.isArray(b.cab) && Array.isArray(b.filas) && b.cab.length > 2) {
+          const rot = f => String((f || [])[0] == null ? '' : f[0]).trim();
+          const iSF = b.filas.findIndex(f => /^saldo final\b/i.test(rot(f)));
+          const iCm = iSF < 0 ? -1 : b.filas.findIndex((f, k) => k > iSF && /^(formulario|seg[uú]n|declarad|declaraci[oó]n|libros|balance)\b/i.test(rot(f)));
+          if (iSF >= 0 && iCm > iSF) {
+            const cols = b.cab.slice(1).map(x => String(x));
+            const val = f => cols.map((_, j) => nmNumEs((f || [])[j + 1]));
+            const sf = val(b.filas[iSF]), cm = val(b.filas[iCm]);
+            const filas = b.filas.map(f => ({ c: rot(f), v: val(f), tot: /^saldo final\b/i.test(rot(f)) }));
+            filas.push({ c: 'Diferencia (' + rot(b.filas[iSF]).toLowerCase() + ' − ' + rot(b.filas[iCm]).toLowerCase() + ')', v: sf.map((x, j) => (x === null || cm[j] === null) ? null : Math.round((x - cm[j]) * 100) / 100), tot: true });
+            out.push({ tipo: 'matriz', titulo: ultTit || 'Cuadro', ref: (ultTit.match(/[A-Z]{2,3}-\d+(\.\d+)?/) || [''])[0], cols, filas, deInforme: true, auto: true });
+            return;
+          }
+        }
         if (!marcas) return;
         (Array.isArray(marcas) ? marcas : [marcas]).forEach(c => {
           if (!c || c.mayor === undefined || c.mayor === null) return;
