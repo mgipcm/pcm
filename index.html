@@ -1123,7 +1123,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
           <label class="block text-xs font-semibold text-slate-600 mb-1">Buscar</label>
           <input type="text" id="pg-buscar" oninput="pintarProgramas()" placeholder="Palabra del procedimiento" class="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs sm:text-sm outline-none">
         </div>
-        <div class="flex items-end gap-2"><select id="pg-hoja" class="p-2 bg-white border border-slate-300 rounded-lg text-xs outline-none" title="Para las cuentas AA, AF y RC"><option value="">Hoja (AA, AF, RC)</option><option value="caja">Caja</option><option value="bancos">Bancos</option><option value="equivalentes">Equivalentes de efectivo</option><option value="venta">Inventario para la venta</option><option value="import">Importaciones (liquidaciones)</option><option value="nomina">Nómina (RC)</option><option value="depreciaciones">Depreciaciones (RC)</option><option value="gastos">Gastos en general (RC)</option></select><button type="button" onclick="agregarProcedimientoPlantilla()" class="px-3 py-2 rounded-lg text-xs transition bg-slate-100 text-slate-800 hover:bg-slate-200 font-medium">+ Agregar procedimiento</button></div>
+        <div class="flex items-end gap-2"><select id="pg-hoja" class="p-2 bg-white border border-slate-300 rounded-lg text-xs outline-none" title="Para las cuentas AA, AF y RC"><option value="">Hoja (AA, AF, RC)</option><option value="impuestos">Impuestos corrientes (AH)</option><option value="caja">Caja</option><option value="bancos">Bancos</option><option value="equivalentes">Equivalentes de efectivo</option><option value="venta">Inventario para la venta</option><option value="import">Importaciones (liquidaciones)</option><option value="nomina">Nómina (RC)</option><option value="depreciaciones">Depreciaciones (RC)</option><option value="gastos">Gastos en general (RC)</option></select><button type="button" onclick="agregarProcedimientoPlantilla()" class="px-3 py-2 rounded-lg text-xs transition bg-slate-100 text-slate-800 hover:bg-slate-200 font-medium">+ Agregar procedimiento</button></div>
       </div>
       <div class="flex flex-wrap items-center gap-2">
         <button type="button" onclick="descargarProgramasExcel(false)" class="px-3 py-1.5 rounded-lg text-xs transition bg-slate-100 text-slate-800 hover:bg-slate-200 font-medium" title="Descarga en Excel el programa de la sumaria elegida arriba">Descargar en Excel: la sumaria elegida</button>
@@ -2220,8 +2220,8 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
 
     <section id="sec-nomina" class="hidden bg-white rounded-2xl shadow-xl border border-slate-200 p-6 min-h-[92vh] space-y-5">
       <div class="border-b pb-4">
-        <h1 class="text-xl font-bold text-slate-800">2. Nómina <span class="text-[11px] font-semibold text-amber-600 border border-amber-300 rounded px-1.5 py-0.5 align-middle">PRUEBA</span></h1>
-        <p class="text-xs text-slate-500">Análisis guiado por el programa de auditoría: Claude elabora cada procedimiento de nómina y arma los papeles de trabajo; el auditor revisa.</p>
+        <h1 id="nm-titulo" class="text-xl font-bold text-slate-800">2. Nómina <span class="text-[11px] font-semibold text-amber-600 border border-amber-300 rounded px-1.5 py-0.5 align-middle">PRUEBA</span></h1>
+        <p id="nm-subtit" class="text-xs text-slate-500">Análisis guiado por el programa de auditoría: Claude elabora cada procedimiento de nómina y arma los papeles de trabajo; el auditor revisa.</p>
       </div>
       <div class="grid grid-cols-1 md:grid-cols-4 xl:grid-cols-10 gap-4">
         <div class="md:col-span-2 xl:col-span-2">
@@ -3402,7 +3402,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       'claude-revisar': { cliente: 'cr-cliente', anio: 'cr-anio', visita: 'cr-visita' },
       'pedidos-claude': { cliente: 'pc-cliente', anio: 'pc-anio', visita: 'pc-visita' },
       contratos: { cliente: 'contr-cliente' }, flujo: { cliente: 'fl-cliente', anio: 'fl-anio' },
-      arrend: { cliente: 'ar-cliente', anio: 'ar-anio', visita: 'ar-visita' }, import2: { cliente: 'v2-cliente', anio: 'v2-anio', visita: 'v2-visita' }, nomina: { cliente: 'nm-cliente', anio: 'nm-anio', visita: 'nm-visita' }, concil: { cliente: 'cb-cliente', anio: 'cb-anio', visita: 'cb-visita' },
+      arrend: { cliente: 'ar-cliente', anio: 'ar-anio', visita: 'ar-visita' }, import2: { cliente: 'v2-cliente', anio: 'v2-anio', visita: 'v2-visita' }, nomina: { cliente: 'nm-cliente', anio: 'nm-anio', visita: 'nm-visita' }, impuestos: { cliente: 'nm-cliente', anio: 'nm-anio', visita: 'nm-visita' }, concil: { cliente: 'cb-cliente', anio: 'cb-anio', visita: 'cb-visita' },
       pce: { cliente: 'pce-cliente' }, reuniones: { cliente: 'reu-cliente' }, mayor: { cliente: 'my-cliente' },
       asignacion: { cliente: 'as-cliente', anio: 'as-anio', visita: 'as-visita' }
     };
@@ -3483,14 +3483,14 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       }
 
       const claveLinea = (seccion === 'analisis' && cuenta) ? (cuenta === 'equivalentes' ? 'concil' : 'cta:' + cuenta) : (seccion === 'aprobaciones-claude' ? 'pedidos-claude' : seccion);
-      if ((seccion === 'sumarias' || seccion === 'pendientes' || seccion === 'claude-revisar' || seccion === 'pedidos-claude' || seccion === 'aprobaciones-claude' || seccion === 'arrend' || seccion === 'import2' || seccion === 'nomina' || seccion === 'concil' || (seccion === 'analisis' && cuenta)) && !herramientaHabilitada(claveLinea)) { avisarEnDesarrollo(); return; }
+      if ((seccion === 'sumarias' || seccion === 'pendientes' || seccion === 'claude-revisar' || seccion === 'pedidos-claude' || seccion === 'aprobaciones-claude' || seccion === 'arrend' || seccion === 'import2' || seccion === 'nomina' || seccion === 'impuestos' || seccion === 'concil' || (seccion === 'analisis' && cuenta)) && !herramientaHabilitada(claveLinea)) { avisarEnDesarrollo(); return; }
       if (!herramientaHabilitada(seccion === 'aprobaciones-claude' ? 'pedidos-claude' : seccion)) {
         if (seccion === 'auditoria') seccion = 'desarrollo'; // pantalla principal: se muestra un aviso en vez de un mensaje emergente
         else { avisarEnDesarrollo(); return; }
       }
       if (!['clientes', 'usuarios', 'cuentas', 'habilitar', 'historial', 'medidor', 'programas'].includes(seccion)) guardarVista({ seccion: seccion, sub: sub || null, cuenta: cuenta || null });
 
-      const secciones = ['desarrollo', 'clientes', 'usuarios', 'cuentas', 'habilitar', 'historial', 'medidor', 'programas', 'sumarias', 'pendientes', 'claude-revisar', 'pedidos-claude', 'aprobaciones-claude', 'flujo', 'auditoria', 'analisis', 'visitas', 'asignacion', 'indices', 'mayor', 'contratos', 'arrend', 'import2', 'nomina', 'concil', 'pce', 'reuniones', 'mas-herramientas'];
+      const secciones = ['desarrollo', 'clientes', 'usuarios', 'cuentas', 'habilitar', 'historial', 'medidor', 'programas', 'sumarias', 'pendientes', 'claude-revisar', 'pedidos-claude', 'aprobaciones-claude', 'flujo', 'auditoria', 'analisis', 'visitas', 'asignacion', 'indices', 'mayor', 'contratos', 'arrend', 'import2', 'nomina', 'impuestos', 'concil', 'pce', 'reuniones', 'mas-herramientas'];
       const grupoSubmenu = sec => ['auditoria', 'visitas', 'asignacion'].includes(sec) ? 'planificacion' : ['indices', 'mayor', 'contratos', 'flujo', 'pce', 'reuniones', 'mas-herramientas'].includes(sec)
         ? 'herramientas'
         : (['clientes', 'usuarios', 'cuentas', 'habilitar', 'historial', 'medidor', 'programas'].includes(sec) ? 'config' : (['sumarias', 'pendientes', 'claude-revisar', 'pedidos-claude', 'aprobaciones-claude'].includes(sec) ? 'analisis' : null));
@@ -3510,7 +3510,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
         }
       });
 
-      const activeSec = document.getElementById(`sec-${seccion}`);
+      const activeSec = document.getElementById(seccion === 'impuestos' ? 'sec-nomina' : `sec-${seccion}`);
       if (activeSec) activeSec.classList.remove('hidden');
       setTimeout(() => aplicarContextoActivo(seccion), 250); setTimeout(() => aplicarContextoActivo(seccion), 1000); // espera a que la pantalla cargue sus clientes
       if (seccion === 'contratos') { poblarClientesContratos(); cargarResumenesGuardados(); }
@@ -3526,6 +3526,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       if (seccion === 'arrend') abrirArrend();
       if (seccion === 'import2') abrirImport2();
       if (seccion === 'nomina') abrirNomina();
+      if (seccion === 'impuestos') abrirImpuestos();
       if (seccion === 'concil') abrirConcil();
       if (seccion === 'pce') abrirPce();
       if (seccion === 'cuentas') abrirCatalogoCuentas();
@@ -3551,7 +3552,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
         abrirAnalisis(rubro, cuentaElegida);
       }
 
-      const desdeAnalisis = ((seccion === 'arrend' || seccion === 'import2' || seccion === 'nomina' || seccion === 'concil') && sub === 'analisis');
+      const desdeAnalisis = ((seccion === 'arrend' || seccion === 'import2' || seccion === 'nomina' || seccion === 'impuestos' || seccion === 'concil') && sub === 'analisis');
       if (seccion === 'arrend') { const t = document.getElementById('ar-titulo'); if (t) t.textContent = desdeAnalisis ? '2. Activos por derecho de uso y pasivos por arrendamiento' : 'Arrendamientos NIIF 16'; }
       if (seccion === 'concil') { pintarHojasAA(); const t = document.getElementById('cb-titulo'); if (t) t.textContent = '2. Bancos'; }
       if (desdeAnalisis) {
@@ -3597,6 +3598,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       'activos': [
         { sumaria: 'AA', id: 'concil', nombre: 'AA Efectivo y equivalentes de efectivo' },
         { sumaria: 'AF', id: 'import2', nombre: 'AF Inventarios' },
+        { sumaria: 'AH', id: 'impuestos', nombre: 'AH Activos por impuestos corrientes' },
         { sumaria: 'AOO', id: 'arrend', nombre: 'AOO Activos por derecho de uso y pasivos por arrendamiento' }
       ]
     };
@@ -4106,7 +4108,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
     async function agregarProcedimientoPlantilla() {
       const s = valorAnalisis('pg-sumaria'), est = document.getElementById('pg-estado');
       if (!s) { est.textContent = 'Elige primero una sumaria para agregarle el procedimiento.'; est.className = 'text-[11px] min-h-[1rem] text-red-600 font-bold'; return; }
-      const hoja = (s === 'AA' || s === 'RC') ? valorAnalisis('pg-hoja') : '';
+      const hoja = s === 'AH' ? 'impuestos' : ((s === 'AA' || s === 'RC') ? valorAnalisis('pg-hoja') : '');
       if (s === 'RC' && !hoja) { est.textContent = 'Para la cuenta RC elige también el tema (Nómina, Depreciaciones o Gastos en general).'; est.className = 'text-[11px] min-h-[1rem] text-red-600 font-bold'; return; }
       if (s === 'AA' && !hoja) { est.textContent = 'Para la cuenta AA elige también la hoja (Caja, Bancos o Equivalentes de efectivo).'; est.className = 'text-[11px] min-h-[1rem] text-red-600 font-bold'; return; }
       const maxOrden = programasPlantilla.reduce((m, r) => Math.max(m, r.orden || 0), 0);
@@ -4755,6 +4757,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
     // ===== Tipos de documento por cuenta y lista de qué subir =====
     const PC_ETIQ = {
       'RC:nomina': ['Planilla de fondos de reserva del IESS', 'Planilla de préstamos hipotecarios del IESS', 'Planilla de préstamos quirografarios del IESS', 'Mayor contable completo', 'Mayor contable de nómina', 'Mayor de pasivos laborales (beneficios sociales)', 'Mayor de IESS por pagar', 'Mayor de anticipos a empleados', 'Rol de pagos (por mes y por persona)', 'Planilla del IESS', 'Listado de personal con fecha de ingreso', 'Cálculo de décimos', 'Cálculo de fondo de reserva', 'Utilidades a trabajadores', 'Finiquitos', 'Liquidaciones', 'Formulario 107', 'Contrato o expediente del colaborador', 'Otro'],
+      'AH:impuestos': ['Mayor de IVA en compras (crédito tributario IVA)', 'Mayor de retenciones de IVA recibidas', 'Mayor de retenciones en la fuente de renta recibidas', 'Mayor de ISD (crédito tributario)', 'Mayor contable completo', 'Formulario 104 (declaración de IVA)', 'ATS (anexo transaccional)', 'Formulario 103 (retenciones en la fuente)', 'Comprobantes de retención recibidos (SRI)', 'Declaración de impuesto a la renta (Formulario 101)', 'Documentos del ISD (pago y partida arancelaria)', 'Balance de comprobación', 'Otro'],
       'AA:bancos': ['Conciliación bancaria', 'Estado de cuenta', 'Confirmación bancaria', 'Firmas autorizadas', 'Otro'],
       'AA:caja': ['Acta de arqueo de caja', 'Detalle de fondos y caja chica', 'Documento de soporte', 'Otro'],
       'AA:equivalentes': ['Certificado o póliza de inversión', 'Estado de cuenta', 'Confirmación de la institución', 'Detalle de equivalentes de efectivo', 'Otro'],
@@ -4768,12 +4771,12 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       AB: ['Certificado o póliza de inversión', 'Estado de cuenta', 'Confirmación bancaria', 'Detalle o anexo de inversiones', 'Otro'],
       AS: ['Certificado o póliza de inversión', 'Estado de cuenta', 'Confirmación bancaria', 'Detalle o anexo de inversiones', 'Otro']
     };
-    const PC_HOJAS = { caja: 'Caja', bancos: 'Bancos', equivalentes: 'Equivalentes de efectivo', venta: 'Inventario para la venta, importaciones en tránsito y kárdex', costo_ventas: 'Costo de ventas → salidas', kardex: 'Movimiento de kárdex', import: 'Importaciones (liquidaciones)', voucheo: 'Revisión de documentación (voucheo)', nomina: 'Nómina', depreciaciones: 'Depreciaciones', gastos: 'Gastos en general' };
-    const PC_HOJAS_SUM = { AA: [['caja', 'Caja'], ['bancos', 'Bancos'], ['equivalentes', 'Equivalentes de efectivo']], AF: [['venta', 'Inventario para la venta, importaciones en tránsito y kárdex']], RC: [['nomina', 'Nómina']] };
+    const PC_HOJAS = { impuestos: 'Activos por impuestos corrientes', caja: 'Caja', bancos: 'Bancos', equivalentes: 'Equivalentes de efectivo', venta: 'Inventario para la venta, importaciones en tránsito y kárdex', costo_ventas: 'Costo de ventas → salidas', kardex: 'Movimiento de kárdex', import: 'Importaciones (liquidaciones)', voucheo: 'Revisión de documentación (voucheo)', nomina: 'Nómina', depreciaciones: 'Depreciaciones', gastos: 'Gastos en general' };
+    const PC_HOJAS_SUM = { AA: [['caja', 'Caja'], ['bancos', 'Bancos'], ['equivalentes', 'Equivalentes de efectivo']], AF: [['venta', 'Inventario para la venta, importaciones en tránsito y kárdex']], RC: [['nomina', 'Nómina']], AH: [['impuestos', 'Activos por impuestos corrientes']] };
     function pcNombreHoja(h) { return PC_HOJAS[h] || h || ''; }
     const PC_TODO = 'Todo en un archivo (todos los documentos juntos)';
     function pcEtiquetas(sumaria, hoja) {
-      const l = PC_ETIQ[(sumaria === 'AA' || sumaria === 'AF' || sumaria === 'RC') ? sumaria + ':' + (hoja || '') : sumaria] || ['Documento de soporte', 'Otro'];
+      const l = PC_ETIQ[(sumaria === 'AA' || sumaria === 'AF' || sumaria === 'RC' || sumaria === 'AH') ? sumaria + ':' + (hoja || '') : sumaria] || ['Documento de soporte', 'Otro'];
       const i = l.indexOf('Otro');
       return i < 0 ? l.concat([PC_TODO]) : l.slice(0, i).concat([PC_TODO], l.slice(i));
     }
@@ -4807,7 +4810,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       pcArchivosElegidos();
     }
     function pcEtiquetaSugerida(nombre, et) {
-      const reglas = [[/hipotec/i, 'Planilla de préstamos hipotecarios del IESS'], [/quirograf/i, 'Planilla de préstamos quirografarios del IESS'], [/fondo.{0,3}reserva|f\.?\s?reserva/i, 'Planilla de fondos de reserva del IESS'], [/inventar/i, 'Mayor contable de inventarios'], [/mayor/i, 'Mayor contable completo'], [/concilia/i, 'Conciliación bancaria'], [/estado.?de.?cuenta|extracto/i, 'Estado de cuenta'], [/confirma/i, 'Confirmación bancaria'], [/firma/i, 'Firmas autorizadas'], [/adenda|renov/i, 'Adenda o renovación'], [/contrato/i, 'Contrato'], [/niif|evaluaci/i, 'Evaluación NIIF 16'], [/factura|pago/i, 'Factura o soporte de pagos'], [/certificado|p[oó]liza|dep[oó]sito|dpf/i, 'Certificado o póliza de inversión'], [/anexo|detalle/i, 'Detalle o anexo de inversiones']];
+      const reglas = [[/formulario.{0,3}104|\b104\b|declaraci[oó]n.{0,10}iva/i, 'Formulario 104 (declaración de IVA)'], [/(^|[^a-z])ats([^a-z]|$)|anexo.{0,3}transaccional/i, 'ATS (anexo transaccional)'], [/formulario.{0,3}103|\b103\b/i, 'Formulario 103 (retenciones en la fuente)'], [/ret.{0,12}iva|iva.{0,12}ret/i, 'Mayor de retenciones de IVA recibidas'], [/ret.{0,12}(renta|fuente|ir\b)|impuestos?.{0,3}pagados?.{0,3}adelant/i, 'Mayor de retenciones en la fuente de renta recibidas'], [/iva.{0,12}compra|cr[eé]dito.{0,3}tributario.{0,3}iva/i, 'Mayor de IVA en compras (crédito tributario IVA)'], [/\bisd\b/i, 'Mayor de ISD (crédito tributario)'], [/hipotec/i, 'Planilla de préstamos hipotecarios del IESS'], [/quirograf/i, 'Planilla de préstamos quirografarios del IESS'], [/fondo.{0,3}reserva|f\.?\s?reserva/i, 'Planilla de fondos de reserva del IESS'], [/inventar/i, 'Mayor contable de inventarios'], [/mayor/i, 'Mayor contable completo'], [/concilia/i, 'Conciliación bancaria'], [/estado.?de.?cuenta|extracto/i, 'Estado de cuenta'], [/confirma/i, 'Confirmación bancaria'], [/firma/i, 'Firmas autorizadas'], [/adenda|renov/i, 'Adenda o renovación'], [/contrato/i, 'Contrato'], [/niif|evaluaci/i, 'Evaluación NIIF 16'], [/factura|pago/i, 'Factura o soporte de pagos'], [/certificado|p[oó]liza|dep[oó]sito|dpf/i, 'Certificado o póliza de inversión'], [/anexo|detalle/i, 'Detalle o anexo de inversiones']];
       const r = reglas.find(x => x[0].test(nombre) && et.includes(x[1])); return r ? r[1] : '';
     }
     function pcArchivosElegidos() {
@@ -5406,16 +5409,17 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       pcIrAPedido(m[0], valorAnalisis('an-cliente'), valorAnalisis('an-anio'), visitaAnalisis(), m[1]);
     }
     // Barra fija para enviar un pedido a Claude desde la propia pantalla (cuando ya hay datos y se quiere actualizar)
+    function pcSumDeHoja(h) { return ({ nomina: 'RC', depreciaciones: 'RC', gastos: 'RC', impuestos: 'AH' })[h] || 'AF'; }
     function pcBarraPedido(hoja, cli, anio, vis, texto) {
       if (!cli) return '';
-      const T = { venta: ['Ingreso de información: todo se pide a Claude', 'Pedir a Claude (mayor contable + cuentas de inventario, tránsito y costo de ventas + kárdex + liquidaciones)'], costo_ventas: ['Costo de ventas: todo se pide a Claude', 'Pedir a Claude (mayor contable + cuentas de costo de ventas)'], kardex: ['Kárdex: todo se pide a Claude', 'Pedir a Claude (kárdex)'], nomina: ['Nómina: todo se pide a Claude', 'Pedir a Claude (mayor contable + roles de pago + IESS + décimos, fondo de reserva y utilidades + finiquitos)'] }[hoja] || ['Todo se pide a Claude', 'Pedir a Claude'];
-      return '<div class="mt-3 p-3 bg-white border border-slate-200 rounded-xl space-y-2 text-xs text-slate-700"><div class="text-[13px] font-semibold text-slate-800 ic-claude ic-tomate">' + T[0] + '</div><p class="text-slate-600">' + escapeHtml(texto) + '</p><div class="flex flex-wrap items-center gap-2"><button type="button" onclick="pcIrAPedido(\'' + (hoja === 'nomina' ? 'RC' : 'AF') + '\', \'' + escapeHtml(cli) + '\', \'' + escapeHtml(anio) + '\', \'' + escapeHtml(vis) + '\', \'' + hoja + '\')" class="px-3 py-1.5 rounded-lg text-xs transition bg-slate-200 text-slate-900 hover:bg-slate-300 font-semibold ic-claude">' + T[1] + '</button>' + ((hoja === 'venta' || hoja === 'nomina') ? '<button type="button" onclick="pcReprocesarPedido(\'' + escapeHtml(cli) + '\', \'' + escapeHtml(anio) + '\', \'' + escapeHtml(vis) + '\', \'' + hoja + '\')" class="px-1 py-1.5 text-xs font-bold bg-transparent border-0 hover:underline transition" style="color:#449964" title="Crea un pedido nuevo con los mismos archivos y cuentas del último pedido">↻ Pedir de nuevo a Claude (mismos archivos)</button>' : '') + '</div>' + (hoja === 'venta' ? '<p class="text-[11px] text-slate-500">«Pedir de nuevo» hace que Claude vuelva a leer los archivos (por ejemplo, si cambió algo en los datos). Para solo recalcular con lo ya leído use «↻ Recalcular» en cada pestaña.</p>' : '') + '</div>';
+      const T = { venta: ['Ingreso de información: todo se pide a Claude', 'Pedir a Claude (mayor contable + cuentas de inventario, tránsito y costo de ventas + kárdex + liquidaciones)'], costo_ventas: ['Costo de ventas: todo se pide a Claude', 'Pedir a Claude (mayor contable + cuentas de costo de ventas)'], kardex: ['Kárdex: todo se pide a Claude', 'Pedir a Claude (kárdex)'], nomina: ['Nómina: todo se pide a Claude', 'Pedir a Claude (mayor contable + roles de pago + IESS + décimos, fondo de reserva y utilidades + finiquitos)'], impuestos: ['Impuestos corrientes: todo se pide a Claude', 'Pedir a Claude (mayores de impuestos + formularios 104 + ATS + retenciones)'] }[hoja] || ['Todo se pide a Claude', 'Pedir a Claude'];
+      return '<div class="mt-3 p-3 bg-white border border-slate-200 rounded-xl space-y-2 text-xs text-slate-700"><div class="text-[13px] font-semibold text-slate-800 ic-claude ic-tomate">' + T[0] + '</div><p class="text-slate-600">' + escapeHtml(texto) + '</p><div class="flex flex-wrap items-center gap-2"><button type="button" onclick="pcIrAPedido(\'' + pcSumDeHoja(hoja) + '\', \'' + escapeHtml(cli) + '\', \'' + escapeHtml(anio) + '\', \'' + escapeHtml(vis) + '\', \'' + hoja + '\')" class="px-3 py-1.5 rounded-lg text-xs transition bg-slate-200 text-slate-900 hover:bg-slate-300 font-semibold ic-claude">' + T[1] + '</button>' + ((hoja === 'venta' || hoja === 'nomina' || hoja === 'impuestos') ? '<button type="button" onclick="pcReprocesarPedido(\'' + escapeHtml(cli) + '\', \'' + escapeHtml(anio) + '\', \'' + escapeHtml(vis) + '\', \'' + hoja + '\')" class="px-1 py-1.5 text-xs font-bold bg-transparent border-0 hover:underline transition" style="color:#449964" title="Crea un pedido nuevo con los mismos archivos y cuentas del último pedido">↻ Pedir de nuevo a Claude (mismos archivos)</button>' : '') + '</div>' + (hoja === 'venta' ? '<p class="text-[11px] text-slate-500">«Pedir de nuevo» hace que Claude vuelva a leer los archivos (por ejemplo, si cambió algo en los datos). Para solo recalcular con lo ya leído use «↻ Recalcular» en cada pestaña.</p>' : '') + '</div>';
     }
     // Repite el último pedido de la hoja con los mismos archivos y cuentas (los archivos se copian, no se vuelven a subir)
     async function pcReprocesarPedido(cli, anio, vis, hoja) {
       if (!usuarioActivo || !nombreUsuarioActivo()) { alert('Ingresa con tu usuario para solicitar.'); return; }
       try {
-        const { data: pe, error: e0 } = await supabaseClient.from('pedidos_claude').select('*').eq('cliente_id', cli).eq('anio', Number(anio)).eq('visita', vis || 'final').eq('sumaria', hoja === 'nomina' ? 'RC' : 'AF').eq('hoja', hoja).in('estado', ['solicitado', 'autorizado', 'hecho']).order('created_at', { ascending: false }).limit(1);
+        const { data: pe, error: e0 } = await supabaseClient.from('pedidos_claude').select('*').eq('cliente_id', cli).eq('anio', Number(anio)).eq('visita', vis || 'final').eq('sumaria', pcSumDeHoja(hoja)).eq('hoja', hoja).in('estado', ['solicitado', 'autorizado', 'hecho']).order('created_at', { ascending: false }).limit(1);
         if (e0) { alert('No se pudo revisar el último pedido: ' + (e0.message || e0)); return; }
         const ant = pe && pe[0];
         if (!ant) { alert('Aún no hay un pedido anterior de este cliente y año. Haga el primer pedido con el botón «Pedir a Claude».'); return; }
@@ -13573,6 +13577,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       if (clave === 'bancos') return 'Efectivo y equivalentes de efectivo › Bancos';
       if (clave === 'inventarios_v2') return 'AF Inventarios › Conclusiones de la cuenta';
       if (clave === 'nomina') return 'RC01 Nómina (prueba) › Conclusiones de la cuenta';
+      if (clave === 'impuestos') return 'AH Activos por impuestos corrientes › Conclusiones de la cuenta';
       for (const r of Object.values(RUBROS_ANALISIS)) {
         const c = r.cuentas.find(x => x.clave === clave);
         if (c) return c.nombre;
@@ -15776,6 +15781,7 @@ ${cont.innerHTML}
       { clave: 'arrend', nombre: '     ↳ 2. Análisis Claves › Activos › Activos por derecho de uso y pasivos por arrendamiento', btn: 'nav-cuenta-extra-activos-arrend', defecto: false },
       { clave: 'import2', nombre: '     ↳ 2. Análisis Claves › Activos › AF Inventarios', btn: 'nav-cuenta-extra-activos-import2', defecto: false },
       { clave: 'nomina', nombre: '     ↳ 2. Análisis Claves › Costos y gastos › RC01 Nómina (prueba)', btn: 'nav-cuenta-extra-costos-gastos-nomina', defecto: false },
+      { clave: 'impuestos', nombre: '     ↳ 2. Análisis Claves › Activos › AH Activos por impuestos corrientes', btn: 'nav-cuenta-extra-activos-impuestos', defecto: false },
       { clave: 'concil', nombre: '     ↳ 2. Análisis Claves › Activos › AA Efectivo y equivalentes de efectivo (hojas Bancos y Equivalentes)', btn: 'nav-cuenta-extra-activos-concil', defecto: false },
       { clave: 'visitas', nombre: '1b) Auditoría/Planificación › Visitas (Calendario)', btn: 'nav-visitas' },
       { clave: 'asignacion', nombre: '1c) Auditoría/Planificación › Asignación de cuentas', btn: 'nav-asignacion' },
@@ -18735,12 +18741,25 @@ ${cont.innerHTML}
       if (await v2Guardar(codigo, { pt: lista })) { supabaseClient.storage.from('papeles-v2').remove([t.ruta]); v2Pintar(); }
     }
     // ===== Nómina (RC01): mismo esquema de 5 pestañas que Inventarios v2 =====
+    // Contexto del módulo: el mismo esquema (programa, subir información, resultado, cuadres y conclusiones) sirve a Nómina (RC) y a Activos por impuestos corrientes (AH)
+    const NM_CFGS = {
+      nomina: { sum: 'RC', hoja: 'nomina', titulo: '2. Nómina <span class="text-[11px] font-semibold text-amber-600 border border-amber-300 rounded px-1.5 py-0.5 align-middle">PRUEBA</span>', subtit: 'Análisis guiado por el programa de auditoría: Claude elabora cada procedimiento de nómina y arma los papeles de trabajo; el auditor revisa.', nombre: 'RC - Nómina', ref: 'RC · Nómina', corto: 'Nómina', txtSubir: 'Aquí se sube todo en un solo pedido: el mayor contable de las cuentas de nómina, los mayores de los pasivos laborales (beneficios sociales e IESS por pagar) y de anticipos a empleados, los roles de pago de todos los meses, las planillas del IESS, el listado de personal con fecha de ingreso (para saber quién tiene más de un año y accede al fondo de reserva), el cálculo de décimos, fondo de reserva y utilidades, y los finiquitos. Claude lo lee junto y las demás pestañas leen de aquí. Cuando el pedido pase a "hecho", presiona «Actualizar».' },
+      impuestos: { sum: 'AH', hoja: 'impuestos', titulo: '2. AH Activos por impuestos corrientes', subtit: 'Análisis guiado por el programa de auditoría: Claude arma el movimiento de las cuentas de impuestos y los cruces con los formularios 104, el ATS y las retenciones; el auditor revisa.', nombre: 'AH - Activos por impuestos corrientes', ref: 'AH · Impuestos corrientes', corto: 'Impuestos corrientes', txtSubir: 'Aquí se sube todo en un solo pedido: los mayores contables de IVA en compras, retenciones de IVA y retenciones de renta recibidas (y de ISD si hay), los formularios 104 de cada mes, el ATS de cada mes (PDF, XML o Excel), los comprobantes de retención del SRI o el formulario 103, y la declaración de renta del año anterior. Claude lo lee junto y las demás pestañas leen de aquí. Cuando el pedido pase a "hecho", presiona «Actualizar».' }
+    };
+    let NM_CTX = NM_CFGS.nomina;
     const nmE = { cliente: '', anio: '', visita: '', procs: [], filas: {}, cargaId: 0, abiertos: {}, tab: 'programa', sv: null };
     const NM_TABS = [['programa', 'Programa'], ['subir', 'Subir información'], ['resultado', 'Resultado del análisis – Claude'], ['cuadres', 'Resumen de cuadres y cruces'], ['conclusiones', 'Conclusiones de la cuenta']];
     function nmIrProg(cod) { nmE.tab = 'programa'; nmPintar(); setTimeout(() => irFilaResaltada('nm-prog-' + cod), 40); }
     function nmIrTab(t) { nmE.tab = t; nmPintar(); }
     function nmFmt(t) { return t ? new Date(t).toLocaleString('es-EC', { day: '2-digit', month: '2-digit', year: 'numeric', hour: 'numeric', minute: '2-digit' }) : ''; }
-    async function abrirNomina() {
+    function nmUsarContexto(k) {
+      const antes = NM_CTX; NM_CTX = NM_CFGS[k] || NM_CFGS.nomina;
+      const t = $im('nm-titulo'), st = $im('nm-subtit'); if (t) t.innerHTML = NM_CTX.titulo; if (st) st.textContent = NM_CTX.subtit;
+      if (antes !== NM_CTX) { nmE.tab = 'programa'; nmE.cons = null; nmE.res = null; nmE.bal = null; nmE.conc = null; }
+    }
+    async function abrirImpuestos() { nmUsarContexto('impuestos'); return abrirNomina(true); }
+    async function abrirNomina(ya) {
+      if (!ya) nmUsarContexto('nomina');
       asegurarClientesEn('nm-cliente');
       const sa = $im('nm-anio'), hoy = new Date().getFullYear();
       if (sa && !sa.options.length) { for (let y = hoy + 1; y >= hoy - 4; y--) sa.add(new Option('Año ' + y, String(y))); sa.value = String(($im('an-anio') || {}).value || hoy); }
@@ -18756,9 +18775,9 @@ ${cont.innerHTML}
       aviso.classList.add('hidden'); esp.classList.remove('hidden');
       const id = ++nmE.cargaId; $im('nm-estado').textContent = 'Cargando…';
       const [p, r, tp] = await Promise.all([
-        supabaseClient.from('programas_plantilla').select('*').eq('sumaria', 'RC').eq('hoja', 'nomina').eq('activo', true).order('orden', { ascending: true }),
-        supabaseClient.from('v2_programa').select('*').eq('cliente_id', cli).eq('anio', Number(anio)).eq('visita', vis).eq('sumaria', 'RC').eq('hoja', 'nomina'),
-        supabaseClient.from('v2_pt').select('*').eq('cliente_id', cli).eq('anio', Number(anio)).eq('visita', vis).eq('sumaria', 'RC').eq('hoja', 'nomina').order('ref', { ascending: true })
+        supabaseClient.from('programas_plantilla').select('*').eq('sumaria', NM_CTX.sum).eq('hoja', NM_CTX.hoja).eq('activo', true).order('orden', { ascending: true }),
+        supabaseClient.from('v2_programa').select('*').eq('cliente_id', cli).eq('anio', Number(anio)).eq('visita', vis).eq('sumaria', NM_CTX.sum).eq('hoja', NM_CTX.hoja),
+        supabaseClient.from('v2_pt').select('*').eq('cliente_id', cli).eq('anio', Number(anio)).eq('visita', vis).eq('sumaria', NM_CTX.sum).eq('hoja', NM_CTX.hoja).order('ref', { ascending: true })
       ]);
       if (id !== nmE.cargaId) return;
       nmE.pts = (tp && !tp.error && tp.data) || [];
@@ -18812,8 +18831,8 @@ ${cont.innerHTML}
       if (nmE.tab === 'cuadres') { nmCuaPintar(); return; }
       if (nmE.tab === 'conclusiones') { nmConcPintar(); return; }
       const h = escapeHtml;
-      const cuenta = (typeof catalogoCuentas !== 'undefined' && catalogoCuentas.find(k => k.sumaria === 'RC')) || null;
-      const nombreSum = cuenta ? cuenta.cuenta : 'RC - Nómina';
+      const cuenta = (typeof catalogoCuentas !== 'undefined' && catalogoCuentas.find(k => k.sumaria === NM_CTX.sum)) || null;
+      const nombreSum = cuenta ? cuenta.cuenta : NM_CTX.nombre;
       let ult = null, filas = '';
       nmE.procs.forEach(p => {
         const kg = p.hoja || '';
@@ -18873,7 +18892,7 @@ ${cont.innerHTML}
     async function nmPtExcel(id) {
       const t = (nmE.pts || []).find(x => x.id === id); if (!t) { alert('No se encontró el papel de trabajo. Presiona «Actualizar» y vuelve a intentar.'); return; }
       const cli = ($im('nm-cliente').selectedOptions[0] || {}).textContent || nmE.cliente;
-      await ptExcelComun(t, cli, 'RC · Nómina', nmE.anio + ' · ' + nmE.visita, nmFmt(t.elaborado_at));
+      await ptExcelComun(t, cli, NM_CTX.ref, nmE.anio + ' · ' + nmE.visita, nmFmt(t.elaborado_at));
     }
     // ----- Pestaña "Subir información": un solo pedido a Claude y el detalle de lo que ya está leído -----
     async function nmSubirCargar() {
@@ -18881,7 +18900,7 @@ ${cont.innerHTML}
       nmE.svId = (nmE.svId || 0) + 1; const id = nmE.svId; nmE.sv = cli ? { cargado: false, id } : null;
       if (!cli) return;
       if (nmE.tab === 'subir') nmSubirPintar();
-      const peT = await supabaseClient.from('pedidos_claude').select('id, created_at, estado, solicitado_por, hecho_at, hoja').eq('cliente_id', cli).eq('anio', anio).eq('visita', vis).eq('sumaria', 'RC').eq('hoja', 'nomina').order('created_at', { ascending: false });
+      const peT = await supabaseClient.from('pedidos_claude').select('id, created_at, estado, solicitado_por, hecho_at, hoja').eq('cliente_id', cli).eq('anio', anio).eq('visita', vis).eq('sumaria', NM_CTX.sum).eq('hoja', NM_CTX.hoja).order('created_at', { ascending: false });
       let archivos = [];
       if (!peT.error && (peT.data || []).length) {
         const ar = await supabaseClient.from('pedidos_claude_archivos').select('id, pedido_id, nombre, ruta, tamano, tipo, subido_por, created_at, eliminado_at, etiqueta').in('pedido_id', peT.data.map(x => x.id)).order('created_at', { ascending: false });
@@ -18901,7 +18920,7 @@ ${cont.innerHTML}
       const est = { solicitado: 'Esperando autorización', autorizado: 'Autorizado, Claude lo trabaja', hecho: 'Hecho', rechazado: 'Rechazado', cancelado: 'Cancelado' };
       const filasA = (S.archivos || []).filter(a => !a.eliminado_at).map((a, i) => '<tr class="border-t border-slate-100 align-top"><td class="px-2 py-1.5">' + e(a.nombre) + '</td><td class="px-2 py-1.5">' + e(a.etiqueta || '') + '</td><td class="px-2 py-1.5 whitespace-nowrap text-right">' + kb(a.tamano) + '</td><td class="px-2 py-1.5 whitespace-nowrap">' + e(nombreMostrado(a.subido_por) || '') + '</td><td class="px-2 py-1.5 whitespace-nowrap">' + nmFmt(a.created_at) + '</td><td class="px-2 py-1.5">' + e(est[a.pedido && a.pedido.estado] || (a.pedido && a.pedido.estado) || '') + '</td><td class="px-2 py-1.5"><button type="button" onclick="nmArchivoBajar(' + (S.archivos || []).indexOf(a) + ')" class="text-[11px] underline text-indigo-700">Descargar</button></td></tr>').join('');
       const detalle = '<div class="mt-3 p-3 bg-white border border-slate-200 rounded-xl text-xs text-slate-700"><div class="flex items-center justify-between gap-2 mb-1"><div class="text-[13px] font-semibold text-slate-800">Información subida para este cliente, año y visita</div><button type="button" onclick="nmSubirCargar()" class="px-2 py-1 text-[11px] font-semibold border border-slate-300 rounded-lg hover:bg-slate-50">↻ Actualizar</button></div>' + (filasA ? '<div class="overflow-x-auto"><table class="w-full text-[11px] leading-tight border-collapse" style="min-width:44rem"><thead><tr class="bg-slate-100 text-slate-700"><th class="px-2 py-1.5 text-left font-bold">Archivo</th><th class="px-2 py-1.5 text-left font-bold">Qué es</th><th class="px-2 py-1.5 text-right font-bold">Tamaño</th><th class="px-2 py-1.5 text-left font-bold">Subido por</th><th class="px-2 py-1.5 text-left font-bold">Fecha</th><th class="px-2 py-1.5 text-left font-bold">Pedido</th><th class="px-2 py-1.5"></th></tr></thead><tbody>' + filasA + '</tbody></table></div>' : '<p class="text-slate-500">Aún no se ha subido información de nómina para este cliente, año y visita.</p>') + '</div>';
-      c.innerHTML = '<div class="p-3">' + pcBarraPedido('nomina', nmE.cliente, nmE.anio, nmE.visita, 'Aquí se sube todo en un solo pedido: el mayor contable de las cuentas de nómina, los mayores de los pasivos laborales (beneficios sociales e IESS por pagar) y de anticipos a empleados, los roles de pago de todos los meses, las planillas del IESS, el listado de personal con fecha de ingreso (para saber quién tiene más de un año y accede al fondo de reserva), el cálculo de décimos, fondo de reserva y utilidades, y los finiquitos. Claude lo lee junto y las demás pestañas leen de aquí. Cuando el pedido pase a "hecho", presiona «Actualizar».') + detalle + '</div>';
+      c.innerHTML = '<div class="p-3">' + pcBarraPedido(NM_CTX.hoja, nmE.cliente, nmE.anio, nmE.visita, NM_CTX.txtSubir) + detalle + '</div>';
     }
     async function nmArchivoBajar(i) {
       const a = ((nmE.sv || {}).archivos || [])[i]; if (!a) return;
@@ -18916,7 +18935,7 @@ ${cont.innerHTML}
       nmE.res = cli ? { cargado: false } : null;
       if (!cli) return;
       if (nmE.tab === 'resultado') nmResPintar();
-      const r = await supabaseClient.from('v2_resultado').select('*').eq('cliente_id', cli).eq('anio', anio).eq('visita', vis).eq('sumaria', 'RC').eq('hoja', 'nomina').maybeSingle();
+      const r = await supabaseClient.from('v2_resultado').select('*').eq('cliente_id', cli).eq('anio', anio).eq('visita', vis).eq('sumaria', NM_CTX.sum).eq('hoja', NM_CTX.hoja).maybeSingle();
       if (id !== nmE.resId) return;
       nmE.res = { cargado: true, error: r.error ? (r.error.message || String(r.error)) : '', data: r.data || null };
       if (nmE.tab === 'resultado') nmResPintar();
@@ -18955,7 +18974,7 @@ ${cont.innerHTML}
       const d = R.data, bl = d.bloques;
       const h2s = bl.filter(b => b.t === 'h2');
       const toc = h2s.map((b, i) => {
-        const m = String(b.x).match(/^((?:RC-\d+(?:\.\d+)?)(?:\s+y\s+RC-\d+(?:\.\d+)?)?)\s+(.*)$/);
+        const m = String(b.x).match(/^((?:[A-Z]{2,3}-\d+(?:\.\d+)?)(?:\s+y\s+[A-Z]{2,3}-\d+(?:\.\d+)?)?)\s+(.*)$/);
         const marca = m ? '<span class="v2t-cod">' + escapeHtml(m[1].replace(/\s+y\s+/, ' · ')) + '</span>' : '<span class="v2t-num">' + (i + 1) + '</span>';
         return '<a href="#" id="nmt-' + i + '" onclick="nmResIr(' + i + ');return false" class="v2t-it">' + marca + '<span class="v2t-tx">' + escapeHtml(m ? m[2] : b.x) + '</span></a>';
       }).join('');
@@ -19004,7 +19023,7 @@ ${cont.innerHTML}
           b.cab.forEach((h, j) => {
             if (j < 2 || !/^diferencia/i.test(String(h).trim())) return;
             const hay = b.filas.some(f => !/^total\b/i.test(String((f || [])[0] == null ? '' : f[0]).trim()) && nmNumEs((f || [])[j - 1]) !== null && nmNumEs((f || [])[j - 2]) !== null);
-            if (hay) inf.push({ c: 0, aud: j - 1, mayor: j - 2, ref: (ultTit.match(/RC-\d+(\.\d+)?/) || [''])[0], titulo: (ultTit || 'Cuadro') + (b.cab.filter(x => /^diferencia/i.test(String(x).trim())).length > 1 ? ' (' + String(b.cab[j - 1]).trim() + ' contra ' + String(b.cab[j - 2]).trim() + ')' : ''), _auto: true });
+            if (hay) inf.push({ c: 0, aud: j - 1, mayor: j - 2, ref: (ultTit.match(/[A-Z]{2,3}-\d+(\.\d+)?/) || [''])[0], titulo: (ultTit || 'Cuadro') + (b.cab.filter(x => /^diferencia/i.test(String(x).trim())).length > 1 ? ' (' + String(b.cab[j - 1]).trim() + ' contra ' + String(b.cab[j - 2]).trim() + ')' : ''), _auto: true });
           });
           if (inf.length) marcas = inf;
         }
@@ -19030,13 +19049,13 @@ ${cont.innerHTML}
     // Lista final de cuadros: los explícitos (consolidado y los de siempre) más los que salen del informe; si un título está en las dos partes manda el del informe.
     function nmCuadresTodos(data) {
       const exp = (data && Array.isArray(data.cuadres)) ? data.cuadres : [], inf = nmCuadresDeInforme(data && data.bloques);
-      const refDe = t => (String(t || '').match(/RC-\d+(\.\d+)?/) || [''])[0];
+      const refDe = t => (String(t || '').match(/[A-Z]{2,3}-\d+(\.\d+)?/) || [''])[0];
       const refExp = new Set(exp.filter(q => q.tipo !== 'matriz').map(q => refDe(q.titulo)).filter(Boolean));
       for (let k = inf.length - 1; k >= 0; k--) if (inf[k].auto && refExp.has(refDe(inf[k].titulo))) inf.splice(k, 1);
       const tit = q => String(q.titulo || '').trim().toLowerCase(), enInf = new Set(inf.map(tit));
       const matriz = exp.filter(q => q.tipo === 'matriz'), resto = exp.filter(q => q.tipo !== 'matriz' && !enInf.has(tit(q)));
       // Orden automático por número de referencia (RC-01, RC-02, RC-02.2, RC-02.3, RC-06, RC-06.4 …); los sin número van al final
-      const clave = q => { const m = String(q.titulo || '').match(/RC-(\d+)(?:\.(\d+))?/) || String(q.ref || '').match(/RC-(\d+)(?:\.(\d+))?/); return m ? [parseInt(m[1], 10), m[2] === undefined ? -1 : parseInt(m[2], 10)] : [9999, 0]; };
+      const clave = q => { const m = String(q.titulo || '').match(/[A-Z]{2,3}-(\d+)(?:\.(\d+))?/) || String(q.ref || '').match(/[A-Z]{2,3}-(\d+)(?:\.(\d+))?/); return m ? [parseInt(m[1], 10), m[2] === undefined ? -1 : parseInt(m[2], 10)] : [9999, 0]; };
       const ordenados = [...inf, ...resto].map((q, i) => ({ q, i, k: clave(q) })).sort((a, b) => (a.k[0] - b.k[0]) || (a.k[1] - b.k[1]) || (a.i - b.i)).map(x => x.q);
       return [...matriz, ...ordenados];
     }
@@ -19088,7 +19107,14 @@ ${cont.innerHTML}
       return out;
     }
     // Cuadros que siempre debe haber en Nómina (cualquier cliente). Si falta alguno, el resumen lo avisa.
-    const NMC_ESPERADOS = [
+    const NMC_ESPERADOS_AH = [
+      ['AH-02.1 Crédito tributario de IVA contra el balance', q => /AH-02\.1/.test(q.titulo || '')],
+      ['AH-03.1 IVA: libros contra Formulario 104', q => /AH-03\.1/.test(q.titulo || '')],
+      ['AH-03.2 IVA: libros contra ATS', q => /AH-03\.2/.test(q.titulo || '')],
+      ['AH-03.3 Retenciones de IVA contra Formulario 104', q => /AH-03\.3/.test(q.titulo || '')],
+      ['AH-04.1 Retenciones de renta contra comprobantes', q => /AH-04\.1/.test(q.titulo || '')]
+    ];
+    const NMC_ESPERADOS_RC = [
       ['Consolidado de la nómina (roles de pago)', q => q.tipo === 'matriz' || /consolidado de la n[oó]mina/i.test(q.titulo || '')],
       ['RC-01 Consolidado de gastos contra el balance', q => /RC-01(?![.\d])/.test(q.titulo || '')],
       ['RC-02 Roles de pago contra el gasto del mayor', q => /RC-02(?![.\d])/.test(q.titulo || '')],
@@ -19143,12 +19169,12 @@ ${cont.innerHTML}
       nmE.bal = cli ? { cargado: false } : null; if (!cli) return;
       let data = [], err = '';
       for (let d = 0; ; d += 1000) {
-        const r = await supabaseClient.from('balance_comprobacion').select('codigo, cuenta, saldo').eq('cliente_id', cli).eq('anio', anio).eq('visita', vis).eq('sumaria', 'RC').range(d, d + 999);
+        const r = await supabaseClient.from('balance_comprobacion').select('codigo, cuenta, saldo').eq('cliente_id', cli).eq('anio', anio).eq('visita', vis).eq('sumaria', NM_CTX.sum).range(d, d + 999);
         if (r.error) { err = r.error.message || String(r.error); break; }
         data.push(...(r.data || [])); if (!r.data || r.data.length < 1000) break;
       }
       if (id !== nmE.resId) return;
-      const m = {}, af = {}; data.forEach(x => { const k = String(x.codigo || '').trim(); if (k) { m[k] = { nombre: x.cuenta || '', saldo: (m[k] ? m[k].saldo : 0) + (Number(x.saldo) || 0), sumaria: 'RC' }; af[k] = 1; } });
+      const m = {}, af = {}; data.forEach(x => { const k = String(x.codigo || '').trim(); if (k) { m[k] = { nombre: x.cuenta || '', saldo: (m[k] ? m[k].saldo : 0) + (Number(x.saldo) || 0), sumaria: NM_CTX.sum }; af[k] = 1; } });
       // cuentas de los cuadros que están en otras sumarias (por ejemplo, costo de ventas)
       const cu = nmCuadresTodos(nmE.res && nmE.res.data), otras = [...new Set(cu.flatMap(q => (q.filas || []).flatMap(f => f.cuentas || [])).map(k => String(k).trim()).filter(k => k && !af[k]))];
       if (otras.length) {
@@ -19203,8 +19229,9 @@ ${cont.innerHTML}
     }
     function nmTipoGasto(nombre) { const t = quitarAcentosAnexo(String(nombre || '')).toLowerCase(); for (const [n, re] of NMK_TIPOS) if (re.test(t)) return n; return 'Otros gastos'; }
     async function nmConsCargar() {
-      const key = [nmE.cliente, nmE.anio, nmE.visita].join('|');
+      const key = [NM_CTX.hoja, nmE.cliente, nmE.anio, nmE.visita].join('|');
       if (nmE.cons && nmE.cons.key === key) return;
+      if (NM_CTX.sum !== 'RC') { nmE.cons = { key, cargado: true, filas: [], error: '' }; return; }
       nmE.cons = { key, cargado: false, filas: [], error: '' };
       const k0 = key; let data = [], err = '';
       for (let d = 0; ; d += 1000) {
@@ -19398,16 +19425,16 @@ ${cont.innerHTML}
       const cob = '<div class="v2r-h3" style="margin:6px 0 6px;display:flex;justify-content:space-between;align-items:center;gap:8px"><span>1. Consolidado de gastos de nómina</span></div><div class="v2r-tw"><table class="v2r-t"><thead><tr><th>Rubro</th>' + NMK_COLS.map(([, nm]) => th(nm, true)).join('') + th('Total', true) + '</tr></thead><tbody>' + cobCuerpo + '</tbody></table></div>';
       const chip = (n, t, P) => '<span style="display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:99px;font-size:12px;font-weight:700;background:' + P[1] + ';color:' + P[2] + '"><span style="font-size:14px">' + n + '</span>' + t + '</span>';
       const resumen = '<div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:6px">' + chip(cont.cuadra, 'cuadran', NMC_PILL.cuadra) + chip(cont.expl, 'explicadas', NMC_PILL.expl) + chip(cont.dif + cont.nosum, 'con diferencia', NMC_PILL.dif) + chip(cont.ajuste, 'con ajuste propuesto', NMC_PILL.ajuste) + chip(cont.sinsoporte, 'sin soporte', NMC_PILL.sinsoporte) + '<span style="font-size:11px;color:#64748b;margin-left:4px">Tolerancia: ' + fmE(NMC_TOL) + ' · la sumaria se lee en vivo del balance de comprobación</span><button type="button" onclick="nmCuaExcelTodo()" style="margin-left:auto;font-size:12px;font-weight:700;color:#449964" class="hover:underline" title="Baja un Excel con todos los cuadros de esta pantalla, uno por hoja">Descargar todos los cuadros en Excel</button></div>';
-      const faltan = NMC_ESPERADOS.filter(x => !cu.some(x[1])).map(x => x[0]);
-      const faltanHtml = faltan.length ? '<div style="margin:14px 0;padding:10px 14px;border:1px dashed #d97706;background:#fffbeb;border-radius:8px;font-size:13px;color:#8a5a00"><b>No generado:</b> faltan ' + faltan.length + ' cuadro(s) que siempre debe haber en Nómina: ' + faltan.map(e).join('; ') + '. Se completan al volver a procesar el pedido o al agregarlos en el análisis de Claude.</div>' : '';
-      const ctl = nmControles(R.data, cu), ctlMal = ctl.filter(x => !x.ok), ctlBien = ctl.length - ctlMal.length;
+      const faltan = (NM_CTX.sum === 'RC' ? NMC_ESPERADOS_RC : NMC_ESPERADOS_AH).filter(x => !cu.some(x[1])).map(x => x[0]);
+      const faltanHtml = faltan.length ? '<div style="margin:14px 0;padding:10px 14px;border:1px dashed #d97706;background:#fffbeb;border-radius:8px;font-size:13px;color:#8a5a00"><b>No generado:</b> faltan ' + faltan.length + ' cuadro(s) que siempre debe haber en ' + NM_CTX.corto + ': ' + faltan.map(e).join('; ') + '. Se completan al volver a procesar el pedido o al agregarlos en el análisis de Claude.</div>' : '';
+      const ctl = NM_CTX.sum === 'RC' ? nmControles(R.data, cu) : [], ctlMal = ctl.filter(x => !x.ok), ctlBien = ctl.length - ctlMal.length;
       const ctlHtml = !ctl.length ? '' : (ctlMal.length
         ? '<div style="margin:14px 0;padding:10px 14px;border:1px dashed #d97706;background:#fffbeb;border-radius:8px;font-size:13px;color:#8a5a00"><b>Controles automáticos:</b> ' + ctlMal.length + ' por revisar' + (ctlBien ? ' y ' + ctlBien + ' correctos' : '') + '<ul style="margin:6px 0 0 18px;list-style:disc">' + ctlMal.map(x => '<li>' + e(x.t) + '</li>').join('') + '</ul></div>'
         : '<div style="margin:14px 0;font-size:12px;color:#2f7a4d"><b>Controles automáticos:</b> ' + ctlBien + ' de ' + ctlBien + ' correctos (totales, vacaciones por colaborador y personas).</div>');
-      c.innerHTML = '<style>' + NMR_CSS + '</style><div class="p-3 sm:p-6 bg-slate-50"><div class="v2r mx-auto" style="max-width:1100px;background:#f6f6f4;border:1px solid #dfdfdb;border-radius:12px;padding:18px 28px 26px">' + resumen + cob + tarjetas + faltanHtml + ctlHtml + '</div></div>';
+      c.innerHTML = '<style>' + NMR_CSS + '</style><div class="p-3 sm:p-6 bg-slate-50"><div class="v2r mx-auto" style="max-width:1100px;background:#f6f6f4;border:1px solid #dfdfdb;border-radius:12px;padding:18px 28px 26px">' + resumen + (NM_CTX.sum === 'RC' ? cob : '') + tarjetas + faltanHtml + ctlHtml + '</div></div>';
     }
 // ===== Conclusiones de la cuenta (v2): por concluir, To/Do-Quick Lett-Opinión, ajustes, revelaciones y conclusión =====
-    const NM_CUENTA = 'nomina';
+    const NM_CUENTA_K = () => NM_CTX.hoja;
     const NM_DEST = { todo: 'To/Do', quicklett: 'Quick Lett', opinion: 'Opinión' };
     function nmConcK(s) { return String(s == null ? '' : s).replace(/[^\w.-]/g, '_'); }
     async function nmConcCargar() {
@@ -19415,7 +19442,7 @@ ${cont.innerHTML}
       if (!cli) { nmE.conc = null; return; }
       const id = (nmE.concId = (nmE.concId || 0) + 1);
       nmE.conc = { cargado: false, datos: {}, id: null, error: '' };
-      const r = await supabaseClient.from('v2_conclusion').select('*').eq('cliente_id', cli).eq('anio', Number(nmE.anio)).eq('visita', nmE.visita).eq('sumaria', 'RC').eq('hoja', 'nomina').maybeSingle();
+      const r = await supabaseClient.from('v2_conclusion').select('*').eq('cliente_id', cli).eq('anio', Number(nmE.anio)).eq('visita', nmE.visita).eq('sumaria', NM_CTX.sum).eq('hoja', NM_CTX.hoja).maybeSingle();
       if (id !== nmE.concId) return;
       nmE.conc = { cargado: true, error: r.error ? (r.error.message || String(r.error)) : '', datos: (r.data && r.data.datos) || {}, id: r.data ? r.data.id : null };
       if (nmE.tab === 'conclusiones') nmConcPintar();
@@ -19424,7 +19451,7 @@ ${cont.innerHTML}
     async function nmConcGuardar(mut) {
       const C = nmE.conc; if (!C || !C.cargado) return false;
       const datos = JSON.parse(JSON.stringify(C.datos || {})); mut(datos);
-      const fila = { cliente_id: nmE.cliente, anio: Number(nmE.anio), visita: nmE.visita, sumaria: 'RC', hoja: 'nomina', datos, actualizado_por: nombreUsuarioActivo() || null, updated_at: new Date().toISOString() };
+      const fila = { cliente_id: nmE.cliente, anio: Number(nmE.anio), visita: nmE.visita, sumaria: NM_CTX.sum, hoja: NM_CTX.hoja, datos, actualizado_por: nombreUsuarioActivo() || null, updated_at: new Date().toISOString() };
       const { data, error } = await supabaseClient.from('v2_conclusion').upsert(fila, { onConflict: 'cliente_id,anio,visita,sumaria,hoja' }).select().single();
       if (error) { $im('nm-estado').textContent = 'No se pudo guardar: ' + (error.message || error); return false; }
       C.datos = data.datos || datos; C.id = data.id; $im('nm-estado').textContent = '';
@@ -19459,13 +19486,13 @@ ${cont.innerHTML}
       if (!quien) { alert('Ingresa con tu usuario para enviar el punto.'); return; }
       if (!await confirmarApp('¿Enviar este punto a ' + NM_DEST[destino] + '?\n\n' + x.texto + '\n\nSe verá en el consolidado «To/Do - Quick Lett - Opinión» (' + nmE.anio + ').')) return;
       const cli = nmE.cliente, anio = Number(nmE.anio), vis = nmE.visita;
-      const { data: ex, error: e1 } = await supabaseClient.from('criterio_auditor_cuentas').select('*').eq('cliente_id', cli).eq('anio', anio).eq('cuenta', NM_CUENTA).eq('visita', vis).maybeSingle();
+      const { data: ex, error: e1 } = await supabaseClient.from('criterio_auditor_cuentas').select('*').eq('cliente_id', cli).eq('anio', anio).eq('cuenta', NM_CUENTA_K()).eq('visita', vis).maybeSingle();
       if (e1) { alert('No se pudo leer el consolidado: ' + (e1.message || e1)); return; }
       const linea = '• [' + NM_DEST[destino] + '] ' + x.texto;
       const previo = String((ex && ex.criterio) || '').trim();
       const marcas = String((ex && ex.conclusion) || '').split(SEP_CONCLUSION).map(m => m.trim()).filter(Boolean);
       if (!marcas.includes(NM_DEST[destino])) marcas.push(NM_DEST[destino]);
-      const fila = { cliente_id: cli, anio, cuenta: NM_CUENTA, visita: vis, conclusion: marcas.join(SEP_CONCLUSION), criterio: previo.includes(linea) ? previo : (previo ? previo + '\n' : '') + linea, auditor: (ex && ex.auditor) || quien, actualizado_por: quien, updated_at: new Date().toISOString() };
+      const fila = { cliente_id: cli, anio, cuenta: NM_CUENTA_K(), visita: vis, conclusion: marcas.join(SEP_CONCLUSION), criterio: previo.includes(linea) ? previo : (previo ? previo + '\n' : '') + linea, auditor: (ex && ex.auditor) || quien, actualizado_por: quien, updated_at: new Date().toISOString() };
       const r = await upsertConFallbackActualizado('criterio_auditor_cuentas', fila);
       if (r.error) { alert('No se pudo enviar: ' + (r.error.message || r.error)); return; }
       const ok = await nmConcGuardar(d => { d.envios = d.envios || {}; d.envios[id] = { ...(d.envios[id] || {}), destino, por: quien, cuando: new Date().toISOString() }; });
@@ -19644,7 +19671,7 @@ ${cont.innerHTML}
     async function nmConcAj(n, v) { if (await nmConcGuardar(d => { d.ajEstado = d.ajEstado || {}; d.ajEstado[n] = v; })) nmConcPintar(); }
     async function nmGuardar(codigo, cambios) {
       const actual = nmE.filas[codigo] || {};
-      const fila = { cliente_id: nmE.cliente, anio: Number(nmE.anio), visita: nmE.visita, sumaria: 'RC', hoja: 'nomina', codigo, ...cambios, actualizado_por: nombreUsuarioActivo() || null, updated_at: new Date().toISOString() };
+      const fila = { cliente_id: nmE.cliente, anio: Number(nmE.anio), visita: nmE.visita, sumaria: NM_CTX.sum, hoja: NM_CTX.hoja, codigo, ...cambios, actualizado_por: nombreUsuarioActivo() || null, updated_at: new Date().toISOString() };
       const { data, error } = await supabaseClient.from('v2_programa').upsert(fila, { onConflict: 'cliente_id,anio,visita,sumaria,hoja,codigo' }).select().single();
       if (error) { $im('nm-estado').textContent = 'No se pudo guardar: ' + (error.message || error); return false; }
       nmE.filas[codigo] = { ...actual, ...data };
