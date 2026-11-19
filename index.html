@@ -18950,8 +18950,25 @@ ${cont.innerHTML}
     // ===== Nómina (RC01): mismo esquema de 5 pestañas que Inventarios v2 =====
     // Contexto del módulo: el mismo esquema (programa, subir información, resultado, cuadres y conclusiones) sirve a Nómina (RC) y a Activos por impuestos corrientes (AH)
     const NM_CFGS = {
-      nomina: { sum: 'RC', hoja: 'nomina', titulo: '2. Nómina', subtit: 'Análisis guiado por el programa de auditoría: Claude elabora cada procedimiento de nómina y arma los papeles de trabajo; el auditor revisa.', nombre: 'RC - Nómina', ref: 'RC · Nómina', corto: 'Nómina', txtSubir: 'Aquí se sube todo en un solo pedido: el mayor contable de las cuentas de nómina, los mayores de los pasivos laborales (beneficios sociales e IESS por pagar) y de anticipos a empleados, los roles de pago de todos los meses, las planillas del IESS, el listado de personal con fecha de ingreso (para saber quién tiene más de un año y accede al fondo de reserva), el cálculo de décimos, fondo de reserva y utilidades, y los finiquitos. Claude lo lee junto y las demás pestañas leen de aquí. Cuando el pedido pase a "hecho", presiona «Actualizar».' },
-      impuestos: { sum: 'AH', hoja: 'impuestos', titulo: '2. AH Activos por impuestos corrientes', subtit: 'Análisis guiado por el programa de auditoría: Claude arma el movimiento de las cuentas de impuestos y los cruces con los formularios 104, el ATS y las retenciones; el auditor revisa.', nombre: 'AH - Activos por impuestos corrientes', ref: 'AH · Impuestos corrientes', corto: 'Impuestos corrientes', txtSubir: 'Aquí se sube todo en un solo pedido: los mayores contables de IVA en compras, retenciones de IVA y retenciones de renta recibidas (y de ISD si hay), los formularios 104 de cada mes, el ATS de cada mes (PDF, XML o Excel), los comprobantes de retención del SRI o el formulario 103, y la declaración de renta del año anterior. Claude lo lee junto y las demás pestañas leen de aquí. Cuando el pedido pase a "hecho", presiona «Actualizar».' }
+      nomina: { cob: [
+        { n: 'Mayor contable (completo o por cuenta)', req: true, et: ['Mayor contable completo', 'Mayor contable de nómina', 'Mayor de pasivos laborales (beneficios sociales)', 'Mayor de IESS por pagar', 'Mayor de anticipos a empleados'] },
+        { n: 'Roles de pago', req: true, et: ['Rol de pagos (por mes y por persona)'] },
+        { n: 'Planillas del IESS (fondos de reserva y préstamos)', req: true, et: ['Planilla de fondos de reserva del IESS', 'Planilla de préstamos hipotecarios del IESS', 'Planilla de préstamos quirografarios del IESS', 'Planilla del IESS'] },
+        { n: 'Listado de personal con fecha de ingreso', req: true, et: ['Listado de personal con fecha de ingreso'] },
+        { n: 'Cálculos de décimos y fondo de reserva', req: false, et: ['Cálculo de décimos', 'Cálculo de fondo de reserva'] },
+        { n: 'Utilidades, finiquitos y liquidaciones', req: false, et: ['Utilidades a trabajadores', 'Finiquitos', 'Liquidaciones'] },
+        { n: 'Formulario 107 y contratos', req: false, et: ['Formulario 107', 'Contrato o expediente del colaborador'] }
+      ], sum: 'RC', hoja: 'nomina', titulo: '2. Nómina', subtit: 'Análisis guiado por el programa de auditoría: Claude elabora cada procedimiento de nómina y arma los papeles de trabajo; el auditor revisa.', nombre: 'RC - Nómina', ref: 'RC · Nómina', corto: 'Nómina', txtSubir: 'Aquí se sube todo en un solo pedido: el mayor contable de las cuentas de nómina, los mayores de los pasivos laborales (beneficios sociales e IESS por pagar) y de anticipos a empleados, los roles de pago de todos los meses, las planillas del IESS, el listado de personal con fecha de ingreso (para saber quién tiene más de un año y accede al fondo de reserva), el cálculo de décimos, fondo de reserva y utilidades, y los finiquitos. Claude lo lee junto y las demás pestañas leen de aquí. Cuando el pedido pase a "hecho", presiona «Actualizar».' },
+      impuestos: { cob: [
+        { n: 'Mayor contable (completo o por cuenta)', req: true, et: ['Mayor contable completo', 'Mayor de IVA en compras (crédito tributario IVA)', 'Mayor de retenciones de IVA recibidas', 'Mayor de retenciones en la fuente de renta recibidas', 'Mayor de ISD (crédito tributario)'] },
+        { n: 'Declaraciones de IVA (formulario 104)', req: true, et: ['Formulario 104 (declaración de IVA)'] },
+        { n: 'ATS (anexo transaccional)', req: true, et: ['ATS (anexo transaccional)'] },
+        { n: 'Reporte de compras', req: true, et: ['Reporte de compras'] },
+        { n: 'Reporte de ventas', req: true, et: ['Reporte de ventas'] },
+        { n: 'Retenciones en la fuente de renta (formulario 103 o comprobantes del SRI)', req: false, et: ['Formulario 103 (retenciones en la fuente)', 'Comprobantes de retención recibidos (SRI)'] },
+        { n: 'Impuesto a la renta (formulario 101)', req: false, et: ['Declaración de impuesto a la renta (Formulario 101)'] },
+        { n: 'Documentos del ISD', req: false, et: ['Documentos del ISD (pago y partida arancelaria)'] }
+      ], sum: 'AH', hoja: 'impuestos', titulo: '2. AH Activos por impuestos corrientes', subtit: 'Análisis guiado por el programa de auditoría: Claude arma el movimiento de las cuentas de impuestos y los cruces con los formularios 104, el ATS y las retenciones; el auditor revisa.', nombre: 'AH - Activos por impuestos corrientes', ref: 'AH · Impuestos corrientes', corto: 'Impuestos corrientes', txtSubir: 'Aquí se sube todo en un solo pedido: los mayores contables de IVA en compras, retenciones de IVA y retenciones de renta recibidas (y de ISD si hay), los formularios 104 de cada mes, el ATS de cada mes (PDF, XML o Excel), los comprobantes de retención del SRI o el formulario 103, y la declaración de renta del año anterior. Claude lo lee junto y las demás pestañas leen de aquí. Cuando el pedido pase a "hecho", presiona «Actualizar».' }
     };
     let NM_CTX = NM_CFGS.nomina;
     const nmE = { cliente: '', anio: '', visita: '', procs: [], filas: {}, cargaId: 0, abiertos: {}, tab: 'programa', sv: null };
@@ -19112,6 +19129,11 @@ ${cont.innerHTML}
       if (!peT.error && (peT.data || []).length) {
         const ar = await supabaseClient.from('pedidos_claude_archivos').select('id, pedido_id, nombre, ruta, tamano, tipo, subido_por, created_at, eliminado_at, etiqueta').in('pedido_id', peT.data.map(x => x.id)).order('created_at', { ascending: false });
         archivos = (ar.data || []).map(a => ({ ...a, pedido: peT.data.find(x => x.id === a.pedido_id) }));
+        try {
+          const ids = archivos.map(a => a.id), mapa = {};
+          for (let i = 0; i < ids.length; i += 150) { const tx = await supabaseClient.from('pedidos_claude_textos').select('archivo_id, error').in('archivo_id', ids.slice(i, i + 150)); (tx.data || []).forEach(t => { mapa[t.archivo_id] = t.error || ''; }); }
+          archivos.forEach(a => { a.lectura = !(a.id in mapa) ? 'sin' : (mapa[a.id] ? 'error' : 'ok'); a.lecturaError = mapa[a.id] || ''; });
+        } catch (er) { /* sin dato de lectura */ }
       }
       if (!nmE.sv || id !== nmE.sv.id) return;
       nmE.sv = { id, cargado: true, error: peT.error ? (peT.error.message || String(peT.error)) : '', pedidos: peT.data || [], archivos };
@@ -19127,7 +19149,52 @@ ${cont.innerHTML}
       const est = { solicitado: 'Esperando autorización', autorizado: 'Autorizado, Claude lo trabaja', hecho: 'Hecho', rechazado: 'Rechazado', cancelado: 'Cancelado' };
       const filasA = (S.archivos || []).filter(a => !a.eliminado_at).map((a, i) => '<tr class="border-t border-slate-100 align-top"><td class="px-2 py-1.5">' + e(a.nombre) + '</td><td class="px-2 py-1.5">' + e(a.etiqueta || '') + '</td><td class="px-2 py-1.5 whitespace-nowrap text-right">' + kb(a.tamano) + '</td><td class="px-2 py-1.5 whitespace-nowrap">' + e(nombreMostrado(a.subido_por) || '') + '</td><td class="px-2 py-1.5 whitespace-nowrap">' + nmFmt(a.created_at) + '</td><td class="px-2 py-1.5">' + e(est[a.pedido && a.pedido.estado] || (a.pedido && a.pedido.estado) || '') + '</td><td class="px-2 py-1.5"><button type="button" onclick="nmArchivoBajar(' + (S.archivos || []).indexOf(a) + ')" class="text-[11px] underline text-indigo-700">Descargar</button></td></tr>').join('');
       const detalle = '<div class="mt-3 p-3 bg-white border border-slate-200 rounded-xl text-xs text-slate-700"><div class="flex items-center justify-between gap-2 mb-1"><div class="text-[13px] font-semibold text-slate-800">Información subida para este cliente, año y visita</div><button type="button" onclick="nmSubirCargar()" class="px-2 py-1 text-[11px] font-semibold border border-slate-300 rounded-lg hover:bg-slate-50">↻ Actualizar</button></div>' + (filasA ? '<div class="overflow-x-auto"><table class="w-full text-[11px] leading-tight border-collapse" style="min-width:44rem"><thead><tr class="bg-slate-100 text-slate-700"><th class="px-2 py-1.5 text-left font-bold">Archivo</th><th class="px-2 py-1.5 text-left font-bold">Qué es</th><th class="px-2 py-1.5 text-right font-bold">Tamaño</th><th class="px-2 py-1.5 text-left font-bold">Subido por</th><th class="px-2 py-1.5 text-left font-bold">Fecha</th><th class="px-2 py-1.5 text-left font-bold">Pedido</th><th class="px-2 py-1.5"></th></tr></thead><tbody>' + filasA + '</tbody></table></div>' : '<p class="text-slate-500">Aún no se ha subido información de nómina para este cliente, año y visita.</p>') + '</div>';
-      c.innerHTML = '<div class="p-3">' + pcBarraPedido(NM_CTX.hoja, nmE.cliente, nmE.anio, nmE.visita, NM_CTX.txtSubir) + detalle + '</div>';
+      const CB = nmCobertura(), insig = CB.n ? '<span style="display:inline-block;min-width:18px;padding:0 5px;margin-left:6px;border-radius:9px;background:#dc2626;color:#fff;font-size:11px;font-weight:700;line-height:18px;text-align:center">' + CB.n + '</span>' : '';
+      const barraInf = '<div class="flex justify-end mb-2"><button type="button" onclick="nmInformeAbrir()" class="px-3 py-1.5 text-xs font-semibold rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50" title="Qué información se subió, si se pudo leer y si Claude la analizó">Informe' + insig + '</button></div>';
+      c.innerHTML = '<div class="p-3">' + barraInf + pcBarraPedido(NM_CTX.hoja, nmE.cliente, nmE.anio, nmE.visita, NM_CTX.txtSubir) + detalle + '</div>';
+    }
+    // Control de la información: por cada tipo, si se subió, si se pudo leer y si Claude lo analizó (acumula todos los pedidos del cliente, año y visita)
+    function nmCobertura() {
+      const S = nmE.sv, R = nmE.res && nmE.res.data, arch = ((S && S.archivos) || []).filter(a => !a.eliminado_at), grupos = NM_CTX.cob || [];
+      const todo = arch.filter(a => a.etiqueta === PC_TODO), decl = R && Array.isArray(R.cobertura) ? R.cobertura : null;
+      const norm = t => String(t || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+      let n = 0;
+      const filas = grupos.map(g => {
+        const f = arch.filter(a => g.et.includes(a.etiqueta));
+        const ok = f.filter(a => a.lectura === 'ok').length, mal = f.filter(a => a.lectura === 'error').length, sin = f.filter(a => a.lectura === 'sin').length;
+        const subido = f.length ? 'si' : (todo.length ? 'junto' : 'no');
+        const leido = !f.length ? '' : (!S || f.every(a => !a.lectura) ? '' : (ok === f.length ? 'si' : (ok ? 'parcial' : 'no')));
+        const d = decl && decl.find(x => norm(x.tipo) === norm(g.n));
+        const an = !f.length ? '' : (d ? String(d.estado || '') : (R ? 'sd' : 'pend'));
+        const obs = [];
+        if (!f.length) obs.push(todo.length ? 'Podría venir dentro de un archivo marcado «Todo en un archivo».' : (g.req ? 'No se ha subido.' : 'No se subió (opcional).'));
+        if (mal) obs.push(mal + ' archivo(s) no se pudieron leer: ' + f.filter(a => a.lectura === 'error').map(a => a.nombre).join(', ') + '. Vuelva a subirlos más livianos, en Excel, CSV o PDF con texto.');
+        if (sin) obs.push(sin + ' archivo(s) aún sin leer.');
+        if (d && d.nota) obs.push(d.nota);
+        const prob = (g.req && subido === 'no') || leido === 'parcial' || leido === 'no' || an === 'parcial' || an === 'no';
+        if (prob) n++;
+        return { g, nf: f.length, ok, subido, leido, an, obs, prob };
+      });
+      return { filas, n, todo: todo.length, otros: arch.filter(a => a.etiqueta !== PC_TODO && !grupos.some(g => g.et.includes(a.etiqueta))).length, hayRes: !!R };
+    }
+    function nmInformeAbrir() {
+      const C = nmCobertura(), e = escapeHtml;
+      const chip = (v, txt) => { const col = { si: '#15803d', parcial: '#b45309', no: '#b91c1c', junto: '#b45309', sd: '#64748b', pend: '#64748b' }[v] || '#64748b', t = txt || { si: 'Sí', parcial: 'Parcial', no: 'No', junto: 'Revisar', sd: 'Sin detalle', pend: 'Pendiente' }[v] || '—'; return '<span style="color:' + col + ';font-weight:600">' + t + '</span>'; };
+      const celda = 'padding:3px 8px;border-bottom:1px solid #e5e7eb;vertical-align:top';
+      const cuerpo = C.filas.map(r => '<tr><td style="' + celda + ';font-weight:600;color:#1e293b">' + e(r.g.n) + (r.g.req ? '' : ' <span style="font-weight:400;color:#94a3b8">(opcional)</span>') + '</td>' +
+        '<td style="' + celda + ';white-space:nowrap">' + chip(r.subido, r.subido === 'si' ? 'Sí (' + r.nf + ')' : '') + '</td>' +
+        '<td style="' + celda + ';white-space:nowrap">' + (r.leido ? chip(r.leido, r.leido === 'si' ? 'Sí' : (r.leido === 'parcial' ? 'Parcial (' + r.ok + ' de ' + r.nf + ')' : 'No')) : '<span style="color:#cbd5e1">—</span>') + '</td>' +
+        '<td style="' + celda + ';white-space:nowrap">' + (r.an ? chip(r.an) : '<span style="color:#cbd5e1">—</span>') + '</td>' +
+        '<td style="' + celda + ';color:#475569">' + (r.obs.length ? e(r.obs.join(' ')) : '') + '</td></tr>').join('');
+      const pie = [C.todo ? C.todo + ' archivo(s) subido(s) como «Todo en un archivo» (no se pueden separar por tipo).' : '', C.otros ? C.otros + ' archivo(s) de otros tipos de documento.' : '', !C.hayRes ? 'Todavía no hay análisis de Claude para este cliente, año y visita; por eso «Analizado» sale pendiente.' : ''].filter(Boolean).join(' ');
+      const ov = document.createElement('div'); ov.id = 'nm-informe-ov';
+      ov.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:9999;display:flex;align-items:flex-start;justify-content:center;padding:6vh 12px;overflow:auto';
+      ov.onclick = ev => { if (ev.target === ov) ov.remove(); };
+      ov.innerHTML = '<div style="background:#fff;border-radius:12px;max-width:1040px;width:100%;box-shadow:0 20px 50px rgba(0,0,0,.3)"><div style="display:flex;justify-content:space-between;align-items:center;padding:14px 18px;border-bottom:1px solid #e5e7eb"><div><div style="font-size:15px;font-weight:700;color:#0f172a">Informe de la información: ' + e(String(NM_CTX.titulo || '').replace(/<[^>]*>/g, '').trim()) + '</div><div style="font-size:12px;color:#64748b">' + (C.n ? C.n + ' tipo(s) de información con algo incompleto' : 'Todo lo subido está leído y analizado') + '</div></div><button type="button" onclick="document.getElementById(\'nm-informe-ov\').remove()" style="font-size:20px;line-height:1;color:#64748b;background:none;border:none;cursor:pointer">×</button></div>' +
+        '<div style="padding:12px 18px 6px;overflow:auto"><table style="border-collapse:collapse;width:100%;font-size:12px"><thead><tr style="text-align:left;color:#475569"><th style="' + celda + '">Tipo de información</th><th style="' + celda + '">Subido</th><th style="' + celda + '">Leído</th><th style="' + celda + '">Analizado</th><th style="' + celda + '">Observación</th></tr></thead><tbody>' + cuerpo + '</tbody></table></div>' +
+        '<div style="padding:6px 18px 14px;font-size:11px;color:#64748b">' + e(pie) + '<br>Subido y Leído salen solos de lo cargado; Analizado lo declara Claude en cada análisis. Incluye todos los pedidos de este cliente, año y visita.</div></div>';
+      const previo = document.getElementById('nm-informe-ov'); if (previo) previo.remove();
+      document.body.appendChild(ov);
     }
     async function nmArchivoBajar(i) {
       const a = ((nmE.sv || {}).archivos || [])[i]; if (!a) return;
@@ -19148,6 +19215,7 @@ ${cont.innerHTML}
       if (nmE.tab === 'resultado') nmResPintar();
       if (nmE.tab === 'cuadres') nmCuaPintar();
       if (nmE.tab === 'conclusiones') nmConcPintar();
+      if (nmE.tab === 'subir' && nmE.sv && nmE.sv.cargado) nmSubirPintar();
       nmCuaCargarBal();
     }
     function nmResHtml(bloques, conIds) {
