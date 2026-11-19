@@ -19380,7 +19380,7 @@ ${cont.innerHTML}
         }).join('');
         return caja((++nTit) + '. ' + (q.titulo || ''), null, '<table class="v2r-t"><thead><tr><th>Concepto</th>' + cols.map(c => th(e(c), true)).join('') + '</tr></thead><tbody>' + cuerpo + '</tbody></table>');
       };
-      const tarjetas = cu.map(q => {
+      const tarj1 = q => {
         if (q.tipo === 'matriz') return tarjMatriz(q);
         // Si un cuadro marcado como composición trae filas con saldo propio (mayor/aud/cuentas) y ningún importe v, se pinta como cuadro de filas
         const esFilasComp = q.tipo === 'composicion' && (q.filas || []).length > 0 && !(q.filas || []).some(f => f.v !== undefined && f.v !== null) && (q.filas || []).some(f => f.aud !== undefined || f.mayor !== undefined);
@@ -19403,7 +19403,30 @@ ${cont.innerHTML}
           return '<tr><td>' + e(f.c || '') + (cuentas.length ? btnC(cuentas.length) : '') + btnI(f.ref) + (notas.length ? btnN : '') + '</td><td class="n">' + num(cuentas.length ? sum : null) + '</td><td class="n">' + num(r.may) + '</td>' + (sinCl ? '' : '<td class="n">' + num(r.aud) + '</td>') + '<td class="n" style="color:' + colDif(r.dif) + '">' + (r.dif === null ? '—' : fmE(r.dif)) + '</td><td>' + pill(P) + '</td></tr>' + filaNotas(notas, NC) + ctaRow;
         }).join('');
         return caja((++nTit) + '. ' + (q.titulo || ''), q.ref, '<table class="v2r-t"><thead><tr><th>Concepto</th>' + th('Según sumaria', true) + th('Según mayor', true) + (sinCl ? '' : th('Análisis de Claude', true)) + th('Diferencia', true) + '<th>Estado</th></tr></thead><tbody>' + filas + '</tbody></table>');
-      }).join('');
+      };
+      // Debajo de cada cuadro se muestra el cálculo y el detalle que Claude explicó en el informe (una vez por referencia)
+      const calcMostrado = new Set();
+      const refIni = x => (String(x || '').match(/^\s*([A-Z]{2,3}-\d+(?:\.\d+)?)/) || [])[1] || '';
+      const calcDe = q => {
+        if (q.tipo === 'matriz') return '';
+        const ref = ((String(q.titulo || '').match(/[A-Z]{2,3}-\d+(?:\.\d+)?/) || [])[0]) || '';
+        if (!ref || calcMostrado.has(ref)) return '';
+        const bl = (R.data && R.data.bloques) || [];
+        const i0 = bl.findIndex(b => b && (b.t === 'h3' || b.t === 'h2') && refIni(b.x) === ref);
+        if (i0 < 0) return '';
+        const out = [];
+        for (let k = i0 + 1; k < bl.length; k++) {
+          const b = bl[k]; if (!b) continue;
+          if (b.t === 'h2' || (b.t === 'h3' && refIni(b.x))) break;
+          if (b.t === 'sello') continue;
+          if (b.t === 'tabla' && (b.cab || []).some(x => /^diferencia/i.test(String(x)))) continue;
+          out.push(b);
+        }
+        if (!out.length) return '';
+        calcMostrado.add(ref);
+        return '<div style="margin:-4px 0 14px;padding:10px 16px 14px;border:1px solid #e5e7eb;border-radius:8px;background:#fff"><div style="font-size:12px;font-weight:700;color:#475569;margin-bottom:2px">Cálculo y detalle según el análisis de Claude (' + e(ref) + ')</div>' + nmResHtml(out, false) + '</div>';
+      };
+      const tarjetas = cu.map(q => tarj1(q) + calcDe(q)).join('');
       // Consolidado de costos y gastos de nómina (costo, administración, ventas y financieros), tomado del balance
       const KC = nmE.cons;
       let cobCuerpo;
