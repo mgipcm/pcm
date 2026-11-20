@@ -20034,7 +20034,7 @@ ${cont.innerHTML}
     }
     // ----- Verificaciones de Nómina: automáticas (se recalculan con lo que hay cargado) y evaluaciones del auditor -----
     const NM_ESTADOS = [['pendiente', 'Pendiente'], ['cumple', 'Cumple'], ['nocumple', 'No cumple'], ['noaplica', 'No aplica']];
-    const NM_VERIF_MANUALES = [
+    const NM_VERIF_MANUALES_NOM = [
       ['roles', 'El resumen de roles de pago por mes cuadra con el mayor contable y con la sumaria', 'NIC 19.11', 'RC-02'],
       ['ir', 'Se recalculó el impuesto a la renta en relación de dependencia en una muestra de colaboradores', 'LRTI', 'RC-03'],
       ['expedientes', 'Los expedientes de los colaboradores respaldan sueldo, afiliación y beneficios pagados', 'NIA 500', 'RC-04'],
@@ -20043,6 +20043,8 @@ ${cont.innerHTML}
       ['anticipos', 'Los anticipos descontados en los roles cuadran con el movimiento y el saldo de las cuentas de anticipos a empleados', 'NIC 19.11', 'RC-08'],
       ['bonos', 'Se evaluaron bonos, pagos basados en acciones y beneficios a la gerencia', 'NIC 19 / NIIF 2', 'RC-05']
     ];
+    // Las evaluaciones manuales son solo de Nómina (códigos RC-02…RC-08); en Impuestos no existen en su programa
+    const NM_VERIF_MANUALES_FN = () => (NM_CTX.hoja === 'nomina' ? NM_VERIF_MANUALES_NOM : []);
     function nmEstProc(p) { const f = nmE.filas[p.codigo] || {}; return f.estado === 'hecho' || f.estado === 'na' || f.estado === 'pendiente' ? f.estado : (nmTienePt(p) ? 'hecho' : ''); }
     function nmTienePt(p) { return (nmE.pts || []).some(t => t.codigo === p.codigo) || ((nmE.filas[p.codigo] || {}).pt || []).length > 0; }
     function nmVerifAuto() {
@@ -20106,7 +20108,7 @@ ${cont.innerHTML}
       const procsPc = nmE.procs || [], mapaPc = new Map();
       const getPc = cod => { if (!mapaPc.has(cod)) mapaPc.set(cod, { cod, proc: procsPc.find(p => p.codigo === cod) || null, pend: false, sinPt: false, items: [], evals: [] }); return mapaPc.get(cod); };
       procsPc.forEach(p => { const st = nmEstProc(p); if (st === 'na') return; if (st !== 'hecho') getPc(p.codigo).pend = true; if (!nmTienePt(p)) getPc(p.codigo).sinPt = true; });
-      NM_VERIF_MANUALES.forEach(([k, t, ref, cod]) => { const ev = (((D.verif || {})[k] || {}).e) || 'pendiente'; if (ev === 'pendiente' || ev === 'nocumple') getPc(cod).evals.push({ t, ev }); });
+      NM_VERIF_MANUALES_FN().forEach(([k, t, ref, cod]) => { const ev = (((D.verif || {})[k] || {}).e) || 'pendiente'; if (ev === 'pendiente' || ev === 'nocumple') getPc(cod).evals.push({ t, ev }); });
       pcsAll.filter(x => !cerrado(x)).forEach(x => getPc(x.ref || '—').items.push(x));
       const gruposPc = [...mapaPc.values()].filter(g => g.pend || g.sinPt || g.items.length || g.evals.length).sort((x, y) => String(x.cod).localeCompare(String(y.cod), 'es', { numeric: true }));
       const nPc = gruposPc.length;
@@ -20141,15 +20143,15 @@ ${cont.innerHTML}
       const aut = nmVerifAuto(), VM = D.verif || {};
       const COL = { ok: 'text-emerald-700', rev: 'text-amber-700', info: 'text-slate-500' }, TX = { ok: 'Cumple', rev: 'Revisar', info: 'Informativo' };
       const lnkV = ref => !ref ? '<span class="text-slate-400">—</span>' : (/^RC/.test(ref) ? '<span class="font-semibold">' + e(ref) + '</span>' : '<a href="#" onclick="nmIrSeccion(\'' + e(ref).replace(/'/g, '') + '\');return false" class="hover:underline" style="color:#3b6fc4">ver ' + e(ref) + ' ›</a>');
-      const nAutoRev = aut ? aut.filter(x => x[1] === 'rev').length : 0, nManPend = NM_VERIF_MANUALES.filter(x => ['pendiente', 'nocumple'].includes((VM[x[0]] || {}).e || 'pendiente')).length, nVer = nAutoRev + nManPend;
+      const nAutoRev = aut ? aut.filter(x => x[1] === 'rev').length : 0, nManPend = NM_VERIF_MANUALES_FN().filter(x => ['pendiente', 'nocumple'].includes((VM[x[0]] || {}).e || 'pendiente')).length, nVer = nAutoRev + nManPend;
       const filasAut = aut ? aut.map(x => '<tr><td class="' + TD + ' whitespace-nowrap text-[12px]">' + lnkV(x[3]) + '</td><td class="' + TD + '" style="min-width:18rem">' + e(x[0]) + '</td><td class="' + TD + ' font-bold whitespace-nowrap ' + COL[x[1]] + '">' + TX[x[1]] + '</td><td class="' + TD + ' text-slate-600" style="min-width:16rem">' + e(x[2]) + '</td></tr>').join('') : '<tr><td colspan="4" class="p-4 text-center text-slate-400">Cargando las verificaciones…</td></tr>';
-      const filasMan = NM_VERIF_MANUALES.map(([k, t, ref, cod]) => { const v = VM[k] || { e: 'pendiente', n: '' };
+      const filasMan = NM_VERIF_MANUALES_FN().map(([k, t, ref, cod]) => { const v = VM[k] || { e: 'pendiente', n: '' };
         return '<tr><td class="' + TD + ' whitespace-nowrap font-semibold text-[12px]">' + e(cod) + '</td><td class="' + TD + '" style="min-width:18rem">' + e(t) + '<div class="text-[10px] text-slate-400">' + e(ref) + '</div></td><td class="' + TD + '" style="min-width:9rem">' + SEL(NM_ESTADOS, v.e || 'pendiente', 'nmVerifEditar(\'' + k + '\',\'e\',this.value)') + '</td><td class="' + TD + '" style="min-width:16rem"><input class="' + INP + '" value="' + e(v.n || '') + '" placeholder="Comentario o papel de trabajo" onchange="nmVerifEditar(\'' + k + '\',\'n\',this.value)"></td></tr>'; }).join('');
-      const nEval = NM_VERIF_MANUALES.filter(x => ((VM[x[0]] || {}).e || 'pendiente') !== 'pendiente').length;
+      const nEval = NM_VERIF_MANUALES_FN().filter(x => ((VM[x[0]] || {}).e || 'pendiente') !== 'pendiente').length;
       const THB = 'bg-slate-100 text-slate-600 text-[10px] font-bold border-b border-slate-200';
       const verifHtml = conclH2('nc-s4', '2. Verificaciones', nVer + ' por resolver', nVer ? 'alerta' : 'ok', false) + '<div class="text-xs font-bold text-slate-700 mb-1">Verificaciones automáticas (se recalculan con los cuadres, la sumaria y el programa)</div>' +
         '<div class="overflow-x-auto"><table class="w-full text-xs border-collapse"><thead class="' + THB + '"><tr><th class="' + TH + '">Referencia</th><th class="' + TH + '">Verificación</th><th class="' + TH + '">Resultado</th><th class="' + TH + '">Detalle</th></tr></thead><tbody>' + filasAut + '</tbody></table></div>' +
-        '<div class="text-xs font-bold text-slate-700 mt-4 mb-1">Evaluaciones del auditor (se guardan por cliente, año y visita): ' + nEval + ' de ' + NM_VERIF_MANUALES.length + ' evaluadas</div>' +
+        '<div class="text-xs font-bold text-slate-700 mt-4 mb-1">Evaluaciones del auditor (se guardan por cliente, año y visita): ' + nEval + ' de ' + NM_VERIF_MANUALES_FN().length + ' evaluadas</div>' +
         '<div class="overflow-x-auto"><table class="w-full text-xs border-collapse"><thead class="' + THB + '"><tr><th class="' + TH + '">Programa</th><th class="' + TH + '">Verificación</th><th class="' + TH + '">Estado</th><th class="' + TH + '">Comentario o papel de trabajo</th></tr></thead><tbody>' + filasMan + '</tbody></table></div>';
       // 5. Revelaciones
       const revs = (cl.revelaciones || []).map(x => ({ ...x, id: nmConcK(x.id), mio: false })).concat((D.revExtra || []).map(x => ({ ...x, mio: true })));
