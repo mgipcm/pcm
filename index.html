@@ -15648,9 +15648,56 @@ ${cont.innerHTML}
     const CB_H2 = 'font-bold text-slate-800 text-base border-b border-slate-200 mt-6 mb-2 pb-1 px-3';
     function cbHtmlCuadres() {
       if (!cbE.cuentas.length) return pcHtmlAviso('AA', cbE.cliente, cbE.anio, cbE.visita, 'bancos');
-      return '<div class="pb-4">' + conclH2('cb-sec-libros', '1. Comparación con libros', '', 'neutro', true) + cbHtmlLibros() +
+      return '<div class="pb-4"><div class="px-3 pt-3">' + pcvBancos() + '</div>' + conclH2('cb-sec-libros', '1. Comparación con libros', '', 'neutro', true) + cbHtmlLibros() +
         conclH2('cb-sec-resumen', '2. Resumen de conciliaciones', '', 'neutro') + cbHtmlResumen() +
         '<div class="px-3">' + cbHtmlMemo() + '</div></div>';
+    }
+    // ===== Lista «Verificado por cuadre» al inicio de «Resumen de cuadres y cruces» (Nómina, Impuestos, Inventarios y Bancos) =====
+    const PCV_EST = { cuadra: ['✓', '#1d6b3a', 'Cuadra'], expl: ['✓', '#8a5a00', 'Diferencia explicada'], ajuste: ['✓', '#8a5a00', 'Con ajuste propuesto'], dif: ['⚠', '#b42318', 'Con diferencia'], nosum: ['⚠', '#b42318', 'No está en la sumaria'], sinsoporte: ['○', '#475467', 'Sin soporte'], pend: ['○', '#475467', 'Pendiente'], real: ['✓', '#1d6b3a', 'Realizado'], parcial: ['○', '#8a5a00', 'Parcial'] };
+    const PCV_OK = { cuadra: 1, expl: 1, ajuste: 1, real: 1 };
+    function pcvIr(id) {
+      const el = document.getElementById(id); if (!el) return;
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      const old = el.style.boxShadow; el.style.transition = 'box-shadow .3s'; el.style.boxShadow = '0 0 0 3px #f59e0b'; setTimeout(() => { el.style.boxShadow = old || ''; }, 1700);
+    }
+    // Estado de un cuadro a partir de lo que cambió en los contadores al pintarlo (el peor estado manda)
+    function pcvEstadoDelta(d) { return (d('dif') || d('nosum')) ? 'dif' : d('sinsoporte') ? 'sinsoporte' : d('ajuste') ? 'ajuste' : d('expl') ? 'expl' : d('cuadra') ? 'cuadra' : null; }
+    // Procedimientos del programa tomados de la tabla «Procedimiento | Estado | Qué se necesita» del informe de Claude
+    function pcvProcs(bloques, irFn) {
+      const bl = Array.isArray(bloques) ? bloques : [], out = [];
+      const t = bl.find(b => b && b.t === 'tabla' && Array.isArray(b.cab) && /procedimiento/i.test(String(b.cab[0])) && /estado/i.test(String(b.cab[1] || '')) && Array.isArray(b.filas));
+      if (!t) return out;
+      t.filas.forEach(f => {
+        const nom = String((f || [])[0] || '').replace(/\*\*/g, '').trim(), est = String((f || [])[1] || '').trim(); if (!nom) return;
+        const ref = (nom.match(/[A-Z]{2,3}-\d+(?:\.\d+)?/) || [''])[0];
+        const k = /ejecut|realiz|complet|cumpl/i.test(est) && !/parcial|pendiente/i.test(est) ? 'real' : (/parcial/i.test(est) ? 'parcial' : 'pend');
+        out.push({ t: nom, est: k, lbl: est || PCV_EST[k][2], det: k === 'real' ? '' : String((f || [])[2] || '').replace(/\*\*/g, ''), go: ref && irFn ? irFn(ref) : '' });
+      });
+      return out;
+    }
+    function pcvHtml(grupos) {
+      const e = escapeHtml, G = (grupos || []).filter(g => g.items && g.items.length);
+      if (!G.length) return '';
+      const todos = G.flatMap(g => g.items), ok = todos.filter(x => PCV_OK[x.est]).length;
+      const fila = x => {
+        const P = PCV_EST[x.est] || PCV_EST.pend, lbl = x.lbl || P[2];
+        const cuerpo = '<span style="width:16px;flex:none;font-weight:800;color:' + P[1] + '">' + P[0] + '</span><span style="flex:1;min-width:0"><span class="' + (x.go ? 'hover:underline' : '') + '">' + (x.num ? x.num + '. ' : '') + e(x.t) + '</span>' + (x.det ? ' <span style="color:#64748b;font-size:11.5px">· ' + e(x.det) + '</span>' : '') + '</span><span style="flex:none;font-weight:700;color:' + P[1] + ';white-space:nowrap">' + e(lbl) + '</span><span style="flex:none;color:#94a3b8">' + (x.go ? '›' : '') + '</span>';
+        const est = 'display:flex;align-items:baseline;gap:8px;padding:3px 2px;border-top:1px solid #eef0f2;font-size:12.5px;color:#1e293b;text-decoration:none';
+        return x.go ? '<a href="#" onclick="' + x.go + ';return false" style="' + est + ';cursor:pointer">' + cuerpo + '</a>' : '<div style="' + est + '">' + cuerpo + '</div>';
+      };
+      return '<div id="pcv-lista" style="margin:0 0 16px;border:1px solid #dfdfdb;border-radius:10px;background:#fff;padding:10px 14px"><div style="display:flex;flex-wrap:wrap;align-items:baseline;gap:8px;margin-bottom:4px"><span style="font-weight:800;font-size:14px;color:#1e293b">Verificado</span><span style="font-size:12px;font-weight:700;color:' + (ok === todos.length ? '#1d6b3a' : '#8a5a00') + '">' + ok + ' de ' + todos.length + ' líneas verificadas</span><span style="font-size:11px;color:#64748b">Haz clic en una línea para ir al cuadro. «Verificado» significa que cuadra con la sumaria, el mayor y el análisis de Claude; el visto bueno del auditor se da en Conclusiones de la cuenta.</span></div>' +
+        G.map(g => (G.length > 1 ? '<div style="margin:8px 0 2px;font-size:11px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:.03em">' + e(g.t) + '</div>' : '') + g.items.map(fila).join('')).join('') + '</div>';
+    }
+    // Bancos: cuentas bancarias contra libros, libros contra balance y verificaciones automáticas
+    function pcvBancos() {
+      const L = cbE.cuentas || [], items = [], tol = cbTol(), t = cbTotales();
+      if (!L.length) return '';
+      L.forEach(c => { const d = cbDif(c), ok = Math.abs(d) <= tol; items.push({ t: 'Comparación con libros: ' + cbNombre(c), est: ok ? 'cuadra' : 'dif', det: 'diferencia ' + cbFmt(d), go: "pcvIr('cb-sec-libros')" }); });
+      const bal = cbE.config.balance, hayBal = bal !== undefined && bal !== '';
+      if (hayBal) { const d = r2f(t.libros - cbN(bal)), ok = Math.abs(d) <= tol; items.push({ t: 'Total en libros contra el saldo del balance (sumaria AA)', est: ok ? 'cuadra' : 'dif', det: 'diferencia ' + cbFmt(d), go: "pcvIr('cb-sec-libros')" }); }
+      else items.push({ t: 'Total en libros contra el saldo del balance (sumaria AA)', est: 'pend', det: 'falta ingresar el saldo según balance', go: "pcvIr('cb-sec-libros')" });
+      const ver = cbVerifAuto().filter(x => x[1] !== 'info').map(x => ({ t: x[0], est: x[1] === 'ok' ? 'cuadra' : 'dif', lbl: x[1] === 'ok' ? 'Cumple' : 'Revisar', det: x[1] === 'ok' ? '' : x[2], go: "cbTab('conclusiones');setTimeout(function(){cbIrSec('cb-sec-verif')},60)" }));
+      return pcvHtml([{ t: 'Cuentas bancarias', items }, { t: 'Verificaciones automáticas', items: ver }]);
     }
     // ----- Título de sección con número en círculo, franja suave y contador a la derecha -----
     function conclH2(id, titulo, cont, estado, primero) {
@@ -18644,7 +18691,7 @@ ${cont.innerHTML}
           '<tr style="background:#f8fafc"><td class="p-3 border-r border-slate-200 text-[12px] font-bold text-slate-800">Diferencia' + (q.expl && est === 'expl' ? '<div class="mt-1 text-[11px] font-normal" style="color:#8a5a00">' + e(q.expl) + '</div>' : '') + '</td>' + cols.map(() => '<td class="p-3 border-r border-slate-200"></td>').join('') + '<td class="p-3 text-right whitespace-nowrap"><b style="color:' + (dif === null ? '#94a3b8' : Math.abs(dif) <= V2C_TOL ? '#1d6b3a' : '#b42318') + '">' + (dif === null ? '—' : fm(dif)) + '</b> <span style="display:inline-block;margin-left:8px;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:700;background:' + P[1] + ';color:' + P[2] + '">' + P[0] + '</span></td></tr>' + ajHtml;
         return '<div class="border border-slate-200 rounded-xl shadow-sm bg-white overflow-hidden"><div class="px-4 py-3 border-b border-slate-200 bg-slate-100 flex items-center justify-between gap-2"><div class="text-base font-bold text-slate-800">' + (++nTit) + '. ' + e(q.titulo || '') + '</div>' + (q.ref ? '<a href="#" onclick="v2IrSeccion(\'' + e(q.ref).replace(/'/g, '') + '\');return false" class="text-[11px] hover:underline" style="color:#3b6fc4">ver en el informe ›</a>' : '') + '</div><div class="overflow-x-auto"><table class="w-full text-left text-xs text-slate-700 border-collapse"><thead class="bg-slate-100 text-slate-600 text-[10px] font-bold border-b border-slate-200"><tr><th class="p-3 border-r border-slate-200 min-w-[260px]">Concepto</th>' + thx + '<th class="p-3 text-right">' + e(q.col_v || 'Importe (USD)') + '</th></tr></thead><tbody class="divide-y divide-slate-200">' + filas.map(fila).join('') + (cols.length && extraNum.some(Boolean) ? '<tr style="background:#f8fafc"><td class="p-3 border-r border-slate-200 text-[12px] font-bold">Total</td>' + sumX + '<td class="p-3 text-right font-bold whitespace-nowrap">' + fm(total) + '</td></tr>' : '') + pie + '</tbody></table></div></div>';
       };
-      const tarjetas = cu.map(q => {
+      const tarjBase = q => {
         if (q.tipo === 'composicion') return tarjComp(q);
         const filas = (q.filas || []).map(f => {
           const cuentas = Array.isArray(f.cuentas) ? f.cuentas : [];
@@ -18666,7 +18713,16 @@ ${cont.innerHTML}
             '<td class="p-3"><span style="display:inline-block;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:700;background:' + P[1] + ';color:' + P[2] + '">' + P[0] + '</span></td></tr>' + exRow;
         }).join('');
         return '<div class="border border-slate-200 rounded-xl shadow-sm bg-white overflow-hidden"><div class="px-4 py-3 border-b border-slate-200 bg-slate-100 flex items-center justify-between gap-2"><div class="text-base font-bold text-slate-800">' + (++nTit) + '. ' + e(q.titulo || '') + '</div>' + (q.ref ? '<a href="#" onclick="v2IrSeccion(\'' + e(q.ref).replace(/'/g, '') + '\');return false" class="text-[11px] hover:underline" style="color:#3b6fc4">ver en el informe ›</a>' : '') + '</div><div class="overflow-x-auto"><table class="w-full text-left text-xs text-slate-700 border-collapse"><thead class="bg-slate-100 text-slate-600 text-[10px] font-bold border-b border-slate-200"><tr><th class="p-3 border-r border-slate-200 min-w-[240px]">Concepto</th><th class="p-3 border-r border-slate-200 min-w-[120px]">Cuenta(s)</th><th class="p-3 border-r border-slate-200 text-right">Según sumaria</th><th class="p-3 border-r border-slate-200 text-right">Según mayor</th><th class="p-3 border-r border-slate-200 text-right">Análisis de Claude</th><th class="p-3 border-r border-slate-200 text-right" title="Sumaria (o mayor, si la cuenta no está en la sumaria) menos el análisis de Claude">Diferencia</th><th class="p-3">Estado</th></tr></thead><tbody class="divide-y divide-slate-200">' + filas + '</tbody></table></div></div>';
+      };
+      const PCV = [];
+      const tarjetas = cu.map((q, qi) => {
+        const a0 = Object.assign({}, cont), d = k => cont[k] - a0[k], h = tarjBase(q), est = pcvEstadoDelta(d);
+        if (!est) return h;
+        const n = d('cuadra') + d('expl') + d('dif') + d('nosum') + d('sinsoporte'), bien = d('cuadra') + d('expl');
+        PCV.push({ t: q.titulo || 'Cuadro', num: nTit, est, det: n > 1 ? bien + ' de ' + n + ' conceptos' : '', go: "pcvIr('pcv-v" + qi + "')" });
+        return '<div id="pcv-v' + qi + '">' + h + '</div>';
       }).join('');
+      const verifHtml = pcvHtml([{ t: 'Cuadros', items: PCV }, { t: 'Procedimientos del programa', items: pcvProcs(R.data && R.data.bloques, r => "v2IrSeccion('" + r + "')") }]);
       // Cobertura: toda cuenta de la sumaria debe estar cruzada en algún cuadro
       const codsAF = Object.keys(bal).filter(k => (B.af || {})[k]).sort(), codsOtras = Object.keys(usadas).filter(k => bal[k] && !(B.af || {})[k]).sort(), cods = codsAF.concat(codsOtras);
       const sinCruce = codsAF.filter(k => !usadas[k]);
@@ -18674,7 +18730,7 @@ ${cont.innerHTML}
         (cods.map(k => '<tr><td class="p-3 border-r border-slate-200 whitespace-nowrap font-semibold">' + e(bal[k].sumaria || 'AF') + '</td><td class="p-3 border-r border-slate-200 whitespace-nowrap">' + e(k) + '</td><td class="p-3 border-r border-slate-200">' + e(bal[k].nombre) + '</td><td class="p-3 border-r border-slate-200 text-right whitespace-nowrap">' + fm(bal[k].saldo) + '</td><td class="p-3 ' + (usadas[k] ? 'text-slate-600' : '') + '">' + (usadas[k] ? e([...new Set(usadas[k])].join(' · ')) : '<b style="color:#b42318">Sin cruce: pedir a Claude que lo analice</b>') + '</td></tr>').join('') || '<tr><td colspan="5" class="p-4 text-center text-slate-400">No hay balance de comprobación cargado para esta visita.</td></tr>') + '</tbody></table></div></div>';
       const chip = (n, t, P) => '<span style="display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:99px;font-size:12px;font-weight:700;background:' + P[1] + ';color:' + P[2] + '"><span style="font-size:15px">' + n + '</span>' + t + '</span>';
       const resumen = '<div class="flex flex-wrap items-center gap-2">' + chip(cont.cuadra, 'cuadran', V2C_PILL.cuadra) + chip(cont.expl, 'explicadas', V2C_PILL.expl) + chip(cont.dif + cont.nosum, 'con diferencia', V2C_PILL.dif) + chip(cont.sinsoporte, 'sin soporte', V2C_PILL.sinsoporte) + '<span class="text-[11px] text-slate-500 ml-1">Tolerancia: ' + fm(V2C_TOL) + ' · la sumaria se lee en vivo del balance de comprobación</span></div>';
-      c.innerHTML = '<style>' + V2R_CSS + '</style><div class="p-4 space-y-4 bg-slate-50">' + resumen + cob + tarjetas + '</div>';
+      c.innerHTML = '<style>' + V2R_CSS + '</style><div class="p-4 space-y-4 bg-slate-50">' + resumen + verifHtml + cob + tarjetas + '</div>';
     }
     // ===== Conclusiones de la cuenta (v2): por concluir, To/Do-Quick Lett-Opinión, ajustes, revelaciones y conclusión =====
     const V2_CUENTA = 'inventarios_v2';
@@ -19859,7 +19915,17 @@ ${cont.innerHTML}
           return caja('Cálculo de ' + ref + (tabs.length > 1 ? ' — cuadro ' + (n + 1) + ' de ' + tabs.length : ''), null, '<table class="v2r-t"><thead><tr>' + cab.map((c, ci) => th(md(c), nu[ci])).join('') + '</tr></thead><tbody>' + cuerpo + '</tbody></table>');
         }).join('');
       };
-      const tarjetas = cu.map(q => tarj1(q) + calcDe(q)).join('');
+      const PCV = [];
+      const tarjetas = cu.map((q, qi) => {
+        const a0 = Object.assign({}, cont), d = k => cont[k] - a0[k], h = tarj1(q) + calcDe(q);
+        let est = pcvEstadoDelta(d);
+        if (q.tipo === 'matriz') { const fd = (q.filas || []).find(f => /^diferencia/i.test(String(f.c || ''))); if (fd) est = (fd.v || []).every(x => x === null || x === undefined || Math.abs(x) <= NMC_TOL) ? 'cuadra' : 'dif'; }
+        if (!est) return h;
+        const n = d('cuadra') + d('expl') + d('dif') + d('nosum') + d('sinsoporte') + d('ajuste'), bien = d('cuadra') + d('expl') + d('ajuste');
+        PCV.push({ t: q.titulo || 'Cuadro', num: nTit, est, det: n > 1 ? bien + ' de ' + n + ' conceptos' : '', go: "pcvIr('pcv-n" + qi + "')" });
+        return '<div id="pcv-n' + qi + '">' + h + '</div>';
+      }).join('');
+      const verifHtml = pcvHtml([{ t: 'Cuadros', items: PCV }, { t: 'Procedimientos del programa', items: pcvProcs(R.data && R.data.bloques, r => "nmIrSeccion('" + r + "')") }]);
       // Consolidado de costos y gastos de nómina (costo, administración, ventas y financieros), tomado del balance
       const KC = nmE.cons;
       let cobCuerpo;
@@ -19887,7 +19953,7 @@ ${cont.innerHTML}
       const ctlHtml = !ctl.length ? '' : (ctlMal.length
         ? '<div style="margin:14px 0;padding:10px 14px;border:1px dashed #d97706;background:#fffbeb;border-radius:8px;font-size:13px;color:#8a5a00"><b>Controles automáticos:</b> ' + ctlMal.length + ' por revisar' + (ctlBien ? ' y ' + ctlBien + ' correctos' : '') + '<ul style="margin:6px 0 0 18px;list-style:disc">' + ctlMal.map(x => '<li>' + e(x.t) + '</li>').join('') + '</ul></div>'
         : '<div style="margin:14px 0;font-size:12px;color:#2f7a4d"><b>Controles automáticos:</b> ' + ctlBien + ' de ' + ctlBien + ' correctos (totales, vacaciones por colaborador y personas).</div>');
-      c.innerHTML = '<style>' + NMR_CSS + '</style><div class="p-3 sm:p-6 bg-slate-50"><div class="v2r mx-auto" style="max-width:1100px;background:#f6f6f4;border:1px solid #dfdfdb;border-radius:12px;padding:18px 28px 26px">' + resumen + (NM_CTX.sum === 'RC' ? cob : '') + tarjetas + faltanHtml + ctlHtml + '</div></div>';
+      c.innerHTML = '<style>' + NMR_CSS + '</style><div class="p-3 sm:p-6 bg-slate-50"><div class="v2r mx-auto" style="max-width:1100px;background:#f6f6f4;border:1px solid #dfdfdb;border-radius:12px;padding:18px 28px 26px">' + resumen + verifHtml + (NM_CTX.sum === 'RC' ? cob : '') + tarjetas + faltanHtml + ctlHtml + '</div></div>';
     }
 // ===== Conclusiones de la cuenta (v2): por concluir, To/Do-Quick Lett-Opinión, ajustes, revelaciones y conclusión =====
     const NM_CUENTA_K = () => NM_CTX.hoja;
