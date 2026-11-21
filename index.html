@@ -512,6 +512,9 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
             <button onclick="navegarMenu('reuniones')" id="nav-reuniones" class="w-full text-left px-2 py-1 rounded-lg text-xs font-medium text-slate-400 hover:bg-slate-800 hover:text-white transition flex items-center gap-2">
               <span style="white-space:nowrap">g) Resumen de reuniones</span>
             </button>
+            <button onclick="navegarMenu('revinforme')" id="nav-revinforme" class="w-full text-left px-2 py-1 rounded-lg text-xs font-medium text-slate-400 hover:bg-slate-800 hover:text-white transition flex items-center gap-2">
+              <span style="white-space:nowrap">h) Revisión de informe</span>
+            </button>
             <button onclick="navegarMenu('mas-herramientas')" id="nav-mas-herramientas" class="w-full text-left px-3 py-1.5 rounded-lg text-xs font-medium text-slate-500 hover:bg-slate-800 hover:text-slate-300 transition flex items-center gap-2 border-t border-slate-800/60 pt-2 mt-1 italic">
               <span>+ Espacio para incluir más</span>
             </button>
@@ -2289,6 +2292,58 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       </div>
     </section>
 
+    <section id="sec-revinforme" class="hidden bg-white rounded-2xl shadow-xl border border-slate-200 p-6 min-h-[92vh] space-y-6">
+      <div class="flex justify-between items-center border-b pb-4">
+        <div>
+          <h1 class="text-xl font-bold text-slate-800">5h. Herramientas: Revisión de informe</h1>
+          <p class="text-xs text-slate-500">Sube el informe con los estados financieros y las notas (Word) y Claude lo revisa: sumas, cuadre de las notas contra los estados, cruces entre notas, ortografía y redacción, y la lógica de las revelaciones</p>
+        </div>
+      </div>
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="space-y-4">
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div class="sm:col-span-2">
+              <h2 class="text-xs font-bold text-slate-600 mb-1">1. Cliente</h2>
+              <select id="ri-cliente" onchange="riCargarLista()" class="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs sm:text-sm outline-none"></select>
+            </div>
+            <div>
+              <h2 class="text-xs font-bold text-slate-600 mb-1">2. Año</h2>
+              <select id="ri-anio" onchange="riCargarLista()" class="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs sm:text-sm outline-none"></select>
+            </div>
+          </div>
+          <div>
+            <h2 class="text-xs font-bold text-slate-600 mb-1">3. Marco contable del informe</h2>
+            <select id="ri-marco" class="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs sm:text-sm outline-none">
+              <option value="NIIF completas">NIIF completas</option>
+              <option value="NIIF para PYMES">NIIF para PYMES</option>
+            </select>
+          </div>
+          <div>
+            <h2 class="text-xs font-bold text-slate-600 mb-1">4. Informe en Word (.docx)</h2>
+            <label for="ri-archivo" ondragover="event.preventDefault()" ondrop="event.preventDefault(); riElegirArchivo(event.dataTransfer.files[0])" class="block border-2 border-dashed border-slate-300 hover:border-slate-400 hover:bg-slate-50 rounded-xl p-4 text-center cursor-pointer transition">
+              <p class="text-xs font-bold text-slate-700">Haz clic o arrastra aquí el informe</p>
+              <p class="text-[11px] text-slate-500 mt-1">Word (.docx) con los estados financieros y las notas · hasta 50 MB</p>
+              <p id="ri-archivo-nombre" class="text-[11px] font-bold text-slate-700 mt-2"></p>
+              <input id="ri-archivo" type="file" accept=".docx" class="hidden" onchange="riElegirArchivo(this.files[0])">
+            </label>
+          </div>
+          <div>
+            <h2 class="text-xs font-bold text-slate-600 mb-1">5. Qué quieres que revise con más cuidado (opcional)</h2>
+            <textarea id="ri-nota" rows="3" class="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs outline-none" placeholder="Por ejemplo: partes relacionadas, arrendamientos, un cambio de política contable de este año…"></textarea>
+          </div>
+          <div class="flex items-center gap-3">
+            <button type="button" onclick="riSolicitar()" class="px-4 py-2 rounded-lg text-xs font-bold text-white" style="background:#44443f">Solicitar revisión a Claude</button>
+            <span id="ri-msg" class="text-[11px] min-h-[1rem] text-slate-500"></span>
+          </div>
+        </div>
+        <div class="space-y-2">
+          <h2 class="text-xs font-bold text-slate-600">Revisiones de este cliente y año</h2>
+          <div id="ri-lista" class="text-xs text-slate-600"></div>
+        </div>
+      </div>
+      <div id="ri-visor"></div>
+    </section>
+
     <section id="sec-reuniones" class="hidden bg-white rounded-2xl shadow-xl border border-slate-200 p-6 min-h-[92vh] space-y-6">
       <div class="flex justify-between items-center border-b pb-4">
         <div>
@@ -3490,8 +3545,8 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       }
       if (!['clientes', 'usuarios', 'cuentas', 'habilitar', 'historial', 'medidor', 'programas'].includes(seccion)) guardarVista({ seccion: seccion, sub: sub || null, cuenta: cuenta || null });
 
-      const secciones = ['desarrollo', 'clientes', 'usuarios', 'cuentas', 'habilitar', 'historial', 'medidor', 'programas', 'sumarias', 'pendientes', 'claude-revisar', 'pedidos-claude', 'aprobaciones-claude', 'flujo', 'auditoria', 'analisis', 'visitas', 'asignacion', 'indices', 'mayor', 'contratos', 'arrend', 'import2', 'nomina', 'impuestos', 'concil', 'pce', 'reuniones', 'mas-herramientas'];
-      const grupoSubmenu = sec => ['auditoria', 'visitas', 'asignacion'].includes(sec) ? 'planificacion' : ['indices', 'mayor', 'contratos', 'flujo', 'pce', 'reuniones', 'mas-herramientas'].includes(sec)
+      const secciones = ['desarrollo', 'clientes', 'usuarios', 'cuentas', 'habilitar', 'historial', 'medidor', 'programas', 'sumarias', 'pendientes', 'claude-revisar', 'pedidos-claude', 'aprobaciones-claude', 'flujo', 'auditoria', 'analisis', 'visitas', 'asignacion', 'indices', 'mayor', 'contratos', 'arrend', 'import2', 'nomina', 'impuestos', 'concil', 'pce', 'reuniones', 'revinforme', 'mas-herramientas'];
+      const grupoSubmenu = sec => ['auditoria', 'visitas', 'asignacion'].includes(sec) ? 'planificacion' : ['indices', 'mayor', 'contratos', 'flujo', 'pce', 'reuniones', 'revinforme', 'mas-herramientas'].includes(sec)
         ? 'herramientas'
         : (['clientes', 'usuarios', 'cuentas', 'habilitar', 'historial', 'medidor', 'programas'].includes(sec) ? 'config' : (['sumarias', 'pendientes', 'claude-revisar', 'pedidos-claude', 'aprobaciones-claude'].includes(sec) ? 'analisis' : null));
       const esSubmenu = sec => grupoSubmenu(sec) !== null;
@@ -3518,6 +3573,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       if (seccion === 'historial') abrirHistorial();
       if (seccion === 'medidor') abrirMedidor();
       if (seccion === 'reuniones') poblarClientesReunion();
+      if (seccion === 'revinforme') riAbrir();
       if (seccion === 'sumarias') abrirSumarias();
       if (seccion === 'pendientes') abrirPendientes();
       if (seccion === 'claude-revisar') abrirClaudeRevisar();
@@ -15899,7 +15955,8 @@ ${cont.innerHTML}
       { clave: 'contratos', nombre: '3c) Resumen de contratos', btn: 'nav-contratos' },
       { clave: 'flujo', nombre: '3d) Flujo de efectivo', btn: 'nav-flujo' },
       { clave: 'pce', nombre: '3f) Matriz de transición - PCE', btn: 'nav-pce' },
-      { clave: 'reuniones', nombre: '3g) Resumen de reuniones', btn: 'nav-reuniones' }
+      { clave: 'reuniones', nombre: '3g) Resumen de reuniones', btn: 'nav-reuniones' },
+      { clave: 'revinforme', nombre: '3h) Revisión de informe', btn: 'nav-revinforme' }
     ];
     let estadoHerramientas = {}; // clave -> true/false (si no existe, está habilitada)
 
@@ -19449,6 +19506,111 @@ ${cont.innerHTML}
       const doc = f.contentWindow.document; doc.open();
       doc.write('<!doctype html><html><head><meta charset="utf-8"><title>' + escapeHtml(R.titulo || 'Resultado del análisis') + '</title><style>body{margin:24px}' + NMR_CSS + '.v2r-sello{display:block}@media print{.v2r-tw{overflow:visible}}</style></head><body><article class="v2r"><h1 class="v2r-h1">' + escapeHtml(R.titulo || '') + '</h1>' + nmResHtml(R.bloques, false) + '</article></body></html>');
       doc.close(); setTimeout(() => { try { f.contentWindow.focus(); f.contentWindow.print(); } catch (e) { } setTimeout(() => f.remove(), 2000); }, 300);
+    }
+    // ===== Herramienta «Revisión de informe»: se sube el Word, Claude lo revisa y deja el informe de hallazgos =====
+    const riE = { lista: [], archivo: null, abierta: null, timer: null };
+    function riAbrir() {
+      asegurarClientesEn('ri-cliente');
+      const sa = $im('ri-anio'), hoy = new Date().getFullYear();
+      if (sa && !sa.options.length) { for (let y = hoy + 1; y >= hoy - 4; y--) sa.add(new Option('Año ' + y, String(y))); sa.value = String(($im('an-anio') || {}).value || hoy); }
+      riCargarLista();
+      if (riE.timer) clearInterval(riE.timer);
+      riE.timer = setInterval(() => { const sec = $im('sec-revinforme'); if (!sec || sec.classList.contains('hidden')) { clearInterval(riE.timer); riE.timer = null; return; } if (riE.lista.some(r => r.estado === 'pendiente' || r.estado === 'en_proceso')) riCargarLista(true); }, 20000);
+    }
+    function riElegirArchivo(f) {
+      const n = $im('ri-archivo-nombre'); riE.archivo = null; if (n) n.textContent = '';
+      if (!f) return;
+      if (!/\.docx$/i.test(f.name)) { $im('ri-msg').textContent = 'El archivo debe ser Word (.docx).'; return; }
+      if (f.size > 52428800) { $im('ri-msg').textContent = 'El archivo supera los 50 MB.'; return; }
+      riE.archivo = f; $im('ri-msg').textContent = ''; if (n) n.textContent = f.name + ' (' + Math.round(f.size / 1024).toLocaleString('es-EC') + ' KB)';
+    }
+    async function riCargarLista(silencioso) {
+      const cli = $im('ri-cliente').value, anio = $im('ri-anio').value, box = $im('ri-lista');
+      if (!cli) { riE.lista = []; box.innerHTML = '<p class="text-slate-400">Elige el cliente para ver sus revisiones.</p>'; return; }
+      if (!silencioso) box.innerHTML = '<p class="text-slate-400">Cargando…</p>';
+      const { data, error } = await supabaseClient.from('revisiones_informe').select('id,cliente_id,anio,marco,nombre_archivo,estado,progreso,progreso_texto,solicitado_por,created_at,hecho_at,resumen').eq('cliente_id', cli).eq('anio', Number(anio)).order('created_at', { ascending: false });
+      if (cli !== $im('ri-cliente').value) return;
+      if (error) { box.innerHTML = '<p class="text-red-600 font-bold">No se pudo cargar: ' + escapeHtml(error.message || '') + '</p>'; return; }
+      riE.lista = data || []; riPintarLista();
+    }
+    function riPintarLista() {
+      const box = $im('ri-lista'), e = escapeHtml, L = riE.lista;
+      if (!L.length) { box.innerHTML = '<p class="text-slate-400">Aún no hay revisiones para este cliente y año.</p>'; return; }
+      const est = r => r.estado === 'hecho' ? '<span style="color:#1d6b3a;font-weight:700">Lista</span>' : r.estado === 'en_proceso' ? '<span style="color:#8a5a00;font-weight:700">Claude revisando ' + (r.progreso || 0) + '%</span>' + (r.progreso_texto ? '<div class="text-[11px] text-slate-500">' + e(r.progreso_texto) + '</div>' : '') : r.estado === 'error' ? '<span style="color:#b42318;font-weight:700">Con error</span>' + (r.progreso_texto ? '<div class="text-[11px] text-slate-500">' + e(r.progreso_texto) + '</div>' : '') : '<span style="color:#475467;font-weight:700">Pendiente: esperando a Claude</span>';
+      box.innerHTML = '<div class="overflow-x-auto"><table class="w-full text-left text-xs border-collapse"><thead><tr class="text-slate-500 border-b border-slate-200"><th class="py-1 pr-2">Informe</th><th class="py-1 pr-2">Solicitado</th><th class="py-1 pr-2">Estado</th><th class="py-1"></th></tr></thead><tbody>' +
+        L.map(r => '<tr class="border-b border-slate-100 align-top"><td class="py-1.5 pr-2"><div class="font-semibold text-slate-800">' + e(r.nombre_archivo) + '</div><div class="text-[11px] text-slate-400">' + e(r.marco || '') + '</div></td><td class="py-1.5 pr-2 text-slate-500">' + e(nmFmt(r.created_at)) + '<div class="text-[11px]">' + e(r.solicitado_por || '') + '</div></td><td class="py-1.5 pr-2">' + est(r) + '</td><td class="py-1.5 text-right whitespace-nowrap">' +
+          (r.estado === 'hecho' ? '<button type="button" onclick="riVer(\'' + r.id + '\')" class="font-bold underline mr-2" style="color:#449964">Ver</button>' : '') +
+          (r.estado !== 'hecho' ? '<button type="button" onclick="riCopiarInstruccion()" class="underline mr-2 text-slate-600" title="Copia el texto para pedirle a Claude que haga las revisiones pendientes">Copiar aviso a Claude</button>' : '') +
+          '<button type="button" onclick="riEliminar(\'' + r.id + '\')" class="underline text-red-700">Eliminar</button></td></tr>').join('') + '</tbody></table></div>';
+    }
+    function riCopiarInstruccion() {
+      const t = 'Claude, ejecuta las revisiones de informe pendientes: revisa la tabla revisiones_informe (estado pendiente), descarga el Word de cada una del bucket papeles-v2 (columna ruta), haz la revisión con las instrucciones de la clave revinforme (tabla instrucciones_claude) y deja el resultado en la columna resultado, con estado hecho.';
+      try { navigator.clipboard.writeText(t); $im('ri-msg').textContent = 'Aviso copiado. Pégalo en la conversación con Claude.'; } catch (x) { $im('ri-msg').textContent = t; }
+    }
+    async function riSolicitar() {
+      const msg = $im('ri-msg'), cli = $im('ri-cliente').value, anio = Number($im('ri-anio').value);
+      const err = t => { msg.textContent = t; msg.style.color = '#b42318'; };
+      msg.style.color = '';
+      if (!usuarioActivo || !nombreUsuarioActivo()) return err('Ingresa con tu usuario para solicitar.');
+      if (!cli) return err('Elige el cliente.');
+      if (!riE.archivo) return err('Sube el informe en Word (.docx).');
+      const f = riE.archivo, id = (crypto.randomUUID ? crypto.randomUUID() : (Date.now() + '-' + Math.random().toString(16).slice(2)));
+      const ruta = cli + '/revinforme/' + id + '_' + f.name.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^A-Za-z0-9._-]+/g, '_');
+      msg.textContent = 'Subiendo el informe…';
+      const up = await supabaseClient.storage.from('papeles-v2').upload(ruta, f, { contentType: f.type || 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', upsert: true });
+      if (up.error) return err('No se pudo subir el archivo: ' + (up.error.message || up.error));
+      const fila = { id, cliente_id: cli, anio, visita: 'final', marco: $im('ri-marco').value, nombre_archivo: f.name, ruta, nota: $im('ri-nota').value.trim() || null, solicitado_por: nombreUsuarioActivo(), solicitado_email: usuarioActivo.email || null };
+      const { error } = await supabaseClient.from('revisiones_informe').insert([fila]);
+      if (error) { try { await supabaseClient.storage.from('papeles-v2').remove([ruta]); } catch (x) { } return err('No se pudo registrar la revisión: ' + (error.message || error)); }
+      try { registrarActividad('Solicitó revisión de informe', f.name, { cliente: cli, anio: String(anio) }); } catch (x) { }
+      riE.archivo = null; $im('ri-archivo').value = ''; $im('ri-archivo-nombre').textContent = ''; $im('ri-nota').value = '';
+      msg.textContent = 'Revisión solicitada. Cuando Claude termine, aparecerá como «Lista» y podrás leerla aquí.';
+      riCargarLista();
+    }
+    async function riEliminar(id) {
+      const r = riE.lista.find(x => x.id === id); if (!r) return;
+      if (!confirm('¿Eliminar esta revisión y su archivo?\n' + r.nombre_archivo)) return;
+      const { data } = await supabaseClient.from('revisiones_informe').select('ruta').eq('id', id).maybeSingle();
+      const { error } = await supabaseClient.from('revisiones_informe').delete().eq('id', id);
+      if (error) { $im('ri-msg').textContent = 'No se pudo eliminar: ' + (error.message || error); return; }
+      if (data && data.ruta) { try { await supabaseClient.storage.from('papeles-v2').remove([data.ruta]); } catch (x) { } }
+      if (riE.abierta && riE.abierta.id === id) { riE.abierta = null; $im('ri-visor').innerHTML = ''; }
+      riCargarLista();
+    }
+    async function riVer(id) {
+      const v = $im('ri-visor'); v.innerHTML = '<p class="text-xs text-slate-500 p-4">Cargando…</p>';
+      const { data, error } = await supabaseClient.from('revisiones_informe').select('*').eq('id', id).maybeSingle();
+      if (error || !data) { v.innerHTML = '<p class="text-xs text-red-600 font-bold p-4">No se pudo cargar: ' + escapeHtml((error && error.message) || 'no existe') + '</p>'; return; }
+      riE.abierta = data; riPintarVisor();
+      setTimeout(() => { const el = $im('ri-visor'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 60);
+    }
+    function riPintarVisor() {
+      const v = $im('ri-visor'), r = riE.abierta, e = escapeHtml; if (!r) { v.innerHTML = ''; return; }
+      const d = r.resultado || {}, bl = d.bloques || [];
+      if (!bl.length) { v.innerHTML = '<p class="text-xs text-slate-500 p-4">Esta revisión todavía no tiene informe.</p>'; return; }
+      const h2s = bl.filter(b => b.t === 'h2');
+      const toc = h2s.map((b, i) => '<a href="#" id="rit-' + i + '" onclick="riIr(' + i + ');return false" class="v2t-it"><span class="v2t-num">' + (i + 1) + '</span><span class="v2t-tx">' + e(String(b.x).replace(/^\d+\.\s*/, '')) + '</span></a>').join('');
+      const R = r.resumen || {}, pill = (n, t, col) => '<span style="font-size:11px;font-weight:700;padding:2px 10px;border-radius:999px;border:1px solid ' + col[1] + ';background:' + col[0] + ';color:' + col[2] + '">' + (n || 0) + ' ' + t + '</span>';
+      const resumen = '<div style="display:flex;flex-wrap:wrap;gap:8px;margin:4px 0 14px">' + pill(R.altos, 'importantes', ['#fef3f2', '#fda29b', '#b42318']) + pill(R.medios, 'a corregir', ['#fff7ed', '#fdba74', '#c2410c']) + pill(R.bajos, 'de redacción u ortografía', ['#f2f2f0', '#c4c4be', '#44443f']) + pill(R.cuadres, 'cuadres correctos', ['#f0fdf4', '#86efac', '#15803d']) + '</div>';
+      v.innerHTML = '<style>' + NMR_CSS + '</style><div class="flex gap-0 bg-slate-50 border border-slate-200 rounded-xl overflow-hidden" style="height:80vh"><nav class="hidden lg:block shrink-0 overflow-y-auto border-r" style="width:346px;padding:16px 12px;background:#ebebe9;border-right-color:#dbdbd8"><div class="v2t-cab"><span>Contenido</span><span id="rit-pct">0%</span></div><div class="v2t-bar"><div id="rit-barra"></div></div>' + toc + '</nav>' +
+        '<div id="ri-res-scroll" class="flex-1 overflow-y-auto p-3 sm:p-6"><article class="v2r mx-auto bg-white border border-slate-200 rounded-xl shadow-sm px-5 sm:px-10 py-8" style="max-width:920px"><div class="flex justify-end gap-3 mb-2 text-xs"><button type="button" onclick="riImprimir()" class="font-bold hover:underline" style="color:#449964">⬇ Imprimir / guardar PDF</button></div><h1 class="v2r-h1">' + e(d.titulo || ('Revisión de informe: ' + r.nombre_archivo)) + '</h1><div class="v2r-meta">Elaborado por ' + e(d.elaborado_por || 'Claude') + (r.hecho_at ? ' · ' + e(nmFmt(r.hecho_at)) : '') + ' · ' + e(r.marco || '') + '</div>' + resumen +
+        nmResHtml(bl, true).replace(/id="nmr-/g, 'id="rir-') + '</article></div></div>';
+      const sc = $im('ri-res-scroll'); if (sc) { sc.onscroll = riSpy; riSpy(); }
+    }
+    function riSpy() {
+      const sc = $im('ri-res-scroll'); if (!sc) return;
+      let act = 0; for (let i = 0; ; i++) { const el = $im('rir-' + i); if (!el) break; if (el.getBoundingClientRect().top - sc.getBoundingClientRect().top <= 90) act = i; }
+      document.querySelectorAll('#ri-visor .v2t-it').forEach((a, i) => a.classList.toggle('on', i === act));
+      const max = sc.scrollHeight - sc.clientHeight, pct = max > 0 ? Math.round(sc.scrollTop * 100 / max) : 0;
+      const b = $im('rit-barra'), t = $im('rit-pct'); if (b) b.style.width = pct + '%'; if (t) t.textContent = pct + '%';
+    }
+    function riIr(i) { const el = $im('rir-' + i), sc = $im('ri-res-scroll'); if (el && sc) sc.scrollTo({ top: sc.scrollTop + el.getBoundingClientRect().top - sc.getBoundingClientRect().top - 20, behavior: 'smooth' }); }
+    function riImprimir() {
+      const r = riE.abierta, d = r && r.resultado; if (!d) return;
+      const f = document.createElement('iframe'); f.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0'; document.body.appendChild(f);
+      const doc = f.contentWindow.document; doc.open();
+      doc.write('<!doctype html><html><head><meta charset="utf-8"><title>' + escapeHtml(d.titulo || 'Revisión de informe') + '</title><style>body{margin:24px}' + NMR_CSS + '@media print{.v2r-tw{overflow:visible}}</style></head><body><article class="v2r"><h1 class="v2r-h1">' + escapeHtml(d.titulo || 'Revisión de informe') + '</h1>' + nmResHtml(d.bloques || [], false) + '</article></body></html>');
+      doc.close(); setTimeout(() => { try { f.contentWindow.focus(); f.contentWindow.print(); } catch (x) { } setTimeout(() => f.remove(), 2000); }, 300);
     }
     // ----- Pestaña "Resumen de cuadres y cruces": los cuadros del informe, cruzados al instante con la sumaria -----
     const NMC_TOL = 1; // diferencia máxima (USD) para considerar que cuadra
