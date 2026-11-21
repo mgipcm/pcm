@@ -5014,9 +5014,9 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       document.getElementById('pc-resumen').innerHTML = '<span class="pill-origen mod">Por autorizar: ' + n('solicitado') + '</span><span class="pill-origen">Autorizados, esperan a Claude: ' + n('autorizado') + '</span><span class="pill-origen rev">Procesados por Claude: ' + n('hecho') + '</span>';
       const lista = pedidosClaude.filter(p => (!f || p.estado === f) && (!fcli || fcli === '__todos__' || p.cliente_id === fcli)), tb = document.getElementById('pc-filas');
       const htmlRev = riFilasAprob(f, fcli);
-      if (!lista.length && !htmlRev) { tb.innerHTML = '<tr><td colspan="6" class="p-8 text-center text-slate-400">No hay pedidos con este filtro.</td></tr>'; return; }
+      if (!lista.length && !htmlRev.length) { tb.innerHTML = '<tr><td colspan="6" class="p-8 text-center text-slate-400">No hay pedidos con este filtro.</td></tr>'; return; }
       const aut = puedeAutorizarPedidos(), miNombre = nombreUsuarioActivo();
-      tb.innerHTML = lista.map(p => {
+      const filasP = lista.map(p => {
         const cli = buscarClienteNombre(p.cliente_id), nom = cli ? (cli.nombre_corto || cli.nombre_completo || p.cliente_id) : p.cliente_id;
         const c = catalogoCuentas.find(k => k.sumaria === p.sumaria), est = ESTADOS_PEDIDO[p.estado] || [p.estado, 'pill-origen'];
         const detalle = p.estado === 'autorizado' || p.estado === 'hecho' ? 'Autorizó ' + escapeHtml(p.autorizado_por || '') + (p.autorizado_at ? ' · ' + fechaCortaOrigen(p.autorizado_at) : '') + (p.estado === 'autorizado' && !(Number(p.progreso) > 0) ? '<br>Claude lo recoge en su próxima revisión (' + pcProxRevision() + ')' : '') : (p.estado === 'rechazado' ? 'Motivo: ' + escapeHtml(p.motivo_rechazo || '—') : '');
@@ -5036,7 +5036,8 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
           '<td class="p-3 border-r border-slate-200 text-[11px] text-slate-600">' + escapeHtml(p.solicitado_por || '') + '<div class="text-slate-400">' + fechaCortaOrigen(p.created_at) + '</div></td>' +
           '<td class="p-3 border-r border-slate-200"><span class="' + est[1] + '">' + est[0] + '</span>' + (detalle ? '<div class="text-[11px] text-slate-500 mt-1">' + detalle + '</div>' : '') + (p.estado === 'autorizado' ? pcBarraAvance(p) : '') + (p.resumen_resultado ? '<div class="text-[11px] text-slate-600 mt-1">' + escapeHtml(p.resumen_resultado) + '</div>' : '') + '</td>' +
           '<td class="p-3 text-center whitespace-nowrap">' + acc + '</td></tr>';
-      }).join('') + htmlRev;
+      });
+      tb.innerHTML = lista.map((p, n) => ({ t: p.created_at || '', h: filasP[n] })).concat(htmlRev).sort((x, y) => String(y.t).localeCompare(String(x.t))).map(x => x.h).join('');
     }
 
     // ===== Aviso al Socio/Supervisor y botón para iniciar a Claude =====
@@ -19597,7 +19598,7 @@ ${cont.innerHTML}
           '<td class="p-3 border-r border-slate-200 text-[11px] text-slate-600">' + e(r.solicitado_por || '') + '<div class="text-slate-400">' + fechaCortaOrigen(r.created_at) + '</div></td>' +
           '<td class="p-3 border-r border-slate-200"><span class="' + est[1] + '">' + est[0] + '</span>' + (det ? '<div class="text-[11px] text-slate-500 mt-1">' + det + '</div>' : '') + '</td>' +
           '<td class="p-3 text-center whitespace-nowrap">' + acc + '</td></tr>';
-      }).join('');
+      }).map((h, n) => ({ t: lista[n].created_at || '', h }));
     }
     async function riIrAInforme(id, cli, anio) {
       navegarMenu('revinforme');
