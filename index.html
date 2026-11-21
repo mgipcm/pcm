@@ -19516,7 +19516,7 @@ ${cont.innerHTML}
       if (sa && !sa.options.length) { for (let y = hoy + 1; y >= hoy - 4; y--) sa.add(new Option('Año ' + y, String(y))); sa.value = String(($im('an-anio') || {}).value || hoy); }
       riCargarLista();
       if (riE.timer) clearInterval(riE.timer);
-      riE.timer = setInterval(() => { const sec = $im('sec-revinforme'); if (!sec || sec.classList.contains('hidden')) { clearInterval(riE.timer); riE.timer = null; return; } if (riE.lista.some(r => r.estado === 'pendiente' || r.estado === 'en_proceso')) riCargarLista(true); }, 20000);
+      riE.timer = setInterval(() => { const sec = $im('sec-revinforme'); if (!sec || sec.classList.contains('hidden')) { clearInterval(riE.timer); riE.timer = null; return; } if (riE.lista.some(r => ['solicitado', 'autorizado', 'en_proceso'].includes(r.estado))) riCargarLista(true); }, 20000);
     }
     function riElegirArchivo(f) {
       const n = $im('ri-archivo-nombre'); riE.archivo = null; if (n) n.textContent = '';
@@ -19529,7 +19529,7 @@ ${cont.innerHTML}
       const cli = $im('ri-cliente').value, anio = $im('ri-anio').value, box = $im('ri-lista');
       if (!cli) { riE.lista = []; box.innerHTML = '<p class="text-slate-400">Elige el cliente para ver sus revisiones.</p>'; return; }
       if (!silencioso) box.innerHTML = '<p class="text-slate-400">Cargando…</p>';
-      const { data, error } = await supabaseClient.from('revisiones_informe').select('id,cliente_id,anio,marco,nombre_archivo,estado,progreso,progreso_texto,solicitado_por,created_at,hecho_at,resumen').eq('cliente_id', cli).eq('anio', Number(anio)).order('created_at', { ascending: false });
+      const { data, error } = await supabaseClient.from('revisiones_informe').select('id,cliente_id,anio,marco,nombre_archivo,estado,progreso,progreso_texto,solicitado_por,created_at,hecho_at,resumen,autorizado_por,motivo_rechazo').eq('cliente_id', cli).eq('anio', Number(anio)).order('created_at', { ascending: false });
       if (cli !== $im('ri-cliente').value) return;
       if (error) { box.innerHTML = '<p class="text-red-600 font-bold">No se pudo cargar: ' + escapeHtml(error.message || '') + '</p>'; return; }
       riE.lista = data || []; riPintarLista();
@@ -19537,15 +19537,17 @@ ${cont.innerHTML}
     function riPintarLista() {
       const box = $im('ri-lista'), e = escapeHtml, L = riE.lista;
       if (!L.length) { box.innerHTML = '<p class="text-slate-400">Aún no hay revisiones para este cliente y año.</p>'; return; }
-      const est = r => r.estado === 'hecho' ? '<span style="color:#1d6b3a;font-weight:700">Lista</span>' : r.estado === 'en_proceso' ? '<span style="color:#8a5a00;font-weight:700">Claude revisando ' + (r.progreso || 0) + '%</span>' + (r.progreso_texto ? '<div class="text-[11px] text-slate-500">' + e(r.progreso_texto) + '</div>' : '') : r.estado === 'error' ? '<span style="color:#b42318;font-weight:700">Con error</span>' + (r.progreso_texto ? '<div class="text-[11px] text-slate-500">' + e(r.progreso_texto) + '</div>' : '') : '<span style="color:#475467;font-weight:700">Pendiente: esperando a Claude</span>';
+      const sub = t => t ? '<div class="text-[11px] text-slate-500">' + e(t) + '</div>' : '';
+      const est = r => r.estado === 'hecho' ? '<span style="color:#1d6b3a;font-weight:700">Lista</span>' : r.estado === 'en_proceso' ? '<span style="color:#8a5a00;font-weight:700">Claude revisando ' + (r.progreso || 0) + '%</span>' + sub(r.progreso_texto) : r.estado === 'error' ? '<span style="color:#b42318;font-weight:700">Con error</span>' + sub(r.progreso_texto) : r.estado === 'rechazado' ? '<span style="color:#b42318;font-weight:700">Rechazada</span>' + sub((r.autorizado_por ? 'Por ' + r.autorizado_por + '. ' : '') + (r.motivo_rechazo || '')) : r.estado === 'autorizado' ? '<span style="color:#8a5a00;font-weight:700">Autorizada, espera a Claude</span>' + sub(r.autorizado_por ? 'Autorizó ' + r.autorizado_por : '') : '<span style="color:#475467;font-weight:700">Por autorizar</span>';
       box.innerHTML = '<div class="overflow-x-auto"><table class="w-full text-left text-xs border-collapse"><thead><tr class="text-slate-500 border-b border-slate-200"><th class="py-1 pr-2">Informe</th><th class="py-1 pr-2">Solicitado</th><th class="py-1 pr-2">Estado</th><th class="py-1"></th></tr></thead><tbody>' +
         L.map(r => '<tr class="border-b border-slate-100 align-top"><td class="py-1.5 pr-2"><div class="font-semibold text-slate-800">' + e(r.nombre_archivo) + '</div><div class="text-[11px] text-slate-400">' + e(r.marco || '') + '</div></td><td class="py-1.5 pr-2 text-slate-500">' + e(nmFmt(r.created_at)) + '<div class="text-[11px]">' + e(r.solicitado_por || '') + '</div></td><td class="py-1.5 pr-2">' + est(r) + '</td><td class="py-1.5 text-right whitespace-nowrap">' +
           (r.estado === 'hecho' ? '<button type="button" onclick="riVer(\'' + r.id + '\')" class="font-bold underline mr-2" style="color:#449964">Ver</button>' : '') +
-          (r.estado !== 'hecho' ? '<button type="button" onclick="riCopiarInstruccion()" class="underline mr-2 text-slate-600" title="Copia el texto para pedirle a Claude que haga las revisiones pendientes">Copiar aviso a Claude</button>' : '') +
+          (r.estado === 'solicitado' && puedeAutorizarPedidos() ? '<button type="button" onclick="riAutorizar(\'' + r.id + '\')" class="font-bold underline mr-2" style="color:#1d6b3a">Autorizar</button><button type="button" onclick="riRechazar(\'' + r.id + '\')" class="underline mr-2 text-red-700">Rechazar</button>' : '') +
+          (r.estado === 'autorizado' ? '<button type="button" onclick="riCopiarInstruccion()" class="underline mr-2 text-slate-600" title="Copia el texto para pedirle a Claude que haga las revisiones autorizadas">Copiar aviso a Claude</button>' : '') +
           '<button type="button" onclick="riEliminar(\'' + r.id + '\')" class="underline text-red-700">Eliminar</button></td></tr>').join('') + '</tbody></table></div>';
     }
     function riCopiarInstruccion() {
-      const t = 'Claude, ejecuta las revisiones de informe pendientes: revisa la tabla revisiones_informe (estado pendiente), descarga el Word de cada una del bucket papeles-v2 (columna ruta), haz la revisión con las instrucciones de la clave revinforme (tabla instrucciones_claude) y deja el resultado en la columna resultado, con estado hecho.';
+      const t = 'Claude, ejecuta las revisiones de informe autorizadas: revisa la tabla revisiones_informe (estado autorizado), descarga el Word de cada una del bucket papeles-v2 (columna ruta), haz la revisión con las instrucciones de la clave revinforme (tabla instrucciones_claude) y deja el resultado en la columna resultado, con estado hecho.';
       try { navigator.clipboard.writeText(t); $im('ri-msg').textContent = 'Aviso copiado. Pégalo en la conversación con Claude.'; } catch (x) { $im('ri-msg').textContent = t; }
     }
     async function riSolicitar() {
@@ -19565,8 +19567,37 @@ ${cont.innerHTML}
       if (error) { try { await supabaseClient.storage.from('papeles-v2').remove([ruta]); } catch (x) { } return err('No se pudo registrar la revisión: ' + (error.message || error)); }
       try { registrarActividad('Solicitó revisión de informe', f.name, { cliente: cli, anio: String(anio) }); } catch (x) { }
       riE.archivo = null; $im('ri-archivo').value = ''; $im('ri-archivo-nombre').textContent = ''; $im('ri-nota').value = '';
-      msg.textContent = 'Revisión solicitada. Cuando Claude termine, aparecerá como «Lista» y podrás leerla aquí.';
+      msg.textContent = 'Revisión solicitada. Avisando por correo al Socio y al Supervisor…';
+      const av = await riAvisar(id, 'solicitado');
+      msg.textContent = 'Revisión solicitada: quedó «Por autorizar» por el Socio o el Supervisor. ' + av;
       riCargarLista();
+    }
+    async function riAvisar(id, evento) {
+      try {
+        const { data, error } = await supabaseClient.functions.invoke('avisar-pedido', { body: { pedido_id: id, evento, tabla: 'revision_informe' } });
+        if (error) { let det = ''; try { const j = error.context && await error.context.json(); det = (j && j.error) || ''; } catch (x) { } throw new Error(det || error.message || 'sin conexión'); }
+        if (data && data.error) throw new Error(data.error);
+        const n = data && data.enviados ? data.enviados.length : 0;
+        if (data && data.fallidos && data.fallidos.length) return 'El correo falló: ' + data.fallidos[0].error;
+        return n ? 'Se envió el correo a ' + n + ' persona(s).' : (data && data.omitido) || 'No se envió correo.';
+      } catch (x) { return 'No se pudo enviar el correo (' + (x.message || x) + '); la solicitud igual quedó registrada.'; }
+    }
+    async function riCambiarEstado(id, cambios, evento) {
+      const { error } = await supabaseClient.from('revisiones_informe').update(cambios).eq('id', id);
+      if (error) { $im('ri-msg').textContent = 'No se pudo guardar: ' + (error.message || error); $im('ri-msg').style.color = '#b42318'; return; }
+      const r = riE.lista.find(x => x.id === id); try { registrarActividad(evento, r ? r.nombre_archivo : '', { cliente: r ? r.cliente_id : '', anio: r ? String(r.anio) : '' }); } catch (x) { }
+      await riCargarLista(true);
+      $im('ri-msg').style.color = ''; $im('ri-msg').textContent = 'Enviando aviso por correo…';
+      $im('ri-msg').textContent = await riAvisar(id, cambios.estado);
+    }
+    function riAutorizar(id) {
+      if (!puedeAutorizarPedidos()) { alert('Solo el Socio o el Supervisor pueden autorizar.'); return; }
+      riCambiarEstado(id, { estado: 'autorizado', autorizado_por: nombreUsuarioActivo(), autorizado_at: new Date().toISOString() }, 'Autorizó revisión de informe');
+    }
+    function riRechazar(id) {
+      if (!puedeAutorizarPedidos()) { alert('Solo el Socio o el Supervisor pueden rechazar.'); return; }
+      const m = prompt('Motivo del rechazo (opcional):'); if (m === null) return;
+      riCambiarEstado(id, { estado: 'rechazado', autorizado_por: nombreUsuarioActivo(), autorizado_at: new Date().toISOString(), motivo_rechazo: (m || '').trim() || null }, 'Rechazó revisión de informe');
     }
     async function riEliminar(id) {
       const r = riE.lista.find(x => x.id === id); if (!r) return;
