@@ -4724,6 +4724,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       if (!ss.options.length) ss.innerHTML = '<option value="">-- Elige la cuenta --</option>' + catalogoCuentas.filter(c => !/^(FG|LA|QL)\d*$/.test(c.sumaria)).map(c => '<option value="' + escapeHtml(c.sumaria) + '">' + escapeHtml(c.cuenta || c.sumaria) + '</option>').join('');
       cargarPedidosClaude();
     }
+    let revInformeAprob = []; // revisiones de informe (Herramientas) que se autorizan en esta misma pantalla
     async function cargarPedidosClaude() {
       const cli = valorAnalisis('pc-f-cliente');
       let q = supabaseClient.from('pedidos_claude').select('*').order('created_at', { ascending: false }).limit(300);
@@ -4731,6 +4732,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       const msg = document.getElementById('pc-msg');
       if (error) { pedidosClaude = []; msg.textContent = 'No se pudo cargar: ' + (error.message || error); msg.className = 'text-[11px] min-h-[1rem] text-red-600 font-bold'; }
       else pedidosClaude = data || [];
+      try { const rv = await supabaseClient.from('revisiones_informe').select('id,cliente_id,anio,marco,nombre_archivo,nota,estado,progreso,progreso_texto,solicitado_por,solicitado_email,created_at,autorizado_por,autorizado_at,motivo_rechazo,hecho_at').order('created_at', { ascending: false }).limit(300); revInformeAprob = rv.error ? [] : (rv.data || []); } catch (x) { revInformeAprob = []; }
       if (!error) { await limpiarArchivosPedidos(); await cargarArchivosPedidos(); }
       pintarPedidosClaude(); try { pintarMisPedidos(); } catch (e) { } avisoPedidosClaude(false); pcProgramarAvanceLista();
     }
@@ -5008,10 +5010,11 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
     }
     function pintarPedidosClaude() {
       pintarMisPedidos();
-      const f = valorAnalisis('pc-f-estado'), fcli = valorAnalisis('pc-f-cliente'), n = e => pedidosClaude.filter(p => p.estado === e).length;
+      const f = valorAnalisis('pc-f-estado'), fcli = valorAnalisis('pc-f-cliente'), n = e => pedidosClaude.filter(p => p.estado === e).length + revInformeAprob.filter(p => p.estado === e).length;
       document.getElementById('pc-resumen').innerHTML = '<span class="pill-origen mod">Por autorizar: ' + n('solicitado') + '</span><span class="pill-origen">Autorizados, esperan a Claude: ' + n('autorizado') + '</span><span class="pill-origen rev">Procesados por Claude: ' + n('hecho') + '</span>';
       const lista = pedidosClaude.filter(p => (!f || p.estado === f) && (!fcli || fcli === '__todos__' || p.cliente_id === fcli)), tb = document.getElementById('pc-filas');
-      if (!lista.length) { tb.innerHTML = '<tr><td colspan="6" class="p-8 text-center text-slate-400">No hay pedidos con este filtro.</td></tr>'; return; }
+      const htmlRev = riFilasAprob(f, fcli);
+      if (!lista.length && !htmlRev) { tb.innerHTML = '<tr><td colspan="6" class="p-8 text-center text-slate-400">No hay pedidos con este filtro.</td></tr>'; return; }
       const aut = puedeAutorizarPedidos(), miNombre = nombreUsuarioActivo();
       tb.innerHTML = lista.map(p => {
         const cli = buscarClienteNombre(p.cliente_id), nom = cli ? (cli.nombre_corto || cli.nombre_completo || p.cliente_id) : p.cliente_id;
@@ -5033,7 +5036,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
           '<td class="p-3 border-r border-slate-200 text-[11px] text-slate-600">' + escapeHtml(p.solicitado_por || '') + '<div class="text-slate-400">' + fechaCortaOrigen(p.created_at) + '</div></td>' +
           '<td class="p-3 border-r border-slate-200"><span class="' + est[1] + '">' + est[0] + '</span>' + (detalle ? '<div class="text-[11px] text-slate-500 mt-1">' + detalle + '</div>' : '') + (p.estado === 'autorizado' ? pcBarraAvance(p) : '') + (p.resumen_resultado ? '<div class="text-[11px] text-slate-600 mt-1">' + escapeHtml(p.resumen_resultado) + '</div>' : '') + '</td>' +
           '<td class="p-3 text-center whitespace-nowrap">' + acc + '</td></tr>';
-      }).join('');
+      }).join('') + htmlRev;
     }
 
     // ===== Aviso al Socio/Supervisor y botón para iniciar a Claude =====
@@ -5046,7 +5049,8 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
         if (nb) nb.style.display = (usuarioActivo && (!window._estHerrCargado || herramientaHabilitada('pedidos-claude'))) ? '' : 'none';
         if (!usuarioActivo || !herramientaHabilitada('pedidos-claude')) { if (b) b.classList.add('hidden'); return; }
         const { data } = await supabaseClient.from('pedidos_claude').select('estado').in('estado', ['solicitado', 'autorizado']);
-        const l = data || [], porAut = l.filter(x => x.estado === 'solicitado').length, auts = l.filter(x => x.estado === 'autorizado').length;
+        let dRev = []; try { const rr = await supabaseClient.from('revisiones_informe').select('estado').in('estado', ['solicitado', 'autorizado']); dRev = rr.error ? [] : (rr.data || []); } catch (x) { }
+        const l = (data || []).concat(dRev), porAut = l.filter(x => x.estado === 'solicitado').length, auts = l.filter(x => x.estado === 'autorizado').length;
         const n = puedeAutorizarPedidos() ? porAut : 0;
         if (b) { b.textContent = n; b.classList.toggle('hidden', n === 0); }
         const av = document.getElementById('pc-aviso');
@@ -5062,7 +5066,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
     }
     async function copiarOrdenClaude() {
       const m = document.getElementById('pc-aviso-msg');
-      const txt = 'Claude, ejecuta los pedidos autorizados en PCM Inteligente: revisa la tabla pedidos_claude (estado autorizado), lee los archivos adjuntos de cada uno (tabla pedidos_claude_archivos, bucket pedidos-claude), haz el análisis y déjalo en "Trabajo procesado por Claude". Si la cuenta es AA, la columna hoja del pedido dice si es caja, bancos o equivalentes.';
+      const txt = 'Claude, ejecuta los pedidos autorizados en PCM Inteligente (y las revisiones de informe autorizadas de la tabla revisiones_informe, con las instrucciones de la clave revinforme): revisa la tabla pedidos_claude (estado autorizado), lee los archivos adjuntos de cada uno (tabla pedidos_claude_archivos, bucket pedidos-claude), haz el análisis y déjalo en "Trabajo procesado por Claude". Si la cuenta es AA, la columna hoja del pedido dice si es caja, bancos o equivalentes.';
       try { await navigator.clipboard.writeText(txt); m.textContent = 'Orden copiada. Pégala en tu conversación con Claude y envíala.'; }
       catch (e) { m.textContent = 'Copia esta orden: ' + txt; }
     }
@@ -19542,7 +19546,7 @@ ${cont.innerHTML}
       box.innerHTML = '<div class="overflow-x-auto"><table class="w-full text-left text-xs border-collapse"><thead><tr class="text-slate-500 border-b border-slate-200"><th class="py-1 pr-2">Informe</th><th class="py-1 pr-2">Solicitado</th><th class="py-1 pr-2">Estado</th><th class="py-1"></th></tr></thead><tbody>' +
         L.map(r => '<tr class="border-b border-slate-100 align-top"><td class="py-1.5 pr-2"><div class="font-semibold text-slate-800">' + e(r.nombre_archivo) + '</div><div class="text-[11px] text-slate-400">' + e(r.marco || '') + '</div></td><td class="py-1.5 pr-2 text-slate-500">' + e(nmFmt(r.created_at)) + '<div class="text-[11px]">' + e(r.solicitado_por || '') + '</div></td><td class="py-1.5 pr-2">' + est(r) + '</td><td class="py-1.5 text-right whitespace-nowrap">' +
           (r.estado === 'hecho' ? '<button type="button" onclick="riVer(\'' + r.id + '\')" class="font-bold underline mr-2" style="color:#449964">Ver</button>' : '') +
-          (r.estado === 'solicitado' && puedeAutorizarPedidos() ? '<button type="button" onclick="riAutorizar(\'' + r.id + '\')" class="font-bold underline mr-2" style="color:#1d6b3a">Autorizar</button><button type="button" onclick="riRechazar(\'' + r.id + '\')" class="underline mr-2 text-red-700">Rechazar</button>' : '') +
+          (r.estado === 'solicitado' ? '<button type="button" onclick="navegarMenu(\'aprobaciones-claude\')" class="underline mr-2 text-slate-600" title="Se autoriza en Pedidos y aprobaciones">Ir a autorizar</button>' : '') +
           (r.estado === 'autorizado' ? '<button type="button" onclick="riCopiarInstruccion()" class="underline mr-2 text-slate-600" title="Copia el texto para pedirle a Claude que haga las revisiones autorizadas">Copiar aviso a Claude</button>' : '') +
           '<button type="button" onclick="riEliminar(\'' + r.id + '\')" class="underline text-red-700">Eliminar</button></td></tr>').join('') + '</tbody></table></div>';
     }
@@ -19569,9 +19573,40 @@ ${cont.innerHTML}
       riE.archivo = null; $im('ri-archivo').value = ''; $im('ri-archivo-nombre').textContent = ''; $im('ri-nota').value = '';
       msg.textContent = 'Revisión solicitada. Avisando por correo al Socio y al Supervisor…';
       const av = await riAvisar(id, 'solicitado');
-      msg.textContent = 'Revisión solicitada: quedó «Por autorizar» por el Socio o el Supervisor. ' + av;
+      msg.textContent = 'Revisión solicitada: quedó «Por autorizar» en «Pedidos y aprobaciones», donde el Socio o el Supervisor la autorizan. ' + av;
       riCargarLista();
     }
+    function riFilasAprob(f, fcli) {
+      const aut = puedeAutorizarPedidos(), miNombre = nombreUsuarioActivo(), e = escapeHtml;
+      const lista = revInformeAprob.filter(r => (!f || r.estado === f || (f === 'autorizado' && r.estado === 'en_proceso')) && (!fcli || fcli === '__todos__' || r.cliente_id === fcli));
+      const btn = (t, fn, cls) => '<button type="button" onclick="' + fn + '" class="px-3 py-1.5 text-[11px] rounded-lg transition ' + cls + '">' + t + '</button> ';
+      return lista.map(r => {
+        const cli = buscarClienteNombre(r.cliente_id), nom = cli ? (cli.nombre_corto || cli.nombre_completo || r.cliente_id) : r.cliente_id;
+        const est = r.estado === 'solicitado' ? ['Por autorizar', 'pill-origen mod'] : r.estado === 'autorizado' ? ['Autorizado, espera a Claude', 'pill-origen'] : r.estado === 'en_proceso' ? ['Claude revisando ' + (r.progreso || 0) + '%', 'pill-origen'] : r.estado === 'hecho' ? ['Procesado por Claude', 'pill-origen rev ic-claude'] : r.estado === 'rechazado' ? ['Rechazado', 'pill-origen'] : ['Con error', 'pill-origen'];
+        const det = (r.estado === 'autorizado' || r.estado === 'en_proceso' || r.estado === 'hecho') && r.autorizado_por ? 'Autorizó ' + e(r.autorizado_por) + (r.autorizado_at ? ' · ' + fechaCortaOrigen(r.autorizado_at) : '') : r.estado === 'rechazado' ? e((r.autorizado_por ? 'Rechazó ' + r.autorizado_por + '. ' : '') + (r.motivo_rechazo || '')) : r.estado === 'error' ? e(r.progreso_texto || '') : '';
+        let acc = '';
+        const mio = aut || r.solicitado_por === miNombre;
+        if (r.estado === 'solicitado') { if (aut) acc += btn('Autorizar', "riAutorizar('" + r.id + "')", 'bg-slate-200 text-slate-900 hover:bg-slate-300 font-semibold') + btn('Rechazar', "riRechazar('" + r.id + "')", 'border border-slate-300 text-slate-700 hover:bg-slate-100 font-medium'); if (mio) acc += btn('Cancelar', "riEliminar('" + r.id + "')", 'text-slate-500 hover:bg-slate-100 font-medium'); }
+        else if (r.estado === 'autorizado') { if (mio) acc += btn('Cancelar', "riEliminar('" + r.id + "')", 'border border-slate-300 text-slate-700 hover:bg-slate-100 font-medium'); }
+        else if (r.estado === 'rechazado' || r.estado === 'error') { if (mio) acc += btn('Eliminar', "riEliminar('" + r.id + "')", 'text-slate-500 hover:bg-slate-100 font-medium'); }
+        else if (r.estado === 'hecho') acc = btn('Ver el informe', "riIrAInforme('" + r.id + "','" + e(r.cliente_id) + "'," + r.anio + ")", 'bg-slate-100 text-slate-800 hover:bg-slate-200 font-medium');
+        return '<tr class="align-top hover:bg-slate-50/80">' +
+          '<td class="p-3 border-r border-slate-200"><div class="font-bold text-slate-800">' + e(nom) + '</div><div class="text-[11px] text-slate-500">' + r.anio + '</div></td>' +
+          '<td class="p-3 border-r border-slate-200 font-medium text-slate-800">Revisión de informe<div class="text-[11px] text-slate-500 font-normal">' + e(r.marco || '') + '</div></td>' +
+          '<td class="p-3 border-r border-slate-200"><div class="text-[11px] text-slate-700">' + e(r.nombre_archivo) + '</div>' + (r.nota ? '<div class="text-[11px] text-slate-500 mt-1">' + e(r.nota) + '</div>' : '') + '</td>' +
+          '<td class="p-3 border-r border-slate-200 text-[11px] text-slate-600">' + e(r.solicitado_por || '') + '<div class="text-slate-400">' + fechaCortaOrigen(r.created_at) + '</div></td>' +
+          '<td class="p-3 border-r border-slate-200"><span class="' + est[1] + '">' + est[0] + '</span>' + (det ? '<div class="text-[11px] text-slate-500 mt-1">' + det + '</div>' : '') + '</td>' +
+          '<td class="p-3 text-center whitespace-nowrap">' + acc + '</td></tr>';
+      }).join('');
+    }
+    async function riIrAInforme(id, cli, anio) {
+      navegarMenu('revinforme');
+      await new Promise(ok => setTimeout(ok, 400));
+      const sc = $im('ri-cliente'), sa = $im('ri-anio'); if (sc) sc.value = cli; if (sa) sa.value = String(anio);
+      await riCargarLista(); riVer(id);
+    }
+    async function riRefrescarTodo() { try { await cargarPedidosClaude(); } catch (x) { } try { await riCargarLista(true); } catch (x) { } }
+    function riMensaje(t, rojo) { ['ri-msg', 'pc-msg'].forEach(i => { const m = $im(i); if (m) { m.textContent = t; if (i === 'ri-msg') m.style.color = rojo ? '#b42318' : ''; } }); }
     async function riAvisar(id, evento) {
       try {
         const { data, error } = await supabaseClient.functions.invoke('avisar-pedido', { body: { pedido_id: id, evento, tabla: 'revision_informe' } });
@@ -19584,11 +19619,11 @@ ${cont.innerHTML}
     }
     async function riCambiarEstado(id, cambios, evento) {
       const { error } = await supabaseClient.from('revisiones_informe').update(cambios).eq('id', id);
-      if (error) { $im('ri-msg').textContent = 'No se pudo guardar: ' + (error.message || error); $im('ri-msg').style.color = '#b42318'; return; }
-      const r = riE.lista.find(x => x.id === id); try { registrarActividad(evento, r ? r.nombre_archivo : '', { cliente: r ? r.cliente_id : '', anio: r ? String(r.anio) : '' }); } catch (x) { }
-      await riCargarLista(true);
-      $im('ri-msg').style.color = ''; $im('ri-msg').textContent = 'Enviando aviso por correo…';
-      $im('ri-msg').textContent = await riAvisar(id, cambios.estado);
+      if (error) { riMensaje('No se pudo guardar: ' + (error.message || error), true); return; }
+      const r = revInformeAprob.find(x => x.id === id) || riE.lista.find(x => x.id === id); try { registrarActividad(evento, r ? r.nombre_archivo : '', { cliente: r ? r.cliente_id : '', anio: r ? String(r.anio) : '' }); } catch (x) { }
+      await riRefrescarTodo();
+      riMensaje('Enviando aviso por correo…');
+      riMensaje(await riAvisar(id, cambios.estado));
     }
     function riAutorizar(id) {
       if (!puedeAutorizarPedidos()) { alert('Solo el Socio o el Supervisor pueden autorizar.'); return; }
@@ -19600,14 +19635,14 @@ ${cont.innerHTML}
       riCambiarEstado(id, { estado: 'rechazado', autorizado_por: nombreUsuarioActivo(), autorizado_at: new Date().toISOString(), motivo_rechazo: (m || '').trim() || null }, 'Rechazó revisión de informe');
     }
     async function riEliminar(id) {
-      const r = riE.lista.find(x => x.id === id); if (!r) return;
-      if (!confirm('¿Eliminar esta revisión y su archivo?\n' + r.nombre_archivo)) return;
-      const { data } = await supabaseClient.from('revisiones_informe').select('ruta').eq('id', id).maybeSingle();
+      const { data } = await supabaseClient.from('revisiones_informe').select('ruta,nombre_archivo').eq('id', id).maybeSingle();
+      if (!data) { riMensaje('No se encontró la revisión.', true); return; }
+      if (!confirm('¿Eliminar esta revisión y su archivo?\n' + data.nombre_archivo)) return;
       const { error } = await supabaseClient.from('revisiones_informe').delete().eq('id', id);
-      if (error) { $im('ri-msg').textContent = 'No se pudo eliminar: ' + (error.message || error); return; }
-      if (data && data.ruta) { try { await supabaseClient.storage.from('papeles-v2').remove([data.ruta]); } catch (x) { } }
-      if (riE.abierta && riE.abierta.id === id) { riE.abierta = null; $im('ri-visor').innerHTML = ''; }
-      riCargarLista();
+      if (error) { riMensaje('No se pudo eliminar: ' + (error.message || error), true); return; }
+      if (data.ruta) { try { await supabaseClient.storage.from('papeles-v2').remove([data.ruta]); } catch (x) { } }
+      if (riE.abierta && riE.abierta.id === id) { riE.abierta = null; const v = $im('ri-visor'); if (v) v.innerHTML = ''; }
+      riRefrescarTodo();
     }
     async function riVer(id) {
       const v = $im('ri-visor'); v.innerHTML = '<p class="text-xs text-slate-500 p-4">Cargando…</p>';
