@@ -4791,7 +4791,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       }
       if (falla.length) { err('El pedido se creó con los archivos que sí se subieron, pero estos no: ' + falla.join('; ') + '. No hace falta cancelar: en «Mis pedidos» usa «Agregar archivos» en ese pedido para subir solo los que faltan (suele ser un corte de internet).'); cargarPedidosClaude(); return; }
       msg.textContent = 'Pedido enviado. Avisando por correo al Socio y al Supervisor…';
-      const av = await avisarPedidoCorreo(ins.id, 'solicitado');
+      const av = await avisarPedidoCorreo(ins.id, 'solicitado') + await autoAutorizarSiJefe(ins.id, 'pedido');
       msg.textContent = 'Pedido enviado con ' + archivos.length + ' archivo(s). Quedó en "Pedidos y aprobaciones" esperando la autorización del Socio o Supervisor. ' + av;
       document.getElementById('pc-nota').value = ''; { const ci = document.getElementById('pc-ctas-inv'); if (ci) ci.value = ''; } { const ct = document.getElementById('pc-ctas-tr'); if (ct) ct.value = ''; } { const cj = document.getElementById('pc-ctas-cv'); if (cj) cj.value = ''; } document.getElementById('pc-archivos').value = ''; pcArchivosSel = []; pcEtiquetasElegidas = []; document.getElementById('pc-confirma').checked = false; pcArchivosElegidos();
       registrarActividad('Solicitó análisis a Claude', fila.sumaria + ' · ' + fila.visita, { cliente: fila.cliente_id, anio: String(fila.anio) });
@@ -5012,7 +5012,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
     function pintarPedidosClaude() {
       pintarMisPedidos();
       const f = valorAnalisis('pc-f-estado'), fcli = valorAnalisis('pc-f-cliente'), n = e => pedidosClaude.filter(p => p.estado === e).length + revInformeAprob.filter(p => p.estado === e).length;
-      document.getElementById('pc-resumen').innerHTML = '<span class="pill-origen mod">Por autorizar: ' + n('solicitado') + '</span><span class="pill-origen">Autorizados, esperan a Claude: ' + n('autorizado') + '</span><span class="pill-origen rev">Procesados por Claude: ' + n('hecho') + '</span>';
+      document.getElementById('pc-resumen').innerHTML = '<span class="pill-origen mod">Por autorizar: ' + n('solicitado') + '</span><span class="pill-origen">Autorizados, esperan a Claude: ' + n('autorizado') + '</span><span class="pill-origen rev">Procesados por Claude: ' + n('hecho') + '</span>' + (puedeAutorizarPedidos() && n('solicitado') > 1 ? ' <button type="button" onclick="autorizarTodosPendientes()" class="px-3 py-1 text-[11px] rounded-lg bg-slate-200 text-slate-900 hover:bg-slate-300 font-semibold">Autorizar todos los pendientes (' + n('solicitado') + ')</button>' : '');
       const lista = pedidosClaude.filter(p => (!f || p.estado === f) && (!fcli || fcli === '__todos__' || p.cliente_id === fcli)), tb = document.getElementById('pc-filas');
       const htmlRev = riFilasAprob(f, fcli);
       if (!lista.length && !htmlRev.length) { tb.innerHTML = '<tr><td colspan="6" class="p-8 text-center text-slate-400">No hay pedidos con este filtro.</td></tr>'; return; }
@@ -5139,6 +5139,35 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       pintarPedidosClaude(); avisoPedidosClaude(false);
       if (cambios.estado === 'autorizado' || cambios.estado === 'rechazado') avisarPedidoCorreo(id, cambios.estado).then(t => { const m = document.getElementById('pc-msg'); if (m) m.textContent = t; });
       return true;
+    }
+    // El Socio o Supervisor que pide algo queda autorizado de inmediato (es quien autoriza de todas formas)
+    async function autoAutorizarSiJefe(id, tipo) {
+      try {
+        if (!puedeAutorizarPedidos()) return '';
+        const cambios = { estado: 'autorizado', autorizado_por: nombreUsuarioActivo(), autorizado_at: new Date().toISOString() };
+        const tabla = tipo === 'revision' ? 'revisiones_informe' : 'pedidos_claude';
+        const { error } = await supabaseClient.from(tabla).update(cambios).eq('id', id).eq('estado', 'solicitado');
+        if (error) return '';
+        if (tipo === 'revision') await riAvisar(id, 'autorizado'); else await avisarPedidoCorreo(id, 'autorizado');
+        try { cargarPedidosClaude(); } catch (e) { }
+        return ' Como eres Socio o Supervisor, quedó autorizado de una vez y Claude lo toma en su próxima ronda.';
+      } catch (e) { return ''; }
+    }
+    async function autorizarTodosPendientes() {
+      if (!puedeAutorizarPedidos()) { alert('Solo el Socio o el Supervisor pueden autorizar.'); return; }
+      const ped = pedidosClaude.filter(p => p.estado === 'solicitado'), rev = revInformeAprob.filter(r => r.estado === 'solicitado');
+      if (!ped.length && !rev.length) return;
+      const malos = ped.filter(p => (p._arch || []).some(a => !a.eliminado_at && (!a._lectura || a._lectura.error)));
+      let txt = 'Se autorizarán ' + ped.length + ' pedido(s) y ' + rev.length + ' revisión(es) de informe.';
+      if (malos.length) txt += '\n\nAtención: ' + malos.length + ' pedido(s) tienen archivos que no se pudieron leer o se están leyendo todavía; Claude los dejará detenidos y avisará al solicitante si no puede completarlos.';
+      if (!await confirmarApp(txt + '\n\n¿Autorizar todos?')) return;
+      const cambios = () => ({ estado: 'autorizado', autorizado_por: nombreUsuarioActivo(), autorizado_at: new Date().toISOString() });
+      let ok = 0;
+      for (const p of ped) { const { error } = await supabaseClient.from('pedidos_claude').update(cambios()).eq('id', p.id).eq('estado', 'solicitado'); if (!error) { ok++; avisarPedidoCorreo(p.id, 'autorizado'); } }
+      for (const r of rev) { const { error } = await supabaseClient.from('revisiones_informe').update(cambios()).eq('id', r.id).eq('estado', 'solicitado'); if (!error) { ok++; riAvisar(r.id, 'autorizado'); } }
+      try { registrarActividad('Autorizó todos los pendientes a Claude', ok + ' elemento(s)', {}); } catch (e) { }
+      await cargarPedidosClaude(); avisoPedidosClaude(false);
+      const m = document.getElementById('pc-msg'); if (m) m.textContent = 'Se autorizaron ' + ok + ' elemento(s). Claude los toma en su próxima ronda.';
     }
     async function autorizarPedidoClaude(id) {
       if (!puedeAutorizarPedidos()) { alert('Solo el Socio o el Supervisor pueden autorizar.'); return; }
@@ -5550,7 +5579,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
           if (ea) falla.push(a.nombre + ' (' + (ea.message || ea) + ')');
         }
         if (falla.length) { alert('El pedido se creó, pero no se pudieron copiar: ' + falla.join('; ') + '. Cancélelo en Pedidos y aprobaciones y haga el pedido de nuevo.'); cargarPedidosClaude(); return; }
-        try { await avisarPedidoCorreo(ins.id, 'solicitado'); } catch (e) { }
+        try { await avisarPedidoCorreo(ins.id, 'solicitado'); await autoAutorizarSiJefe(ins.id, 'pedido'); } catch (e) { }
         registrarActividad('Pidió de nuevo a Claude (mismos archivos)', fila.sumaria + ' · ' + fila.visita, { cliente: fila.cliente_id, anio: String(fila.anio) });
         cargarPedidosClaude();
         alert('Pedido enviado con los mismos ' + ar.length + ' archivo(s). Quedó en «Pedidos y aprobaciones» esperando la autorización del Socio o Supervisor.');
@@ -18027,7 +18056,7 @@ ${cont.innerHTML}
       }
       await vcGuardarAhora();
       if (falla.length) { alert('El pedido se creó, pero no se pudieron copiar: ' + falla.join('; ') + '. Cancélalo en «Pedidos y aprobaciones» y vuelve a pedir.'); try { cargarPedidosClaude(); } catch (e) { } vcPintar(); vcCargarPedido(); return; }
-      try { await avisarPedidoCorreo(ins.id, 'solicitado'); } catch (e) { }
+      try { await avisarPedidoCorreo(ins.id, 'solicitado'); await autoAutorizarSiJefe(ins.id, 'pedido'); } catch (e) { }
       try { registrarActividad('Pidió a Claude leer los soportes del voucheo', 'AF · ' + fila.visita, { cliente: fila.cliente_id, anio: String(fila.anio) }); } catch (e) { }
       try { cargarPedidosClaude(); } catch (e) { }
       if (m) m.textContent = '';
@@ -19625,7 +19654,7 @@ ${cont.innerHTML}
       try { registrarActividad('Solicitó revisión de informe', f.name, { cliente: cli, anio: String(anio) }); } catch (x) { }
       riE.archivo = null; $im('ri-archivo').value = ''; $im('ri-archivo-nombre').textContent = ''; $im('ri-nota').value = '';
       msg.textContent = 'Revisión solicitada. Avisando por correo al Socio y al Supervisor…';
-      const av = await riAvisar(id, 'solicitado');
+      const av = await riAvisar(id, 'solicitado') + await autoAutorizarSiJefe(id, 'revision');
       msg.textContent = 'Revisión solicitada: quedó «Por autorizar» en «Pedidos y aprobaciones», donde el Socio o el Supervisor la autorizan. ' + av;
       riCargarLista();
     }
