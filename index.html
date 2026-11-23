@@ -4732,7 +4732,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       const msg = document.getElementById('pc-msg');
       if (error) { pedidosClaude = []; msg.textContent = 'No se pudo cargar: ' + (error.message || error); msg.className = 'text-[11px] min-h-[1rem] text-red-600 font-bold'; }
       else pedidosClaude = data || [];
-      try { const rv = await supabaseClient.from('revisiones_informe').select('id,cliente_id,anio,marco,nombre_archivo,ruta,texto_ok,nota,estado,progreso,progreso_texto,solicitado_por,solicitado_email,created_at,autorizado_por,autorizado_at,motivo_rechazo,hecho_at').order('created_at', { ascending: false }).limit(300); revInformeAprob = rv.error ? [] : (rv.data || []); } catch (x) { revInformeAprob = []; }
+      try { const rv = await supabaseClient.from('revisiones_informe').select('id,cliente_id,anio,marco,nombre_archivo,ruta,texto_ok,nota,estado,progreso,progreso_texto,solicitado_por,solicitado_email,created_at,autorizado_por,autorizado_at,motivo_rechazo,hecho_at,detenido_motivo').order('created_at', { ascending: false }).limit(300); revInformeAprob = rv.error ? [] : (rv.data || []); } catch (x) { revInformeAprob = []; }
       try { riPrepararTextos(); } catch (x) { }
       if (!error) { await limpiarArchivosPedidos(); await cargarArchivosPedidos(); }
       pintarPedidosClaude(); try { pintarMisPedidos(); } catch (e) { } avisoPedidosClaude(false); pcProgramarAvanceLista();
@@ -4746,9 +4746,9 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
         const visible = ['sec-pedidos-claude', 'sec-aprobaciones-claude'].some(id => { const e = document.getElementById(id); return e && !e.classList.contains('hidden'); });
         if (!visible) { pcProgramarAvanceLista(); return; }
         const ids = pedidosClaude.filter(p => p.estado === 'autorizado').map(p => p.id);
-        const { data } = await supabaseClient.from('pedidos_claude').select('id, estado, progreso, progreso_texto').in('id', ids);
+        const { data } = await supabaseClient.from('pedidos_claude').select('id, estado, progreso, progreso_texto, detenido_motivo').in('id', ids);
         let cambio = false;
-        (data || []).forEach(d => { const p = pedidosClaude.find(x => x.id === d.id); if (!p) return; if (p.estado !== d.estado) cambio = true; p.progreso = d.progreso; p.progreso_texto = d.progreso_texto; });
+        (data || []).forEach(d => { const p = pedidosClaude.find(x => x.id === d.id); if (!p) return; if (p.estado !== d.estado) cambio = true; p.progreso = d.progreso; p.progreso_texto = d.progreso_texto; p.detenido_motivo = d.detenido_motivo; });
         if (cambio) { cargarPedidosClaude(); return; }
         pintarPedidosClaude(); try { pintarMisPedidos(); } catch (e) { }
         pcProgramarAvanceLista();
@@ -4995,7 +4995,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       tb.innerHTML = lista.map(p => {
         const cli = buscarClienteNombre(p.cliente_id), nom = cli ? (cli.nombre_corto || cli.nombre_completo || p.cliente_id) : p.cliente_id;
         const c = catalogoCuentas.find(k => k.sumaria === p.sumaria), est = ESTADOS_PEDIDO[p.estado] || [p.estado, 'pill-origen'];
-        const detalle = p.estado === 'autorizado' || p.estado === 'hecho' ? 'Autorizó ' + escapeHtml(p.autorizado_por || '') + (p.autorizado_at ? ' · ' + fechaCortaOrigen(p.autorizado_at) : '') + (p.estado === 'autorizado' && !(Number(p.progreso) > 0) ? '<br>Claude lo recoge en su próxima revisión (' + pcProxRevision() + ')' : '') : (p.estado === 'rechazado' ? 'Motivo: ' + escapeHtml(p.motivo_rechazo || '—') : '');
+        const detalle = p.estado === 'autorizado' || p.estado === 'hecho' ? 'Autorizó ' + escapeHtml(p.autorizado_por || '') + (p.autorizado_at ? ' · ' + fechaCortaOrigen(p.autorizado_at) : '') + (p.estado === 'autorizado' && !(Number(p.progreso) > 0) && !p.detenido_motivo ? '<br>Claude lo recoge en su próxima revisión (' + pcProxRevision() + ')' : '') : (p.estado === 'rechazado' ? 'Motivo: ' + escapeHtml(p.motivo_rechazo || '—') : '');
         const btn = (fn, txt, cls) => '<button type="button" onclick="' + fn + '(\'' + p.id + '\')" class="px-3 py-1.5 text-[11px] rounded-lg transition ' + cls + ' font-medium">' + txt + '</button>';
         let acc = '';
         if (p.estado === 'solicitado' || p.estado === 'autorizado') acc = btn('cancelarPedidoClaude', 'Cancelar', 'border border-slate-300 text-slate-700 hover:bg-slate-100');
@@ -5005,7 +5005,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
           '<td class="p-3 border-r border-slate-200"><div class="font-bold text-slate-800">' + escapeHtml(nom) + '</div><div class="text-[11px] text-slate-500">' + p.anio + ' · ' + (p.visita === 'preliminar' ? 'Visita preliminar' : 'Visita final') + '</div></td>' +
           '<td class="p-3 border-r border-slate-200 font-medium text-slate-800">' + escapeHtml((c ? c.cuenta : p.sumaria) + (p.hoja ? ' · ' + pcNombreHoja(p.hoja) : '')) + '</td>' +
           '<td class="p-3 border-r border-slate-200">' + htmlArchivosPedido(p, true) + (p.nota ? '<div class="text-[11px] text-slate-500 mt-1">' + escapeHtml(p.nota) + '</div>' : '') + '</td>' +
-          '<td class="p-3 border-r border-slate-200"><span class="' + est[1] + '">' + est[0] + '</span>' + (detalle ? '<div class="text-[11px] text-slate-500 mt-1">' + detalle + '</div>' : '') + (p.estado === 'autorizado' ? pcBarraAvance(p) : '') + '</td>' +
+          '<td class="p-3 border-r border-slate-200"><span class="' + est[1] + '">' + est[0] + '</span>' + (detalle ? '<div class="text-[11px] text-slate-500 mt-1">' + detalle + '</div>' : '') + (p.estado === 'autorizado' ? (p.detenido_motivo ? pcHtmlDetenido(p.detenido_motivo) : pcBarraAvance(p)) : '') + '</td>' +
           '<td class="p-3 text-center whitespace-nowrap">' + acc + '</td></tr>';
       }).join('');
     }
@@ -5020,7 +5020,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       const filasP = lista.map(p => {
         const cli = buscarClienteNombre(p.cliente_id), nom = cli ? (cli.nombre_corto || cli.nombre_completo || p.cliente_id) : p.cliente_id;
         const c = catalogoCuentas.find(k => k.sumaria === p.sumaria), est = ESTADOS_PEDIDO[p.estado] || [p.estado, 'pill-origen'];
-        const detalle = p.estado === 'autorizado' || p.estado === 'hecho' ? 'Autorizó ' + escapeHtml(p.autorizado_por || '') + (p.autorizado_at ? ' · ' + fechaCortaOrigen(p.autorizado_at) : '') + (p.estado === 'autorizado' && !(Number(p.progreso) > 0) ? '<br>Claude lo recoge en su próxima revisión (' + pcProxRevision() + ')' : '') : (p.estado === 'rechazado' ? 'Motivo: ' + escapeHtml(p.motivo_rechazo || '—') : '');
+        const detalle = p.estado === 'autorizado' || p.estado === 'hecho' ? 'Autorizó ' + escapeHtml(p.autorizado_por || '') + (p.autorizado_at ? ' · ' + fechaCortaOrigen(p.autorizado_at) : '') + (p.estado === 'autorizado' && !(Number(p.progreso) > 0) && !p.detenido_motivo ? '<br>Claude lo recoge en su próxima revisión (' + pcProxRevision() + ')' : '') : (p.estado === 'rechazado' ? 'Motivo: ' + escapeHtml(p.motivo_rechazo || '—') : '');
         let acc = '';
         if (p.estado === 'solicitado') {
           if (aut) acc += '<button type="button" onclick="autorizarPedidoClaude(\'' + p.id + '\')" class="px-3 py-1.5 text-[11px] rounded-lg transition bg-slate-200 text-slate-900 hover:bg-slate-300 font-semibold">Autorizar</button> <button type="button" onclick="rechazarPedidoClaude(\'' + p.id + '\')" class="px-3 py-1.5 text-[11px] rounded-lg transition border border-slate-300 text-slate-700 hover:bg-slate-100 font-medium">Rechazar</button> ';
@@ -5035,7 +5035,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
           '<td class="p-3 border-r border-slate-200 font-medium text-slate-800">' + escapeHtml((c ? c.cuenta : p.sumaria) + (p.hoja ? ' · ' + pcNombreHoja(p.hoja) : '')) + '</td>' +
           '<td class="p-3 border-r border-slate-200">' + htmlArchivosPedido(p, true) + (p.nota ? '<div class="text-[11px] text-slate-500 mt-1">' + escapeHtml(p.nota) + '</div>' : '') + '</td>' +
           '<td class="p-3 border-r border-slate-200 text-[11px] text-slate-600">' + escapeHtml(p.solicitado_por || '') + '<div class="text-slate-400">' + fechaCortaOrigen(p.created_at) + '</div></td>' +
-          '<td class="p-3 border-r border-slate-200"><span class="' + est[1] + '">' + est[0] + '</span>' + (detalle ? '<div class="text-[11px] text-slate-500 mt-1">' + detalle + '</div>' : '') + (p.estado === 'autorizado' ? pcBarraAvance(p) : '') + (p.resumen_resultado ? '<div class="text-[11px] text-slate-600 mt-1">' + escapeHtml(p.resumen_resultado) + '</div>' : '') + '</td>' +
+          '<td class="p-3 border-r border-slate-200"><span class="' + est[1] + '">' + est[0] + '</span>' + (detalle ? '<div class="text-[11px] text-slate-500 mt-1">' + detalle + '</div>' : '') + (p.estado === 'autorizado' ? (p.detenido_motivo ? pcHtmlDetenido(p.detenido_motivo) : pcBarraAvance(p)) : '') + (p.resumen_resultado ? '<div class="text-[11px] text-slate-600 mt-1">' + escapeHtml(p.resumen_resultado) + '</div>' : '') + '</td>' +
           '<td class="p-3 text-center whitespace-nowrap">' + acc + '</td></tr>';
       });
       tb.innerHTML = lista.map((p, n) => ({ t: p.created_at || '', h: filasP[n] })).concat(htmlRev).sort((x, y) => String(y.t).localeCompare(String(x.t))).map(x => x.h).join('');
@@ -5517,6 +5517,10 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       return '<div class="pc-aviso p-8 text-center text-sm text-slate-600 space-y-3" data-sum="' + e(sumaria) + '" data-cli="' + e(cli) + '" data-anio="' + e(anio) + '" data-vis="' + e(vis) + '" data-hoja="' + e(hoja) + '"><p>Aún no hay información cargada para esta cuenta, cliente, año y visita.<br>Para comenzar, realiza un pedido de análisis.</p><button type="button" onclick="pcIrAPedido(\'' + e(sumaria) + '\', \'' + e(cli) + '\', \'' + e(anio) + '\', \'' + e(vis) + '\', \'' + e(hoja) + '\')" class="px-4 py-2 bg-slate-200 text-slate-900 hover:bg-slate-300 rounded-lg text-xs font-bold transition ic-claude">Realizar pedido</button></div>';
     }
     // Barra de avance del pedido: etapas reales (enviado, autorizado, Claude trabajando, listo)
+    function pcHtmlDetenido(m) {
+      if (!m) return '';
+      return '<div style="margin-top:6px;padding:6px 8px;border-left:3px solid #b45309;background:#faf6ee;border-radius:0 6px 6px 0"><div style="font-size:11px;font-weight:700;color:#8a5a00">Detenido: falta completar</div><div class="text-[11px]" style="color:#57534e;margin-top:2px">' + escapeHtml(m).replace(/\n/g, '<br>') + '</div><div class="text-[11px]" style="color:#78716c;margin-top:2px">Súbelo en la aplicación y avisa al Socio o Supervisor para que Claude retome el trabajo.</div></div>';
+    }
     function pcBarraAvance(p) {
       if (!p || !['solicitado', 'autorizado', 'hecho'].includes(p.estado)) return '';
       if (!document.getElementById('pc-estilo-barra')) { const st = document.createElement('style'); st.id = 'pc-estilo-barra'; st.textContent = '@keyframes pcRayas{from{background-position:0 0}to{background-position:28px 0}}'; document.head.appendChild(st); }
@@ -19535,7 +19539,7 @@ ${cont.innerHTML}
       const cli = $im('ri-cliente').value, anio = $im('ri-anio').value, box = $im('ri-lista');
       if (!cli) { riE.lista = []; box.innerHTML = '<p class="text-slate-400">Elige el cliente para ver sus revisiones.</p>'; return; }
       if (!silencioso) box.innerHTML = '<p class="text-slate-400">Cargando…</p>';
-      const { data, error } = await supabaseClient.from('revisiones_informe').select('id,cliente_id,anio,marco,nombre_archivo,ruta,texto_ok,estado,progreso,progreso_texto,solicitado_por,created_at,hecho_at,resumen,autorizado_por,motivo_rechazo').eq('cliente_id', cli).eq('anio', Number(anio)).order('created_at', { ascending: false });
+      const { data, error } = await supabaseClient.from('revisiones_informe').select('id,cliente_id,anio,marco,nombre_archivo,ruta,texto_ok,estado,progreso,progreso_texto,solicitado_por,created_at,hecho_at,resumen,autorizado_por,motivo_rechazo,detenido_motivo').eq('cliente_id', cli).eq('anio', Number(anio)).order('created_at', { ascending: false });
       if (cli !== $im('ri-cliente').value) return;
       if (error) { box.innerHTML = '<p class="text-red-600 font-bold">No se pudo cargar: ' + escapeHtml(error.message || '') + '</p>'; return; }
       riE.lista = data || []; riPintarLista(); riPrepararTextos();
@@ -19546,7 +19550,7 @@ ${cont.innerHTML}
       const sub = t => t ? '<div class="text-[11px] text-slate-500">' + e(t) + '</div>' : '';
       const est = r => r.estado === 'hecho' ? '<span style="color:#1d6b3a;font-weight:700">Lista</span>' : r.estado === 'en_proceso' ? '<span style="color:#8a5a00;font-weight:700">Claude revisando ' + (r.progreso || 0) + '%</span>' + sub(r.progreso_texto) : r.estado === 'error' ? '<span style="color:#b42318;font-weight:700">Con error</span>' + sub(r.progreso_texto) : r.estado === 'rechazado' ? '<span style="color:#b42318;font-weight:700">Rechazada</span>' + sub((r.autorizado_por ? 'Por ' + r.autorizado_por + '. ' : '') + (r.motivo_rechazo || '')) : r.estado === 'autorizado' ? '<span style="color:#8a5a00;font-weight:700">Autorizada, espera a Claude</span>' + sub(r.autorizado_por ? 'Autorizó ' + r.autorizado_por : '') : '<span style="color:#475467;font-weight:700">Por autorizar</span>';
       box.innerHTML = '<div class="overflow-x-auto"><table class="w-full text-left text-xs border-collapse"><thead><tr class="text-slate-500 border-b border-slate-200"><th class="py-1 pr-2">Informe</th><th class="py-1 pr-2">Solicitado</th><th class="py-1 pr-2">Estado</th><th class="py-1"></th></tr></thead><tbody>' +
-        L.map(r => '<tr class="border-b border-slate-100 align-top"><td class="py-1.5 pr-2"><div class="font-semibold text-slate-800">' + e(r.nombre_archivo) + '</div><div class="text-[11px] text-slate-400">' + e(r.marco || '') + '</div></td><td class="py-1.5 pr-2 text-slate-500">' + e(nmFmt(r.created_at)) + '<div class="text-[11px]">' + e(r.solicitado_por || '') + '</div></td><td class="py-1.5 pr-2">' + est(r) + '</td><td class="py-1.5 text-right whitespace-nowrap">' +
+        L.map(r => '<tr class="border-b border-slate-100 align-top"><td class="py-1.5 pr-2"><div class="font-semibold text-slate-800">' + e(r.nombre_archivo) + '</div><div class="text-[11px] text-slate-400">' + e(r.marco || '') + '</div></td><td class="py-1.5 pr-2 text-slate-500">' + e(nmFmt(r.created_at)) + '<div class="text-[11px]">' + e(r.solicitado_por || '') + '</div></td><td class="py-1.5 pr-2">' + est(r) + ((r.estado === 'autorizado' || r.estado === 'error') ? pcHtmlDetenido(r.detenido_motivo) : '') + '</td><td class="py-1.5 text-right whitespace-nowrap">' +
           (r.estado === 'hecho' ? '<button type="button" onclick="riVer(\'' + r.id + '\')" class="font-bold underline mr-2" style="color:#449964">Ver</button>' : '') +
           (r.estado === 'solicitado' ? '<button type="button" onclick="navegarMenu(\'aprobaciones-claude\')" class="underline mr-2 text-slate-600" title="Se autoriza en Pedidos y aprobaciones">Ir a autorizar</button>' : '') +
           (r.estado === 'autorizado' ? '<button type="button" onclick="riCopiarInstruccion()" class="underline mr-2 text-slate-600" title="Copia el texto para pedirle a Claude que haga las revisiones autorizadas">Copiar aviso a Claude</button>' : '') +
@@ -19586,7 +19590,7 @@ ${cont.innerHTML}
       return lista.map(r => {
         const cli = buscarClienteNombre(r.cliente_id), nom = cli ? (cli.nombre_corto || cli.nombre_completo || r.cliente_id) : r.cliente_id;
         const est = r.estado === 'solicitado' ? ['Por autorizar', 'pill-origen mod'] : r.estado === 'autorizado' ? ['Autorizado, espera a Claude', 'pill-origen'] : r.estado === 'en_proceso' ? ['Claude revisando ' + (r.progreso || 0) + '%', 'pill-origen'] : r.estado === 'hecho' ? ['Procesado por Claude', 'pill-origen rev ic-claude'] : r.estado === 'rechazado' ? ['Rechazado', 'pill-origen'] : ['Con error', 'pill-origen'];
-        const det = (r.estado === 'autorizado' || r.estado === 'en_proceso' || r.estado === 'hecho') && r.autorizado_por ? 'Autorizó ' + e(r.autorizado_por) + (r.autorizado_at ? ' · ' + fechaCortaOrigen(r.autorizado_at) : '') : r.estado === 'rechazado' ? e((r.autorizado_por ? 'Rechazó ' + r.autorizado_por + '. ' : '') + (r.motivo_rechazo || '')) : r.estado === 'error' ? e(r.progreso_texto || '') : '';
+        const det = (r.estado === 'autorizado' || r.estado === 'en_proceso' || r.estado === 'hecho') && r.autorizado_por ? 'Autorizó ' + e(r.autorizado_por) + (r.autorizado_at ? ' · ' + fechaCortaOrigen(r.autorizado_at) : '') : r.estado === 'rechazado' ? e((r.autorizado_por ? 'Rechazó ' + r.autorizado_por + '. ' : '') + (r.motivo_rechazo || '')) : r.estado === 'error' ? (r.detenido_motivo ? '' : e(r.progreso_texto || '')) : '';
         let acc = '';
         const mio = aut || r.solicitado_por === miNombre;
         if (r.estado === 'solicitado') { if (aut) acc += btn('Autorizar', "riAutorizar('" + r.id + "')", 'bg-slate-200 text-slate-900 hover:bg-slate-300 font-semibold') + btn('Rechazar', "riRechazar('" + r.id + "')", 'border border-slate-300 text-slate-700 hover:bg-slate-100 font-medium'); if (mio) acc += btn('Cancelar', "riEliminar('" + r.id + "')", 'text-slate-500 hover:bg-slate-100 font-medium'); }
@@ -19598,7 +19602,7 @@ ${cont.innerHTML}
           '<td class="p-3 border-r border-slate-200 font-medium text-slate-800">Revisión de informe<div class="text-[11px] text-slate-500 font-normal">' + e(r.marco || '') + '</div></td>' +
           '<td class="p-3 border-r border-slate-200"><div class="text-[11px] text-slate-700">' + e(r.nombre_archivo) + '</div>' + (r.nota ? '<div class="text-[11px] text-slate-500 mt-1">' + e(r.nota) + '</div>' : '') + '</td>' +
           '<td class="p-3 border-r border-slate-200 text-[11px] text-slate-600">' + e(r.solicitado_por || '') + '<div class="text-slate-400">' + fechaCortaOrigen(r.created_at) + '</div></td>' +
-          '<td class="p-3 border-r border-slate-200"><span class="' + est[1] + '">' + est[0] + '</span>' + (det ? '<div class="text-[11px] text-slate-500 mt-1">' + det + '</div>' : '') + '</td>' +
+          '<td class="p-3 border-r border-slate-200"><span class="' + est[1] + '">' + est[0] + '</span>' + (det ? '<div class="text-[11px] text-slate-500 mt-1">' + det + '</div>' : '') + ((r.estado === 'autorizado' || r.estado === 'error') ? pcHtmlDetenido(r.detenido_motivo) : '') + '</td>' +
           '<td class="p-3 text-center whitespace-nowrap">' + acc + '</td></tr>';
       }).map((h, n) => ({ t: lista[n].created_at || '', h }));
     }
