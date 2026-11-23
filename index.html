@@ -5043,16 +5043,62 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
 
     // ===== Aviso al Socio/Supervisor y botón para iniciar a Claude =====
     let timerAvisoPedidos = null;
+    // Globo de aviso instantáneo: cuando llega un pedido nuevo, el Socio o Supervisor lo ve al momento
+    let globosVistos = null, canalAvisoPedidos = null;
+    function suscribirAvisoPedidos() {
+      try {
+        if (canalAvisoPedidos) return;
+        canalAvisoPedidos = supabaseClient.channel('aviso-pedidos')
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'pedidos_claude' }, () => avisoPedidosClaude(false))
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'revisiones_informe' }, () => avisoPedidosClaude(false))
+          .subscribe();
+      } catch (e) { /* si falla, queda la revisión cada 30 segundos */ }
+    }
+    function globoNuevosPedidos(lista) {
+      const ids = new Set(lista.map(x => x._tipo + x.id));
+      if (globosVistos === null) { globosVistos = ids; return; }
+      const miEmail = String((usuarioActivo && usuarioActivo.email) || '').toLowerCase();
+      const nuevos = lista.filter(x => !globosVistos.has(x._tipo + x.id));
+      globosVistos = ids;
+      if (!puedeAutorizarPedidos()) return;
+      nuevos.forEach(x => {
+        if (miEmail && String(x.solicitado_email || '').toLowerCase() === miEmail) return;
+        mostrarGloboPedido(x);
+      });
+    }
+    function mostrarGloboPedido(x) {
+      let cont = document.getElementById('globos-pedidos');
+      if (!cont) {
+        cont = document.createElement('div'); cont.id = 'globos-pedidos';
+        cont.style.cssText = 'position:fixed;right:16px;bottom:16px;z-index:9999;display:flex;flex-direction:column;gap:8px;max-width:340px';
+        document.body.appendChild(cont);
+      }
+      const g = document.createElement('div');
+      g.style.cssText = 'background:#fff;border:1px solid #dbdbd8;border-left:4px solid #b45309;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.15);padding:10px 12px;font-size:12px;color:#44403c';
+      const quien = x.solicitado_por || x.solicitado_email || 'Un auditor';
+      const que = x._tipo === 'pedido' ? (x.sumaria || x.hoja || 'análisis') : '';
+      g.innerHTML = '<div style="font-weight:700;color:#8a5a00;margin-bottom:2px">Nuevo ' + escapeHtml(x._tipo) + ' por autorizar</div>' +
+        '<div>' + escapeHtml(quien) + (x.cliente_id ? ' · ' + escapeHtml(String(x.cliente_id)) : '') + (que ? ' · ' + escapeHtml(String(que)) : '') + '</div>' +
+        '<div style="margin-top:8px;display:flex;gap:8px"><button type="button" class="g-ir" style="background:#44403c;color:#fff;border-radius:6px;padding:3px 10px;font-size:12px">Ir a autorizar</button><button type="button" class="g-x" style="color:#78716c;padding:3px 6px;font-size:12px">Cerrar</button></div>';
+      const cerrar = () => { if (g.parentNode) g.parentNode.removeChild(g); };
+      g.querySelector('.g-ir').onclick = () => { cerrar(); navegarMenu('aprobaciones-claude'); };
+      g.querySelector('.g-x').onclick = cerrar;
+      cont.appendChild(g);
+      setTimeout(cerrar, 60000);
+    }
     async function avisoPedidosClaude(reiniciar) {
       try {
-        if (reiniciar) { clearInterval(timerAvisoPedidos); timerAvisoPedidos = setInterval(() => avisoPedidosClaude(false), 120000); }
+        if (reiniciar) { clearInterval(timerAvisoPedidos); timerAvisoPedidos = setInterval(() => avisoPedidosClaude(false), 30000); suscribirAvisoPedidos(); }
         const b = document.getElementById('badge-pedidos-claude');
         const nb = document.getElementById('nav-aprobaciones-claude');
         if (nb) nb.style.display = (usuarioActivo && (!window._estHerrCargado || herramientaHabilitada('pedidos-claude'))) ? '' : 'none';
         if (!usuarioActivo || !herramientaHabilitada('pedidos-claude')) { if (b) b.classList.add('hidden'); return; }
-        const { data } = await supabaseClient.from('pedidos_claude').select('estado').in('estado', ['solicitado', 'autorizado']);
-        let dRev = []; try { const rr = await supabaseClient.from('revisiones_informe').select('estado').in('estado', ['solicitado', 'autorizado']); dRev = rr.error ? [] : (rr.data || []); } catch (x) { }
-        const l = (data || []).concat(dRev), porAut = l.filter(x => x.estado === 'solicitado').length, auts = l.filter(x => x.estado === 'autorizado').length;
+        const { data } = await supabaseClient.from('pedidos_claude').select('id,estado,cliente_id,sumaria,hoja,solicitado_por,solicitado_email').in('estado', ['solicitado', 'autorizado']);
+        let dRev = []; try { const rr = await supabaseClient.from('revisiones_informe').select('id,estado,cliente_id,solicitado_por,solicitado_email').in('estado', ['solicitado', 'autorizado']); dRev = rr.error ? [] : (rr.data || []); } catch (x) { }
+        (data || []).forEach(x => x._tipo = 'pedido'); dRev.forEach(x => x._tipo = 'revisión de informe');
+        const l = (data || []).concat(dRev);
+        globoNuevosPedidos(l.filter(x => x.estado === 'solicitado'));
+        const porAut = l.filter(x => x.estado === 'solicitado').length, auts = l.filter(x => x.estado === 'autorizado').length;
         const n = puedeAutorizarPedidos() ? porAut : 0;
         if (b) { b.textContent = n; b.classList.toggle('hidden', n === 0); }
         const av = document.getElementById('pc-aviso');
