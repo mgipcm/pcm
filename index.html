@@ -5132,7 +5132,11 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       try {
         if (canalAvisoPedidos) return;
         canalAvisoPedidos = supabaseClient.channel('aviso-pedidos')
-          .on('postgres_changes', { event: '*', schema: 'public', table: 'pedidos_claude' }, () => avisoPedidosClaude(false))
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'pedidos_claude' }, () => {
+            avisoPedidosClaude(false);
+            // Si la pantalla de pedidos está abierta, se actualiza sola para que no siga saliendo "por autorizar" lo que otra persona ya autorizó
+            try { const el = document.getElementById('pc-msg'); if (el && el.offsetParent !== null) { clearTimeout(window._pcRecarga); window._pcRecarga = setTimeout(() => { try { cargarPedidosClaude(); } catch (e) { } }, 1500); } } catch (e) { }
+          })
           .on('postgres_changes', { event: '*', schema: 'public', table: 'revisiones_informe' }, () => avisoPedidosClaude(false))
           .subscribe();
       } catch (e) { /* si falla, queda la revisión cada 30 segundos */ }
@@ -5215,8 +5219,19 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
     // Claude revisa los pedidos autorizados cada hora, al minuto 3
     function pcProxRevision() { const d = new Date(), n = new Date(d); n.setMinutes(3, 0, 0); if (n <= d) n.setHours(n.getHours() + 1); return 'a las ' + String(n.getHours()).padStart(2, '0') + ':' + String(n.getMinutes()).padStart(2, '0'); }
     async function cambiarEstadoPedido(id, cambios, accion) {
-      const { error } = await supabaseClient.from('pedidos_claude').update(cambios).eq('id', id);
+      // Autorizar o rechazar solo vale si el pedido sigue "por autorizar": así no se pisa el nombre de quien ya lo autorizó
+      const decide = cambios.estado === 'autorizado' || cambios.estado === 'rechazado';
+      let qu = supabaseClient.from('pedidos_claude').update(cambios).eq('id', id);
+      if (decide) qu = qu.eq('estado', 'solicitado').select('id');
+      const { data: filasAct, error } = await qu;
       if (error) { alert('No se pudo guardar: ' + (error.message || error)); return false; }
+      if (decide && !(filasAct && filasAct.length)) {
+        let quien = '', cuando = '', est = '';
+        try { const { data: ya } = await supabaseClient.from('pedidos_claude').select('estado,autorizado_por,autorizado_at').eq('id', id).limit(1); const r0 = ya && ya[0]; if (r0) { est = r0.estado; quien = r0.autorizado_por || ''; cuando = r0.autorizado_at ? fechaHoraCorta(r0.autorizado_at) : ''; } } catch (e) { }
+        alert('Este pedido ya no estaba por autorizar' + (est === 'rechazado' ? ' (fue rechazado' : est ? ' (estado: ' + est : '') + (quien ? ' por ' + quien : '') + (cuando ? ' · ' + cuando : '') + (est ? ')' : '') + '. No se cambió nada; se actualizó la lista.');
+        try { await cargarPedidosClaude(); } catch (e) { }
+        return false;
+      }
       const p = pedidosClaude.find(x => x.id === id);
       if (p) { Object.assign(p, cambios); registrarActividad(accion, p.sumaria + ' · ' + p.visita, { cliente: p.cliente_id, anio: String(p.anio) }); }
       pintarPedidosClaude(); avisoPedidosClaude(false);
@@ -19970,8 +19985,18 @@ ${cont.innerHTML}
       } catch (x) { return 'No se pudo enviar el correo (' + (x.message || x) + '); la solicitud igual quedó registrada.'; }
     }
     async function riCambiarEstado(id, cambios, evento) {
-      const { error } = await supabaseClient.from('revisiones_informe').update(cambios).eq('id', id);
+      const decide = cambios.estado === 'autorizado' || cambios.estado === 'rechazado';
+      let qu = supabaseClient.from('revisiones_informe').update(cambios).eq('id', id);
+      if (decide) qu = qu.eq('estado', 'solicitado').select('id');
+      const { data: filasAct, error } = await qu;
       if (error) { riMensaje('No se pudo guardar: ' + (error.message || error), true); return; }
+      if (decide && !(filasAct && filasAct.length)) {
+        let quien = '';
+        try { const { data: ya } = await supabaseClient.from('revisiones_informe').select('autorizado_por').eq('id', id).limit(1); quien = (ya && ya[0] && ya[0].autorizado_por) || ''; } catch (x) { }
+        await riRefrescarTodo();
+        riMensaje('Esta revisión ya no estaba por autorizar' + (quien ? ' (la atendió ' + quien + ')' : '') + '. No se cambió nada.', true);
+        return;
+      }
       const r = revInformeAprob.find(x => x.id === id) || riE.lista.find(x => x.id === id); try { registrarActividad(evento, r ? r.nombre_archivo : '', { cliente: r ? r.cliente_id : '', anio: r ? String(r.anio) : '' }); } catch (x) { }
       await riRefrescarTodo();
       riMensaje('Enviando aviso por correo…');
