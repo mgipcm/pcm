@@ -4424,6 +4424,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
     const TABLAS_ORIGEN = { programa: 'programa_trabajo_cuentas', anexo: 'anexo_inversiones', claude: 'analisis_claude_cuentas', arrend: 'arrendamientos_contratos', import: 'importaciones_datos' };
     const NOMBRE_ORIGEN = { programa: 'Programa de trabajo', anexo: 'Anexo', claude: 'Análisis de Claude', arrend: 'Contratos de arrendamiento', import: 'Importaciones' };
     function estadoOrigen(r) { return r && r.origen === 'claude' ? (r.estado_revision === 'revisado' ? 'revisado' : (r.estado_revision === 'modificado' ? 'modificado' : (r.estado_revision === 'procesado' ? 'procesado' : 'pendiente'))) : ''; }
+    function fechaHoraCorta(iso) { try { if (!iso) return ''; const d = new Date(iso); return d.toLocaleDateString('es-EC', { day: '2-digit', month: '2-digit', year: 'numeric' }) + ' · ' + d.toLocaleTimeString('es-EC', { hour: '2-digit', minute: '2-digit', hour12: false }); } catch (e) { return ''; } }
     function fechaCortaOrigen(iso) { try { return iso ? new Date(iso).toLocaleDateString('es-EC', { day: '2-digit', month: '2-digit', year: 'numeric' }) : ''; } catch (e) { return ''; } }
     function textoOrigen(r) {
       const e = estadoOrigen(r);
@@ -4995,7 +4996,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       tb.innerHTML = lista.map(p => {
         const cli = buscarClienteNombre(p.cliente_id), nom = cli ? (cli.nombre_corto || cli.nombre_completo || p.cliente_id) : p.cliente_id;
         const c = catalogoCuentas.find(k => k.sumaria === p.sumaria), est = ESTADOS_PEDIDO[p.estado] || [p.estado, 'pill-origen'];
-        const detalle = p.estado === 'autorizado' || p.estado === 'hecho' ? 'Autorizó ' + escapeHtml(p.autorizado_por || '') + (p.autorizado_at ? ' · ' + fechaCortaOrigen(p.autorizado_at) : '') + (p.estado === 'autorizado' && !(Number(p.progreso) > 0) && !p.detenido_motivo ? '<br>Claude lo recoge en su próxima revisión (' + pcProxRevision() + ')' : '') : (p.estado === 'rechazado' ? 'Motivo: ' + escapeHtml(p.motivo_rechazo || '—') : '');
+        const detalle = p.estado === 'autorizado' || p.estado === 'hecho' ? 'Autorizó ' + escapeHtml(p.autorizado_por || '') + (p.autorizado_at ? ' · ' + fechaHoraCorta(p.autorizado_at) : '') + (p.estado === 'autorizado' && !(Number(p.progreso) > 0) && !p.detenido_motivo ? '<br>Claude lo recoge en su próxima revisión (' + pcProxRevision() + ')' : '') : (p.estado === 'rechazado' ? 'Motivo: ' + escapeHtml(p.motivo_rechazo || '—') : '');
         const btn = (fn, txt, cls) => '<button type="button" onclick="' + fn + '(\'' + p.id + '\')" class="px-3 py-1.5 text-[11px] rounded-lg transition ' + cls + ' font-medium">' + txt + '</button>';
         let acc = '';
         if (p.estado === 'solicitado' || p.estado === 'autorizado') acc = btn('cancelarPedidoClaude', 'Cancelar', 'border border-slate-300 text-slate-700 hover:bg-slate-100');
@@ -5020,7 +5021,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       const filasP = lista.map(p => {
         const cli = buscarClienteNombre(p.cliente_id), nom = cli ? (cli.nombre_corto || cli.nombre_completo || p.cliente_id) : p.cliente_id;
         const c = catalogoCuentas.find(k => k.sumaria === p.sumaria), est = ESTADOS_PEDIDO[p.estado] || [p.estado, 'pill-origen'];
-        const detalle = p.estado === 'autorizado' || p.estado === 'hecho' ? 'Autorizó ' + escapeHtml(p.autorizado_por || '') + (p.autorizado_at ? ' · ' + fechaCortaOrigen(p.autorizado_at) : '') + (p.estado === 'autorizado' && !(Number(p.progreso) > 0) && !p.detenido_motivo ? '<br>Claude lo recoge en su próxima revisión (' + pcProxRevision() + ')' : '') : (p.estado === 'rechazado' ? 'Motivo: ' + escapeHtml(p.motivo_rechazo || '—') : '');
+        const detalle = p.estado === 'autorizado' || p.estado === 'hecho' ? 'Autorizó ' + escapeHtml(p.autorizado_por || '') + (p.autorizado_at ? ' · ' + fechaHoraCorta(p.autorizado_at) : '') + (p.estado === 'autorizado' && !(Number(p.progreso) > 0) && !p.detenido_motivo ? '<br>Claude lo recoge en su próxima revisión (' + pcProxRevision() + ')' : '') : (p.estado === 'rechazado' ? 'Motivo: ' + escapeHtml(p.motivo_rechazo || '—') : '');
         let acc = '';
         if (p.estado === 'solicitado') {
           if (aut) acc += '<button type="button" onclick="autorizarPedidoClaude(\'' + p.id + '\')" class="px-3 py-1.5 text-[11px] rounded-lg transition bg-slate-200 text-slate-900 hover:bg-slate-300 font-semibold">Autorizar</button> <button type="button" onclick="rechazarPedidoClaude(\'' + p.id + '\')" class="px-3 py-1.5 text-[11px] rounded-lg transition border border-slate-300 text-slate-700 hover:bg-slate-100 font-medium">Rechazar</button> ';
@@ -5034,7 +5035,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
           '<td class="p-3 border-r border-slate-200"><div class="font-bold text-slate-800">' + escapeHtml(nom) + '</div><div class="text-[11px] text-slate-500">' + p.anio + ' · ' + (p.visita === 'preliminar' ? 'Visita preliminar' : 'Visita final') + '</div></td>' +
           '<td class="p-3 border-r border-slate-200 font-medium text-slate-800">' + escapeHtml((c ? c.cuenta : p.sumaria) + (p.hoja ? ' · ' + pcNombreHoja(p.hoja) : '')) + '</td>' +
           '<td class="p-3 border-r border-slate-200">' + htmlArchivosPedido(p, true) + (p.nota ? '<div class="text-[11px] text-slate-500 mt-1">' + escapeHtml(p.nota) + '</div>' : '') + '</td>' +
-          '<td class="p-3 border-r border-slate-200 text-[11px] text-slate-600">' + escapeHtml(p.solicitado_por || '') + '<div class="text-slate-400">' + fechaCortaOrigen(p.created_at) + '</div></td>' +
+          '<td class="p-3 border-r border-slate-200 text-[11px] text-slate-600">' + escapeHtml(p.solicitado_por || '') + '<div class="text-slate-400">' + fechaHoraCorta(p.created_at) + '</div></td>' +
           '<td class="p-3 border-r border-slate-200"><span class="' + est[1] + '">' + est[0] + '</span>' + (detalle ? '<div class="text-[11px] text-slate-500 mt-1">' + detalle + '</div>' : '') + (p.estado === 'autorizado' ? (p.detenido_motivo ? pcHtmlDetenido(p.detenido_motivo) : pcBarraAvance(p)) : '') + (p.resumen_resultado ? '<div class="text-[11px] text-slate-600 mt-1">' + escapeHtml(p.resumen_resultado) + '</div>' : '') + '</td>' +
           '<td class="p-3 text-center whitespace-nowrap">' + acc + '</td></tr>';
       });
@@ -19665,7 +19666,7 @@ ${cont.innerHTML}
       return lista.map(r => {
         const cli = buscarClienteNombre(r.cliente_id), nom = cli ? (cli.nombre_corto || cli.nombre_completo || r.cliente_id) : r.cliente_id;
         const est = r.estado === 'solicitado' ? ['Por autorizar', 'pill-origen mod'] : r.estado === 'autorizado' ? ['Autorizado, espera a Claude', 'pill-origen'] : r.estado === 'en_proceso' ? ['Claude revisando ' + (r.progreso || 0) + '%', 'pill-origen'] : r.estado === 'hecho' ? ['Procesado por Claude', 'pill-origen rev ic-claude'] : r.estado === 'rechazado' ? ['Rechazado', 'pill-origen'] : ['Con error', 'pill-origen'];
-        const det = (r.estado === 'autorizado' || r.estado === 'en_proceso' || r.estado === 'hecho') && r.autorizado_por ? 'Autorizó ' + e(r.autorizado_por) + (r.autorizado_at ? ' · ' + fechaCortaOrigen(r.autorizado_at) : '') : r.estado === 'rechazado' ? e((r.autorizado_por ? 'Rechazó ' + r.autorizado_por + '. ' : '') + (r.motivo_rechazo || '')) : r.estado === 'error' ? (r.detenido_motivo ? '' : e(r.progreso_texto || '')) : '';
+        const det = (r.estado === 'autorizado' || r.estado === 'en_proceso' || r.estado === 'hecho') && r.autorizado_por ? 'Autorizó ' + e(r.autorizado_por) + (r.autorizado_at ? ' · ' + fechaHoraCorta(r.autorizado_at) : '') : r.estado === 'rechazado' ? e((r.autorizado_por ? 'Rechazó ' + r.autorizado_por + '. ' : '') + (r.motivo_rechazo || '')) : r.estado === 'error' ? (r.detenido_motivo ? '' : e(r.progreso_texto || '')) : '';
         let acc = '';
         const mio = aut || r.solicitado_por === miNombre;
         if (r.estado === 'solicitado') { if (aut) acc += btn('Autorizar', "riAutorizar('" + r.id + "')", 'bg-slate-200 text-slate-900 hover:bg-slate-300 font-semibold') + btn('Rechazar', "riRechazar('" + r.id + "')", 'border border-slate-300 text-slate-700 hover:bg-slate-100 font-medium'); if (mio) acc += btn('Cancelar', "riEliminar('" + r.id + "')", 'text-slate-500 hover:bg-slate-100 font-medium'); }
@@ -19676,7 +19677,7 @@ ${cont.innerHTML}
           '<td class="p-3 border-r border-slate-200"><div class="font-bold text-slate-800">' + e(nom) + '</div><div class="text-[11px] text-slate-500">' + r.anio + '</div></td>' +
           '<td class="p-3 border-r border-slate-200 font-medium text-slate-800">Revisión de informe<div class="text-[11px] text-slate-500 font-normal">' + e(r.marco || '') + '</div></td>' +
           '<td class="p-3 border-r border-slate-200"><div class="text-[11px] text-slate-700">' + e(r.nombre_archivo) + '</div>' + (r.nota ? '<div class="text-[11px] text-slate-500 mt-1">' + e(r.nota) + '</div>' : '') + '</td>' +
-          '<td class="p-3 border-r border-slate-200 text-[11px] text-slate-600">' + e(r.solicitado_por || '') + '<div class="text-slate-400">' + fechaCortaOrigen(r.created_at) + '</div></td>' +
+          '<td class="p-3 border-r border-slate-200 text-[11px] text-slate-600">' + e(r.solicitado_por || '') + '<div class="text-slate-400">' + fechaHoraCorta(r.created_at) + '</div></td>' +
           '<td class="p-3 border-r border-slate-200"><span class="' + est[1] + '">' + est[0] + '</span>' + (det ? '<div class="text-[11px] text-slate-500 mt-1">' + det + '</div>' : '') + ((r.estado === 'autorizado' || r.estado === 'error') ? pcHtmlDetenido(r.detenido_motivo) : '') + '</td>' +
           '<td class="p-3 text-center whitespace-nowrap">' + acc + '</td></tr>';
       }).map((h, n) => ({ t: lista[n].created_at || '', h }));
