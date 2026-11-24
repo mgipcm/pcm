@@ -1175,7 +1175,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       </div>
       <div id="mc-subir" class="hidden p-3 border border-slate-200 rounded-xl bg-slate-50 space-y-2">
         <div class="text-[13px] font-semibold text-slate-800">Subir el mayor contable</div>
-        <p class="text-xs text-slate-600">Formatos: CSV (el más liviano y seguro), Excel o PDF. Si el cliente te entrega un mayor corregido, súbelo y borra el anterior.</p>
+        <p class="text-xs text-slate-600">Formatos: un CSV comprimido en zip (lo más liviano y seguro; sirve aun para mayores de cientos de MB), CSV, Excel o PDF. Si el cliente te entrega un mayor corregido, súbelo y borra el anterior.</p>
         <div class="flex flex-wrap items-center gap-2">
           <input type="file" id="mc-archivo" accept=".zip,.csv,.xlsx,.xls,.pdf,.txt" class="text-xs">
           <button type="button" id="mc-btn-subir" onclick="mcSubir()" class="px-3 py-1.5 rounded-lg text-xs transition bg-slate-200 text-slate-900 hover:bg-slate-300 font-semibold">Subir y leer</button>
@@ -13926,7 +13926,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
     }
     function mcNum(n) { return Number(n || 0).toLocaleString('es-EC'); }
     function mcFecha(iso) { try { return new Date(iso).toLocaleDateString('es-EC', { day: '2-digit', month: 'short', year: 'numeric' }); } catch (e) { return ''; } }
-    function mcEstadoLectura(a, l, largo) {
+    function mcEstadoLectura(a, l, largo, res) {
       if (!l) return { txt: 'Leyendo…', ok: false, espera: true };
       if (l.error) {
         if (/interrump/i.test(l.error)) return (l.intentos || 0) < 3 ? { txt: 'Reintentando la lectura (intento ' + ((l.intentos || 0) + 1) + ' de 3)…', ok: false, espera: true } : { txt: 'No se pudo leer por ser muy pesado. Comprímelo en zip (un CSV dentro de un zip es lo más liviano).', ok: false, error: true };
@@ -13934,7 +13934,13 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       }
       if (largo === null || largo === undefined) return { txt: 'Leyendo…', ok: false, espera: true };
       if (largo <= 0) return { txt: 'El archivo no tiene texto legible.', ok: false, error: true };
-      return { txt: 'Leído completo: ' + mcNum(largo) + ' caracteres' + (l.paginas ? ' · ' + mcNum(l.paginas) + (l.paginas === 1 ? ' hoja o página' : ' hojas o páginas') : ''), ok: true };
+      const parte = l.en_partes ? (l.paginas ? ' · ' + mcNum(l.paginas) + (l.paginas === 1 ? ' archivo' : ' archivos') : '') : (l.paginas ? ' · ' + mcNum(l.paginas) + (l.paginas === 1 ? ' hoja o página' : ' hojas o páginas') : '');
+      let r = { txt: 'Leído completo: ' + mcNum(largo) + ' caracteres' + parte, ok: true };
+      if (l.en_partes) {
+        if (res && res.listo) r.txt += ' · Resumen por cuenta: listo (' + mcNum(res.cuentas) + ' cuentas)';
+        else { r.txt += ' · Armando el resumen por cuenta' + (res && res.total ? ' (' + Math.min(100, Math.round(100 * (res.sig || 0) / res.total)) + '%)' : '') + '…'; r.espera = true; }
+      }
+      return r;
     }
     async function mcCargar() {
       clearTimeout(mcTimer);
@@ -13945,11 +13951,20 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       const { data: arch, error } = await supabaseClient.from('pedidos_claude_archivos').select('*').is('pedido_id', null).eq('cliente_id', cli).eq('anio', Number(anio)).eq('visita', vis).eq('etiqueta', MC_ETQ).is('eliminado_at', null).order('created_at', { ascending: false });
       if (mi !== mcToken) return;
       if (error) { caja.innerHTML = '<p class="text-xs text-red-600 font-bold">No se pudo cargar: ' + escapeHtml(error.message || '') + '</p>'; return; }
-      const lista = arch || [], mapa = {}, largos = {};
+      const lista = arch || [], mapa = {}, largos = {}, resumenes = {};
       if (lista.length) {
-        const { data: t } = await supabaseClient.from('pedidos_claude_textos').select('archivo_id, error, paginas, intentos, ultimo_uso_at').in('archivo_id', lista.map(a => a.id));
+        const { data: t } = await supabaseClient.from('pedidos_claude_textos').select('archivo_id, error, paginas, intentos, ultimo_uso_at, en_partes').in('archivo_id', lista.map(a => a.id));
         (t || []).forEach(x => { mapa[x.archivo_id] = x; });
         await Promise.all(lista.filter(a => mapa[a.id] && !mapa[a.id].error).map(async a => { const r = await supabaseClient.rpc('largo_texto_archivo', { p_id: a.id }); largos[a.id] = r.error ? null : r.data; }));
+        // resumen por cuenta de los mayores muy grandes (se arma solo después de leerlos)
+        await Promise.all(lista.filter(a => mapa[a.id] && mapa[a.id].en_partes && !mapa[a.id].error).map(async a => {
+          try {
+            const { data: es } = await supabaseClient.from('mayor_resumen_estado').select('listo, siguiente_parte, total_partes').eq('archivo_id', a.id).maybeSingle();
+            let cuentas = 0;
+            if (es && es.listo) { const c = await supabaseClient.from('mayor_resumen_cuentas').select('cuenta', { count: 'exact', head: true }).eq('archivo_id', a.id); cuentas = c.count || 0; }
+            resumenes[a.id] = { listo: !!(es && es.listo), sig: es ? es.siguiente_parte : 0, total: es ? es.total_partes : 0, cuentas };
+          } catch (e) { resumenes[a.id] = null; }
+        }));
       }
       // Mayores leídos antes dentro de un pedido: siguen sirviendo a los análisis
       let previos = [];
@@ -13965,7 +13980,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       if (mi !== mcToken) return;
       let espera = false;
       const filas = lista.map(a => {
-        const l = mapa[a.id], est = mcEstadoLectura(a, l, largos[a.id]); if (est.espera) espera = true;
+        const l = mapa[a.id], est = mcEstadoLectura(a, l, largos[a.id], resumenes[a.id]); if (est.espera) espera = true;
         const vence = l && l.ultimo_uso_at ? new Date(new Date(l.ultimo_uso_at).getTime() + MC_DIAS * 86400000) : null;
         const color = est.ok ? '#1d6b3a' : (est.error ? '#b42318' : '#8a5a00');
         return '<tr style="border-top:1px solid #e5e5e0"><td class="px-2 py-1.5 text-xs">' + escapeHtml(a.nombre) + '<div class="text-[10px] text-slate-500">' + tamanoLegible(a.tamano) + ' · subido por ' + escapeHtml(a.subido_por || '') + ' el ' + mcFecha(a.created_at) + '</div></td>' +
