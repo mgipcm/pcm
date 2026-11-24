@@ -3496,7 +3496,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       'claude-revisar': { cliente: 'cr-cliente', anio: 'cr-anio', visita: 'cr-visita' },
       'pedidos-claude': { cliente: 'pc-cliente', anio: 'pc-anio', visita: 'pc-visita' },
       contratos: { cliente: 'contr-cliente' }, flujo: { cliente: 'fl-cliente', anio: 'fl-anio' },
-      arrend: { cliente: 'ar-cliente', anio: 'ar-anio', visita: 'ar-visita' }, import2: { cliente: 'v2-cliente', anio: 'v2-anio', visita: 'v2-visita' }, nomina: { cliente: 'nm-cliente', anio: 'nm-anio', visita: 'nm-visita' }, impuestos: { cliente: 'nm-cliente', anio: 'nm-anio', visita: 'nm-visita' }, concil: { cliente: 'cb-cliente', anio: 'cb-anio', visita: 'cb-visita' },
+      arrend: { cliente: 'ar-cliente', anio: 'ar-anio', visita: 'ar-visita' }, import2: { cliente: 'v2-cliente', anio: 'v2-anio', visita: 'v2-visita' }, nomina: { cliente: 'nm-cliente', anio: 'nm-anio', visita: 'nm-visita' }, impuestos: { cliente: 'nm-cliente', anio: 'nm-anio', visita: 'nm-visita' }, gastos: { cliente: 'nm-cliente', anio: 'nm-anio', visita: 'nm-visita' }, concil: { cliente: 'cb-cliente', anio: 'cb-anio', visita: 'cb-visita' },
       pce: { cliente: 'pce-cliente' }, reuniones: { cliente: 'reu-cliente' }, mayor: { cliente: 'my-cliente' },
       asignacion: { cliente: 'as-cliente', anio: 'as-anio', visita: 'as-visita' }
     };
@@ -3582,14 +3582,14 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       }
 
       const claveLinea = (seccion === 'analisis' && cuenta) ? (cuenta === 'equivalentes' ? 'concil' : 'cta:' + cuenta) : (seccion === 'aprobaciones-claude' ? 'pedidos-claude' : seccion);
-      if ((seccion === 'sumarias' || seccion === 'pendientes' || seccion === 'claude-revisar' || seccion === 'pedidos-claude' || seccion === 'aprobaciones-claude' || seccion === 'arrend' || seccion === 'import2' || seccion === 'nomina' || seccion === 'impuestos' || seccion === 'concil' || (seccion === 'analisis' && cuenta)) && !herramientaHabilitada(claveLinea)) { avisarEnDesarrollo(); return; }
+      if ((seccion === 'sumarias' || seccion === 'pendientes' || seccion === 'claude-revisar' || seccion === 'pedidos-claude' || seccion === 'aprobaciones-claude' || seccion === 'arrend' || seccion === 'import2' || seccion === 'nomina' || seccion === 'impuestos' || seccion === 'gastos' || seccion === 'concil' || (seccion === 'analisis' && cuenta)) && !herramientaHabilitada(claveLinea)) { avisarEnDesarrollo(); return; }
       if (!herramientaHabilitada(seccion === 'aprobaciones-claude' ? 'pedidos-claude' : seccion)) {
         if (seccion === 'auditoria') seccion = 'desarrollo'; // pantalla principal: se muestra un aviso en vez de un mensaje emergente
         else { avisarEnDesarrollo(); return; }
       }
       if (!['clientes', 'usuarios', 'cuentas', 'habilitar', 'historial', 'medidor', 'programas'].includes(seccion)) guardarVista({ seccion: seccion, sub: sub || null, cuenta: cuenta || null });
 
-      const secciones = ['desarrollo', 'clientes', 'usuarios', 'cuentas', 'habilitar', 'historial', 'medidor', 'programas', 'sumarias', 'mayor-contable', 'pendientes', 'claude-revisar', 'pedidos-claude', 'aprobaciones-claude', 'flujo', 'auditoria', 'analisis', 'visitas', 'asignacion', 'indices', 'mayor', 'contratos', 'arrend', 'import2', 'nomina', 'impuestos', 'concil', 'pce', 'reuniones', 'revinforme', 'mas-herramientas'];
+      const secciones = ['desarrollo', 'clientes', 'usuarios', 'cuentas', 'habilitar', 'historial', 'medidor', 'programas', 'sumarias', 'mayor-contable', 'pendientes', 'claude-revisar', 'pedidos-claude', 'aprobaciones-claude', 'flujo', 'auditoria', 'analisis', 'visitas', 'asignacion', 'indices', 'mayor', 'contratos', 'arrend', 'import2', 'nomina', 'impuestos', 'gastos', 'concil', 'pce', 'reuniones', 'revinforme', 'mas-herramientas'];
       const grupoSubmenu = sec => ['auditoria', 'visitas', 'asignacion'].includes(sec) ? 'planificacion' : ['indices', 'mayor', 'contratos', 'flujo', 'pce', 'reuniones', 'revinforme', 'mas-herramientas'].includes(sec)
         ? 'herramientas'
         : (['clientes', 'usuarios', 'cuentas', 'habilitar', 'historial', 'medidor', 'programas'].includes(sec) ? 'config' : (['sumarias', 'mayor-contable', 'pendientes', 'claude-revisar', 'pedidos-claude', 'aprobaciones-claude'].includes(sec) ? 'analisis' : null));
@@ -3609,7 +3609,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
         }
       });
 
-      const activeSec = document.getElementById(seccion === 'impuestos' ? 'sec-nomina' : `sec-${seccion}`);
+      const activeSec = document.getElementById((seccion === 'impuestos' || seccion === 'gastos') ? 'sec-nomina' : `sec-${seccion}`);
       if (activeSec) activeSec.classList.remove('hidden');
       setTimeout(() => aplicarContextoActivo(seccion), 250); setTimeout(() => aplicarContextoActivo(seccion), 1000); // espera a que la pantalla cargue sus clientes
       if (seccion === 'contratos') { poblarClientesContratos(); cargarResumenesGuardados(); }
@@ -3628,6 +3628,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       if (seccion === 'import2') abrirImport2();
       if (seccion === 'nomina') abrirNomina();
       if (seccion === 'impuestos') abrirImpuestos();
+      if (seccion === 'gastos') abrirGastos();
       if (seccion === 'concil') abrirConcil();
       if (seccion === 'pce') abrirPce();
       if (seccion === 'cuentas') abrirCatalogoCuentas();
@@ -3653,7 +3654,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
         abrirAnalisis(rubro, cuentaElegida);
       }
 
-      const desdeAnalisis = ((seccion === 'arrend' || seccion === 'import2' || seccion === 'nomina' || seccion === 'impuestos' || seccion === 'concil') && sub === 'analisis');
+      const desdeAnalisis = ((seccion === 'arrend' || seccion === 'import2' || seccion === 'nomina' || seccion === 'impuestos' || seccion === 'gastos' || seccion === 'concil') && sub === 'analisis');
       if (seccion === 'arrend') { const t = document.getElementById('ar-titulo'); if (t) t.textContent = desdeAnalisis ? '2. Activos por derecho de uso y pasivos por arrendamiento' : 'Arrendamientos NIIF 16'; }
       if (seccion === 'concil') { pintarHojasAA(); const t = document.getElementById('cb-titulo'); if (t) t.textContent = '2. Bancos'; }
       if (desdeAnalisis) {
@@ -3707,7 +3708,8 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       ]
     };
     EXTRAS_ANALISIS['costos-gastos'] = [
-      { sumaria: 'RC', id: 'nomina', nombre: 'RC01 Nómina (prueba)' }
+      { sumaria: 'RC', id: 'nomina', nombre: 'RC01 Nómina (prueba)' },
+      { sumaria: 'RC', id: 'gastos', nombre: 'RC02 Gastos (prueba)' }
     ];
     const RUBROS_ANALISIS = {
       'activos': { titulo: 'Activos', cuentas: [{ clave: 'inversiones_corrientes', nombre: 'Inversiones corrientes', sumariaCorto: 'AB', sumariaLargo: 'AS' }, { clave: 'equivalentes', nombre: 'Efectivo y equivalentes de efectivo › Equivalentes de efectivo', sumariaCorto: 'AA', hoja: 'equivalentes', oculta: true }] },
@@ -4870,6 +4872,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
     // ===== Tipos de documento por cuenta y lista de qué subir =====
     const PC_ETIQ = {
       'RC:nomina': ['Planilla de fondos de reserva del IESS', 'Planilla de préstamos hipotecarios del IESS', 'Planilla de préstamos quirografarios del IESS', 'Mayor contable completo', 'Mayor contable de nómina', 'Mayor de pasivos laborales (beneficios sociales)', 'Mayor de IESS por pagar', 'Mayor de anticipos a empleados', 'Rol de pagos (por mes y por persona)', 'Planilla del IESS', 'Listado de personal con fecha de ingreso', 'Cálculo de décimos', 'Cálculo de fondo de reserva', 'Utilidades a trabajadores', 'Finiquitos', 'Liquidaciones', 'Formulario 107', 'Contrato o expediente del colaborador', 'Otro'],
+      'RC:gastos': ['Factura de compra o gasto', 'Nota de crédito', 'Comprobante de retención', 'Otro'],
       'AH:impuestos': ['Mayor de IVA en compras (crédito tributario IVA)', 'Mayor de retenciones de IVA recibidas', 'Mayor de retenciones en la fuente de renta recibidas', 'Mayor de ISD (crédito tributario)', 'Mayor contable completo', 'Formulario 104 (declaración de IVA)', 'ATS (anexo transaccional)', 'Reporte de compras', 'Reporte de ventas', 'Formulario 103 (retenciones en la fuente)', 'Comprobantes de retención recibidos (SRI)', 'Declaración de impuesto a la renta (Formulario 101)', 'Documentos del ISD (pago y partida arancelaria)', 'Balance de comprobación', 'Otro'],
       'AA:bancos': ['Conciliación bancaria', 'Estado de cuenta', 'Confirmación bancaria', 'Firmas autorizadas', 'Otro'],
       'AA:caja': ['Acta de arqueo de caja', 'Detalle de fondos y caja chica', 'Documento de soporte', 'Otro'],
@@ -4885,7 +4888,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       AS: ['Certificado o póliza de inversión', 'Estado de cuenta', 'Confirmación bancaria', 'Detalle o anexo de inversiones', 'Otro']
     };
     const PC_HOJAS = { impuestos: 'Activos por impuestos corrientes', caja: 'Caja', bancos: 'Bancos', equivalentes: 'Equivalentes de efectivo', venta: 'Inventario para la venta, importaciones en tránsito y kárdex', costo_ventas: 'Costo de ventas → salidas', kardex: 'Movimiento de kárdex', import: 'Importaciones (liquidaciones)', voucheo: 'Revisión de documentación (voucheo)', nomina: 'Nómina', depreciaciones: 'Depreciaciones', gastos: 'Gastos en general' };
-    const PC_HOJAS_SUM = { AA: [['caja', 'Caja'], ['bancos', 'Bancos'], ['equivalentes', 'Equivalentes de efectivo']], AF: [['venta', 'Inventario para la venta, importaciones en tránsito y kárdex']], RC: [['nomina', 'Nómina']], AH: [['impuestos', 'Activos por impuestos corrientes']] };
+    const PC_HOJAS_SUM = { AA: [['caja', 'Caja'], ['bancos', 'Bancos'], ['equivalentes', 'Equivalentes de efectivo']], AF: [['venta', 'Inventario para la venta, importaciones en tránsito y kárdex']], RC: [['nomina', 'Nómina'], ['gastos', 'Gastos en general']], AH: [['impuestos', 'Activos por impuestos corrientes']] };
     function pcNombreHoja(h) { return PC_HOJAS[h] || h || ''; }
     const PC_TODO = 'Todo en un archivo (todos los documentos juntos)';
     function pcEtiquetas(sumaria, hoja) {
@@ -5661,8 +5664,8 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
     function pcSumDeHoja(h) { return ({ nomina: 'RC', depreciaciones: 'RC', gastos: 'RC', impuestos: 'AH' })[h] || 'AF'; }
     function pcBarraPedido(hoja, cli, anio, vis, texto) {
       if (!cli) return '';
-      const T = { venta: ['Ingreso de información: todo se pide a Claude', 'Pedir a Claude (mayor contable + cuentas de inventario, tránsito y costo de ventas + kárdex + liquidaciones)'], costo_ventas: ['Costo de ventas: todo se pide a Claude', 'Pedir a Claude (mayor contable + cuentas de costo de ventas)'], kardex: ['Kárdex: todo se pide a Claude', 'Pedir a Claude (kárdex)'], nomina: ['Nómina: todo se pide a Claude', 'Pedir a Claude (mayor contable + roles de pago + IESS + décimos, fondo de reserva y utilidades + finiquitos)'], impuestos: ['Impuestos corrientes: todo se pide a Claude', 'Pedir a Claude (mayores de impuestos + formularios 104 + ATS + retenciones)'] }[hoja] || ['Todo se pide a Claude', 'Pedir a Claude'];
-      return '<div class="mt-3 p-3 bg-white border border-slate-200 rounded-xl space-y-2 text-xs text-slate-700"><div class="text-[13px] font-semibold text-slate-800 ic-claude ic-tomate">' + T[0] + '</div><p class="text-slate-600">' + escapeHtml(texto) + '</p><div class="flex flex-wrap items-center gap-2"><button type="button" onclick="pcIrAPedido(\'' + pcSumDeHoja(hoja) + '\', \'' + escapeHtml(cli) + '\', \'' + escapeHtml(anio) + '\', \'' + escapeHtml(vis) + '\', \'' + hoja + '\')" class="px-3 py-1.5 rounded-lg text-xs transition bg-slate-200 text-slate-900 hover:bg-slate-300 font-semibold ic-claude">' + T[1] + '</button>' + ((hoja === 'venta' || hoja === 'nomina' || hoja === 'impuestos') ? '<button type="button" onclick="pcReprocesarPedido(\'' + escapeHtml(cli) + '\', \'' + escapeHtml(anio) + '\', \'' + escapeHtml(vis) + '\', \'' + hoja + '\')" class="px-1 py-1.5 text-xs font-bold bg-transparent border-0 hover:underline transition" style="color:#449964" title="Crea un pedido nuevo con los mismos archivos y cuentas del último pedido">↻ Pedir de nuevo a Claude (mismos archivos)</button>' : '') + '</div>' + (hoja === 'venta' ? '<p class="text-[11px] text-slate-500">«Pedir de nuevo» hace que Claude vuelva a leer los archivos (por ejemplo, si cambió algo en los datos). Para solo recalcular con lo ya leído use «↻ Recalcular» en cada pestaña.</p>' : '') + '</div>';
+      const T = { venta: ['Ingreso de información: todo se pide a Claude', 'Pedir a Claude (mayor contable + cuentas de inventario, tránsito y costo de ventas + kárdex + liquidaciones)'], costo_ventas: ['Costo de ventas: todo se pide a Claude', 'Pedir a Claude (mayor contable + cuentas de costo de ventas)'], kardex: ['Kárdex: todo se pide a Claude', 'Pedir a Claude (kárdex)'], nomina: ['Nómina: todo se pide a Claude', 'Pedir a Claude (mayor contable + roles de pago + IESS + décimos, fondo de reserva y utilidades + finiquitos)'], gastos: ['Gastos: se piden a Claude los soportes de la muestra', 'Pedir a Claude (facturas, notas de crédito y retenciones de la muestra + mayor contable)'], impuestos: ['Impuestos corrientes: todo se pide a Claude', 'Pedir a Claude (mayores de impuestos + formularios 104 + ATS + retenciones)'] }[hoja] || ['Todo se pide a Claude', 'Pedir a Claude'];
+      return '<div class="mt-3 p-3 bg-white border border-slate-200 rounded-xl space-y-2 text-xs text-slate-700"><div class="text-[13px] font-semibold text-slate-800 ic-claude ic-tomate">' + T[0] + '</div><p class="text-slate-600">' + escapeHtml(texto) + '</p><div class="flex flex-wrap items-center gap-2"><button type="button" onclick="pcIrAPedido(\'' + pcSumDeHoja(hoja) + '\', \'' + escapeHtml(cli) + '\', \'' + escapeHtml(anio) + '\', \'' + escapeHtml(vis) + '\', \'' + hoja + '\')" class="px-3 py-1.5 rounded-lg text-xs transition bg-slate-200 text-slate-900 hover:bg-slate-300 font-semibold ic-claude">' + T[1] + '</button>' + ((hoja === 'venta' || hoja === 'nomina' || hoja === 'impuestos' || hoja === 'gastos') ? '<button type="button" onclick="pcReprocesarPedido(\'' + escapeHtml(cli) + '\', \'' + escapeHtml(anio) + '\', \'' + escapeHtml(vis) + '\', \'' + hoja + '\')" class="px-1 py-1.5 text-xs font-bold bg-transparent border-0 hover:underline transition" style="color:#449964" title="Crea un pedido nuevo con los mismos archivos y cuentas del último pedido">↻ Pedir de nuevo a Claude (mismos archivos)</button>' : '') + '</div>' + (hoja === 'venta' ? '<p class="text-[11px] text-slate-500">«Pedir de nuevo» hace que Claude vuelva a leer los archivos (por ejemplo, si cambió algo en los datos). Para solo recalcular con lo ya leído use «↻ Recalcular» en cada pestaña.</p>' : '') + '</div>';
     }
     // Repite el último pedido de la hoja con los mismos archivos y cuentas (los archivos se copian, no se vuelven a subir)
     async function pcReprocesarPedido(cli, anio, vis, hoja) {
@@ -13889,6 +13892,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       if (clave === 'bancos') return 'Efectivo y equivalentes de efectivo › Bancos';
       if (clave === 'inventarios_v2') return 'AF Inventarios › Conclusiones de la cuenta';
       if (clave === 'nomina') return 'RC01 Nómina (prueba) › Conclusiones de la cuenta';
+      if (clave === 'gastos') return 'RC02 Gastos (prueba) › Conclusiones de la cuenta';
       if (clave === 'impuestos') return 'AH Activos por impuestos corrientes › Conclusiones de la cuenta';
       for (const r of Object.values(RUBROS_ANALISIS)) {
         const c = r.cuentas.find(x => x.clave === clave);
@@ -16295,6 +16299,7 @@ ${cont.innerHTML}
       { clave: 'arrend', nombre: '     ↳ 2. Análisis Claves › Activos › Activos por derecho de uso y pasivos por arrendamiento', btn: 'nav-cuenta-extra-activos-arrend', defecto: false },
       { clave: 'import2', nombre: '     ↳ 2. Análisis Claves › Activos › AF Inventarios', btn: 'nav-cuenta-extra-activos-import2', defecto: false },
       { clave: 'nomina', nombre: '     ↳ 2. Análisis Claves › Costos y gastos › RC01 Nómina (prueba)', btn: 'nav-cuenta-extra-costos-gastos-nomina', defecto: false },
+      { clave: 'gastos', nombre: '     ↳ 2. Análisis Claves › Costos y gastos › RC02 Gastos (prueba)', btn: 'nav-cuenta-extra-costos-gastos-gastos', defecto: false },
       { clave: 'impuestos', nombre: '     ↳ 2. Análisis Claves › Activos › AH Activos por impuestos corrientes', btn: 'nav-cuenta-extra-activos-impuestos', defecto: false },
       { clave: 'concil', nombre: '     ↳ 2. Análisis Claves › Activos › AA Efectivo y equivalentes de efectivo (hojas Bancos y Equivalentes)', btn: 'nav-cuenta-extra-activos-concil', defecto: false },
       { clave: 'visitas', nombre: '1b) Auditoría/Planificación › Visitas (Calendario)', btn: 'nav-visitas' },
@@ -19465,6 +19470,12 @@ ${cont.innerHTML}
         { n: 'Utilidades, finiquitos y liquidaciones', req: false, et: ['Utilidades a trabajadores', 'Finiquitos', 'Liquidaciones'] },
         { n: 'Formulario 107 y contratos', req: false, et: ['Formulario 107', 'Contrato o expediente del colaborador'] }
       ], sum: 'RC', hoja: 'nomina', titulo: '2. Nómina', subtit: 'Análisis guiado por el programa de auditoría: Claude elabora cada procedimiento de nómina y arma los papeles de trabajo; el auditor revisa.', nombre: 'RC - Nómina', ref: 'RC · Nómina', corto: 'Nómina', txtSubir: 'Aquí se sube todo en un solo pedido: el mayor contable de las cuentas de nómina, los mayores de los pasivos laborales (beneficios sociales e IESS por pagar) y de anticipos a empleados, los roles de pago de todos los meses, las planillas del IESS, el listado de personal con fecha de ingreso (para saber quién tiene más de un año y accede al fondo de reserva), el cálculo de décimos, fondo de reserva y utilidades, y los finiquitos. Claude lo lee junto y las demás pestañas leen de aquí. Cuando el pedido pase a "hecho", presiona «Actualizar».' },
+      gastos: { tabs: [['subir', 'Subir información'], ['validacion', 'Validación con el mayor'], ['resumen', 'Resumen']], tab0: 'subir', cob: [
+        { n: 'Mayor contable completo (se carga en la pantalla Mayor contable)', req: true, et: ['Mayor contable completo'] },
+        { n: 'Facturas y documentos de compra o gasto de la muestra', req: true, et: ['Factura de compra o gasto'] },
+        { n: 'Notas de crédito', req: false, et: ['Nota de crédito'] },
+        { n: 'Comprobantes de retención', req: false, et: ['Comprobante de retención'] }
+      ], sum: 'RC', hoja: 'gastos', titulo: '2. RC02 Gastos', subtit: 'El auditor sube los soportes de su muestra; Claude arma el cuadro con los datos de cada documento y lo busca en el mayor contable; el auditor verifica con una marca y la aplicación arma el resumen.', nombre: 'RC02 - Gastos', ref: 'RC02 · Gastos', corto: 'Gastos', txtSubir: 'Sube aquí los soportes de la muestra que elegiste: facturas, notas de crédito y comprobantes de retención, en PDF o en foto (pueden ir varios documentos por archivo). El mayor contable se carga una sola vez en la pantalla Mayor contable y Claude lo usa solo. Cuando el pedido pase a "hecho", ve a «Validación con el mayor» y presiona «Actualizar».' },
       impuestos: { cob: [
         { n: 'Mayor contable (completo o por cuenta)', req: true, et: ['Mayor contable completo', 'Mayor de IVA en compras (crédito tributario IVA)', 'Mayor de retenciones de IVA recibidas', 'Mayor de retenciones en la fuente de renta recibidas', 'Mayor de ISD (crédito tributario)'] },
         { n: 'Declaraciones de IVA (formulario 104)', req: true, et: ['Formulario 104 (declaración de IVA)'] },
@@ -19485,8 +19496,9 @@ ${cont.innerHTML}
     function nmUsarContexto(k) {
       const antes = NM_CTX; NM_CTX = NM_CFGS[k] || NM_CFGS.nomina;
       const t = $im('nm-titulo'), st = $im('nm-subtit'); if (t) t.innerHTML = NM_CTX.titulo; if (st) st.textContent = NM_CTX.subtit;
-      if (antes !== NM_CTX) { nmE.tab = 'programa'; nmE.cons = null; nmE.res = null; nmE.bal = null; nmE.conc = null; }
+      if (antes !== NM_CTX) { nmE.tab = NM_CTX.tab0 || 'programa'; nmE.cons = null; nmE.res = null; nmE.bal = null; nmE.conc = null; }
     }
+    async function abrirGastos() { nmUsarContexto('gastos'); return abrirNomina(true); }
     async function abrirImpuestos() { nmUsarContexto('impuestos'); return abrirNomina(true); }
     async function abrirNomina(ya) {
       if (!ya) nmUsarContexto('nomina');
@@ -19522,6 +19534,7 @@ ${cont.innerHTML}
       nmSubirCargar();
       nmResCargar();
       nmConcCargar();
+      if (NM_CTX.hoja === 'gastos') gaCargar();
     }
     // Si la referencia no está tal cual en la base de normas (p. ej. "NIC 2.9 y 2.36"), la arma desde sus partes
     function nmArmarChips(txt) {
@@ -19555,8 +19568,9 @@ ${cont.innerHTML}
     function nmPintar() {
       flechasLados('sec-nomina', 'nm-panel');
       const tb = $im('nm-tabs');
-      if (tb) { const cbN = nmCobertura().n; tb.innerHTML = NM_TABS.map(([k, n]) => '<button type="button" onclick="nmIrTab(\'' + k + '\')" class="px-3 py-1.5 text-xs transition rounded-lg ' + (nmE.tab === k ? 'bg-slate-200 text-slate-900 font-semibold' : 'text-slate-600 hover:bg-slate-100 font-medium') + '">' + n + (k === 'subir' && cbN ? '<span title="Información incompleta: abra Informe" style="display:inline-block;min-width:18px;padding:0 5px;margin-left:6px;border-radius:9px;background:#dc2626;color:#fff;font-size:11px;font-weight:700;line-height:18px;text-align:center">' + cbN + '</span>' : '') + (k === 'conclusiones' ? pcConcBadgeHtml('nm') : '') + '</button>').join(''); }
+      if (tb) { const cbN = nmCobertura().n; tb.innerHTML = (NM_CTX.tabs || NM_TABS).map(([k, n]) => '<button type="button" onclick="nmIrTab(\'' + k + '\')" class="px-3 py-1.5 text-xs transition rounded-lg ' + (nmE.tab === k ? 'bg-slate-200 text-slate-900 font-semibold' : 'text-slate-600 hover:bg-slate-100 font-medium') + '">' + n + (k === 'subir' && cbN ? '<span title="Información incompleta: abra Informe" style="display:inline-block;min-width:18px;padding:0 5px;margin-left:6px;border-radius:9px;background:#dc2626;color:#fff;font-size:11px;font-weight:700;line-height:18px;text-align:center">' + cbN + '</span>' : '') + (k === 'conclusiones' ? pcConcBadgeHtml('nm') : '') + '</button>').join(''); }
       if (nmE.tab === 'subir') { nmSubirPintar(); return; }
+      if (NM_CTX.hoja === 'gastos') { if (nmE.tab === 'validacion') gaValPintar(); else gaResPintar(); return; }
       if (nmE.tab === 'resultado') { nmResPintar(); return; }
       if (nmE.tab === 'cuadres') { nmCuaPintar(); return; }
       if (nmE.tab === 'conclusiones') { nmConcPintar(); return; }
@@ -19658,6 +19672,169 @@ ${cont.innerHTML}
       const CB = nmCobertura(), insig = CB.n ? '<span style="display:inline-block;min-width:18px;padding:0 5px;margin-left:6px;border-radius:9px;background:#dc2626;color:#fff;font-size:11px;font-weight:700;line-height:18px;text-align:center">' + CB.n + '</span>' : '';
       const barraInf = '<div class="flex justify-end mb-2"><button type="button" onclick="nmInformeAbrir()" class="px-3 py-1.5 text-xs font-semibold rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50" title="Qué información se subió, si se pudo leer y si Claude la analizó">Informe' + insig + '</button></div>';
       c.innerHTML = '<div class="p-3">' + barraInf + pcBarraPedido(NM_CTX.hoja, nmE.cliente, nmE.anio, nmE.visita, NM_CTX.txtSubir) + detalle + '</div>';
+    }
+    // ===== RC02 Gastos: subir los soportes de la muestra, validar contra el mayor y resumir =====
+    const GA_ATRIB = [['cuenta', 'Cuenta'], ['valor', 'Valor'], ['iva', 'IVA'], ['ret', 'Retención'], ['conc', 'Concepto y fecha']];
+    const GA_SUMS = ['RC', 'RD', 'RE', 'RG'];
+    const gaE = { id: 0, filas: [], bal: [], mayor: null, mov: '', cargado: false, error: '' };
+    const gaM = v => (v === null || v === undefined || v === '') ? '' : Number(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    async function gaCargar() {
+      const cli = nmE.cliente, anio = Number(nmE.anio), vis = nmE.visita, id = ++gaE.id;
+      Object.assign(gaE, { cargado: false, filas: [], bal: [], mayor: null, mov: '', error: '' });
+      if (!cli) return;
+      if (nmE.tab === 'validacion' || nmE.tab === 'resumen') nmPintar();
+      const [f, b, m] = await Promise.all([
+        supabaseClient.from('gastos_facturas').select('*').eq('cliente_id', cli).eq('anio', anio).eq('visita', vis).order('cuenta', { ascending: true }).order('fecha', { ascending: true }),
+        supabaseClient.from('balance_comprobacion').select('codigo,cuenta,saldo,sumaria,fecha_corte').eq('cliente_id', cli).eq('anio', anio).eq('visita', vis).in('sumaria', GA_SUMS).order('codigo', { ascending: true }),
+        supabaseClient.from('pedidos_claude_archivos').select('id,nombre,created_at').is('pedido_id', null).eq('cliente_id', cli).eq('anio', anio).eq('etiqueta', PC_MAYOR_ETQ).is('eliminado_at', null).order('created_at', { ascending: false }).limit(1)
+      ]);
+      if (id !== gaE.id) return;
+      gaE.error = f.error ? (f.error.message || String(f.error)) : '';
+      gaE.filas = f.data || []; gaE.bal = (b && b.data) || []; gaE.mayor = (m && m.data && m.data[0]) || null;
+      if (gaE.mayor) { try { const r = await supabaseClient.rpc('mayor_mov_iniciar', { p_archivo: gaE.mayor.id }); gaE.mov = r.error ? '' : String(r.data || ''); } catch (e) { } }
+      if (id !== gaE.id) return;
+      gaE.cargado = true;
+      if (nmE.tab === 'validacion' || nmE.tab === 'resumen') nmPintar();
+      if (['iniciado', 'en_proceso'].includes(gaE.mov)) setTimeout(() => { if (id === gaE.id && (nmE.tab === 'validacion' || nmE.tab === 'resumen')) gaRevisarMov(id); }, 20000);
+    }
+    async function gaRevisarMov(id) {
+      if (id !== gaE.id || !gaE.mayor) return;
+      try { const r = await supabaseClient.rpc('mayor_mov_iniciar', { p_archivo: gaE.mayor.id }); if (!r.error) gaE.mov = String(r.data || ''); } catch (e) { }
+      if (id !== gaE.id) return;
+      if (nmE.tab === 'validacion') nmPintar();
+      if (['iniciado', 'en_proceso'].includes(gaE.mov)) setTimeout(() => { if (id === gaE.id && nmE.tab === 'validacion') gaRevisarMov(id); }, 20000);
+    }
+    function gaMarcaEf(f, k) {
+      const a = f.rev && f.rev[k]; if (a) return { v: a, por: 'aud' };
+      const c = f.claude && f.claude.rev && f.claude.rev[k]; return c ? { v: c, por: 'cl' } : { v: '', por: '' };
+    }
+    function gaEstadoFila(f) {
+      const ms = GA_ATRIB.map(([k]) => (f.rev && f.rev[k]) || '');
+      if (ms.some(x => x === 'ex')) return 'ex';
+      return ms.every(x => x === 'ok' || x === 'na') ? 'ok' : 'pend';
+    }
+    function gaValorFila(f) { return Number(f.valor_mayor != null ? f.valor_mayor : (f.base_iva != null || f.base_0 != null ? (Number(f.base_iva || 0) + Number(f.base_0 || 0)) : (f.total || 0))); }
+    async function gaGuardarFila(id, cambios) {
+      const { error } = await supabaseClient.from('gastos_facturas').update({ ...cambios, updated_at: new Date().toISOString() }).eq('id', id);
+      if (error) { alert('No se pudo guardar: ' + (error.message || error)); return false; }
+      const f = gaE.filas.find(x => x.id === id); if (f) Object.assign(f, cambios);
+      return true;
+    }
+    async function gaMarcar(id, k) {
+      const f = gaE.filas.find(x => x.id === id); if (!f) return;
+      const ciclo = ['', 'ok', 'ex', 'na'], act = (f.rev && f.rev[k]) || '', sig = ciclo[(ciclo.indexOf(act) + 1) % ciclo.length];
+      const rev = { ...(f.rev || {}) }; if (sig) rev[k] = sig; else delete rev[k];
+      if (await gaGuardarFila(id, { rev, revisado_por: nombreUsuarioActivo() || null, revisado_at: new Date().toISOString() })) nmPintar();
+    }
+    async function gaAceptar(id) {
+      const f = gaE.filas.find(x => x.id === id); if (!f) return;
+      const rev = { ...(f.rev || {}) }; let n = 0;
+      GA_ATRIB.forEach(([k]) => { const c = f.claude && f.claude.rev && f.claude.rev[k]; if (!rev[k] && c) { rev[k] = c; n++; } });
+      if (!n) { alert('Claude no dejó marcas pendientes de aceptar en este documento.'); return; }
+      if (await gaGuardarFila(id, { rev, revisado_por: nombreUsuarioActivo() || null, revisado_at: new Date().toISOString() })) nmPintar();
+    }
+    async function gaComentario(id, v) { await gaGuardarFila(id, { comentario: v.trim() || null }); }
+    async function gaQuitar(id) {
+      const f = gaE.filas.find(x => x.id === id); if (!f) return;
+      if (!await confirmarApp('¿Quitar este documento de la validación?\n\n' + (f.proveedor || '') + ' · ' + (f.numero || ''))) return;
+      const { error } = await supabaseClient.from('gastos_facturas').delete().eq('id', id);
+      if (error) { alert('No se pudo quitar: ' + (error.message || error)); return; }
+      gaE.filas = gaE.filas.filter(x => x.id !== id); nmPintar();
+    }
+    function gaEstadoMayor() {
+      if (!gaE.mayor) return { t: 'No hay mayor contable cargado para este cliente, año y visita: cárgalo en la pantalla Mayor contable del menú. Sin él, Claude no puede buscar en qué cuenta está registrada cada factura.', col: '#b42318' };
+      const t = { listo: 'Mayor listo para buscar facturas (' + gaE.mayor.nombre + ').', sin_mayor_en_partes: 'Mayor cargado (' + gaE.mayor.nombre + ').', resumen_en_proceso: 'El mayor todavía arma su resumen por cuenta; espera unos minutos.', iniciado: 'Preparando los movimientos de gasto del mayor… puede tardar unos minutos.', en_proceso: 'Preparando los movimientos de gasto del mayor… puede tardar unos minutos.' }[gaE.mov];
+      return { t: t || ('Mayor cargado (' + gaE.mayor.nombre + ').'), col: ['listo', 'sin_mayor_en_partes'].includes(gaE.mov) || !gaE.mov ? '#1d6b3a' : '#8a5a00' };
+    }
+    function gaValPintar() {
+      const c = $im('nm-panel'), e = escapeHtml;
+      if (!nmE.cliente) { c.innerHTML = '<p class="text-xs text-slate-500 p-4">Selecciona el cliente para comenzar.</p>'; return; }
+      if (!gaE.cargado) { c.innerHTML = '<p class="text-xs text-slate-500 p-4">Cargando…</p>'; return; }
+      if (gaE.error) { c.innerHTML = '<p class="text-xs text-red-600 font-bold p-4">No se pudo cargar: ' + e(gaE.error) + '</p>'; return; }
+      const em = gaEstadoMayor(), F = gaE.filas;
+      const nOk = F.filter(f => gaEstadoFila(f) === 'ok').length, nEx = F.filter(f => gaEstadoFila(f) === 'ex').length, nPe = F.length - nOk - nEx;
+      const barra = '<div class="flex flex-wrap items-center gap-x-4 gap-y-1 mb-2 text-xs"><span class="font-semibold" style="color:' + em.col + '">' + e(em.t) + '</span><span class="text-slate-600">' + F.length + ' documento(s): <b style="color:#1d6b3a">' + nOk + ' validados</b> · <b style="color:#b42318">' + nEx + ' con excepción</b> · ' + nPe + ' pendientes</span><button type="button" onclick="gaCargar()" class="px-2 py-1 text-[11px] font-semibold border border-slate-300 rounded-lg hover:bg-slate-50">↻ Actualizar</button></div>';
+      const ayuda = '<p class="text-[11px] text-slate-500 mb-2">Claude arma cada fila con los datos del documento y busca en el mayor dónde está registrado. En cada casilla, un clic marca ✓ correcto, otro ✗ con excepción, otro – no aplica, y otro la deja vacía. El símbolo de color tenue es la sugerencia de Claude (pasa el cursor para ver la evidencia); lo que marca el auditor manda. Una fila queda <b>validada</b> cuando las cinco casillas tienen ✓ o – del auditor.</p>';
+      if (!F.length) { c.innerHTML = '<div class="p-3">' + barra + ayuda + '<p class="text-xs text-slate-600 border border-dashed border-slate-300 rounded-xl p-4">Todavía no hay documentos validados. Sube los soportes de tu muestra en la pestaña «Subir información» y pide a Claude; cuando el pedido pase a «hecho», presiona «Actualizar».</p></div>'; return; }
+      const TD = 'px-1.5 py-0.5 align-top', TH = 'px-1.5 py-1 text-left font-bold';
+      const glifo = { ok: '✓', ex: '✗', na: '–' }, colr = { ok: '#1d6b3a', ex: '#b42318', na: '#64748b' };
+      const celda = (f, k) => {
+        const m = gaMarcaEf(f, k), det = f.claude && f.claude.detalle && f.claude.detalle[k];
+        const tip = (m.por === 'cl' ? 'Sugerencia de Claude: ' : (m.por === 'aud' ? 'Marca del auditor. ' : '')) + (det || (m.v ? '' : 'Sin marca: clic para marcar'));
+        const estilo = m.v ? 'color:' + colr[m.v] + ';border:1px ' + (m.por === 'cl' ? 'dashed' : 'solid') + ' ' + colr[m.v] + ';opacity:' + (m.por === 'cl' ? '.55' : '1') + ';font-weight:700' : 'color:#94a3b8;border:1px dashed #cbd5e1';
+        return '<td class="' + TD + ' text-center"><button type="button" onclick="gaMarcar(\'' + f.id + '\',\'' + k + '\')" title="' + e(tip) + '" style="' + estilo + ';width:24px;height:20px;border-radius:5px;background:#fff;line-height:1;font-size:12px">' + (m.v ? glifo[m.v] : '·') + '</button></td>';
+      };
+      const estLbl = { ok: '<span style="color:#1d6b3a;font-weight:700">Validado</span>', ex: '<span style="color:#b42318;font-weight:700">Excepción</span>', pend: '<span class="text-slate-500">Pendiente</span>' };
+      const filas = F.map((f, i) => {
+        const movs = Array.isArray(f.mayor) ? f.mayor.slice(0, 6).map(x => (x.cuenta || '') + ' · asiento ' + (x.asiento || '') + ' · ' + (x.fecha || '') + ' · ' + gaM(x.debito || x.credito)).join('\n') : '';
+        const resumen = f.claude && f.claude.resumen ? f.claude.resumen : '';
+        return '<tr class="border-t border-slate-200">' +
+          '<td class="' + TD + ' text-slate-500">' + (i + 1) + '</td>' +
+          '<td class="' + TD + '" style="min-width:11rem"><div class="font-semibold text-slate-800">' + e(f.proveedor || '—') + '</div><div class="text-slate-500">' + e(f.ruc || '') + '</div></td>' +
+          '<td class="' + TD + ' whitespace-nowrap"><div>' + e(({ factura: 'Factura', nota_credito: 'Nota de crédito', retencion: 'Retención', otro: 'Otro' })[f.tipo] || f.tipo || '') + ' ' + e(f.numero || '') + '</div><div class="text-slate-500">' + e(f.fecha || '') + '</div></td>' +
+          '<td class="' + TD + '" style="min-width:12rem" title="' + e(resumen) + '">' + e(f.concepto || '') + '</td>' +
+          '<td class="' + TD + ' text-right whitespace-nowrap">' + gaM(Number(f.base_iva || 0) + Number(f.base_0 || 0)) + '</td>' +
+          '<td class="' + TD + ' text-right whitespace-nowrap">' + gaM(f.iva) + '</td>' +
+          '<td class="' + TD + ' text-right whitespace-nowrap">' + gaM(f.total) + '</td>' +
+          '<td class="' + TD + ' text-right whitespace-nowrap">' + gaM(f.ret_renta) + '</td>' +
+          '<td class="' + TD + ' text-right whitespace-nowrap">' + gaM(f.ret_iva) + '</td>' +
+          '<td class="' + TD + '" style="min-width:10rem" title="' + e(movs) + '"><div class="font-semibold text-slate-800">' + e(f.cuenta || '— no encontrada —') + '</div><div class="text-slate-500">' + e(f.cuenta_nombre || '') + '</div></td>' +
+          '<td class="' + TD + ' whitespace-nowrap">' + e(f.asiento || '') + '</td>' +
+          '<td class="' + TD + ' text-right whitespace-nowrap">' + gaM(f.valor_mayor) + '</td>' +
+          GA_ATRIB.map(([k]) => celda(f, k)).join('') +
+          '<td class="' + TD + ' whitespace-nowrap">' + estLbl[gaEstadoFila(f)] + (f.revisado_por ? '<div class="text-[10px] text-slate-500">' + e(nombreMostrado(f.revisado_por) || '') + '</div>' : '') + '</td>' +
+          '<td class="' + TD + '"><input type="text" value="' + e(f.comentario || '') + '" onchange="gaComentario(\'' + f.id + '\', this.value)" placeholder="Comentario" class="w-40 border border-slate-200 rounded px-1 py-0.5 text-[11px]"></td>' +
+          '<td class="' + TD + ' whitespace-nowrap"><button type="button" onclick="gaAceptar(\'' + f.id + '\')" title="Aceptar como propias las sugerencias de Claude de esta fila" class="text-[11px] underline text-slate-700 mr-2">Aceptar</button><button type="button" onclick="gaQuitar(\'' + f.id + '\')" class="text-[11px] text-slate-400 hover:text-rose-600" title="Quitar de la validación">✕</button></td></tr>';
+      }).join('');
+      c.innerHTML = '<div class="p-3">' + barra + ayuda + '<div class="overflow-x-auto border border-slate-200 rounded-xl"><table class="w-full text-[11px] leading-tight border-collapse" style="min-width:90rem"><thead class="bg-slate-100 text-slate-700"><tr><th class="' + TH + '">#</th><th class="' + TH + '">Proveedor · RUC</th><th class="' + TH + '">Documento</th><th class="' + TH + '">Concepto</th><th class="' + TH + ' text-right">Base</th><th class="' + TH + ' text-right">IVA</th><th class="' + TH + ' text-right">Total</th><th class="' + TH + ' text-right">Ret. renta</th><th class="' + TH + ' text-right">Ret. IVA</th><th class="' + TH + '">Cuenta en el mayor</th><th class="' + TH + '">Asiento</th><th class="' + TH + ' text-right">En el mayor</th>' + GA_ATRIB.map(([, n]) => '<th class="' + TH + ' text-center">' + n + '</th>').join('') + '<th class="' + TH + '">Estado</th><th class="' + TH + '">Comentario</th><th></th></tr></thead><tbody>' + filas + '</tbody></table></div></div>';
+    }
+    // Resumen por cuenta de gasto, igual al cuadro de resumen de gastos de los papeles de trabajo
+    function gaResumenDatos() {
+      const por = {};
+      gaE.bal.forEach(b => { const k = b.codigo; if (!por[k]) por[k] = { codigo: k, nombre: String(b.cuenta || '').replace(/^\s*\d+\s*-\s*/, ''), valor: 0, n: 0, val: 0, ex: 0, pend: 0 }; por[k].valor += Number(b.saldo || 0); });
+      gaE.filas.forEach(f => {
+        const k = f.cuenta || '(sin cuenta)';
+        if (!por[k]) por[k] = { codigo: k, nombre: f.cuenta_nombre || '', valor: 0, n: 0, val: 0, ex: 0, pend: 0 };
+        const x = por[k], st = gaEstadoFila(f); x.n++;
+        if (st === 'ok') x.val += gaValorFila(f); else if (st === 'ex') x.ex++; else x.pend++;
+      });
+      const filas = Object.values(por).filter(x => Math.abs(x.valor) > 0.004 || x.n).sort((a, b) => String(a.codigo).localeCompare(String(b.codigo)));
+      const tot = filas.reduce((a, x) => ({ valor: a.valor + x.valor, n: a.n + x.n, val: a.val + x.val, ex: a.ex + x.ex, pend: a.pend + x.pend }), { valor: 0, n: 0, val: 0, ex: 0, pend: 0 });
+      return { filas, tot };
+    }
+    function gaResPintar() {
+      const c = $im('nm-panel'), e = escapeHtml;
+      if (!nmE.cliente) { c.innerHTML = '<p class="text-xs text-slate-500 p-4">Selecciona el cliente para comenzar.</p>'; return; }
+      if (!gaE.cargado) { c.innerHTML = '<p class="text-xs text-slate-500 p-4">Cargando…</p>'; return; }
+      const D = gaResumenDatos(), pct = (a, b) => b ? (100 * a / b).toFixed(1) + ' %' : '';
+      const TD = 'px-2 py-0.5', TH = 'px-2 py-1 text-left font-bold';
+      const cuerpo = D.filas.map(x => '<tr class="border-t border-slate-200"><td class="' + TD + '">' + e(x.codigo) + (x.nombre ? ' - ' + e(x.nombre) : '') + '</td><td class="' + TD + ' text-right">' + gaM(x.valor) + '</td><td class="' + TD + ' text-right">' + pct(x.valor, D.tot.valor) + '</td><td class="' + TD + ' text-right">' + (x.n || '') + '</td><td class="' + TD + ' text-right">' + (x.val ? gaM(x.val) : '') + '</td><td class="' + TD + ' text-right">' + (x.val ? pct(x.val, x.valor) : '') + '</td><td class="' + TD + ' text-right" style="color:#b42318">' + (x.ex || '') + '</td><td class="' + TD + ' text-right">' + (x.pend || '') + '</td></tr>').join('');
+      const exc = gaE.filas.filter(f => gaEstadoFila(f) === 'ex');
+      const lExc = exc.map(f => { const at = GA_ATRIB.filter(([k]) => (f.rev || {})[k] === 'ex').map(([k, n]) => n + (f.claude && f.claude.detalle && f.claude.detalle[k] ? ' (' + f.claude.detalle[k] + ')' : '')).join('; '); return '<li>' + e((f.proveedor || '') + ' · ' + (f.numero || '') + ' · ' + gaM(gaValorFila(f))) + ': ' + e(at) + (f.comentario ? ' — ' + e(f.comentario) : '') + '</li>'; }).join('');
+      const concl = D.tot.n ? 'Se revisaron ' + D.tot.n + ' documento(s) de soporte de la muestra del auditor; ' + gaE.filas.filter(f => gaEstadoFila(f) === 'ok').length + ' quedaron validados contra el mayor contable por ' + gaM(D.tot.val) + ', que equivale al ' + pct(D.tot.val, D.tot.valor) + ' del gasto de las cuentas revisadas (' + gaM(D.tot.valor) + ').' + (exc.length ? ' Quedaron ' + exc.length + ' documento(s) con excepción, detallados abajo.' : '') + (D.tot.pend ? ' Hay ' + D.tot.pend + ' documento(s) pendientes de validar.' : '') : 'Aún no hay documentos validados.';
+      c.innerHTML = '<div class="p-3 space-y-3 text-xs text-slate-700"><div class="flex flex-wrap items-center justify-between gap-2"><div class="text-[13px] font-semibold text-slate-800">Resumen de gastos validados por cuenta</div><div class="flex gap-3"><button type="button" onclick="gaCargar()" class="px-2 py-1 text-[11px] font-semibold border border-slate-300 rounded-lg hover:bg-slate-50">↻ Actualizar</button><button type="button" onclick="gaExcel()" class="px-1 py-1 text-[11px] font-bold hover:underline" style="color:#449964">⬇ Descargar Excel</button></div></div>' +
+        (gaE.bal.length ? '' : '<p class="text-amber-800">No hay balance de comprobación cargado para este cliente, año y visita (sumarias): los valores por cuenta aparecen vacíos.</p>') +
+        '<div class="overflow-x-auto border border-slate-200 rounded-xl"><table class="w-full text-[11px] leading-tight border-collapse" style="min-width:56rem"><thead class="bg-slate-100 text-slate-700"><tr><th class="' + TH + '">Cuenta</th><th class="' + TH + ' text-right">Valor</th><th class="' + TH + ' text-right">%</th><th class="' + TH + ' text-right">Docs.</th><th class="' + TH + ' text-right">Validado</th><th class="' + TH + ' text-right">% validado</th><th class="' + TH + ' text-right">Excep.</th><th class="' + TH + ' text-right">Pend.</th></tr></thead><tbody>' + cuerpo +
+        '<tr class="border-t-2 border-slate-300 font-bold bg-slate-50"><td class="' + TD + '">Total</td><td class="' + TD + ' text-right">' + gaM(D.tot.valor) + '</td><td class="' + TD + ' text-right">' + (D.tot.valor ? '100.0 %' : '') + '</td><td class="' + TD + ' text-right">' + D.tot.n + '</td><td class="' + TD + ' text-right">' + gaM(D.tot.val) + '</td><td class="' + TD + ' text-right">' + pct(D.tot.val, D.tot.valor) + '</td><td class="' + TD + ' text-right">' + (D.tot.ex || '') + '</td><td class="' + TD + ' text-right">' + (D.tot.pend || '') + '</td></tr></tbody></table></div>' +
+        '<div><div class="font-bold text-slate-800">Objetivo</div><p>Verificar que los gastos de la muestra están sustentados con documentos válidos y correctamente registrados: cuenta contable, valor, IVA, retenciones, concepto y período.</p></div>' +
+        '<div><div class="font-bold text-slate-800">Procedimiento</div><ul class="list-disc pl-5"><li>El auditor eligió la muestra y subió los soportes (facturas, notas de crédito y comprobantes de retención).</li><li>Se extrajeron los datos de cada documento y se buscó en el mayor contable la cuenta y el asiento donde están registrados.</li><li>El auditor verificó, casilla por casilla, la cuenta, el valor, el IVA, las retenciones y el concepto.</li></ul></div>' +
+        '<div><div class="font-bold text-slate-800">Conclusión</div><p>' + e(concl) + '</p>' + (lExc ? '<div class="mt-1 font-semibold">Excepciones:</div><ul class="list-disc pl-5">' + lExc + '</ul>' : '') + '</div>' +
+        '<div><div class="font-bold text-slate-800">Fuente</div><p>Mayor contable y balance de comprobación (sumarias) de la visita; documentos de soporte de la muestra.</p></div>' +
+        '<div><div class="font-bold text-slate-800">Marcas</div><p>✓ Verificado con el documento fuente · ✗ Con excepción · – No aplica.</p></div></div>';
+    }
+    function gaExcel() {
+      if (typeof XLSX === 'undefined') { alert('No se pudo cargar el generador de Excel. Recarga la página.'); return; }
+      const D = gaResumenDatos(), cli = ($im('nm-cliente').selectedOptions[0] || {}).textContent || nmE.cliente;
+      const r1 = [['RC02 - Resumen de gastos validados'], [cli + ' · ' + nmE.anio + ' · ' + (nmE.visita === 'final' ? 'Visita final' : 'Visita preliminar')], [], ['Cuenta', 'Valor', 'Porcentaje', 'Documentos', 'Validado', 'Porcentaje validado', 'Excepciones', 'Pendientes']]
+        .concat(D.filas.map(x => [x.codigo + (x.nombre ? ' - ' + x.nombre : ''), x.valor, D.tot.valor ? x.valor / D.tot.valor : 0, x.n, x.val, x.valor ? x.val / x.valor : 0, x.ex, x.pend]))
+        .concat([['Total', D.tot.valor, D.tot.valor ? 1 : 0, D.tot.n, D.tot.val, D.tot.valor ? D.tot.val / D.tot.valor : 0, D.tot.ex, D.tot.pend]]);
+      const nom = { ok: '✓', ex: '✗', na: '–' };
+      const r2 = [['Proveedor', 'RUC', 'Tipo', 'Número', 'Fecha', 'Concepto', 'Base', 'IVA', 'Total', 'Retención renta', 'Retención IVA', 'Cuenta en el mayor', 'Asiento', 'Valor en el mayor'].concat(GA_ATRIB.map(a => a[1])).concat(['Estado', 'Comentario', 'Revisado por'])]
+        .concat(gaE.filas.map(f => [f.proveedor, f.ruc, f.tipo, f.numero, f.fecha, f.concepto, Number(f.base_iva || 0) + Number(f.base_0 || 0), f.iva, f.total, f.ret_renta, f.ret_iva, f.cuenta, f.asiento, f.valor_mayor].concat(GA_ATRIB.map(([k]) => nom[(f.rev || {})[k]] || '')).concat([({ ok: 'Validado', ex: 'Excepción', pend: 'Pendiente' })[gaEstadoFila(f)], f.comentario, nombreMostrado(f.revisado_por) || ''])));
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(r1), 'Resumen');
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(r2), 'Validación');
+      XLSX.writeFile(wb, 'RC02 Gastos - ' + String(cli).replace(/[\\/:*?"<>|]+/g, '_') + ' ' + nmE.anio + '.xlsx');
     }
     // ===== Control de la información subida (común a todas las cuentas): subido, leído y analizado =====
     const PC_COB_MOD = {
