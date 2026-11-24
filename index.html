@@ -1151,6 +1151,40 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       </div>
     </section>
 
+    <section id="sec-mayor-contable" class="hidden bg-white rounded-2xl shadow-xl border border-slate-200 p-6 min-h-[92vh] space-y-5">
+      <div class="border-b pb-4">
+        <h1 class="text-xl font-bold text-slate-800">Mayor contable</h1>
+        <p class="text-xs text-slate-500">Sube aquí el mayor contable completo del cliente, una sola vez por visita. La aplicación lo lee y todos los análisis y cuadres lo usan desde este lugar; ya no hace falta subirlo en cada pedido. Se conserva 90 días desde la última vez que se usa.</p>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-6 gap-4">
+        <div class="md:col-span-2">
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Cliente</label>
+          <select id="mc-cliente" onchange="mcCargar()" class="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs sm:text-sm outline-none"><option value="">-- Selecciona un Cliente --</option></select>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Año a Evaluar</label>
+          <select id="mc-anio" onchange="mcCargar()" class="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs sm:text-sm outline-none"><option value="2026">Año 2026</option></select>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Visita</label>
+          <select id="mc-visita" onchange="mcCargar()" class="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs sm:text-sm outline-none">
+            <option value="preliminar">Visita preliminar</option>
+            <option value="final" selected>Visita final</option>
+          </select>
+        </div>
+      </div>
+      <div id="mc-subir" class="hidden p-3 border border-slate-200 rounded-xl bg-slate-50 space-y-2">
+        <div class="text-[13px] font-semibold text-slate-800">Subir el mayor contable</div>
+        <p class="text-xs text-slate-600">Formatos: CSV (el más liviano y seguro), Excel o PDF. Si el cliente te entrega un mayor corregido, súbelo y borra el anterior.</p>
+        <div class="flex flex-wrap items-center gap-2">
+          <input type="file" id="mc-archivo" accept=".zip,.csv,.xlsx,.xls,.pdf,.txt" class="text-xs">
+          <button type="button" id="mc-btn-subir" onclick="mcSubir()" class="px-3 py-1.5 rounded-lg text-xs transition bg-slate-200 text-slate-900 hover:bg-slate-300 font-semibold">Subir y leer</button>
+        </div>
+        <div id="mc-msg" class="text-[11px] min-h-[1rem] text-slate-500"></div>
+      </div>
+      <div id="mc-lista" class="space-y-3"><p class="text-xs text-slate-500">Elige un cliente para ver su mayor contable.</p></div>
+    </section>
+
     <section id="sec-pedidos-claude" class="hidden bg-white rounded-2xl shadow-xl border border-slate-200 p-6 min-h-[92vh] space-y-5">
       <div class="border-b pb-4">
         <h1 class="text-xl font-bold text-slate-800">Pedidos a Claude</h1>
@@ -3454,6 +3488,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       auditoria: { cliente: 'select-cliente', anio: 'select-anio' },
       analisis: { cliente: 'an-cliente', anio: 'an-anio', visita: 'an-visita' },
       sumarias: { cliente: 'su-cliente', anio: 'su-anio', visita: 'su-visita' },
+      'mayor-contable': { cliente: 'mc-cliente', anio: 'mc-anio', visita: 'mc-visita' },
       pendientes: { cliente: 'pe-cliente', anio: 'pe-anio', visita: 'pe-visita' },
       'claude-revisar': { cliente: 'cr-cliente', anio: 'cr-anio', visita: 'cr-visita' },
       'pedidos-claude': { cliente: 'pc-cliente', anio: 'pc-anio', visita: 'pc-visita' },
@@ -3546,10 +3581,10 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       }
       if (!['clientes', 'usuarios', 'cuentas', 'habilitar', 'historial', 'medidor', 'programas'].includes(seccion)) guardarVista({ seccion: seccion, sub: sub || null, cuenta: cuenta || null });
 
-      const secciones = ['desarrollo', 'clientes', 'usuarios', 'cuentas', 'habilitar', 'historial', 'medidor', 'programas', 'sumarias', 'pendientes', 'claude-revisar', 'pedidos-claude', 'aprobaciones-claude', 'flujo', 'auditoria', 'analisis', 'visitas', 'asignacion', 'indices', 'mayor', 'contratos', 'arrend', 'import2', 'nomina', 'impuestos', 'concil', 'pce', 'reuniones', 'revinforme', 'mas-herramientas'];
+      const secciones = ['desarrollo', 'clientes', 'usuarios', 'cuentas', 'habilitar', 'historial', 'medidor', 'programas', 'sumarias', 'mayor-contable', 'pendientes', 'claude-revisar', 'pedidos-claude', 'aprobaciones-claude', 'flujo', 'auditoria', 'analisis', 'visitas', 'asignacion', 'indices', 'mayor', 'contratos', 'arrend', 'import2', 'nomina', 'impuestos', 'concil', 'pce', 'reuniones', 'revinforme', 'mas-herramientas'];
       const grupoSubmenu = sec => ['auditoria', 'visitas', 'asignacion'].includes(sec) ? 'planificacion' : ['indices', 'mayor', 'contratos', 'flujo', 'pce', 'reuniones', 'revinforme', 'mas-herramientas'].includes(sec)
         ? 'herramientas'
-        : (['clientes', 'usuarios', 'cuentas', 'habilitar', 'historial', 'medidor', 'programas'].includes(sec) ? 'config' : (['sumarias', 'pendientes', 'claude-revisar', 'pedidos-claude', 'aprobaciones-claude'].includes(sec) ? 'analisis' : null));
+        : (['clientes', 'usuarios', 'cuentas', 'habilitar', 'historial', 'medidor', 'programas'].includes(sec) ? 'config' : (['sumarias', 'mayor-contable', 'pendientes', 'claude-revisar', 'pedidos-claude', 'aprobaciones-claude'].includes(sec) ? 'analisis' : null));
       const esSubmenu = sec => grupoSubmenu(sec) !== null;
       
       secciones.forEach(sec => {
@@ -3576,6 +3611,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       if (seccion === 'reuniones') poblarClientesReunion();
       if (seccion === 'revinforme') riAbrir();
       if (seccion === 'sumarias') abrirSumarias();
+      if (seccion === 'mayor-contable') abrirMayorContable();
       if (seccion === 'pendientes') abrirPendientes();
       if (seccion === 'claude-revisar') abrirClaudeRevisar();
       if (seccion === 'pedidos-claude' || seccion === 'aprobaciones-claude') abrirPedidosClaude();
@@ -3723,6 +3759,9 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       const botonSumarias = `
         <button type="button" onclick="navegarMenu('sumarias')" id="nav-sumarias" class="w-full text-left px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:bg-slate-800 hover:text-white transition flex items-center gap-2">
           <span>Sumarias</span>
+        </button>
+        <button type="button" onclick="navegarMenu('mayor-contable')" id="nav-mayor-contable" class="w-full text-left px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:bg-slate-800 hover:text-white transition flex items-center gap-2">
+          <span>Mayor contable</span>
         </button>
         <button type="button" onclick="navegarMenu('pendientes')" id="nav-pendientes" class="w-full text-left px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:bg-slate-800 hover:text-white transition flex items-center gap-2">
           <span>To/Do - Quick Lett - Opinión</span>
@@ -4944,7 +4983,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       const { data } = await supabaseClient.from('pedidos_claude_archivos').select('*').in('pedido_id', ids).order('created_at', { ascending: true });
       (data || []).forEach(a => { const p = pedidosClaude.find(x => x.id === a.pedido_id); if (p) p._arch.push(a); });
       const { data: lec } = await supabaseClient.from('pedidos_claude_textos').select('archivo_id, error, paginas, origen_lectura').in('archivo_id', (data || []).map(a => a.id));
-      const mapa = {}; (lec || []).forEach(l => { if (l.error && /interrump/i.test(l.error)) l.error = 'No se pudo leer por ser muy pesado. Si es un mayor contable completo, súbelo solo en otro pedido (aparte de los demás archivos); si es otro archivo, súbelo más liviano o como PDF o CSV.'; mapa[l.archivo_id] = l; });
+      const mapa = {}; (lec || []).forEach(l => { if (l.error && /interrump/i.test(l.error)) l.error = 'No se pudo leer por ser muy pesado. Si es un mayor contable completo, cárgalo en la pantalla Mayor contable del menú (no en el pedido); si es otro archivo, súbelo más liviano o como PDF o CSV.'; mapa[l.archivo_id] = l; });
       (data || []).forEach(a => { a._lectura = mapa[a.id] || null; });
     }
     // Elimina los archivos de pedidos vencidos (3 días) o cancelados/rechazados; conserva el registro con los nombres.
@@ -4952,7 +4991,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       try {
         const { data: act } = await supabaseClient.from('pedidos_claude_archivos').select('id, pedido_id, ruta').is('eliminado_at', null);
         if (!act || !act.length) return;
-        const pids = [...new Set(act.map(a => a.pedido_id))];
+        const pids = [...new Set(act.map(a => a.pedido_id).filter(Boolean))]; // el mayor contable del menú no depende de un pedido y no vence con ellos
         const { data: peds } = await supabaseClient.from('pedidos_claude').select('id, created_at, estado, hecho_at, resultado_id').in('id', pids);
         const rids = (peds || []).map(p => p.resultado_id).filter(Boolean);
         let revis = {};
@@ -13876,6 +13915,100 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       const contScroll = document.querySelector('body > main'); if (contScroll) contScroll.scrollTop = 0;
     }
 
+    // ===== Mayor contable: se carga una vez por cliente y visita; los pedidos y análisis lo leen de aquí =====
+    const MC_ETQ = 'Mayor contable completo', MC_DIAS = 90;
+    let mcTimer = null, mcToken = 0;
+    async function abrirMayorContable() {
+      asegurarClientesEn('mc-cliente');
+      const sa = document.getElementById('mc-anio'), origen = document.getElementById('select-anio');
+      if (sa && origen && sa.dataset.listo !== '1') { const previo = sa.value; sa.innerHTML = origen.innerHTML; if (previo) sa.value = previo; sa.dataset.listo = '1'; }
+      mcCargar();
+    }
+    function mcNum(n) { return Number(n || 0).toLocaleString('es-EC'); }
+    function mcFecha(iso) { try { return new Date(iso).toLocaleDateString('es-EC', { day: '2-digit', month: 'short', year: 'numeric' }); } catch (e) { return ''; } }
+    function mcEstadoLectura(a, l, largo) {
+      if (!l) return { txt: 'Leyendo…', ok: false, espera: true };
+      if (l.error) {
+        if (/interrump/i.test(l.error)) return (l.intentos || 0) < 3 ? { txt: 'Reintentando la lectura (intento ' + ((l.intentos || 0) + 1) + ' de 3)…', ok: false, espera: true } : { txt: 'No se pudo leer por ser muy pesado. Comprímelo en zip (un CSV dentro de un zip es lo más liviano).', ok: false, error: true };
+        return { txt: l.error, ok: false, error: true };
+      }
+      if (largo === null || largo === undefined) return { txt: 'Leyendo…', ok: false, espera: true };
+      if (largo <= 0) return { txt: 'El archivo no tiene texto legible.', ok: false, error: true };
+      return { txt: 'Leído completo: ' + mcNum(largo) + ' caracteres' + (l.paginas ? ' · ' + mcNum(l.paginas) + (l.paginas === 1 ? ' hoja o página' : ' hojas o páginas') : ''), ok: true };
+    }
+    async function mcCargar() {
+      clearTimeout(mcTimer);
+      const mi = ++mcToken, cli = document.getElementById('mc-cliente').value, anio = document.getElementById('mc-anio').value, vis = document.getElementById('mc-visita').value;
+      const caja = document.getElementById('mc-lista'), sub = document.getElementById('mc-subir');
+      if (!cli) { sub.classList.add('hidden'); caja.innerHTML = '<p class="text-xs text-slate-500">Elige un cliente para ver su mayor contable.</p>'; return; }
+      sub.classList.remove('hidden');
+      const { data: arch, error } = await supabaseClient.from('pedidos_claude_archivos').select('*').is('pedido_id', null).eq('cliente_id', cli).eq('anio', Number(anio)).eq('visita', vis).eq('etiqueta', MC_ETQ).is('eliminado_at', null).order('created_at', { ascending: false });
+      if (mi !== mcToken) return;
+      if (error) { caja.innerHTML = '<p class="text-xs text-red-600 font-bold">No se pudo cargar: ' + escapeHtml(error.message || '') + '</p>'; return; }
+      const lista = arch || [], mapa = {}, largos = {};
+      if (lista.length) {
+        const { data: t } = await supabaseClient.from('pedidos_claude_textos').select('archivo_id, error, paginas, intentos, ultimo_uso_at').in('archivo_id', lista.map(a => a.id));
+        (t || []).forEach(x => { mapa[x.archivo_id] = x; });
+        await Promise.all(lista.filter(a => mapa[a.id] && !mapa[a.id].error).map(async a => { const r = await supabaseClient.rpc('largo_texto_archivo', { p_id: a.id }); largos[a.id] = r.error ? null : r.data; }));
+      }
+      // Mayores leídos antes dentro de un pedido: siguen sirviendo a los análisis
+      let previos = [];
+      try {
+        const { data: pe } = await supabaseClient.from('pedidos_claude').select('id, created_at').eq('cliente_id', cli).eq('anio', Number(anio));
+        if (pe && pe.length) {
+          const { data: ar2 } = await supabaseClient.from('pedidos_claude_archivos').select('id, nombre, tamano, created_at').in('pedido_id', pe.map(x => x.id)).eq('etiqueta', MC_ETQ).is('eliminado_at', null).order('created_at', { ascending: false });
+          const { data: t2 } = (ar2 && ar2.length) ? await supabaseClient.from('pedidos_claude_textos').select('archivo_id, error').in('archivo_id', ar2.map(x => x.id)) : { data: [] };
+          const bien = {}; (t2 || []).forEach(x => { if (!x.error) bien[x.archivo_id] = true; });
+          previos = (ar2 || []).filter(x => bien[x.id]);
+        }
+      } catch (e) { /* es solo informativo */ }
+      if (mi !== mcToken) return;
+      let espera = false;
+      const filas = lista.map(a => {
+        const l = mapa[a.id], est = mcEstadoLectura(a, l, largos[a.id]); if (est.espera) espera = true;
+        const vence = l && l.ultimo_uso_at ? new Date(new Date(l.ultimo_uso_at).getTime() + MC_DIAS * 86400000) : null;
+        const color = est.ok ? '#1d6b3a' : (est.error ? '#b42318' : '#8a5a00');
+        return '<tr style="border-top:1px solid #e5e5e0"><td class="px-2 py-1.5 text-xs">' + escapeHtml(a.nombre) + '<div class="text-[10px] text-slate-500">' + tamanoLegible(a.tamano) + ' · subido por ' + escapeHtml(a.subido_por || '') + ' el ' + mcFecha(a.created_at) + '</div></td>' +
+          '<td class="px-2 py-1.5 text-xs" style="color:' + color + '">' + escapeHtml(est.txt) + '</td>' +
+          '<td class="px-2 py-1.5 text-xs text-slate-600">' + (est.ok && vence ? 'Hasta el ' + mcFecha(vence.toISOString()) + ' si no se usa' : '') + '</td>' +
+          '<td class="px-2 py-1.5 text-xs text-right whitespace-nowrap"><button type="button" class="font-bold text-slate-700 hover:underline mr-3" onclick="descargarArchivoPedido(\'' + a.ruta.replace(/'/g, "\\'") + '\',\'' + a.nombre.replace(/'/g, "\\'") + '\')">Descargar</button><button type="button" class="font-bold hover:underline" style="color:#b42318" onclick="mcBorrar(\'' + a.id + '\')">Borrar</button></td></tr>';
+      }).join('');
+      let html = lista.length
+        ? '<div class="border border-slate-200 rounded-xl overflow-x-auto"><table class="w-full text-left"><thead><tr class="text-[11px] text-slate-600" style="background:#f3f3f0"><th class="px-2 py-1.5">Archivo</th><th class="px-2 py-1.5">Lectura</th><th class="px-2 py-1.5">Se conserva</th><th></th></tr></thead><tbody>' + filas + '</tbody></table></div>'
+        : '<p class="text-xs text-slate-600 p-3 border border-slate-200 rounded-xl">Todavía no hay un mayor contable cargado para este cliente, año y visita.</p>';
+      if (previos.length) html += '<div class="text-xs text-slate-600 p-3 border border-slate-200 rounded-xl"><div class="font-semibold text-slate-700 mb-1">Mayores ya leídos dentro de pedidos anteriores de este cliente y año</div>' + previos.map(x => '<div>' + escapeHtml(x.nombre) + ' · ' + tamanoLegible(x.tamano) + ' · ' + mcFecha(x.created_at) + '</div>').join('') + '<div class="mt-1 text-slate-500">Los análisis pueden usarlos mientras estén guardados.</div></div>';
+      caja.innerHTML = html;
+      if (espera) mcTimer = setTimeout(mcCargar, 5000);
+    }
+    async function mcSubir() {
+      const cli = document.getElementById('mc-cliente').value, anio = document.getElementById('mc-anio').value, vis = document.getElementById('mc-visita').value;
+      const inp = document.getElementById('mc-archivo'), msg = document.getElementById('mc-msg'), btn = document.getElementById('mc-btn-subir'), f = inp.files && inp.files[0];
+      const dec = (t, mal) => { msg.textContent = t || ''; msg.className = 'text-[11px] min-h-[1rem] ' + (mal ? 'text-red-600 font-bold' : 'text-slate-500'); };
+      if (!cli) { dec('Elige primero el cliente.', true); return; }
+      if (!f) { dec('Elige el archivo del mayor contable.', true); return; }
+      const seguro = f.name.replace(/[^A-Za-z0-9._-]+/g, '_'), ruta = 'mayores/' + cli + '/' + anio + '-' + vis + '/' + Date.now() + '-' + seguro;
+      btn.disabled = true; dec('Subiendo ' + f.name + ' (' + tamanoLegible(f.size) + '). No cierres esta pantalla…');
+      try {
+        const up = await supabaseClient.storage.from('pedidos-claude').upload(ruta, f, { contentType: f.type || 'application/octet-stream' });
+        if (up.error) throw new Error(/exceed|maximum|size|payload/i.test(up.error.message || '') ? 'El archivo es demasiado grande para subirlo (' + tamanoLegible(f.size) + '). Comprímelo en zip (un CSV dentro de un zip es lo más liviano).' : (up.error.message || 'No se pudo subir'));
+        const ins = await supabaseClient.from('pedidos_claude_archivos').insert([{ pedido_id: null, cliente_id: cli, anio: Number(anio), visita: vis, nombre: f.name, ruta, tamano: f.size, tipo: f.type || '', subido_por: nombreUsuarioActivo(), etiqueta: MC_ETQ }]);
+        if (ins.error) { await supabaseClient.storage.from('pedidos-claude').remove([ruta]); throw new Error(ins.error.message || 'No se pudo registrar el archivo'); }
+        inp.value = ''; dec('Subido. La aplicación lo está leyendo; puede tardar unos minutos si es pesado. Puedes seguir trabajando.');
+        mcCargar();
+      } catch (e) { dec(e.message || String(e), true); }
+      btn.disabled = false;
+    }
+    async function mcBorrar(id) {
+      if (!await confirmarApp('¿Borrar este mayor contable? Los análisis ya hechos no se pierden, pero para nuevos análisis habría que subirlo otra vez.')) return;
+      const { data: a } = await supabaseClient.from('pedidos_claude_archivos').select('id, ruta').eq('id', id).maybeSingle();
+      if (!a) { mcCargar(); return; }
+      const r = await supabaseClient.storage.from('pedidos-claude').remove([a.ruta]);
+      if (r.error) { alert('No se pudo borrar el archivo: ' + (r.error.message || '')); return; }
+      await supabaseClient.from('pedidos_claude_archivos').update({ eliminado_at: new Date().toISOString(), eliminado_motivo: 'Borrado por ' + (nombreUsuarioActivo() || 'una persona') }).eq('id', id);
+      await supabaseClient.from('pedidos_claude_textos').delete().eq('archivo_id', id);
+      mcCargar();
+    }
+
     async function abrirSumarias() {
       asegurarClientesEn('su-cliente');
       const sa = document.getElementById('su-anio'), origen = document.getElementById('select-anio');
@@ -16026,6 +16159,7 @@ ${cont.innerHTML}
       { clave: 'auditoria', nombre: '1a) Auditoría/Planificación › Cuestionarios de evaluación', btn: 'nav-auditoria' },
       { clave: 'analisis', nombre: '2. Auditoría/Análisis Claves', btn: 'nav-analisis' },
       { clave: 'sumarias', nombre: '     ↳ 2. Análisis Claves › Sumarias', btn: 'nav-sumarias', defecto: false },
+      { clave: 'mayor-contable', nombre: '     ↳ 2. Análisis Claves › Mayor contable', btn: 'nav-mayor-contable' },
       { clave: 'pendientes', nombre: '     ↳ 2. Análisis Claves › To/Do - Quick Lett - Opinión', btn: 'nav-pendientes', defecto: false },
       { clave: 'pedidos-claude', nombre: '     ↳ 2. Análisis Claves › Pedidos a Claude', btn: 'nav-pedidos-claude', defecto: false },
       { clave: 'claude-revisar', nombre: '     ↳ 2. Análisis Claves › Trabajo procesado por Claude', btn: 'nav-claude-revisar', defecto: false },
@@ -16155,7 +16289,7 @@ ${cont.innerHTML}
     // ===== Históricos de visitas: quién ingresa y qué hace (bitácora en Supabase) =====
     const NOMBRE_PANTALLA = {
       auditoria: '1. Planificación: Cuestionarios de evaluación', desarrollo: 'Pantalla principal', analisis: '2. Auditoría/Análisis Claves',
-      sumarias: 'Sumarias', pendientes: 'Pendientes', 'claude-revisar': 'Trabajo procesado por Claude', 'pedidos-claude': 'Pedidos a Claude', 'aprobaciones-claude': 'Pedidos y aprobaciones', visitas: '1. Planificación: Visitas (Calendario)', asignacion: '1. Planificación: Asignación de cuentas',
+      sumarias: 'Sumarias', 'mayor-contable': 'Mayor contable', pendientes: 'Pendientes', 'claude-revisar': 'Trabajo procesado por Claude', 'pedidos-claude': 'Pedidos a Claude', 'aprobaciones-claude': 'Pedidos y aprobaciones', visitas: '1. Planificación: Visitas (Calendario)', asignacion: '1. Planificación: Asignación de cuentas',
       indices: 'Herramienta: Índices', mayor: 'Herramienta: Mayor', contratos: 'Herramienta: Resumen de contratos',
       flujo: 'Herramienta: Flujo de efectivo', arrend: 'Herramienta: Arrendamientos NIIF 16', pce: 'Herramienta: Matriz PCE',
       reuniones: 'Herramienta: Resumen de reuniones', clientes: 'Configuración: Clientes', usuarios: 'Configuración: Usuarios / Auditores',
@@ -19435,6 +19569,16 @@ ${cont.innerHTML}
           for (let i = 0; i < archivos.length; i += 150) { const tx = await supabaseClient.from('pedidos_claude_textos').select('archivo_id, error').in('archivo_id', archivos.slice(i, i + 150).map(a => a.id)); (tx.data || []).forEach(t => { mapa[t.archivo_id] = t.error || ''; }); }
           archivos.forEach(a => { a.lectura = !(a.id in mapa) ? 'sin' : (mapa[a.id] ? 'error' : 'ok'); });
         }
+        // Mayor contable cargado en el menú (no depende de un pedido): cuenta como entregado para todos los análisis
+        try {
+          const my = await supabaseClient.from('pedidos_claude_archivos').select('id, nombre, etiqueta, eliminado_at').is('pedido_id', null).eq('cliente_id', X.cli).eq('anio', X.anio).eq('visita', X.vis).is('eliminado_at', null);
+          if (!my.error && (my.data || []).length) {
+            const tm = await supabaseClient.from('pedidos_claude_textos').select('archivo_id, error').in('archivo_id', my.data.map(a => a.id)), mm = {};
+            (tm.data || []).forEach(t => { mm[t.archivo_id] = t.error || ''; });
+            my.data.forEach(a => { a.lectura = !(a.id in mm) ? 'sin' : (mm[a.id] ? 'error' : 'ok'); a.nombre = a.nombre + ' (cargado en Mayor contable)'; });
+            archivos = archivos.concat(my.data);
+          }
+        } catch (er2) { /* si falla, se muestra solo lo de los pedidos */ }
         let rq = supabaseClient.from('v2_resultado').select('cobertura, bloques').eq('cliente_id', X.cli).eq('anio', X.anio).eq('visita', X.vis).in('sumaria', X.cfg.sums);
         if (X.cfg.hojas) rq = rq.in('hoja', X.cfg.hojas);
         const rs = await rq; const filas = (rs.data || []);
@@ -19459,7 +19603,8 @@ ${cont.innerHTML}
         let an = '';
         if (f.length) { if (d) an = String(d.estado || ''); else if (R) an = 'sd'; else if (appFn) an = appFn() ? 'si' : 'pend'; else an = ''; }
         const obs = [];
-        if (!f.length) obs.push(todo.length ? 'Podría venir dentro de un archivo marcado «Todo en un archivo».' : (g.req ? 'No se ha subido.' : 'No se subió (opcional).'));
+        const esMayor = (g.et || []).includes('Mayor contable completo');
+        if (!f.length) obs.push(todo.length ? 'Podría venir dentro de un archivo marcado «Todo en un archivo».' : (g.req ? (esMayor ? 'No se ha subido: cárgalo en la pantalla Mayor contable del menú.' : 'No se ha subido.') : 'No se subió (opcional).'));
         if (mal) obs.push(mal + ' archivo(s) no se pudieron leer: ' + f.filter(a => a.lectura === 'error').map(a => a.nombre).join(', ') + '. Vuelva a subirlos más livianos, en Excel, CSV o PDF con texto.');
         if (sin) obs.push(sin + ' archivo(s) aún sin leer.');
         if (d && d.nota) obs.push(d.nota);
