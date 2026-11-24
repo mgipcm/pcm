@@ -8468,6 +8468,8 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
         ? { h1: 'Programación de Inventarios Físicos', sub: 'Calendario solo para las tomas físicas de inventario: quién asiste, en qué cliente y en qué fechas.', btn: '+ Agendar Inventario Físico', uno: 'inventario físico', este: 'este inventario físico', asig: 'Asignó inventario físico', elim: 'Eliminó inventario físico' }
         : { h1: 'Programación de Visitas', sub: 'Planificación lineal jerárquica por auditor y escala de colores para múltiples asignaciones', btn: '+ Agendar Visita', uno: 'visita', este: 'esta visita', asig: 'Asignó visita', elim: 'Eliminó visita' };
     }
+    // En el calendario de inventarios los días son más anchos y las barras más altas para poder leer el cliente
+    function medidasCal() { return modoCalendario === 'inventario' ? { dia: 120, alto: 26, paso: 30, letra: 12 } : { dia: 48, alto: 16, paso: 17, letra: 9 }; }
     function aplicarModoCalendario() {
       const t = textosCal();
       const a = document.getElementById('cal-h1'); if (a) a.textContent = t.h1;
@@ -8498,7 +8500,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       const cont = document.getElementById('contenedor-calendario-lineal'); if (!cont || !cont.parentElement) return;
       const hoy = new Date(), f = fechaCalendarioActual;
       const esMesActual = f.getFullYear() === hoy.getFullYear() && f.getMonth() === hoy.getMonth();
-      cont.parentElement.scrollLeft = esMesActual ? Math.max(0, (hoy.getDate() - 7 - 1) * 48) : 0;
+      cont.parentElement.scrollLeft = esMesActual ? Math.max(0, (hoy.getDate() - 7 - 1) * medidasCal().dia) : 0;
     }
 
     function cambiarMesCalendario(offset) {
@@ -8621,7 +8623,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
         const esFinDeSemana = fechaTemp.getDay() === 0 || fechaTemp.getDay() === 6;
 
         headerDaysHtml += `
-          <div class="w-12 h-10 flex flex-col justify-center items-center border-r border-slate-200 shrink-0 ${esFinDeSemana ? 'bg-slate-200/60 text-slate-400' : 'bg-slate-100 text-slate-700'}">
+          <div style="width:${medidasCal().dia}px" class="h-10 flex flex-col justify-center items-center border-r border-slate-200 shrink-0 ${esFinDeSemana ? 'bg-slate-200/60 text-slate-400' : 'bg-slate-100 text-slate-700'}">
             <span class="text-[9px] font-medium">${diaSemana}</span>
             <span class="text-[11px] font-bold">${dia}</span>
           </div>
@@ -8675,7 +8677,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
             carrilDe.set(it.v, c);
           });
           const cantAsignaciones = Math.max(1, finCarril.length);
-          const minHeightPx = Math.max(48, (cantAsignaciones * 17) + 10);
+          const minHeightPx = Math.max(48, (cantAsignaciones * medidasCal().paso) + 10);
 
           htmlFilasAuditores += `
             <div class="flex border-b border-slate-200 hover:bg-slate-50/50 transition relative" style="min-height: ${minHeightPx}px;">
@@ -8693,7 +8695,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
             const fechaTemp = new Date(year, month, dia);
             const esFinDeSemana = fechaTemp.getDay() === 0 || fechaTemp.getDay() === 6;
             htmlFilasAuditores += `
-              <div class="w-12 h-full border-r border-slate-100 shrink-0 ${esFinDeSemana ? 'bg-slate-50/80' : ''}"></div>
+              <div style="width:${medidasCal().dia}px" class="h-full border-r border-slate-100 shrink-0 ${esFinDeSemana ? 'bg-slate-50/80' : ''}"></div>
             `;
           }
 
@@ -8726,20 +8728,20 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
               let diaEnd = (yearHasta > year || (yearHasta === year && monthHasta > month)) ? ultimoDia : diaHasta;
 
               const duracionDias = (diaEnd - diaStart) + 1;
-              const posicionLeftPx = (diaStart - 1) * 48;
-              const anchoPx = (duracionDias * 48) - 4;
+              const M = medidasCal(), posicionLeftPx = (diaStart - 1) * M.dia;
+              const anchoPx = (duracionDias * M.dia) - 4;
 
               const colorEstilo = colorPastelCliente(vis.cliente_id);
 
               const cli = buscarClienteNombre(vis.cliente_id);
               const nombreCliente = (clienteIdRepetido(vis.cliente_id) ? '⚠ ' : '') + (cli ? (cli.nombre_corto || cli.nombre_completo) : (vis.cliente_id || 'Cliente'));
 
-              const topOffset = ((carrilDe.get(vis) || 0) * 17) + 3;
+              const topOffset = ((carrilDe.get(vis) || 0) * M.paso) + 3;
 
               htmlFilasAuditores += `
                 <div onclick="abrirModalApuntesVisita('${visId}')"
-                     style="left: ${posicionLeftPx + 2}px; width: ${Math.max(anchoPx, 40)}px; top: ${topOffset}px; height: 16px; background:${colorEstilo.fondo}; border-color:${colorEstilo.borde}; color:${colorEstilo.texto};"
-                     class="absolute border rounded px-1 text-[9px] font-bold flex items-center justify-between cursor-pointer shadow-xs hover:brightness-95 transition z-10 overflow-hidden leading-none"
+                     style="left: ${posicionLeftPx + 2}px; width: ${Math.max(anchoPx, 40)}px; top: ${topOffset}px; height: ${M.alto}px; font-size:${M.letra}px; background:${colorEstilo.fondo}; border-color:${colorEstilo.borde}; color:${colorEstilo.texto};"
+                     class="absolute border rounded px-1 font-bold flex items-center justify-between cursor-pointer shadow-xs hover:brightness-95 transition z-10 overflow-hidden leading-none"
                      >
                   ${comentarioCompartidoVisita(vis) ? '<span class="mr-0.5 shrink-0 text-[10px]" data-com="' + escapeHtml(comentarioCompartidoVisita(vis)) + '" onmouseenter="mostrarNubeComentario(this)" onmouseleave="ocultarNubeComentario()">💬</span>' : ''}
                   <span class="truncate flex-1">${nombreCliente}</span>
