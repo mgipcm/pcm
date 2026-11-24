@@ -465,11 +465,14 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
             <button onclick="navegarMenu('auditoria')" id="nav-auditoria" class="w-full text-left px-3 py-1.5 rounded-lg text-xs font-bold bg-indigo-600 text-white shadow-md transition flex items-center gap-2">
               <span style="white-space:nowrap">a) Cuestionarios de evaluación</span>
             </button>
-            <button onclick="navegarMenu('visitas')" id="nav-visitas" class="w-full text-left px-2 py-1 rounded-lg text-xs font-medium text-slate-400 hover:bg-slate-800 hover:text-white transition flex items-center gap-2">
+            <button onclick="navegarMenu('visitas','visita')" id="nav-visitas" class="w-full text-left px-2 py-1 rounded-lg text-xs font-medium text-slate-400 hover:bg-slate-800 hover:text-white transition flex items-center gap-2">
               <span style="white-space:nowrap">b) Visitas (Calendario)</span>
             </button>
+            <button onclick="navegarMenu('visitas','inventario')" id="nav-invfis" class="w-full text-left px-2 py-1 rounded-lg text-xs font-medium text-slate-400 hover:bg-slate-800 hover:text-white transition flex items-center gap-2">
+              <span style="white-space:nowrap">c) Inventarios físicos (Calendario)</span>
+            </button>
             <button onclick="navegarMenu('asignacion')" id="nav-asignacion" class="w-full text-left px-2 py-1 rounded-lg text-xs font-medium text-slate-400 hover:bg-slate-800 hover:text-white transition flex items-center gap-2">
-              <span style="white-space:nowrap">c) Asignación de cuentas</span>
+              <span style="white-space:nowrap">d) Asignación de cuentas</span>
             </button>
           </div>
         </div>
@@ -918,8 +921,8 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
     <section id="sec-visitas" class="hidden bg-white rounded-2xl shadow-xl border border-slate-200 p-6 min-h-[92vh] space-y-6">
       <div class="flex justify-between items-center border-b pb-4">
         <div>
-          <h1 class="text-xl font-bold text-slate-800">Programación de Visitas</h1>
-          <p class="text-xs text-slate-500">Planificación lineal jerárquica por auditor y escala de colores para múltiples asignaciones</p>
+          <h1 id="cal-h1" class="text-xl font-bold text-slate-800">Programación de Visitas</h1>
+          <p id="cal-sub" class="text-xs text-slate-500">Planificación lineal jerárquica por auditor y escala de colores para múltiples asignaciones</p>
         </div>
       </div>
 
@@ -953,7 +956,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
           </div>
           <div class="pt-4 shrink-0">
             <button type="submit" class="px-5 py-2 rounded-lg text-xs transition flex items-center gap-1.5 bg-slate-200 text-slate-900 hover:bg-slate-300 font-semibold">
-              <span>+ Agendar Visita</span>
+              <span id="vis-btn-txt">+ Agendar Visita</span>
             </button>
           </div>
         </div>
@@ -3049,7 +3052,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       const pendRev = f => f.or('estado_revision.is.null,estado_revision.eq.pendiente').eq('origen', 'claude');
       const [asig, vis, ped, cat, cli, equipo, r1, r2, r3, r4, r5] = await Promise.all([
         q('asignaciones_cuentas', t => t.select('*').eq('auditor', email)),
-        q('visitas', t => t.select('*').or(`auditor_asignado.eq.${email},usuario_asignado_email.eq.${email}`)),
+        q('visitas', t => t.select('*').eq('tipo', 'visita').or(`auditor_asignado.eq.${email},usuario_asignado_email.eq.${email}`)),
         q('pedidos_claude', t => t.select('id,estado,cliente_id,sumaria,solicitado_email,created_at,hecho_at,doc_confirmada_at').order('created_at', { ascending: false }).limit(300)),
         q('cuentas_sumarias', t => t.select('sumaria,cuenta')),
         q('clientes', t => t.select('cliente_id,nombre_corto,nombre_completo')),
@@ -3566,7 +3569,12 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
     window.alert = function (msg) { dlgAbrir(msg, false, null); };
     function navegarMenu(seccion, sub, cuenta) {
       if (seccion === 'mayor') { try { mayorPoblarClientes(); } catch (e) { } }
-      if (seccion === 'visitas') { fechaCalendarioActual = new Date(); renderizarCalendarioLineal(); setTimeout(posicionarCalendarioHoy, 60); }
+      if (seccion === 'visitas') {
+        modoCalendario = sub === 'inventario' ? 'inventario' : 'visita';
+        if (modoCalendario === 'inventario' && !herramientaHabilitada('invfis')) { avisarEnDesarrollo(); return; }
+        fechaCalendarioActual = new Date(); aplicarModoCalendario(); renderizarCalendarioLineal(); setTimeout(posicionarCalendarioHoy, 60);
+        cargarVisitas();
+      }
       // Clientes y Usuarios solo se abren con ingreso de Socio o Supervisor
       if ((seccion === 'clientes' || seccion === 'usuarios' || seccion === 'cuentas' || seccion === 'habilitar' || seccion === 'historial' || seccion === 'medidor' || seccion === 'programas') && !puedeConfigurar()) {
         abrirLoginConfig(seccion);
@@ -3659,7 +3667,10 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
         const gr = bx ? bx.closest('[id^="submenu-grupo-"]') : null;
         if (gr) { gr.classList.remove('hidden'); const ic = document.getElementById(gr.id.replace('submenu-grupo-', 'icon-grupo-')); if (ic) ic.classList.add('rotate-180'); }
       }
-      const activeBtn = document.getElementById(`nav-${seccion}`);
+      const btnInv = document.getElementById('nav-invfis');
+      if (btnInv) btnInv.className = "w-full text-left px-2 py-1 rounded-lg text-xs font-medium text-slate-400 hover:bg-slate-800 hover:text-white transition flex items-center gap-2";
+      const activeBtn = document.getElementById(seccion === 'visitas' && modoCalendario === 'inventario' ? 'nav-invfis' : `nav-${seccion}`);
+      if (seccion === 'visitas' && modoCalendario === 'inventario') { const bv = document.getElementById('nav-visitas'); if (bv) bv.className = "w-full text-left px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:bg-slate-800 hover:text-white transition flex items-center gap-2"; }
       if (activeBtn && seccion !== 'analisis' && !desdeAnalisis) {
         if (esSubmenu(seccion)) {
           activeBtn.className = "w-full text-left px-3 py-1.5 rounded-lg text-xs font-bold bg-indigo-600 text-white shadow-md transition flex items-center gap-2";
@@ -8450,11 +8461,27 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
     }
 
     // VISITAS
+    // El mismo calendario sirve para las visitas de auditoría y para los inventarios físicos (columna tipo de la tabla visitas)
+    let modoCalendario = 'visita';
+    function textosCal() {
+      return modoCalendario === 'inventario'
+        ? { h1: 'Programación de Inventarios Físicos', sub: 'Calendario solo para las tomas físicas de inventario: quién asiste, en qué cliente y en qué fechas.', btn: '+ Agendar Inventario Físico', uno: 'inventario físico', este: 'este inventario físico', asig: 'Asignó inventario físico', elim: 'Eliminó inventario físico' }
+        : { h1: 'Programación de Visitas', sub: 'Planificación lineal jerárquica por auditor y escala de colores para múltiples asignaciones', btn: '+ Agendar Visita', uno: 'visita', este: 'esta visita', asig: 'Asignó visita', elim: 'Eliminó visita' };
+    }
+    function aplicarModoCalendario() {
+      const t = textosCal();
+      const a = document.getElementById('cal-h1'); if (a) a.textContent = t.h1;
+      const b = document.getElementById('cal-sub'); if (b) b.textContent = t.sub;
+      const c = document.getElementById('vis-btn-txt'); if (c) c.textContent = t.btn;
+    }
     async function cargarVisitas() {
+      const modoPedido = modoCalendario;
       const { data: visitas, error } = await supabaseClient
         .from('visitas')
         .select('*')
+        .eq('tipo', modoPedido)
         .order('fecha_desde', { ascending: true });
+      if (modoPedido !== modoCalendario) return; // cambió de calendario mientras cargaba
 
       if (error) {
         console.error("Error al cargar visitas:", error);
@@ -8740,7 +8767,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
 
     async function guardarVisita(e) {
       e.preventDefault();
-      if (!puedeGestionarVisitas()) { alert('Solo el Socio y el Supervisor pueden asignar visitas.'); return; }
+      if (!puedeGestionarVisitas()) { alert('Solo el Socio y el Supervisor pueden asignar ' + (modoCalendario === 'inventario' ? 'inventarios físicos.' : 'visitas.')); return; }
       const cliente_id = document.getElementById('vis-cliente').value;
       const auditor_asignado = document.getElementById('vis-auditor').value;
       const fecha_desde = document.getElementById('vis-fecha-desde').value;
@@ -8763,11 +8790,11 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       }
 
       const { data, error } = await supabaseClient.from('visitas').insert([
-        { cliente_id, auditor_asignado, fecha_desde, fecha_hasta, apuntes: '' }
+        { cliente_id, auditor_asignado, fecha_desde, fecha_hasta, apuntes: '', tipo: modoCalendario }
       ]).select();
 
       if (error) {
-        alert("Error al agendar visita: " + error.message);
+        alert("Error al agendar " + textosCal().uno + ": " + error.message);
       } else {
         let avisoCorreo = '';
         if (enviarEmail) {
@@ -8779,8 +8806,8 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
           } catch (err) { avisoCorreo = `\n\nLa visita quedó agendada, pero no se pudo enviar el correo: ${err.message}`; }
         }
 
-        registrarActividad('Asignó visita', `${nombreDeUsuarioPorEmail(auditor_asignado)} · ${fecha_desde} al ${fecha_hasta}`, { cliente: cliente_id });
-        alert("¡Visita agendada correctamente!" + avisoCorreo);
+        registrarActividad(textosCal().asig, `${nombreDeUsuarioPorEmail(auditor_asignado)} · ${fecha_desde} al ${fecha_hasta}`, { cliente: cliente_id });
+        alert(modoCalendario === 'inventario' ? "¡Inventario físico agendado correctamente!" + avisoCorreo : "¡Visita agendada correctamente!" + avisoCorreo);
         document.getElementById('vis-fecha-desde').value = '';
         document.getElementById('vis-fecha-hasta').value = '';
         cargarVisitas();
@@ -8815,7 +8842,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       if (error) {
         alert("Error al eliminar la visita: " + error.message);
       } else {
-        registrarActividad('Eliminó visita', 'Borró una asignación del calendario');
+        registrarActividad(textosCal().elim, 'Borró una asignación del calendario');
         cargarVisitas();
       }
     }
@@ -16269,7 +16296,8 @@ ${cont.innerHTML}
       { clave: 'impuestos', nombre: '     ↳ 2. Análisis Claves › Activos › AH Activos por impuestos corrientes', btn: 'nav-cuenta-extra-activos-impuestos', defecto: false },
       { clave: 'concil', nombre: '     ↳ 2. Análisis Claves › Activos › AA Efectivo y equivalentes de efectivo (hojas Bancos y Equivalentes)', btn: 'nav-cuenta-extra-activos-concil', defecto: false },
       { clave: 'visitas', nombre: '1b) Auditoría/Planificación › Visitas (Calendario)', btn: 'nav-visitas' },
-      { clave: 'asignacion', nombre: '1c) Auditoría/Planificación › Asignación de cuentas', btn: 'nav-asignacion' },
+      { clave: 'invfis', nombre: '1c) Auditoría/Planificación › Inventarios físicos (Calendario)', btn: 'nav-invfis' },
+      { clave: 'asignacion', nombre: '1d) Auditoría/Planificación › Asignación de cuentas', btn: 'nav-asignacion' },
       { clave: 'indices', nombre: '3a) Índices financieros', btn: 'nav-indices' },
       { clave: 'mayor', nombre: '3b) Análisis de mayor contable', btn: 'nav-mayor' },
       { clave: 'contratos', nombre: '3c) Resumen de contratos', btn: 'nav-contratos' },
