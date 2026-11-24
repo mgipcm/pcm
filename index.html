@@ -17983,14 +17983,49 @@ ${cont.innerHTML}
         ].join('\n')
       };
     }
+    function comBorradorMayor() {
+      const yo = (typeof nombreUsuarioActivo === 'function' && nombreUsuarioActivo()) || '';
+      return {
+        asunto: 'PCM Inteligente: el mayor contable se sube una sola vez, en el menú Mayor contable',
+        mensaje: [
+          '## Qué cambia',
+          'El mayor contable del cliente ya no se adjunta en cada pedido. Se sube una sola vez en el menú **Mayor contable** y queda disponible para todos los análisis de ese cliente, año y visita. Así evitamos esperas y errores por el tamaño de los archivos.',
+          '',
+          '## Cómo cargarlo',
+          '- 1. Entrar al menú Auditoría / Análisis Claves › **Mayor contable**.',
+          '- 2. Elegir el cliente, el año y la visita.',
+          '- 3. Pulsar **Subir y leer** y esperar a que aparezca «Leído completo» y «Resumen por cuenta: listo».',
+          '- 4. Hacer el pedido de análisis de la forma normal.',
+          '',
+          '## Recomendaciones',
+          '- Si el archivo CSV es muy pesado, súbanlo comprimido en formato **.zip**.',
+          '- Si el cliente entrega un mayor corregido, reemplácenlo con el botón **Borrar** y suban el nuevo.',
+          '- El mayor se conserva 90 días desde su último uso y luego se elimina automáticamente.',
+          '- Si el cliente solo les entrega el mayor de una cuenta o de un grupo de cuentas (por ejemplo, IVA o inventarios), adjúntenlo en el pedido. Si ya está cargado el mayor completo, no hace falta.',
+          '- Si hacen un pedido sin mayor cargado, el pedido queda detenido y llega un correo pidiendo subirlo en el menú Mayor contable.',
+          '- Al abrir la aplicación, presionar Ctrl+F5.',
+          '',
+          'Cualquier duda me avisan.',
+          '',
+          'Saludos,',
+          yo
+        ].join('\n')
+      };
+    }
+    function comPlantilla(clave) {
+      const b = clave === 'mayor' ? comBorradorMayor() : comBorrador();
+      const a = document.getElementById('com-asunto'), m = document.getElementById('com-mensaje');
+      if (a) a.value = b.asunto; if (m) m.value = b.mensaje;
+    }
     function comAbrir() {
       if (cargoUsuarioNorm() !== 'socio') { alert('Solo el Socio puede enviar comunicados.'); return; }
-      const b = comBorrador(), us = (listaUsuariosCache || []).filter(u => u.email);
+      const b = comBorradorMayor(), us = (listaUsuariosCache || []).filter(u => u.email);
       const ov = document.createElement('div'); ov.id = 'com-overlay';
       ov.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
       ov.innerHTML = '<div class="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[92vh] overflow-auto p-5 space-y-3 text-xs text-slate-700">' +
         '<div class="flex items-center justify-between"><div class="text-sm font-bold text-slate-800">Enviar comunicado por correo</div><button type="button" onclick="comCerrar()" class="text-slate-500 hover:text-slate-800 text-base" title="Cerrar">✕</button></div>' +
         '<p class="text-slate-500">Edita el texto como quieras. Formato sencillo: «## Título» para un subtítulo, «- » para una viñeta y **negrita** con dos asteriscos. Cada persona recibe el correo con su nombre. Se envía desde info@mgipcm.com y las respuestas llegan a tu correo.</p>' +
+        '<label class="block font-bold text-slate-600">Comunicado<select onchange="comPlantilla(this.value)" class="mt-1 w-full p-2 border border-slate-300 rounded-lg outline-none font-normal bg-white"><option value="mayor">El mayor contable se sube una sola vez</option><option value="nomina">Ya está disponible la prueba de Nómina</option></select></label>' +
         '<label class="block font-bold text-slate-600">Asunto<input id="com-asunto" type="text" class="mt-1 w-full p-2 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 font-normal" value="' + escapeHtml(b.asunto) + '"></label>' +
         '<label class="block font-bold text-slate-600">Mensaje<textarea id="com-mensaje" rows="18" class="mt-1 w-full p-2 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 font-normal" style="font-family:inherit">' + escapeHtml(b.mensaje) + '</textarea></label>' +
         '<div><div class="font-bold text-slate-600 mb-1">Destinatarios</div><div class="grid sm:grid-cols-2 gap-1">' + us.map(u => '<label class="flex items-center gap-2"><input type="checkbox" class="com-dest" value="' + escapeHtml(String(u.email).toLowerCase()) + '" checked> <span>' + escapeHtml(u.nombre || u.email) + ' <span class="text-slate-400">· ' + escapeHtml(u.cargo || '') + '</span></span></label>').join('') + '</div></div>' +
