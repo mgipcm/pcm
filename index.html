@@ -4807,6 +4807,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       const archivos = [...pcArchivosSel];
       if (!archivos.length) return err('Sube al menos un archivo con la documentación.');
       const grande = archivos.find(f => f.size > 209715200); if (grande) return err('El archivo "' + grande.name + '" supera los 200 MB. Sube una versión resumida o filtrada a lo que se va a analizar.');
+      { const my = archivos.filter((f, i) => pcEsMayorCompleto(f, pcEtiquetasElegidas[i])); if (my.length) { const q = my; archivos.splice(0, archivos.length, ...archivos.filter(f => !q.includes(f))); pcArchivosSel = pcArchivosSel.filter(f => !q.includes(f)); pcArchivosElegidos(); return err(await pcMensajeMayor(v('pc-cliente'), v('pc-anio'), q.map(f => f.name))); } }
       if (archivos.some((f, i) => !pcEtiquetasElegidas[i])) return err('Elige el tipo de cada archivo (conciliación, estado de cuenta, etc.).');
       if (!document.getElementById('pc-confirma').checked) return err('Marca la confirmación de que la documentación es completa y adecuada.');
       if (confirmado !== true) { pcResumenAntesDeEnviar(archivos); return; }
@@ -4877,7 +4878,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
     function pcNombreHoja(h) { return PC_HOJAS[h] || h || ''; }
     const PC_TODO = 'Todo en un archivo (todos los documentos juntos)';
     function pcEtiquetas(sumaria, hoja) {
-      const l = PC_ETIQ[(sumaria === 'AA' || sumaria === 'AF' || sumaria === 'RC' || sumaria === 'AH') ? sumaria + ':' + (hoja || '') : sumaria] || ['Documento de soporte', 'Otro'];
+      const l = (PC_ETIQ[(sumaria === 'AA' || sumaria === 'AF' || sumaria === 'RC' || sumaria === 'AH') ? sumaria + ':' + (hoja || '') : sumaria] || ['Documento de soporte', 'Otro']).filter(x => x !== PC_MAYOR_ETQ);
       const i = l.indexOf('Otro');
       return i < 0 ? l.concat([PC_TODO]) : l.slice(0, i).concat([PC_TODO], l.slice(i));
     }
@@ -4900,8 +4901,49 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
     let pcEtiquetasElegidas = [];
     let pcArchivosSel = [];
     let pcTipoPrevio = '';
-    function pcAgregarSeleccion(inp) {
-      const nuevos = [...(inp.files || [])];
+    // El mayor contable completo no se sube desde el pedido (es muy pesado y se corta): se carga en la pantalla Mayor contable del menú
+    const PC_MAYOR_ETQ = 'Mayor contable completo';
+    function pcEsMayorCompleto(f, etiqueta) {
+      if (etiqueta === PC_MAYOR_ETQ) return true;
+      if (etiqueta && /^mayor /i.test(etiqueta)) return false; // mayores de una cuenta o de un grupo de cuentas: son livianos y sí se suben
+      const n = String((f && f.name) || '');
+      return /mayor(es)?[\s_.-]*(contable|depurado|general|completo)/i.test(n) || /mayores/i.test(n);
+    }
+    async function pcMensajeMayor(cli, anio, nombres) {
+      const lista = nombres.map(n => '«' + n + '»').join(', ');
+      let ya = null;
+      try {
+        const { data: a1 } = await supabaseClient.from('pedidos_claude_archivos').select('id, nombre, visita, created_at').is('pedido_id', null).eq('cliente_id', cli).eq('anio', Number(anio)).eq('etiqueta', PC_MAYOR_ETQ).is('eliminado_at', null).order('created_at', { ascending: false });
+        const ids = (a1 || []).map(x => x.id);
+        if (ids.length) {
+          const { data: t1 } = await supabaseClient.from('pedidos_claude_textos').select('archivo_id, error').in('archivo_id', ids);
+          const bien = {}; (t1 || []).forEach(x => { if (!x.error) bien[x.archivo_id] = true; });
+          ya = (a1 || []).find(x => bien[x.id]) || null;
+        }
+        if (!ya) {
+          const { data: pe } = await supabaseClient.from('pedidos_claude').select('id').eq('cliente_id', cli).eq('anio', Number(anio));
+          if (pe && pe.length) {
+            const { data: a2 } = await supabaseClient.from('pedidos_claude_archivos').select('id, nombre, created_at').in('pedido_id', pe.map(x => x.id)).eq('etiqueta', PC_MAYOR_ETQ).is('eliminado_at', null).order('created_at', { ascending: false });
+            const ids2 = (a2 || []).map(x => x.id);
+            if (ids2.length) {
+              const { data: t2 } = await supabaseClient.from('pedidos_claude_textos').select('archivo_id, error').in('archivo_id', ids2);
+              const bien2 = {}; (t2 || []).forEach(x => { if (!x.error) bien2[x.archivo_id] = true; });
+              ya = (a2 || []).find(x => bien2[x.id]) || null;
+            }
+          }
+        }
+      } catch (e) { /* si no se pudo consultar, se da el mensaje general */ }
+      if (ya) return 'El mayor contable de este cliente y año ya está subido en la pantalla Mayor contable del menú (' + ya.nombre + ', del ' + mcFecha(ya.created_at) + '). No hace falta subirlo en el pedido: Claude lo usa solo. Se quitó de la lista: ' + lista + '.';
+      return 'El mayor contable no se sube desde el pedido (es muy pesado y se corta). Cárgalo primero en la pantalla Mayor contable del menú (Auditoría/Análisis Claves › Mayor contable), mejor comprimido en zip, y después vuelve a hacer el pedido: Claude lo usa solo. Se quitó de la lista: ' + lista + '.';
+    }
+    async function pcAgregarSeleccion(inp) {
+      let nuevos = [...(inp.files || [])];
+      const mayores = nuevos.filter(f => pcEsMayorCompleto(f, pcTipoPrevio));
+      if (mayores.length) {
+        nuevos = nuevos.filter(f => !mayores.includes(f));
+        inp.value = '';
+        alert(await pcMensajeMayor(valorAnalisis('pc-cliente'), valorAnalisis('pc-anio'), mayores.map(f => f.name)));
+      }
       nuevos.forEach(f => { if (!pcArchivosSel.some(x => x.name === f.name && x.size === f.size)) { pcArchivosSel.push(f); if (pcTipoPrevio) pcEtiquetasElegidas[pcArchivosSel.length - 1] = pcTipoPrevio; } });
       inp.value = '';
       pcArchivosElegidos();
@@ -4948,7 +4990,8 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       if (!sel || !sel.value) { alert('Elige primero el tipo de archivo que vas a agregar.'); return; }
       const et = sel.value, inp = document.createElement('input'); inp.type = 'file'; inp.multiple = true;
       inp.onchange = async () => {
-        const fs = [...inp.files], p = pedidosClaude.find(x => x.id === id); if (!fs.length || !p) return;
+        let fs = [...inp.files]; const p = pedidosClaude.find(x => x.id === id); if (!fs.length || !p) return;
+        { const my = fs.filter(f => pcEsMayorCompleto(f, et)); if (my.length) { fs = fs.filter(f => !my.includes(f)); alert(await pcMensajeMayor(p.cliente_id, p.anio, my.map(f => f.name))); if (!fs.length) return; } }
         const grande = fs.find(f => f.size > 209715200); if (grande) { alert('El archivo "' + grande.name + '" supera los 200 MB. Sube una versión resumida o filtrada.'); return; }
         msg.textContent = 'Subiendo ' + fs.length + ' archivo(s)…'; msg.className = 'text-[11px] min-h-[1rem] text-slate-500';
         const falla = [];
