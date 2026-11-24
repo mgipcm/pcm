@@ -4943,7 +4943,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       const { data } = await supabaseClient.from('pedidos_claude_archivos').select('*').in('pedido_id', ids).order('created_at', { ascending: true });
       (data || []).forEach(a => { const p = pedidosClaude.find(x => x.id === a.pedido_id); if (p) p._arch.push(a); });
       const { data: lec } = await supabaseClient.from('pedidos_claude_textos').select('archivo_id, error, paginas, origen_lectura').in('archivo_id', (data || []).map(a => a.id));
-      const mapa = {}; (lec || []).forEach(l => { mapa[l.archivo_id] = l; });
+      const mapa = {}; (lec || []).forEach(l => { if (l.error && /interrump/i.test(l.error)) l.error = 'No se pudo leer por ser muy pesado. Si es un mayor contable completo, súbelo solo en otro pedido (aparte de los demás archivos); si es otro archivo, súbelo más liviano o como PDF o CSV.'; mapa[l.archivo_id] = l; });
       (data || []).forEach(a => { a._lectura = mapa[a.id] || null; });
     }
     // Elimina los archivos de pedidos vencidos (3 días) o cancelados/rechazados; conserva el registro con los nombres.
