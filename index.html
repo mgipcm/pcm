@@ -20211,10 +20211,10 @@ ${cont.innerHTML}
     function eiTabla(doc, filas, o) {
       o = o || {};
       const n = Math.max(...filas.map(f => f.length)), tbl = eiNuevo(doc, 'tbl');
-      const primera = n <= 3 ? 5000 : (n <= 5 ? 3000 : (n === 6 ? 2200 : 1700)), otras = n > 1 ? Math.min(1500, Math.floor(((o.ancho || 9000) - primera) / (n - 1))) : 0, tam = n >= 7 ? 14 : (n === 6 ? 16 : 0);
+      const primera = n <= 3 ? 5000 : (n <= 5 ? 3000 : (n === 6 ? 2200 : (n >= 10 ? 1500 : 1700))), otras = n > 1 ? Math.min(1500, Math.floor(((o.ancho || 9000) - primera) / (n - 1))) : 0, tam = n >= 10 ? 12 : (n >= 7 ? 14 : (n === 6 ? 16 : 0));
       const ancho = c => Math.round(c === 0 ? primera : otras);
       const grid = eiNuevo(doc, 'tblGrid'); for (let c = 0; c < n; c++) grid.appendChild(eiNuevo(doc, 'gridCol', { w: ancho(c), type: 'dxa' })); tbl.appendChild(grid);
-      const pr = eiNuevo(doc, 'tblPr'); pr.appendChild(eiNuevo(doc, 'tblStyle', { val: o.estiloTabla || 'myTable' })); tbl.appendChild(pr);
+      const pr = eiNuevo(doc, 'tblPr'); pr.appendChild(eiNuevo(doc, 'tblStyle', { val: o.estiloTabla || 'myTable' })); if (n >= 9) { pr.appendChild(eiNuevo(doc, 'tblW', { w: primera + otras * (n - 1), type: 'dxa' })); pr.appendChild(eiNuevo(doc, 'tblLayout', { type: 'fixed' })); const mar = eiNuevo(doc, 'tblCellMar'); mar.appendChild(eiNuevo(doc, 'left', { w: 40, type: 'dxa' })); mar.appendChild(eiNuevo(doc, 'right', { w: 40, type: 'dxa' })); pr.appendChild(mar); } tbl.appendChild(pr);
       const nEnc = o.encabezado === undefined ? 1 : o.encabezado, esTotal = (f, r) => (o.total_filas ? o.total_filas.includes(r) : /^\s*(total|subtotal|saldo al final|saldo final)/i.test(String(f[0] || '')));
       filas.forEach((f, r) => {
         const enc = r < nEnc, tot = !enc && esTotal(f, r), tr = eiNuevo(doc, 'tr'); tr.appendChild(eiNuevo(doc, 'trPr'));
@@ -20304,7 +20304,7 @@ ${cont.innerHTML}
             p.appendChild(run); colocar(op.despues, p); log.push('Párrafo agregado después de ' + op.despues);
           } else if (op.op === 'tabla') {
             if (!orig[op.despues]) throw new Error('no existe el elemento ' + op.despues);
-            let filas = []; for (const id of (op.bloques || [])) { const b = bloques[id]; if (!b) throw new Error('no existe el bloque ' + id); filas = filas.concat(b.filas.map(f => f.slice())); }
+            let filas = []; for (const id of (op.bloques || [])) { if (id && typeof id === 'object' && Array.isArray(id.fila)) { filas.push(id.fila.map(String)); continue; } const b = bloques[id]; if (!b) throw new Error('no existe el bloque ' + id); filas = filas.concat(b.filas.map(f => f.slice())); }
             if (!filas.length) throw new Error('el bloque no trae filas');
             if (op.excluir_filas && op.excluir_filas.length) filas = filas.filter((f, i) => !op.excluir_filas.includes(i));
             if (op.cols && op.cols.length) filas = filas.map(f => op.cols.map(c => f[c] === undefined ? '' : f[c]));
