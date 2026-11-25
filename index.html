@@ -19707,9 +19707,46 @@ ${cont.innerHTML}
         (dc.data || []).forEach(x => { (F.dec[x.mes] = F.dec[x.mes] || {})[x.casilla] = x.valor === null ? null : Number(x.valor); });
         await f104CargarMov(tok);
         if (tok !== nmE.f104Tok) return;
+        try { await f104LeerFormularios(cli, anio, vis, tok); } catch (e2) { F.avisoForm = 'No se pudieron leer los formularios 104 subidos: ' + ((e2 && e2.message) || e2); }
         F.cargado = true;
       } catch (er) { if (nmE.f104) { nmE.f104.error = (er && er.message) || String(er); nmE.f104.cargado = true; } }
       if (tok === nmE.f104Tok && nmE.tab === 'f104') f104Pintar();
+    }
+    // Lee los formularios 104 subidos (texto ya extraído en el servidor) y llena los casilleros declarados que aún no tienen valor
+    const F104_CASILLAS = ['419', '429', '483', '564', '601', '602', '605', '609', '615', '617', '618', '619', '721', '723', '725', '727', '729', '731', '799'];
+    const F104_MES_NOM = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'setiembre', 'octubre', 'noviembre', 'diciembre'];
+    function f104LeerTexto(txt, nombre) {
+      const nm = String(nombre || '').toLowerCase(); let mes = 0;
+      F104_MES_NOM.forEach((x, i) => { if (!mes && nm.includes(x)) mes = i >= 9 ? i : i + 1; });
+      if (!mes) { const mm = /(?:mes|per[ií]odo)[^\d\n]{0,25}(\d{1,2})\b/i.exec(txt); if (mm && Number(mm[1]) >= 1 && Number(mm[1]) <= 12) mes = Number(mm[1]); }
+      const cas = {}, re = /(?<!\d)(\d{3})(?!\d)[^\d\n]{0,90}?(-?\d[\d.,]*[.,]\d{2})(?!\d)/g; let m;
+      while ((m = re.exec(txt))) { if (!F104_CASILLAS.includes(m[1]) || cas[m[1]] !== undefined) continue; let s = m[2]; s = /,\d{2}$/.test(s) ? s.replace(/\./g, '').replace(',', '.') : s.replace(/,/g, ''); const v = Number(s); if (Number.isFinite(v)) cas[m[1]] = v; }
+      return { mes, cas };
+    }
+    async function f104LeerFormularios(cli, anio, vis, tok) {
+      const F = nmE.f104, ET = 'Formulario 104 (declaración de IVA)'; F.nForm = 0;
+      const pe = await supabaseClient.from('pedidos_claude').select('id').eq('cliente_id', cli).eq('anio', anio).eq('visita', vis).eq('hoja', 'impuestos');
+      const pids = (pe.data || []).map(x => x.id);
+      let arch = [];
+      if (pids.length) arch = arch.concat(await f104Pag(() => supabaseClient.from('pedidos_claude_archivos').select('id, nombre').in('pedido_id', pids).eq('etiqueta', ET).is('eliminado_at', null)));
+      arch = arch.concat(await f104Pag(() => supabaseClient.from('pedidos_claude_archivos').select('id, nombre').is('pedido_id', null).eq('cliente_id', cli).eq('anio', anio).eq('visita', vis).eq('etiqueta', ET).is('eliminado_at', null)));
+      if (!arch.length) return;
+      const nuevos = [], sinTexto = [], sinMes = [];
+      for (const a of arch) {
+        if (tok !== nmE.f104Tok) return;
+        const t = await supabaseClient.from('pedidos_claude_textos').select('texto, error, en_partes').eq('archivo_id', a.id).maybeSingle();
+        const tx = t.data && t.data.texto;
+        if (!tx) { sinTexto.push(a.nombre); continue; }
+        const r = f104LeerTexto(tx, a.nombre);
+        if (!r.mes) { sinMes.push(a.nombre); continue; }
+        F.nForm++;
+        Object.keys(r.cas).forEach(c => { const d = F.dec[r.mes] || {}; if (d[c] === undefined || d[c] === null) { (F.dec[r.mes] = F.dec[r.mes] || {})[c] = r.cas[c]; nuevos.push({ cliente_id: cli, anio, visita: vis, mes: r.mes, casilla: c, valor: r.cas[c], updated_at: new Date().toISOString() }); } });
+      }
+      if (nuevos.length) await supabaseClient.from('f104_declarado').upsert(nuevos, { onConflict: 'cliente_id,anio,visita,mes,casilla' });
+      const av = [];
+      if (sinTexto.length) av.push(sinTexto.length + ' formulario(s) aún sin texto leído (espere un momento y vuelva a abrir): ' + sinTexto.join(', '));
+      if (sinMes.length) av.push('No se pudo saber el mes de: ' + sinMes.join(', '));
+      F.avisoForm = av.join(' · ');
     }
     async function f104CargarMov(tok) {
       const F = nmE.f104, anio = Number(nmE.anio); if (!F || !F.ids || !F.ids.length) return;
@@ -19883,7 +19920,7 @@ ${cont.innerHTML}
       const mesOpt = F104_MESES.map((nm, i) => '<option value="' + (i + 1) + '"' + ((F.mesPeg || 1) === i + 1 ? ' selected' : '') + '>' + nm + '</option>').join('');
       c.innerHTML = '<style>.f104{border-collapse:collapse;font-size:12px;color:#2b2b27;width:100%}.f104 th{background:#f4f4f1;border:1px solid #dfdfdb;padding:4px 6px;font-weight:700;font-size:10.5px;text-align:center;vertical-align:middle;line-height:1.25}.f104 th.g{background:#ecece8;font-size:11px}.f104 td{border:1px solid #ececE8;padding:2px 6px;white-space:nowrap}.f104 td.n{text-align:right}.f104 td.mes,.f104 th.mes{text-align:left;font-weight:600;position:sticky;left:0;background:#fff;z-index:1;min-width:84px}.f104 th.mes{background:#ecece8}.f104 td.fx{background:#faf9f6}.f104 tr.tot td{font-weight:700;border-top:1px solid #cfcfc8;background:#faf9f6}.f104 tr.tot td.mes{background:#faf9f6}.f104 td.d{min-width:96px;background:#fcfcfa}.f104 td.d input{width:100%;text-align:right;border:0;background:transparent;font-size:12px;padding:2px 0;outline:none}.f104 td.d input:focus{background:#fff;box-shadow:inset 0 0 0 1px #c9c9c0;border-radius:3px}.f104 td.d.dif{background:#fdf0ee}.f104 td.d.dif input{color:' + RCOL + ';font-weight:700}.f104 td.tf input{border:0;background:transparent;text-align:right;font-size:12px;padding:0;outline:none}.f104 td.tf input:focus{background:#fff;box-shadow:inset 0 0 0 1px #c9c9c0;border-radius:3px}.f104-av{margin:10px 14px;padding:8px 12px;border:1px dashed #d97706;background:#fffbeb;border-radius:8px;font-size:12px;color:#8a5a00}.f104-btn{font-size:12px;font-weight:600;color:#4a4a44;border:1px solid #dcdcd6;border-radius:8px;padding:4px 10px;background:#fff}.f104-btn:hover{background:#f4f4f1}.f104-det{margin:8px 14px;border:1px solid #dfdfdb;border-radius:10px;background:#faf9f6}.f104-det>summary{cursor:pointer;padding:7px 12px;font-size:12px;font-weight:700;color:#4a4a44}.f104-h{padding:10px 14px 4px;font-size:13px;font-weight:800;color:#2b2b27}</style>'
         + '<div style="padding:12px 14px 2px"><div style="font-size:15px;font-weight:800;color:#2b2b27">Anexo de IVA y retenciones de IVA · libros contra declaraciones</div><div style="font-size:12px;color:#6b6b63;margin-top:2px">Cuadre sencillo armado solo con las cuentas del mayor contable (basado en el Anexo No. 4 del informe de cumplimiento tributario). Los valores «según declaraciones» son los casilleros del formulario 104. Las celdas de fondo claro son cálculos del cuadro.</div></div>'
-        + aviso
+        + aviso + (F.avisoForm ? '<div class="f104-av">' + e(F.avisoForm) + '</div>' : '')
         + '<div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:6px 14px"><span style="font-size:12px">' + estado + '</span></div>'
         + '<details id="f104-map" class="f104-det"' + (abMap ? ' open' : '') + '><summary>Cuentas del mayor que arman el cuadre (' + nMap + ' asignadas)</summary><div style="padding:4px 12px 10px"><div style="font-size:11px;color:#6b6b63;margin-bottom:6px">Indique qué cuentas del mayor alimentan cada columna «según libros». Se guarda por cliente y sirve para todos los meses y años. La tarifa de IVA de cada mes se cambia directamente en la tabla.</div><div style="margin-bottom:6px"><button type="button" class="f104-btn" onclick="f104Sugerir()">Sugerir cuentas por nombre</button></div><div style="overflow-x:auto"><table class="f104" style="min-width:760px"><thead><tr><th style="text-align:left">Columna del anexo</th><th>N.º</th><th style="text-align:left">Cuentas del mayor</th><th style="text-align:left">Qué toma del mayor</th></tr></thead><tbody>' + filasMap + '</tbody></table></div>' + dl + '</div></details>'
         + '<div class="f104-h">Cuadre del IVA: libros contra declaraciones</div>'
