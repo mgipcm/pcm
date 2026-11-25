@@ -19856,6 +19856,39 @@ ${cont.innerHTML}
       if (r.error) { alert('No se pudo guardar: ' + r.error.message); return; }
       await f104CargarMov(); f104Pintar(true);
     }
+    // Detalle por cuenta de cada columna del cuadre (para comparar rápido contra el mayor)
+    function f104Detalle(FILAS) {
+      const F = nmE.f104, e = escapeHtml, ym = m => nmE.anio + '-' + String(m).padStart(2, '0');
+      const abiertos = new Set([].slice.call(document.querySelectorAll('details.f104-dc[open]')).map(x => x.getAttribute('data-k')));
+      const ab = (k, d) => (abiertos.size || document.querySelector('details.f104-dc')) ? abiertos.has(k) : d;
+      const num = x => x === 0 ? '<span style="color:#c4c4bd">0,00</span>' : f104Fm(x);
+      const enCuadro = { c1: r => r.B, c7: r => r.H, c4: r => r.E, c14: r => r.compras };
+      let h = '';
+      F104_COLS.forEach(cl => {
+        const mp = F.mapeo[cl.k]; if (!mp || !mp.cuentas || !mp.cuentas.length) return;
+        const modo = mp.modo || cl.modo, ini = modo === 'saldo_ini';
+        const val = (cu, m) => { const x = (F.mov[cu] || {})[ym(m)]; if (!x) return 0; return modo === 'bruto' ? (cl.nat === 'cr' ? x[1] : x[0]) : (ini ? x[0] - x[1] : (cl.nat === 'cr' ? x[1] - x[0] : x[0] - x[1])); };
+        const si0 = cu => { const mv = F.mov[cu] || {}; let s = (F.ctas[cu] || {}).si || 0; Object.keys(mv).forEach(k => { if (k < nmE.anio + '-01') s += mv[k][0] - mv[k][1]; }); return f104R(s); };
+        const tm = new Array(12).fill(0); let tsi = 0;
+        let filas = mp.cuentas.map(cu => {
+          let t = 0, c = '';
+          for (let m = 1; m <= 12; m++) { const v = f104R(val(cu, m)); tm[m - 1] += v; t += v; c += '<td class="n">' + num(v) + '</td>'; }
+          const s0 = ini ? si0(cu) : 0; tsi += s0;
+          return '<tr><td class="mes" style="min-width:110px">' + e(cu) + '</td><td style="max-width:260px;overflow:hidden;text-overflow:ellipsis">' + e(F.ctas[cu] ? F.ctas[cu].nombre : '(no está en el mayor)') + '</td>' + (ini ? '<td class="n">' + num(s0) + '</td>' : '') + c + '<td class="n fx"><b>' + num(f104R(t)) + '</b></td></tr>';
+        }).join('');
+        const tt = f104R(tm.reduce((a, b) => a + b, 0));
+        filas += '<tr class="tot"><td class="mes">Suma</td><td></td>' + (ini ? '<td class="n">' + num(f104R(tsi)) + '</td>' : '') + tm.map(v => '<td class="n">' + num(f104R(v)) + '</td>').join('') + '<td class="n">' + num(tt) + '</td></tr>';
+        const fn = enCuadro[cl.k];
+        if (fn && !ini) {
+          const cu = FILAS.map(fn), dd = tm.map((v, i) => f104R(cu[i] - v));
+          filas += '<tr><td class="mes">En el cuadro</td><td></td>' + cu.map(v => '<td class="n">' + num(v) + '</td>').join('') + '<td class="n">' + num(f104R(cu.reduce((a, b) => a + b, 0))) + '</td></tr>'
+            + '<tr><td class="mes">Diferencia</td><td></td>' + dd.map(v => '<td class="n">' + (Math.abs(v) > 0.01 ? '<b style="color:#b42318">' + f104Fm(v) + '</b>' : '<span style="color:#2f7a4d">0,00</span>') + '</td>').join('') + '<td class="n">' + num(f104R(dd.reduce((a, b) => a + b, 0))) + '</td></tr>';
+        }
+        const tit = cl.t.replace(/\s*\(.*$/, '');
+        h += '<details class="f104-det f104-dc" data-k="' + cl.k + '"' + (ab(cl.k, cl.k === 'c1') ? ' open' : '') + '><summary>' + e(cl.n + '. ' + tit) + ' · ' + mp.cuentas.length + ' cuenta(s) · total ' + f104Fm(tt) + '</summary><div class="overflow-x-auto" style="overflow-x:auto;padding:4px 10px 10px"><table class="f104" style="min-width:1500px"><thead><tr><th class="mes">Cuenta</th><th style="text-align:left">Nombre</th>' + (ini ? '<th>Saldo al 01-01</th>' : '') + F104_MESES.map(m => '<th>' + m + '</th>').join('') + '<th>Total</th></tr></thead><tbody>' + filas + '</tbody></table></div></details>';
+      });
+      return h ? '<div class="f104-h">Detalle por cuenta de cada columna (lo que tomó del mayor)</div>' + h : '';
+    }
     function f104Pintar(mantener) {
       const c = $im('nm-panel'), e = escapeHtml;
       if (!nmE.cliente) { c.innerHTML = '<p class="text-xs text-slate-500 p-4">Selecciona el cliente para comenzar.</p>'; return; }
@@ -19927,6 +19960,7 @@ ${cont.innerHTML}
         + '<details id="f104-map" class="f104-det"' + (abMap ? ' open' : '') + '><summary>Cuentas del mayor que arman el cuadre (' + nMap + ' asignadas)</summary><div style="padding:4px 12px 10px"><div style="font-size:11px;color:#6b6b63;margin-bottom:6px">Indique qué cuentas del mayor alimentan cada columna «según libros». Se guarda por cliente y sirve para todos los meses y años. La tarifa de IVA de cada mes se cambia directamente en la tabla.</div><div style="margin-bottom:6px"><button type="button" class="f104-btn" onclick="f104Sugerir()">Sugerir cuentas por nombre</button></div><div style="overflow-x:auto"><table class="f104" style="min-width:760px"><thead><tr><th style="text-align:left">Columna del anexo</th><th>N.º</th><th style="text-align:left">Cuentas del mayor</th><th style="text-align:left">Qué toma del mayor</th></tr></thead><tbody>' + filasMap + '</tbody></table></div>' + dl + '</div></details>'
         + '<div class="f104-h">Cuadre del IVA: libros contra declaraciones</div>'
         + '<div class="overflow-x-auto" style="overflow-x:auto;padding:0 10px 10px"><table class="f104" style="min-width:2300px"><thead>' + H1 + '</thead><tbody>' + cuerpo + tot + '</tbody></table></div>'
+        + f104Detalle(FILAS)
         + '<div class="f104-h">Conciliación de retenciones en la fuente del IVA declaradas contra libros</div>'
         + '<div class="overflow-x-auto" style="overflow-x:auto;padding:0 10px 12px"><table class="f104" style="min-width:1700px"><thead>' + HR + '</thead><tbody>' + cuerpoR + totR + '</tbody></table></div>'
         + '<div style="padding:0 14px 14px;font-size:11px;color:#6b6b63;line-height:1.55"><b>Cómo se arma.</b> Todo sale del mayor contable. Ventas netas = cuentas de ingresos por ventas. Ventas con tarifa ≠ 0% = IVA generado ÷ tarifa del mes; el resto de las ventas va como tarifa 0% y exentas. Impuesto causado = IVA generado − IVA en compras del mes. Crédito tributario final = saldo inicial + débitos − créditos de la cuenta de crédito tributario de IVA. La tarifa del mes se puede cambiar (por defecto 15% desde 2025). Se considera diferencia cuando supera ' + f104Fm(TOL) + '. Toda diferencia debe explicarse al pie de este cuadro y en las recomendaciones.</div>';
