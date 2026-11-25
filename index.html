@@ -14043,9 +14043,9 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       if (cr === null || cr === undefined) return '';
       const col = '<td colspan="4" class="px-2 pb-2 text-xs">';
       if (!cr.length || !cr.some(x => x.estado !== 'solo_mayor')) return '<tr>' + col + '<span class="text-slate-600">Cruce con las sumarias (balance de comprobación): no hay balance de comprobación cargado para este cliente, año y visita.</span>' + mcSaldosHtml(sa, false) + '</td></tr>';
-      const n = e => cr.filter(x => x.estado === e).length, cu = n('cuadra'), di = n('diferencia'), sm = n('solo_mayor'), sb = n('solo_balance');
-      const cruzan = cu + di, ok = di === 0 && sb === 0;
-      let t = '<span class="font-semibold" style="color:' + (ok ? '#1d6b3a' : '#8a5a00') + '">Cruce con las sumarias (balance de comprobación): ' + mcNum(cu) + ' de ' + mcNum(cruzan) + ' cuentas del balance cuadran con el mayor' + (di ? ' · ' + mcNum(di) + ' con diferencia' : '') + (sb ? ' · ' + mcNum(sb) + ' del balance no están en el mayor' : '') + '</span>';
+      const n = e => cr.filter(x => x.estado === e).length, rd = cr.filter(x => x.estado === 'diferencia' && Math.abs(Number(x.diferencia)) <= 1).length, rb = cr.filter(x => x.estado === 'solo_balance' && Math.abs(Number(x.saldo_bc)) <= 1).length, cu = n('cuadra'), di = n('diferencia') - rd, sm = n('solo_mayor'), sb = n('solo_balance') - rb;
+      const cruzan = cu + di + rd + rb, ok = di === 0 && sb === 0;
+      let t = '<span class="font-semibold" style="color:' + (ok ? '#1d6b3a' : '#8a5a00') + '">Cruce con las sumarias (balance de comprobación): ' + mcNum(cu) + ' de ' + mcNum(cruzan) + ' cuentas del balance cuadran con el mayor' + (rd + rb ? ' (' + mcNum(rd + rb) + ' por redondeo, diferencia de hasta US$ 1)' : '') + (di ? ' · ' + mcNum(di) + ' con diferencia' : '') + (sb ? ' · ' + mcNum(sb) + ' del balance no están en el mayor' : '') + '</span>';
       if (sm) t += '<span class="text-slate-500"> · ' + mcNum(sm) + ' cuentas del mayor no están en el balance (sin saldo o sin sumaria)</span>';
       if (di || sb) t += ' <button type="button" class="font-bold text-slate-700 hover:underline ml-2" onclick="mcVerCruce(\'' + id + '\')">Ver diferencias</button><div id="mc-cruce-' + id + '"></div>';
       return '<tr>' + col + t + mcSaldosHtml(sa, di || sb) + '</td></tr>';
@@ -14056,7 +14056,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       caja.innerHTML = '<span class="text-slate-500">Cargando…</span>';
       const r = await supabaseClient.rpc('mayor_cruce_bc', { p_archivo: id });
       if (r.error) { caja.innerHTML = '<span class="text-red-600">No se pudo cargar: ' + escapeHtml(r.error.message || '') + '</span>'; return; }
-      const f = (r.data || []).filter(x => x.estado === 'diferencia' || x.estado === 'solo_balance');
+      const f = (r.data || []).filter(x => (x.estado === 'diferencia' && Math.abs(Number(x.diferencia)) > 1) || (x.estado === 'solo_balance' && Math.abs(Number(x.saldo_bc)) > 1));
       const m = v => v === null || v === undefined ? '—' : Number(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
       caja.innerHTML = '<div class="mt-1 border border-slate-200 rounded-lg overflow-x-auto"><table class="w-full text-left"><thead><tr class="text-[11px] text-slate-600" style="background:#f3f3f0"><th class="px-2 py-1">Cuenta</th><th class="px-2 py-1">Nombre</th><th class="px-2 py-1 text-right">Saldo mayor</th><th class="px-2 py-1 text-right">Saldo balance</th><th class="px-2 py-1 text-right">Diferencia</th></tr></thead><tbody>' +
         f.map(x => '<tr style="border-top:1px solid #e5e5e0"><td class="px-2 py-0.5">' + escapeHtml(x.cuenta) + '</td><td class="px-2 py-0.5">' + escapeHtml(x.nombre || '') + (x.estado === 'solo_balance' ? ' <span class="text-slate-500">(no está en el mayor)</span>' : '') + '</td><td class="px-2 py-0.5 text-right">' + m(x.saldo_mayor) + '</td><td class="px-2 py-0.5 text-right">' + m(x.saldo_bc) + '</td><td class="px-2 py-0.5 text-right font-semibold">' + m(x.diferencia) + '</td></tr>').join('') + '</tbody></table></div>';
