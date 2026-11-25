@@ -19639,9 +19639,9 @@ ${cont.innerHTML}
         const b1 = G ? Math.min(Math.max(B - E, 0), f104R(H / G)) : 0, b0 = f104R(Math.max(B - E - b1, 0));
         const ini = m === 1 ? g('t0') : p.fin, compras = e.c14 !== undefined ? g('c14') : g('tdb'), apl = g('tcr');
         const fin = f104R(ini + g('tdb') - apl), caus = f104R(Math.max(H - compras, 0));
-        const dY = dec[419], dZ = has(dec.ZCT) ? dec.ZCT : (['615', '617', '618', '619'].some(k => has(dec[k])) ? f104R(['615', '617', '618', '619'].reduce((t, k) => t + (Number(dec[k]) || 0), 0)) : undefined), dA = dec[601], dG = dec[429];
-        const r = { m, B, E, G, H, b1, b0, ini, compras, apl, fin, caus, Y: dY, Z: dZ, AA: dA, GG: dG,
-          AB: has(dY) ? f104R(dY - B) : null, AC: has(dZ) ? f104R(dZ - fin) : null, AD: has(dA) ? f104R(dA - caus) : null, AE: has(dG) ? f104R(dG - H) : null };
+        const dY = dec[419], dZ = dec[615], dA = dec[601], dG = dec[429], suma = ks => ks.some(k => has(dec[k])) ? f104R(ks.reduce((t, k) => t + (Number(dec[k]) || 0), 0)) : undefined, d1 = suma(['411', '412', '435']), d0 = suma(['413', '414', '415', '416']);
+        const r = { m, B, E, G, H, b1, b0, ini, compras, apl, fin, caus, Y: dY, Z: dZ, AA: dA, GG: dG, D1: d1, D0: d0,
+          AB: has(dY) ? f104R(dY - B) : null, AC: has(dZ) ? f104R(dZ - fin) : null, AD: has(dA) ? f104R(dA - caus) : null, AE: has(dG) ? f104R(dG - H) : null, A1: has(d1) ? f104R(d1 - b1) : null, A0: has(d0) ? f104R(d0 - b0) : null };
         const rl = ['r1', 'r2', 'r3', 'r4', 'r5', 'r6'].map(k => g(k)), rd = ['721', '723', '725', '727', '729', '731'].map(k => dec[k]);
         r.ret = { l: rl, tot: f104R(rl.reduce((t, x) => t + x, 0) + g('rt')), d: rd, dt: dec[799], dif: rl.map((x, i) => has(rd[i]) ? f104R(rd[i] - x) : null) };
         r.ret.difT = has(r.ret.dt) ? f104R(r.ret.dt - r.ret.tot) : null;
@@ -19713,7 +19713,7 @@ ${cont.innerHTML}
       if (tok === nmE.f104Tok && nmE.tab === 'f104') f104Pintar();
     }
     // Lee los formularios 104 subidos (texto ya extraído en el servidor) y llena los casilleros declarados que aún no tienen valor
-    const F104_CASILLAS = ['419', '429', '483', '564', '601', '602', '605', '609', '615', '617', '618', '619', '721', '723', '725', '727', '729', '731', '799'];
+    const F104_CASILLAS = ['411', '412', '413', '414', '415', '416', '419', '429', '435', '483', '564', '601', '602', '605', '609', '615', '617', '618', '619', '721', '723', '725', '727', '729', '731', '799'];
     const F104_MES_NOM = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'setiembre', 'octubre', 'noviembre', 'diciembre'];
     function f104LeerTexto(txt, nombre) {
       const nm = String(nombre || '').toLowerCase(); let mes = 0;
@@ -19874,20 +19874,20 @@ ${cont.innerHTML}
       let cuerpo = '';
       FILAS.forEach(r => {
         if ([r.Y, r.Z, r.AA, r.GG].some(x => x !== undefined && x !== null)) nDecl++;
-        [r.AB, r.AC, r.AD, r.AE].forEach(x => { if (x !== null && Math.abs(x) > TOL) nDifs++; });
+        [r.AB, r.AC, r.AD, r.AE, r.A1, r.A0].forEach(x => { if (x !== null && Math.abs(x) > TOL) nDifs++; });
         const dc = (k, v, d) => '<td class="n d' + (d !== null && Math.abs(d) > TOL ? ' dif' : '') + '">' + inp(r.m, k, v) + '</td>';
         cuerpo += '<tr><td class="mes">' + F104_MESES[r.m - 1] + '</td>'
           + '<td class="n">' + n(r.B) + '</td><td class="n fx">' + n(r.b1) + '</td><td class="n fx">' + n(r.b0) + '</td><td class="n">' + n(r.E) + '</td>'
           + '<td class="n tf"><input type="text" value="' + pc(r.G).replace('%', '') + '" onchange="f104Tarifa1(' + r.m + ',this.value)" title="Tarifa de IVA vigente del mes (%)" style="width:48px">%</td>'
           + '<td class="n">' + n(r.H) + '</td><td class="n">' + n(r.compras) + '</td><td class="n fx">' + n(r.caus) + '</td><td class="n fx">' + n(r.ini) + '</td><td class="n">' + n(r.apl) + '</td><td class="n fx">' + n(r.fin) + '</td>'
-          + dc('419', r.Y, r.AB) + dc('429', r.GG, r.AE) + dc('601', r.AA, r.AD) + dc('ZCT', r.Z, r.AC)
-          + '<td class="n">' + dif(r.AB) + '</td><td class="n">' + dif(r.AE) + '</td><td class="n">' + dif(r.AD) + '</td><td class="n">' + dif(r.AC) + '</td></tr>';
+          + dc('419', r.Y, r.AB) + '<td class="n d' + (r.A1 !== null && Math.abs(r.A1) > TOL ? ' dif' : '') + '">' + n(r.D1) + '</td><td class="n d' + (r.A0 !== null && Math.abs(r.A0) > TOL ? ' dif' : '') + '">' + n(r.D0) + '</td>' + dc('429', r.GG, r.AE) + dc('601', r.AA, r.AD) + dc('615', r.Z, r.AC)
+          + '<td class="n">' + dif(r.AB) + '</td><td class="n">' + dif(r.A1) + '</td><td class="n">' + dif(r.A0) + '</td><td class="n">' + dif(r.AE) + '</td><td class="n">' + dif(r.AD) + '</td><td class="n">' + dif(r.AC) + '</td></tr>';
       });
       const tot = '<tr class="tot"><td class="mes">TOTAL</td>' + ['B', 'b1', 'b0', 'E'].map(k => '<td class="n">' + n(sum(FILAS, k)) + '</td>').join('') + '<td></td>'
         + ['H', 'compras', 'caus'].map(k => '<td class="n">' + n(sum(FILAS, k)) + '</td>').join('') + '<td></td><td class="n">' + n(sum(FILAS, 'apl')) + '</td><td></td>'
-        + ['Y', 'GG', 'AA'].map(k => '<td class="n">' + n(sumN(FILAS, k)) + '</td>').join('') + '<td></td>' + ['AB', 'AE', 'AD', 'AC'].map(k => '<td class="n">' + dif(sumN(FILAS, k)) + '</td>').join('') + '</tr>';
-      const H1 = '<tr><th rowspan="2" class="mes">Mes</th><th colspan="11" class="g">Cuadre según los libros contables (mayor contable)</th><th colspan="4" class="g">Según las declaraciones de IVA</th><th colspan="4" class="g">Diferencias (declarado − libros)</th></tr>'
-        + '<tr>' + ['Ventas netas', 'Ventas con tarifa ≠ 0% (IVA ÷ tarifa)', 'Ventas con tarifa 0% y exentas', 'Exportaciones', 'Tarifa de IVA', 'IVA generado en ventas', 'IVA en compras', 'Impuesto causado (generado − compras)', 'Crédito tributario inicial', 'Crédito aplicado contra el IVA', 'Crédito tributario final', 'Total ventas (419)', 'IVA generado (429)', 'Impuesto causado (601)', 'Crédito tributario próximo mes (615+617+618+619)', 'En ventas', 'En IVA generado', 'En impuesto causado', 'En crédito tributario'].map(t => '<th>' + e(t) + '</th>').join('') + '</tr>';
+        + ['Y', 'D1', 'D0', 'GG', 'AA'].map(k => '<td class="n">' + n(sumN(FILAS, k)) + '</td>').join('') + '<td></td>' + ['AB', 'A1', 'A0', 'AE', 'AD', 'AC'].map(k => '<td class="n">' + dif(sumN(FILAS, k)) + '</td>').join('') + '</tr>';
+      const H1 = '<tr><th rowspan="2" class="mes">Mes</th><th colspan="11" class="g">Cuadre según los libros contables (mayor contable)</th><th colspan="6" class="g">Según las declaraciones de IVA</th><th colspan="6" class="g">Diferencias (declarado − libros)</th></tr>'
+        + '<tr>' + ['Ventas netas', 'Ventas con tarifa ≠ 0% (IVA ÷ tarifa)', 'Ventas con tarifa 0% y exentas', 'Exportaciones', 'Tarifa de IVA', 'IVA generado en ventas', 'IVA en compras', 'Impuesto causado (generado − compras)', 'Crédito tributario inicial', 'Crédito aplicado contra el IVA', 'Crédito tributario final', 'Total ventas netas (419)', 'Ventas tarifa ≠ 0% (411+412+435)', 'Ventas tarifa 0% (413 a 416)', 'IVA generado (429)', 'Impuesto causado (601)', 'Crédito tributario por compras, próximo mes (615)', 'En total ventas', 'En ventas ≠ 0%', 'En ventas 0%', 'En IVA generado', 'En impuesto causado', 'En crédito tributario'].map(t => '<th>' + e(t) + '</th>').join('') + '</tr>';
       // Conciliación de retenciones de IVA
       const RL = ['10%', '20%', '30%', '50%', '70%', '100%'], RC = ['721', '723', '725', '727', '729', '731'];
       let cuerpoR = '', nDifR = 0;
@@ -19924,7 +19924,7 @@ ${cont.innerHTML}
         + '<div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:6px 14px"><span style="font-size:12px">' + estado + '</span></div>'
         + '<details id="f104-map" class="f104-det"' + (abMap ? ' open' : '') + '><summary>Cuentas del mayor que arman el cuadre (' + nMap + ' asignadas)</summary><div style="padding:4px 12px 10px"><div style="font-size:11px;color:#6b6b63;margin-bottom:6px">Indique qué cuentas del mayor alimentan cada columna «según libros». Se guarda por cliente y sirve para todos los meses y años. La tarifa de IVA de cada mes se cambia directamente en la tabla.</div><div style="margin-bottom:6px"><button type="button" class="f104-btn" onclick="f104Sugerir()">Sugerir cuentas por nombre</button></div><div style="overflow-x:auto"><table class="f104" style="min-width:760px"><thead><tr><th style="text-align:left">Columna del anexo</th><th>N.º</th><th style="text-align:left">Cuentas del mayor</th><th style="text-align:left">Qué toma del mayor</th></tr></thead><tbody>' + filasMap + '</tbody></table></div>' + dl + '</div></details>'
         + '<div class="f104-h">Cuadre del IVA: libros contra declaraciones</div>'
-        + '<div class="overflow-x-auto" style="overflow-x:auto;padding:0 10px 10px"><table class="f104" style="min-width:2000px"><thead>' + H1 + '</thead><tbody>' + cuerpo + tot + '</tbody></table></div>'
+        + '<div class="overflow-x-auto" style="overflow-x:auto;padding:0 10px 10px"><table class="f104" style="min-width:2300px"><thead>' + H1 + '</thead><tbody>' + cuerpo + tot + '</tbody></table></div>'
         + '<div class="f104-h">Conciliación de retenciones en la fuente del IVA declaradas contra libros</div>'
         + '<div class="overflow-x-auto" style="overflow-x:auto;padding:0 10px 12px"><table class="f104" style="min-width:1700px"><thead>' + HR + '</thead><tbody>' + cuerpoR + totR + '</tbody></table></div>'
         + '<div style="padding:0 14px 14px;font-size:11px;color:#6b6b63;line-height:1.55"><b>Cómo se arma.</b> Todo sale del mayor contable. Ventas netas = cuentas de ingresos por ventas. Ventas con tarifa ≠ 0% = IVA generado ÷ tarifa del mes; el resto de las ventas va como tarifa 0% y exentas. Impuesto causado = IVA generado − IVA en compras del mes. Crédito tributario final = saldo inicial + débitos − créditos de la cuenta de crédito tributario de IVA. La tarifa del mes se puede cambiar (por defecto 15% desde 2025). Se considera diferencia cuando supera ' + f104Fm(TOL) + '. Toda diferencia debe explicarse al pie de este cuadro y en las recomendaciones.</div>';
