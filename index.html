@@ -20786,11 +20786,13 @@ ${cont.innerHTML}
         (Array.isArray(marcas) ? marcas : [marcas]).forEach(c => {
           if (!c || c.mayor === undefined || c.mayor === null) return;
           const iC = Number.isInteger(c.c) ? c.c : 0, ex = c.filas || {}, filas = [];
+          // Tabla mes por mes: si varias filas traen las mismas cuentas, la sumaria es del año completo y no se compara contra cada mes
+          const usoCta = {}; Object.keys(ex).forEach(k => { if (ex[k] && Array.isArray(ex[k].cuentas)) { const kk = ex[k].cuentas.join('|'); usoCta[kk] = (usoCta[kk] || 0) + 1; } });
           (b.filas || []).forEach((f, i) => {
             const nom = String((f || [])[iC] == null ? '' : f[iC]);
             if (/^total\b/i.test(nom.trim())) return;
             const ext = ex[String(i)] || {}, row = { c: nom, ref: ext.ref || c.ref, mayor: nmNumEs(f[c.mayor]), aud: Number.isInteger(c.aud) ? nmNumEs(f[c.aud]) : null };
-            if (Array.isArray(ext.cuentas)) row.cuentas = ext.cuentas;
+            if (Array.isArray(ext.cuentas) && usoCta[ext.cuentas.join('|')] < 2) row.cuentas = ext.cuentas;
             if (ext.nota) row.nota = ext.nota;
             if (ext.ajuste !== undefined && ext.ajuste !== null) row.ajuste = ext.ajuste;
             const ee = (b.expl || {})[String(i)]; if (ee) row.expl = ee;
