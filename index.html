@@ -19576,13 +19576,405 @@ ${cont.innerHTML}
         { n: 'Retenciones en la fuente de renta (formulario 103 o comprobantes del SRI)', req: false, et: ['Formulario 103 (retenciones en la fuente)', 'Comprobantes de retención recibidos (SRI)'] },
         { n: 'Impuesto a la renta (formulario 101)', req: false, et: ['Declaración de impuesto a la renta (Formulario 101)'] },
         { n: 'Documentos del ISD', req: false, et: ['Documentos del ISD (pago y partida arancelaria)'] }
-      ], sum: 'AH', hoja: 'impuestos', titulo: '2. AH Activos por impuestos corrientes', subtit: 'Análisis guiado por el programa de auditoría: Claude arma el movimiento de las cuentas de impuestos y los cruces con los formularios 104, el ATS y las retenciones; el auditor revisa.', nombre: 'AH - Activos por impuestos corrientes', ref: 'AH · Impuestos corrientes', corto: 'Impuestos corrientes', txtSubir: 'Aquí se sube todo en un solo pedido: los mayores contables de IVA en compras, retenciones de IVA y retenciones de renta recibidas (y de ISD si hay), los formularios 104 de cada mes, el ATS de cada mes (PDF, XML o Excel), los comprobantes de retención del SRI o el formulario 103, y la declaración de renta del año anterior. Claude lo lee junto y las demás pestañas leen de aquí. Cuando el pedido pase a "hecho", presiona «Actualizar».' }
+      ], tabs: [['programa', 'Programa'], ['subir', 'Subir información'], ['resultado', 'Resultado del análisis – Claude'], ['f104', 'Formulario 104 IVA'], ['cuadres', 'Resumen de cuadres y cruces'], ['conclusiones', 'Conclusiones de la cuenta']], sum: 'AH', hoja: 'impuestos', titulo: '2. AH Activos por impuestos corrientes', subtit: 'Análisis guiado por el programa de auditoría: Claude arma el movimiento de las cuentas de impuestos y los cruces con los formularios 104, el ATS y las retenciones; el auditor revisa.', nombre: 'AH - Activos por impuestos corrientes', ref: 'AH · Impuestos corrientes', corto: 'Impuestos corrientes', txtSubir: 'Aquí se sube todo en un solo pedido: los mayores contables de IVA en compras, retenciones de IVA y retenciones de renta recibidas (y de ISD si hay), los formularios 104 de cada mes, el ATS de cada mes (PDF, XML o Excel), los comprobantes de retención del SRI o el formulario 103, y la declaración de renta del año anterior. Claude lo lee junto y las demás pestañas leen de aquí. Cuando el pedido pase a "hecho", presiona «Actualizar».' }
     };
     let NM_CTX = NM_CFGS.nomina;
     const nmE = { cliente: '', anio: '', visita: '', procs: [], filas: {}, cargaId: 0, abiertos: {}, tab: 'programa', sv: null };
     const NM_TABS = [['programa', 'Programa'], ['subir', 'Subir información'], ['resultado', 'Resultado del análisis – Claude'], ['cuadres', 'Resumen de cuadres y cruces'], ['conclusiones', 'Conclusiones de la cuenta']];
     function nmIrProg(cod) { nmE.tab = 'programa'; nmPintar(); setTimeout(() => irFilaResaltada('nm-prog-' + cod), 40); }
-    function nmIrTab(t) { nmE.tab = t; nmPintar(); }
+    function nmIrTab(t) { if (t === 'f104') nmE.f104 = null; nmE.tab = t; nmPintar(); }
+    // ===== Formulario 104 de IVA (pestaña de Impuestos): el formulario se arma con el mayor y se compara con lo declarado =====
+    // Cada fila tiene hasta tres casilleros: b = valor bruto, n = valor neto, i = impuesto. nat: 'cr' (sube por el crédito) o 'db' (sube por el débito).
+    // modo de lectura del mayor: neto = movimiento neto; bruto = solo el lado natural; saldo_ini / saldo_fin = saldo de las cuentas al inicio o al cierre del mes.
+    const F104 = [
+      { s: 'VENTAS · Resumen de ventas y otras operaciones del período' },
+      { id: 'v1', t: 'Ventas locales (excluye activos fijos) gravadas tarifa diferente de cero', b: 401, n: 411, i: 421, nat: 'cr' },
+      { id: 'v2', t: 'Ventas de activos fijos gravadas tarifa diferente de cero', b: 402, n: 412, i: 422, nat: 'cr' },
+      { id: 'v3', t: 'Ventas locales (excluye activos fijos) gravadas tarifa diferente de cero (tarifa variable)', b: 410, n: 420, i: 430, nat: 'cr' },
+      { id: 'v4', t: 'Ventas locales (excluye activos fijos) gravadas tarifa 5%', b: 425, n: 435, i: 445, nat: 'cr' },
+      { id: 'v5', t: 'IVA generado en la diferencia entre ventas y notas de crédito con distinta tarifa (ajuste a pagar)', i: 423, nat: 'cr' },
+      { id: 'v6', t: 'IVA generado en la diferencia entre ventas y notas de crédito con distinta tarifa (ajuste a favor)', i: 424, nat: 'cr' },
+      { id: 'v7', t: 'Ventas locales (excluye activos fijos) gravadas tarifa 0% que no dan derecho a crédito tributario', b: 403, n: 413, nat: 'cr' },
+      { id: 'v8', t: 'Ventas de activos fijos gravadas tarifa 0% que no dan derecho a crédito tributario', b: 404, n: 414, nat: 'cr' },
+      { id: 'v9', t: 'Ventas locales (excluye activos fijos) gravadas tarifa 0% que dan derecho a crédito tributario', b: 405, n: 415, nat: 'cr' },
+      { id: 'v10', t: 'Ventas de activos fijos gravadas tarifa 0% que dan derecho a crédito tributario', b: 406, n: 416, nat: 'cr' },
+      { id: 'v11', t: 'Exportaciones de bienes', b: 407, n: 417, nat: 'cr' },
+      { id: 'v12', t: 'Exportaciones de servicios y/o derechos', b: 408, n: 418, nat: 'cr' },
+      { id: 'v13', t: 'TOTAL VENTAS Y OTRAS OPERACIONES', b: 409, n: 419, i: 429, tot: 1 },
+      { id: 'v14', t: 'Transferencias de bienes y prestación de servicios no objeto o exentos de IVA', b: 431, n: 441, nat: 'cr' },
+      { id: 'v15', t: 'Notas de crédito tarifa 0% por compensar próximo mes', n: 442, nat: 'cr' },
+      { id: 'v16', t: 'Notas de crédito tarifa diferente de cero por compensar próximo mes', n: 443, i: 453, nat: 'cr' },
+      { id: 'v17', t: 'Ingresos por reembolso como intermediario / valores facturados por operadoras de transporte (informativo)', b: 434, n: 444, i: 454, nat: 'cr' },
+      { s: 'LIQUIDACIÓN DEL IVA EN EL MES' },
+      { id: 'l1', t: 'Total transferencias gravadas tarifa diferente de cero a contado este mes', i: 480, man: 1 },
+      { id: 'l2', t: 'Total transferencias gravadas tarifa diferente de cero a crédito este mes', i: 481, man: 1 },
+      { id: 'l3', t: 'Total impuesto generado (traslada el casillero 429)', i: 482 },
+      { id: 'l4', t: 'Impuesto a liquidar del mes anterior (casillero 485 de la declaración anterior)', i: 483 },
+      { id: 'l5', t: 'Impuesto a liquidar en este mes', i: 484 },
+      { id: 'l6', t: 'Impuesto a liquidar en el próximo mes (482 − 484)', i: 485, man: 1 },
+      { id: 'l7', t: 'TOTAL IMPUESTO A LIQUIDAR EN ESTE MES (483 + 484)', i: 499, tot: 1 },
+      { s: 'ADQUISICIONES Y PAGOS · Resumen del período que declara' },
+      { id: 'a1', t: 'Adquisiciones y pagos (excluye activos fijos) gravados tarifa diferente de cero (con derecho a crédito tributario)', b: 500, n: 510, i: 520, nat: 'db' },
+      { id: 'a2', t: 'Adquisiciones locales de activos fijos gravados tarifa diferente de cero (con derecho a crédito tributario)', b: 501, n: 511, i: 521, nat: 'db' },
+      { id: 'a3', t: 'Adquisiciones y pagos (excluye activos fijos) gravados tarifa diferente de cero (tarifa variable)', b: 530, n: 533, i: 534, nat: 'db' },
+      { id: 'a4', t: 'Adquisiciones y pagos locales (excluye activos fijos) gravados con tarifa 5% (con derecho a crédito tributario)', b: 540, n: 550, i: 560, nat: 'db' },
+      { id: 'a5', t: 'Otras adquisiciones y pagos gravados tarifa diferente de cero (sin derecho a crédito tributario)', b: 502, n: 512, i: 522, nat: 'db' },
+      { id: 'a6', t: 'Importaciones de servicios y/o derechos gravados tarifa diferente de cero', b: 503, n: 513, i: 523, nat: 'db' },
+      { id: 'a7', t: 'Importaciones de bienes (excluye activos fijos) gravados tarifa diferente de cero', b: 504, n: 514, i: 524, nat: 'db' },
+      { id: 'a8', t: 'Importaciones de activos fijos gravados tarifa diferente de cero', b: 505, n: 515, i: 525, nat: 'db' },
+      { id: 'a9', t: 'IVA generado en la diferencia entre adquisiciones y notas de crédito con distinta tarifa (ajuste en positivo al crédito tributario)', i: 526, nat: 'db' },
+      { id: 'a10', t: 'IVA generado en la diferencia entre adquisiciones y notas de crédito con distinta tarifa (ajuste en negativo al crédito tributario)', i: 527, nat: 'db' },
+      { id: 'a11', t: 'Importaciones de bienes (incluye activos fijos) gravados tarifa 0%', b: 506, n: 516, nat: 'db' },
+      { id: 'a12', t: 'Adquisiciones y pagos (incluye activos fijos) gravados tarifa 0%', b: 507, n: 517, nat: 'db' },
+      { id: 'a13', t: 'Adquisiciones realizadas a contribuyentes RISE / negocios populares', b: 508, n: 518, nat: 'db' },
+      { id: 'a14', t: 'TOTAL ADQUISICIONES Y PAGOS', b: 509, n: 519, i: 529, tot: 1 },
+      { id: 'a15', t: 'Adquisiciones no objeto de IVA', b: 531, n: 541, nat: 'db' },
+      { id: 'a16', t: 'Adquisiciones exentas del pago de IVA', b: 532, n: 542, nat: 'db' },
+      { id: 'a17', t: 'Notas de crédito tarifa 0% por compensar próximo mes', n: 543, nat: 'db' },
+      { id: 'a18', t: 'Notas de crédito tarifa diferente de cero por compensar próximo mes', n: 544, i: 554, nat: 'db' },
+      { id: 'a19', t: 'Pagos netos por reembolso como intermediario (informativo)', b: 535, n: 545, i: 555, nat: 'db' },
+      { id: 'f1', t: 'Factor de proporcionalidad para crédito tributario  (411+412+420+435+415+416+417+418) / 419', i: 563, fac: 1 },
+      { id: 'f2', t: 'Crédito tributario aplicable en este período  (520+521+534+560+523+524+525+526−527) × 563', i: 564 },
+      { id: 'f3', t: 'Valor de IVA no considerado como crédito tributario por factor de proporcionalidad', i: 565 },
+      { s: 'RESUMEN IMPOSITIVO · Agente de percepción del Impuesto al Valor Agregado' },
+      { id: 'r1', t: 'Impuesto causado (si 499 − 564 es mayor que cero)', i: 601 },
+      { id: 'r2', t: 'Crédito tributario aplicable en este período (si 499 − 564 es menor que cero)', i: 602 },
+      { id: 'r3', t: '(−) Compensación de IVA por ventas con medio electrónico y/o IVA devuelto o descontado (adultos mayores y discapacidad)', i: 603, man: 1 },
+      { id: 'r4', t: '(−) Compensación de IVA por ventas en zonas afectadas - Ley de solidaridad', i: 604, man: 1 },
+      { id: 'r5', t: '(−) Saldo crédito tributario del mes anterior: por adquisiciones e importaciones', i: 605, nat: 'db', modo: 'saldo_ini' },
+      { id: 'r6', t: '(−) Saldo crédito tributario del mes anterior: por retenciones en la fuente de IVA que le han sido efectuadas', i: 606, nat: 'db', modo: 'saldo_ini' },
+      { id: 'r7', t: '(−) Saldo crédito tributario del mes anterior: por compensación de IVA por ventas con medio electrónico', i: 607, man: 1 },
+      { id: 'r8', t: '(−) Saldo crédito tributario del mes anterior: por compensación de IVA en zonas afectadas', i: 608, man: 1 },
+      { id: 'r9', t: '(−) Saldo crédito tributario del mes anterior: por procesos de fusión o absorción de sociedades', i: 623, man: 1 },
+      { id: 'r10', t: '(−) Retenciones en la fuente de IVA que le han sido efectuadas en este período', i: 609, nat: 'db', modo: 'bruto' },
+      { id: 'r11', t: '(−) IVA devuelto o descontado por transacciones con personas adultas mayores o con discapacidad', i: 622, man: 1 },
+      { id: 'r12', t: '(+) Ajuste por IVA devuelto o descontado por adquisiciones con medio electrónico', i: 610, man: 1 },
+      { id: 'r13', t: '(+) Ajuste por IVA devuelto o descontado en adquisiciones en zonas afectadas', i: 611, man: 1 },
+      { id: 'r14', t: '(+) Ajuste por IVA devuelto y rechazado, control y otros (adquisiciones e importaciones)', i: 612, man: 1 },
+      { id: 'r15', t: '(+) Ajuste por IVA devuelto y rechazado, control y otros (retenciones en la fuente de IVA)', i: 613, man: 1 },
+      { id: 'r16', t: '(+) Ajuste por IVA devuelto por otras instituciones del sector público', i: 614, man: 1 },
+      { id: 'r17', t: 'Saldo crédito tributario para el próximo mes: por adquisiciones e importaciones', i: 615, tot: 1 },
+      { id: 'c615', t: 'Comprobación con el mayor: saldo al cierre de las cuentas de crédito tributario por adquisiciones (se compara con el 615 declarado)', i: '615c', chk: 615, nat: 'db', modo: 'saldo_fin' },
+      { id: 'r18', t: 'Saldo crédito tributario para el próximo mes: por retenciones en la fuente de IVA que le han sido efectuadas', i: 617, tot: 1 },
+      { id: 'c617', t: 'Comprobación con el mayor: saldo al cierre de las cuentas de retenciones de IVA recibidas (se compara con el 617 declarado)', i: '617c', chk: 617, nat: 'db', modo: 'saldo_fin' },
+      { id: 'r19', t: 'Saldo crédito tributario para el próximo mes: por compensación de IVA con medio electrónico', i: 618, man: 1 },
+      { id: 'r20', t: 'Saldo crédito tributario para el próximo mes: por compensación de IVA en zonas afectadas', i: 619, man: 1 },
+      { id: 'r21', t: 'IVA pagado y no compensado que se carga al gasto de Impuesto a la Renta', i: 624, nat: 'db', modo: 'bruto' },
+      { id: 'r22', t: 'Ajuste del crédito tributario pagado en adquisiciones superior a cinco (5) años', i: 625, man: 1 },
+      { id: 'r23', t: 'SUBTOTAL A PAGAR  601−602−603−604−605−606−607−608−609+610+611+612+613+614 (si es mayor que cero)', i: 620, tot: 1 },
+      { id: 'r24', t: 'IVA presuntivo de salas de juego / retención de IVA en ventas diferentes porcentajes', i: 621, man: 1 },
+      { id: 'r25', t: 'TOTAL IMPUESTO A PAGAR POR PERCEPCIÓN Y RETENCIONES EFECTUADAS EN VENTAS (620 + 621)', i: 699, tot: 1 },
+      { s: 'AGENTE DE RETENCIÓN DEL IMPUESTO AL VALOR AGREGADO' },
+      { id: 'g1', t: 'Retención del 10%', i: 721, nat: 'cr', modo: 'bruto' },
+      { id: 'g2', t: 'Retención del 20%', i: 723, nat: 'cr', modo: 'bruto' },
+      { id: 'g3', t: 'Retención del 30%', i: 725, nat: 'cr', modo: 'bruto' },
+      { id: 'g4', t: 'Retención del 50%', i: 727, nat: 'cr', modo: 'bruto' },
+      { id: 'g5', t: 'Retención del 70%', i: 729, nat: 'cr', modo: 'bruto' },
+      { id: 'g6', t: 'Retención del 100%', i: 731, nat: 'cr', modo: 'bruto' },
+      { id: 'g7', t: 'TOTAL IMPUESTO RETENIDO (721+723+725+727+729+731)', i: 799, tot: 1 },
+      { id: 'g8', t: 'Devolución provisional de IVA mediante compensación con retenciones efectuadas', i: 800, man: 1 },
+      { id: 'g9', t: 'Retenciones efectuadas y no pagadas sector público, universidades y escuelas politécnicas', i: 802, man: 1 },
+      { id: 'g10', t: 'TOTAL IMPUESTO A PAGAR POR RETENCIÓN (799 − 800 − 802)', i: 801, tot: 1 },
+      { s: 'TOTAL CONSOLIDADO Y VALORES A PAGAR' },
+      { id: 't1', t: 'TOTAL CONSOLIDADO DE IMPUESTO AL VALOR AGREGADO (699 + 801)', i: 859, tot: 1 },
+      { id: 't2', t: 'Pago previo (declaración sustitutiva)', i: 890, man: 1 },
+      { id: 't3', t: 'Detalle de imputación al pago: interés', i: 897, man: 1 },
+      { id: 't4', t: 'Detalle de imputación al pago: impuesto', i: 898, man: 1 },
+      { id: 't5', t: 'Detalle de imputación al pago: multa', i: 899, man: 1 },
+      { id: 't6', t: 'TOTAL IMPUESTO A PAGAR (859 − 898)', i: 902, tot: 1 },
+      { id: 't7', t: 'Interés por mora', i: 903, man: 1 },
+      { id: 't8', t: 'Multa', i: 904, man: 1 },
+      { id: 't9', t: 'TOTAL PAGADO (902 + 903 + 904)', i: 999, tot: 1 }
+    ];
+    const F104_FORM = new Set([409, 419, 429, 482, 483, 484, 499, 509, 519, 529, 563, 564, 565, 601, 602, 615, 617, 620, 699, 799, 801, 859, 902, 999]);
+    const F104_MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+    // Sugerencia de cuentas por nombre (siempre se puede cambiar); solo se aplica a los casilleros que están vacíos
+    const F104_SUG = {
+      'v1:i': /iva.*ventas/i, 'v1:b': /^\s*(\d+\s*%\s*)?ventas?\b(?!.*(0\s*%|export|exent))/i, 'v7:b': /ventas?.*\b0\s*%/i, 'v11:b': /export.*bien|exportaci/i,
+      'a1:i': /iva.*compras/i, 'r5:i': /iva.*cr[eé]dito tributario/i, 'r10:i': /retenc.*iva.*(clientes|recib|efectuad)/i,
+      'c615:i': /iva.*cr[eé]dito tributario/i, 'c617:i': /retenc.*iva.*(clientes|recib|efectuad)/i,
+      'g1:i': /retenc.*iva.*\b10\s*%/i, 'g2:i': /retenc.*iva.*\b20\s*%/i, 'g3:i': /retenc.*iva.*\b30\s*%/i, 'g4:i': /retenc.*iva.*\b50\s*%/i, 'g5:i': /retenc.*iva.*\b70\s*%/i, 'g6:i': /retenc.*iva.*\b100\s*%/i
+    };
+    function f104Fm(n) { return Number(n).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+    function f104R(x) { return Math.round(x * 100) / 100; }
+    function f104Slots() {
+      const out = [];
+      F104.forEach(r => {
+        if (!r.id || !(r.nat || r.chk)) return;
+        if (r.b || r.n) out.push({ clave: r.id + ':b', r, sl: 'b' });
+        if (r.i) out.push({ clave: r.id + ':i', r, sl: 'i' });
+      });
+      return out;
+    }
+    function f104Modo(r, sl) { const mp = ((nmE.f104 || {}).mapeo || {})[r.id + ':' + sl]; return (mp && mp.modo) || r.modo || (sl === 'i' ? 'bruto' : 'neto'); }
+    // Lo que sale del mayor para un mes: valores de los casilleros que tienen cuentas asignadas
+    function f104Ent(mes) {
+      const F = nmE.f104, ent = {}, ym = nmE.anio + '-' + String(mes).padStart(2, '0');
+      F104.forEach(r => {
+        if (!r.id) return;
+        ['b', 'i'].forEach(sl => {
+          const mp = F.mapeo[r.id + ':' + sl]; if (!mp || !mp.cuentas || !mp.cuentas.length) return;
+          const modo = f104Modo(r, sl), nat = r.nat || 'cr';
+          let deb = 0, cred = 0, sal = 0;
+          mp.cuentas.forEach(cu => {
+            const mv = F.mov[cu] || {};
+            const m = mv[ym]; if (m) { deb += m[0]; cred += m[1]; }
+            if (modo === 'saldo_ini' || modo === 'saldo_fin') {
+              let s = (F.ctas[cu] || {}).si || 0;
+              Object.keys(mv).forEach(k => { if (k < ym || (modo === 'saldo_fin' && k === ym)) s += mv[k][0] - mv[k][1]; });
+              sal += s;
+            }
+          });
+          const bruto = nat === 'cr' ? cred : deb, neto = nat === 'cr' ? cred - deb : deb - cred;
+          if (sl === 'b') {
+            if (r.b) ent[r.b] = f104R(bruto);
+            const tn = r.n; if (tn) ent[tn] = f104R(modo === 'bruto' ? bruto : neto);
+          } else {
+            const v = (modo === 'saldo_ini' || modo === 'saldo_fin') ? sal : (modo === 'bruto' ? bruto : neto);
+            ent[r.i] = f104R(v);
+          }
+        });
+      });
+      return ent;
+    }
+    // Fórmulas del formulario según la guía del SRI
+    function f104Calc(mes) {
+      const F = nmE.f104, V = f104Ent(mes), dec = F.dec[mes] || {}, decP = F.dec[mes - 1] || {};
+      const g = c => Number(V[c]) || 0, R = f104R;
+      V[409] = R(g(401) + g(402) + g(410) + g(425) + g(403) + g(404) + g(405) + g(406) + g(407) + g(408));
+      V[419] = R(g(411) + g(412) + g(420) + g(435) + g(413) + g(414) + g(415) + g(416) + g(417) + g(418));
+      V[429] = R(g(421) + g(422) + g(430) + g(445) + g(423) - g(424));
+      V[482] = V[429];
+      V[483] = Number(decP[485]) || 0;
+      V[485] = Number(dec[485]) || 0;
+      V[484] = R(g(482) - g(485));
+      V[499] = R(g(483) + g(484));
+      V[509] = R(g(500) + g(501) + g(530) + g(540) + g(502) + g(503) + g(504) + g(505) + g(506) + g(507) + g(508));
+      V[519] = R(g(510) + g(511) + g(533) + g(550) + g(512) + g(513) + g(514) + g(515) + g(516) + g(517) + g(518));
+      V[529] = R(g(520) + g(521) + g(534) + g(560) + g(522) + g(523) + g(524) + g(525));
+      const num = g(411) + g(412) + g(420) + g(435) + g(415) + g(416) + g(417) + g(418), den = g(419);
+      V[563] = den ? Math.round(num / den * 10000) / 10000 : 1; V._sinVentas = !den;
+      const pag = g(520) + g(521) + g(534) + g(560) + g(523) + g(524) + g(525) + g(526) - g(527);
+      V[564] = R(pag * g(563)); V[565] = R(pag - g(564));
+      const d = g(499) - g(564);
+      V[601] = d > 0 ? R(d) : 0; V[602] = d < 0 ? R(-d) : 0;
+      const N = g(601) - g(602) - g(603) - g(604) - g(605) - g(606) - g(607) - g(608) - g(609) + g(610) + g(611) + g(612) + g(613) + g(614);
+      V[620] = N > 0 ? R(N) : 0;
+      const cred = N < 0 ? -N : 0;
+      V[617] = R(Math.min(cred, Math.max(0, g(606) + g(609))));
+      V[615] = R(cred - V[617]);
+      V[699] = R(g(620) + g(621));
+      V[799] = R(g(721) + g(723) + g(725) + g(727) + g(729) + g(731));
+      V[801] = R(g(799) - g(800) - g(802));
+      V[859] = R(g(699) + g(801));
+      V[902] = R(g(859) - g(898));
+      V[999] = R(g(902) + g(903) + g(904));
+      return V;
+    }
+    function f104Tol(c) { return Number(c) === 563 ? 0.0005 : (typeof NMC_TOL !== 'undefined' ? NMC_TOL : 1); }
+    // Diferencias de un mes: lista de casilleros donde lo del mayor y lo declarado no coinciden
+    function f104Difs(mes, V) {
+      const dec = (nmE.f104.dec || {})[mes] || {}, out = [];
+      F104.forEach(r => {
+        if (!r.id) return;
+        [r.b, r.n, r.i].forEach(c => {
+          if (!c) return;
+          const k = r.chk ? String(r.chk) : String(c), dv = dec[k], av = V[c];
+          if (dv === undefined || dv === null || av === undefined || av === null) return;
+          if (Math.abs(av - dv) > f104Tol(c)) out.push(c);
+        });
+      });
+      return out;
+    }
+    async function f104Pag(build) {
+      let out = [], d = 0;
+      for (; ;) { const r = await build().range(d, d + 999); if (r.error) throw r.error; const x = r.data || []; out = out.concat(x); if (x.length < 1000) break; d += 1000; }
+      return out;
+    }
+    async function f104Cargar() {
+      const cli = nmE.cliente, anio = Number(nmE.anio), vis = nmE.visita;
+      const tok = (nmE.f104Tok = (nmE.f104Tok || 0) + 1);
+      if (!cli) { nmE.f104 = null; return; }
+      nmE.f104 = { cargado: false, error: '', mes: nmE.f104Mes || (anio < (new Date()).getFullYear() ? 12 : Math.max(1, (new Date()).getMonth())), ver: nmE.f104Ver || 'val', ctas: {}, lista: [], mapeo: {}, dec: {}, mov: {}, hayMayor: false };
+      try {
+        const arch = await f104Pag(() => supabaseClient.from('pedidos_claude_archivos').select('id, nombre').is('pedido_id', null).eq('cliente_id', cli).eq('anio', anio).eq('visita', vis).eq('etiqueta', MC_ETQ).is('eliminado_at', null).order('created_at', { ascending: false }));
+        let ids = [];
+        if (arch.length) {
+          const es = await supabaseClient.from('mayor_resumen_estado').select('archivo_id, listo').in('archivo_id', arch.map(a => a.id));
+          const listos = new Set(((es.data) || []).filter(x => x.listo).map(x => x.archivo_id));
+          ids = arch.filter(a => listos.has(a.id)).map(a => a.id);
+        }
+        const F = nmE.f104; F.ids = ids; F.hayMayor = ids.length > 0; F.nArch = arch.length;
+        if (ids.length) {
+          const cu = await f104Pag(() => supabaseClient.from('mayor_resumen_cuentas').select('cuenta, nombre, saldo_inicial, archivo_id').in('archivo_id', ids).order('cuenta'));
+          cu.forEach(x => { const k = String(x.cuenta).trim(); if (!F.ctas[k]) { F.ctas[k] = { nombre: x.nombre || '', si: Number(x.saldo_inicial) || 0, arch: x.archivo_id }; F.lista.push(k); } });
+        }
+        const [mp, dc] = await Promise.all([
+          supabaseClient.from('f104_mapeo').select('clave, cuentas, modo').eq('cliente_id', cli),
+          supabaseClient.from('f104_declarado').select('mes, casilla, valor').eq('cliente_id', cli).eq('anio', anio).eq('visita', vis)
+        ]);
+        if (mp.error) throw mp.error; if (dc.error) throw dc.error;
+        (mp.data || []).forEach(x => { F.mapeo[x.clave] = { cuentas: Array.isArray(x.cuentas) ? x.cuentas : [], modo: x.modo || '' }; });
+        (dc.data || []).forEach(x => { (F.dec[x.mes] = F.dec[x.mes] || {})[x.casilla] = x.valor === null ? null : Number(x.valor); });
+        await f104CargarMov(tok);
+        if (tok !== nmE.f104Tok) return;
+        F.cargado = true;
+      } catch (er) { if (nmE.f104) nmE.f104.error = (er && er.message) || String(er); if (nmE.f104) nmE.f104.cargado = true; }
+      if (tok === nmE.f104Tok && nmE.tab === 'f104') f104Pintar();
+    }
+    async function f104CargarMov(tok) {
+      const F = nmE.f104, anio = Number(nmE.anio); if (!F || !F.ids || !F.ids.length) return;
+      const usadas = new Set(); Object.values(F.mapeo).forEach(m => (m.cuentas || []).forEach(c => usadas.add(String(c))));
+      const lista = [...usadas].filter(c => F.ctas[c]); F.mov = {};
+      for (let i = 0; i < lista.length; i += 40) {
+        const trozo = lista.slice(i, i + 40);
+        const rows = await f104Pag(() => supabaseClient.from('mayor_resumen_mes').select('archivo_id, cuenta, anio_mes, debitos, creditos').in('archivo_id', F.ids).in('cuenta', trozo).gte('anio_mes', (anio - 1) + '-01').lte('anio_mes', anio + '-12').order('cuenta').order('anio_mes'));
+        rows.forEach(x => {
+          const k = String(x.cuenta).trim(), c = F.ctas[k]; if (!c || c.arch !== x.archivo_id) return;
+          const o = (F.mov[k] = F.mov[k] || {}); const a = o[x.anio_mes] || [0, 0]; a[0] += Number(x.debitos) || 0; a[1] += Number(x.creditos) || 0; o[x.anio_mes] = a;
+        });
+        if (tok !== undefined && tok !== nmE.f104Tok) return;
+      }
+    }
+    function f104Num(t) {
+      let x = String(t == null ? '' : t).replace(/[\s$]/g, '');
+      if (x === '' || x === '-') return null;
+      if (x.indexOf(',') >= 0) x = x.replace(/\./g, '').replace(',', '.');
+      else if ((x.match(/\./g) || []).length > 1 || /\.\d{3}$/.test(x)) x = x.replace(/\./g, '');
+      return Number.isFinite(Number(x)) ? Number(x) : null;
+    }
+    async function f104GuardarDec(inp) {
+      const F = nmE.f104; if (!F) return;
+      const c = inp.getAttribute('data-c'), mes = F.mes, txt = String(inp.value || '').trim();
+      const v = txt === '' ? null : f104Num(txt);
+      if (txt !== '' && v === null) { inp.style.outline = '1px solid #b42318'; return; }
+      inp.style.outline = '';
+      const fila = { cliente_id: nmE.cliente, anio: Number(nmE.anio), visita: nmE.visita, mes, casilla: c, valor: v, updated_at: new Date().toISOString() };
+      const r = await supabaseClient.from('f104_declarado').upsert(fila, { onConflict: 'cliente_id,anio,visita,mes,casilla' });
+      if (r.error) { alert('No se pudo guardar: ' + r.error.message); return; }
+      (F.dec[mes] = F.dec[mes] || {})[c] = v;
+      f104Pintar(true);
+    }
+    async function f104Pegar() {
+      const F = nmE.f104, ta = $im('f104-pegar'); if (!F || !ta) return;
+      const filas = [], vistos = {};
+      String(ta.value || '').split(/\r?\n/).forEach(l => {
+        const p = l.trim().split(/[\t;]+|\s{2,}|\s+(?=[-\d.,]+$)/).filter(Boolean); if (p.length < 2) return;
+        const cas = p[0].replace(/\D/g, ''); if (cas.length !== 3) return;
+        const v = f104Num(p[p.length - 1]); if (v === null) return;
+        vistos[cas] = v;
+      });
+      Object.keys(vistos).forEach(c => filas.push({ cliente_id: nmE.cliente, anio: Number(nmE.anio), visita: nmE.visita, mes: F.mes, casilla: c, valor: vistos[c], updated_at: new Date().toISOString() }));
+      if (!filas.length) { alert('No encontré casilleros con valor. Pegue líneas como: 401  1.234,56'); return; }
+      const r = await supabaseClient.from('f104_declarado').upsert(filas, { onConflict: 'cliente_id,anio,visita,mes,casilla' });
+      if (r.error) { alert('No se pudo guardar: ' + r.error.message); return; }
+      filas.forEach(f => { (F.dec[F.mes] = F.dec[F.mes] || {})[f.casilla] = f.valor; });
+      ta.value = ''; f104Pintar();
+    }
+    async function f104BorrarMes() {
+      const F = nmE.f104; if (!F || !confirm('¿Borrar lo declarado de ' + F104_MESES[F.mes - 1] + '?')) return;
+      const r = await supabaseClient.from('f104_declarado').delete().eq('cliente_id', nmE.cliente).eq('anio', Number(nmE.anio)).eq('visita', nmE.visita).eq('mes', F.mes);
+      if (r.error) { alert('No se pudo borrar: ' + r.error.message); return; }
+      delete F.dec[F.mes]; f104Pintar();
+    }
+    async function f104GuardarMapeo(clave, texto, modo) {
+      const F = nmE.f104; if (!F) return;
+      const cuentas = [...new Set(String(texto || '').split(/[,;\s]+/).map(x => x.trim()).filter(Boolean))];
+      const fila = { cliente_id: nmE.cliente, clave, cuentas, modo: modo || null, updated_at: new Date().toISOString() };
+      const r = await supabaseClient.from('f104_mapeo').upsert(fila, { onConflict: 'cliente_id,clave' });
+      if (r.error) { alert('No se pudo guardar: ' + r.error.message); return; }
+      F.mapeo[clave] = { cuentas, modo: modo || '' };
+      await f104CargarMov(); f104Pintar(true);
+    }
+    function f104MapeoCambio(clave) {
+      const t = document.getElementById('f104m-' + clave.replace(':', '_')), m = document.getElementById('f104o-' + clave.replace(':', '_'));
+      f104GuardarMapeo(clave, t ? t.value : '', m ? m.value : '');
+    }
+    async function f104Sugerir() {
+      const F = nmE.f104; if (!F) return; let n = 0;
+      const filas = [];
+      f104Slots().forEach(s => {
+        const re = F104_SUG[s.clave]; if (!re) return;
+        const act = F.mapeo[s.clave]; if (act && act.cuentas && act.cuentas.length) return;
+        const hit = F.lista.filter(c => re.test(F.ctas[c].nombre));
+        if (!hit.length) return;
+        F.mapeo[s.clave] = { cuentas: hit, modo: '' }; n++;
+        filas.push({ cliente_id: nmE.cliente, clave: s.clave, cuentas: hit, modo: null, updated_at: new Date().toISOString() });
+      });
+      if (!filas.length) { alert('No encontré cuentas que coincidan por nombre. Asígnelas a mano en cada casillero.'); return; }
+      const r = await supabaseClient.from('f104_mapeo').upsert(filas, { onConflict: 'cliente_id,clave' });
+      if (r.error) { alert('No se pudo guardar: ' + r.error.message); return; }
+      await f104CargarMov(); f104Pintar(true);
+    }
+    function f104Ir(m) { nmE.f104.mes = m; nmE.f104Mes = m; f104Pintar(); }
+    function f104Ver(v) { nmE.f104.ver = v; nmE.f104Ver = v; f104Pintar(); }
+    function f104Abrir(id) { const x = document.getElementById(id); if (x) x.open = !x.open; }
+    function f104Pintar(mantener) {
+      const c = $im('nm-panel'), e = escapeHtml;
+      if (!nmE.cliente) { c.innerHTML = '<p class="text-xs text-slate-500 p-4">Selecciona el cliente para comenzar.</p>'; return; }
+      const F = nmE.f104;
+      if (!F) { f104Cargar(); c.innerHTML = '<p class="text-xs text-slate-500 p-4">Cargando el mayor y el formulario declarado…</p>'; return; }
+      if (!F.cargado && !mantener) { c.innerHTML = '<p class="text-xs text-slate-500 p-4">Cargando el mayor y el formulario declarado…</p>'; return; }
+      if (F.error) { c.innerHTML = '<p class="text-xs text-red-600 font-bold p-4">No se pudo cargar: ' + e(F.error) + '</p>'; return; }
+      const scroll = c.scrollTop, hs = c.scrollLeft;
+      const abiertoMap = (document.getElementById('f104-map') || {}).open, abiertoPeg = (document.getElementById('f104-peg') || {}).open;
+      const mes = F.mes, V = f104Calc(mes), dec = F.dec[mes] || {}, RCOL = '#b42318';
+      // Resumen por mes: puntos de color según haya declarado y diferencias
+      const chips = F104_MESES.map((nm, i) => {
+        const m = i + 1, tieneDec = F.dec[m] && Object.keys(F.dec[m]).length, dif = tieneDec ? f104Difs(m, f104Calc(m)).length : 0;
+        const col = !tieneDec ? '#c4c4bd' : (dif ? RCOL : '#2f7a4d');
+        return '<button type="button" onclick="f104Ir(' + m + ')" class="px-2.5 py-1 text-xs rounded-lg ' + (m === mes ? 'bg-slate-200 text-slate-900 font-semibold' : 'text-slate-600 hover:bg-slate-100') + '" title="' + (!tieneDec ? 'Sin formulario declarado' : (dif ? dif + ' casillero(s) con diferencia' : 'Todo coincide')) + '"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:' + col + ';margin-right:5px"></span>' + nm.slice(0, 3) + '</button>';
+      }).join('');
+      const difs = f104Difs(mes, V), setDif = new Set(difs.map(String));
+      const tieneDecMes = Object.keys(dec).length > 0;
+      const cel = (r, cas, extra) => {
+        if (!cas) return '<td></td><td></td>';
+        const key = r.chk ? String(r.chk) : String(cas), av = V[cas], dv = dec[key];
+        const esF = F104_FORM.has(Number(cas)) || r.fac;
+        const fac = Number(cas) === 563, fmt = x => fac ? Number(x).toFixed(4).replace('.', ',') : f104Fm(x);
+        const hay = av !== undefined && av !== null, hayD = dv !== undefined && dv !== null;
+        const dif = hay && hayD && Math.abs(av - dv) > f104Tol(cas);
+        const cs = '<span style="font-size:10px;color:#8a8a82;margin-right:6px;font-family:ui-monospace,monospace">' + (r.chk ? r.chk + '*' : cas) + '</span>';
+        const a = hay ? ((av === 0 && !hayD) ? '<span style="color:#c4c4bd">0,00</span>' : fmt(av)) : '<span style="color:#d4d4cd">—</span>';
+        return '<td class="n' + (esF ? ' fx' : '') + '">' + cs + a + '</td><td class="n d' + (dif ? ' dif' : '') + '"><input type="text" data-c="' + (r.chk ? r.chk : cas) + '" value="' + (hayD ? e(fac ? Number(dv).toFixed(4).replace('.', ',') : f104Fm(dv)) : '') + '" onchange="f104GuardarDec(this)" placeholder="" onfocus="this.select()">' + (dif ? '<span class="df" title="Mayor menos declarado">' + f104Fm(av - dv) + '</span>' : '') + '</td>';
+      };
+      let cuerpo = '';
+      F104.forEach(r => {
+        if (r.s) { cuerpo += '<tr class="sec"><td colspan="7">' + e(r.s) + '</td></tr>'; return; }
+        const cas = [r.b, r.n, r.i].filter(Boolean);
+        const hayVal = cas.some(x => { const k = r.chk ? String(r.chk) : String(x); const a = V[x], d = dec[k]; return (a !== undefined && a !== null && a !== 0) || (d !== undefined && d !== null && d !== 0); });
+        const hayDif = cas.some(x => setDif.has(String(x)));
+        if (F.ver === 'val' && !hayVal && !r.tot) return;
+        if (F.ver === 'dif' && !hayDif) return;
+        cuerpo += '<tr class="' + (r.tot ? 'tot' : '') + (r.chk ? ' chk' : '') + '"><td class="t">' + e(r.t) + '</td>' + cel(r, r.b) + cel(r, r.n) + cel(r, r.i) + '</tr>';
+      });
+      if (!cuerpo) cuerpo = '<tr><td colspan="7" style="padding:18px;text-align:center;color:#8a8a82">' + (F.ver === 'dif' ? 'No hay diferencias en este mes.' : 'Aún no hay valores. Asigne las cuentas del mayor a cada casillero y pegue o digite el formulario declarado.') + '</td></tr>';
+      // Panel de cuentas por casillero
+      const dl = '<datalist id="f104-cuentas">' + F.lista.map(k => '<option value="' + e(k) + '">' + e(k + ' — ' + F.ctas[k].nombre) + '</option>').join('') + '</datalist>';
+      const MODOS = [['neto', 'Movimiento neto del mes'], ['bruto', 'Solo el lado natural (sin contrapartida)'], ['saldo_ini', 'Saldo al inicio del mes'], ['saldo_fin', 'Saldo al cierre del mes']];
+      const filasMap = f104Slots().map(s => {
+        const cl = s.clave, id = cl.replace(':', '_'), mp = F.mapeo[cl] || { cuentas: [], modo: '' }, modo = f104Modo(s.r, s.sl);
+        const casTxt = s.sl === 'b' ? [s.r.b, s.r.n].filter(Boolean).join(' / ') : (s.r.chk ? s.r.chk + '*' : s.r.i);
+        const nombres = mp.cuentas.map(k => (F.ctas[k] ? F.ctas[k].nombre : '(no está en el mayor)')).join(' · ');
+        return '<tr><td class="t">' + e(s.r.t) + '</td><td style="font-family:ui-monospace,monospace;font-size:11px;color:#6b6b63;white-space:nowrap">' + e(casTxt) + (s.sl === 'b' ? ' · base' : ' · impuesto') + '</td>'
+          + '<td><input id="f104m-' + id + '" list="f104-cuentas" type="text" value="' + e(mp.cuentas.join(', ')) + '" placeholder="Códigos de cuenta, separados por coma" onchange="f104MapeoCambio(\'' + cl + '\')" style="width:100%;border:1px solid #dcdcd6;border-radius:6px;padding:3px 6px;font-size:12px;background:#fff"><div style="font-size:10px;color:#8a8a82;margin-top:1px">' + e(nombres) + '</div></td>'
+          + '<td><select id="f104o-' + id + '" onchange="f104MapeoCambio(\'' + cl + '\')" style="border:1px solid #dcdcd6;border-radius:6px;padding:3px 4px;font-size:11px;background:#fff">' + MODOS.map(m => '<option value="' + m[0] + '"' + (modo === m[0] ? ' selected' : '') + '>' + m[1] + '</option>').join('') + '</select></td></tr>';
+      }).join('');
+      const aviso = !F.hayMayor ? '<div class="f104-av">No hay un mayor contable completo ya resumido para este cliente, año y visita. Súbalo en la pantalla «Mayor contable» y espere a que termine de leerse; mientras tanto puede digitar lo declarado.</div>' : '';
+      const nDif = difs.length, avFac = V._sinVentas ? '<div class="f104-av">Todavía no hay ventas asignadas a los casilleros 411 a 418, por eso el factor de proporcionalidad (563) se asumió en 1 y el crédito tributario (564) puede salir distinto del declarado. Asigne las cuentas de ventas en «Cuentas del mayor por casillero».</div>' : '';
+      const estado = !tieneDecMes ? '<span style="color:#8a8a82">Sin formulario declarado de ' + F104_MESES[mes - 1] + ' (pegue o digite los valores en la columna Declarado)</span>' : (nDif ? '<b style="color:' + RCOL + '">⚠ ' + nDif + ' casillero(s) con diferencia entre el mayor y lo declarado</b>' : '<b style="color:#2f7a4d">✓ Los casilleros comparados coinciden</b>');
+      c.innerHTML = '<style>.f104{width:100%;border-collapse:collapse;font-size:12px;color:#2b2b27}.f104 th{background:#f4f4f1;border-bottom:1px solid #dfdfdb;padding:5px 8px;text-align:right;font-weight:700;font-size:11px;white-space:nowrap}.f104 th:first-child{text-align:left}.f104 td{border-bottom:1px solid #ececE8;padding:2px 8px;vertical-align:middle}.f104 td.t{width:46%;min-width:300px;line-height:1.3}.f104 td.n{text-align:right;white-space:nowrap}.f104 td.fx{background:#faf9f6}.f104 tr.sec td{background:#ecece8;font-weight:700;font-size:11px;letter-spacing:.02em;padding:5px 8px;color:#4a4a44}.f104 tr.tot td{font-weight:700;border-top:1px solid #cfcfc8;background:#faf9f6}.f104 tr.chk td{color:#5f5f58;font-style:italic;background:#fcfcfa}.f104 td.d{min-width:112px;width:112px;position:relative}.f104 td.d input{width:100%;text-align:right;border:0;background:transparent;font-size:12px;padding:2px 0;outline:none}.f104 td.d input:focus{background:#fff;box-shadow:inset 0 0 0 1px #c9c9c0;border-radius:3px}.f104 td.d.dif{background:#fdf0ee}.f104 td.d.dif input{color:' + RCOL + ';font-weight:700}.f104 .df{display:block;font-size:10px;color:' + RCOL + ';text-align:right}.f104-av{margin:10px 14px;padding:8px 12px;border:1px dashed #d97706;background:#fffbeb;border-radius:8px;font-size:12px;color:#8a5a00}.f104-btn{font-size:12px;font-weight:600;color:#4a4a44;border:1px solid #dcdcd6;border-radius:8px;padding:4px 10px;background:#fff}.f104-btn:hover{background:#f4f4f1}.f104-det{margin:8px 14px;border:1px solid #dfdfdb;border-radius:10px;background:#faf9f6}.f104-det>summary{cursor:pointer;padding:7px 12px;font-size:12px;font-weight:700;color:#4a4a44}</style>'
+        + '<div style="padding:12px 14px 4px"><div style="font-size:15px;font-weight:800;color:#2b2b27">Formulario 104 · Declaración del Impuesto al Valor Agregado</div><div style="font-size:12px;color:#6b6b63;margin-top:2px">La app arma el formulario con las fórmulas de la guía del SRI y las cuentas del mayor; al lado de cada casillero va lo declarado por el cliente.</div></div>'
+        + aviso + avFac
+        + '<div style="display:flex;flex-wrap:wrap;gap:2px;padding:6px 10px">' + chips + '</div>'
+        + '<div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:2px 14px 8px"><span style="font-size:13px;font-weight:700">' + F104_MESES[mes - 1] + ' ' + e(nmE.anio) + '</span><span style="font-size:12px">' + estado + '</span>'
+        + '<span style="margin-left:auto;display:flex;gap:6px;flex-wrap:wrap"><button type="button" class="f104-btn" onclick="f104Ver(\'val\')" style="' + (F.ver === 'val' ? 'background:#ecece8' : '') + '">Solo con valores</button><button type="button" class="f104-btn" onclick="f104Ver(\'dif\')" style="' + (F.ver === 'dif' ? 'background:#ecece8' : '') + '">Solo diferencias</button><button type="button" class="f104-btn" onclick="f104Ver(\'todo\')" style="' + (F.ver === 'todo' ? 'background:#ecece8' : '') + '">Todo el formulario</button></span></div>'
+        + '<details id="f104-peg" class="f104-det"' + (abiertoPeg ? ' open' : '') + '><summary>Cargar el formulario declarado de ' + F104_MESES[mes - 1] + ' (pegar casilleros y valores)</summary><div style="padding:4px 12px 10px"><div style="font-size:11px;color:#6b6b63;margin-bottom:4px">Pegue una línea por casillero, por ejemplo <b>401&nbsp;&nbsp;1.234,56</b> (puede copiarlas desde el Excel o el PDF del formulario). También puede digitar directamente en la columna «Declarado».</div><textarea id="f104-pegar" rows="5" style="width:100%;border:1px solid #dcdcd6;border-radius:8px;padding:6px 8px;font-size:12px;font-family:ui-monospace,monospace;background:#fff"></textarea><div style="margin-top:6px;display:flex;gap:6px"><button type="button" class="f104-btn" onclick="f104Pegar()">Cargar al mes</button><button type="button" class="f104-btn" onclick="f104BorrarMes()" style="color:' + RCOL + '">Borrar lo declarado del mes</button></div></div></details>'
+        + '<details id="f104-map" class="f104-det"' + (abiertoMap ? ' open' : '') + '><summary>Cuentas del mayor por casillero (' + Object.values(F.mapeo).filter(m => m.cuentas && m.cuentas.length).length + ' asignadas)</summary><div style="padding:4px 12px 10px"><div style="font-size:11px;color:#6b6b63;margin-bottom:6px">Indique qué cuentas del mayor alimentan cada casillero. Se guarda por cliente y sirve para todos los meses y años. Los totales y la liquidación se calculan solos con las fórmulas del formulario.</div><div style="margin-bottom:6px"><button type="button" class="f104-btn" onclick="f104Sugerir()">Sugerir cuentas por nombre</button></div><div style="overflow-x:auto"><table class="f104" style="min-width:760px"><thead><tr><th>Casillero del formulario</th><th>Casilleros</th><th style="text-align:left">Cuentas del mayor</th><th style="text-align:left">Qué toma del mayor</th></tr></thead><tbody>' + filasMap + '</tbody></table></div>' + dl + '</div></details>'
+        + '<div style="overflow-x:auto;padding:4px 10px 12px"><table class="f104" style="min-width:1050px"><thead><tr><th>Concepto</th><th colspan="2" style="text-align:center">Valor bruto</th><th colspan="2" style="text-align:center">Valor neto (bruto − N/C)</th><th colspan="2" style="text-align:center">Impuesto generado</th></tr><tr><th></th><th>Según mayor</th><th>Declarado</th><th>Según mayor</th><th>Declarado</th><th>Según mayor</th><th>Declarado</th></tr></thead><tbody>' + cuerpo + '</tbody></table></div>'
+        + '<div style="padding:0 14px 14px;font-size:11px;color:#6b6b63;line-height:1.5"><b>Cómo se calcula.</b> Las celdas con fondo más claro son fórmulas de la guía del SRI: 409, 419 y 429 suman las ventas; 509, 519 y 529 suman las adquisiciones; 563 = (411+412+420+435+415+416+417+418) / 419; 564 = (520+521+534+560+523+524+525+526−527) × 563; 601 o 602 según el signo de 499 − 564; 620 y los saldos 615 y 617 salen de 601−602−603−604−605−606−607−608−609+610+611+612+613+614 (el crédito se aplica primero a adquisiciones y luego a retenciones); 699, 799, 801, 859, 902 y 999 como indica el formulario. Los casilleros 485 y 483 (impuesto a liquidar en el próximo mes) no salen del mayor: se toman de lo declarado. El casillero marcado con * compara el saldo del mayor con el 615 o 617 declarado. Se considera diferencia cuando supera ' + f104Fm(typeof NMC_TOL !== 'undefined' ? NMC_TOL : 1) + '.</div>';
+      c.scrollTop = scroll; c.scrollLeft = hs;
+    }
     function nmFmt(t) { return t ? new Date(t).toLocaleString('es-EC', { day: '2-digit', month: '2-digit', year: 'numeric', hour: 'numeric', minute: '2-digit' }) : ''; }
     function nmUsarContexto(k) {
       const antes = NM_CTX; NM_CTX = NM_CFGS[k] || NM_CFGS.nomina;
@@ -19600,7 +19992,7 @@ ${cont.innerHTML}
     }
     async function nmCargar() {
       const cli = $im('nm-cliente').value, anio = $im('nm-anio').value, vis = $im('nm-visita').value;
-      Object.assign(nmE, { cliente: cli, anio, visita: vis, filas: {}, pts: [], sv: null, res: null, bal: null, conc: null, cons: null });
+      Object.assign(nmE, { cliente: cli, anio, visita: vis, filas: {}, pts: [], sv: null, res: null, bal: null, conc: null, cons: null, f104: null });
       const f = $im('nm-fecha'); if (f) f.value = vis === 'final' ? anio + '-12-31' : anio + '-09-30';
       const a = $im('nm-auditor'); if (a) a.value = (typeof nombreUsuarioActivo === 'function' ? nombreUsuarioActivo() : '') || '';
       const aviso = $im('nm-aviso'), esp = $im('nm-espacio');
@@ -19661,6 +20053,7 @@ ${cont.innerHTML}
       const tb = $im('nm-tabs');
       if (tb) { const cbN = nmCobertura().n; tb.innerHTML = (NM_CTX.tabs || NM_TABS).map(([k, n]) => '<button type="button" onclick="nmIrTab(\'' + k + '\')" class="px-3 py-1.5 text-xs transition rounded-lg ' + (nmE.tab === k ? 'bg-slate-200 text-slate-900 font-semibold' : 'text-slate-600 hover:bg-slate-100 font-medium') + '">' + n + (k === 'subir' && cbN ? '<span title="Información incompleta: abra Informe" style="display:inline-block;min-width:18px;padding:0 5px;margin-left:6px;border-radius:9px;background:#dc2626;color:#fff;font-size:11px;font-weight:700;line-height:18px;text-align:center">' + cbN + '</span>' : '') + (k === 'conclusiones' ? pcConcBadgeHtml('nm') : '') + '</button>').join(''); }
       if (nmE.tab === 'subir') { nmSubirPintar(); return; }
+      if (nmE.tab === 'f104' && NM_CTX.hoja === 'impuestos') { f104Pintar(); return; }
       if (NM_CTX.hoja === 'gastos') { if (nmE.tab === 'validacion') gaValPintar(); else gaResPintar(); return; }
       if (nmE.tab === 'resultado') { nmResPintar(); return; }
       if (nmE.tab === 'cuadres') { nmCuaPintar(); return; }
