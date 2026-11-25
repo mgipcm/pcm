@@ -21191,6 +21191,10 @@ ${cont.innerHTML}
           if (b.t === 'h2' || (b.t === 'h3' && refIni(b.x))) break;
           if (b.t !== 'tabla') continue;
           if ((b.cab || []).some(x => /^diferencia/i.test(String(x)))) continue;
+          // Si es la tabla mes por mes que ya se muestra completa arriba como cuadro de movimiento (Saldo final y fila de comparación), no se repite
+          const rot0 = f => String((f || [])[0] == null ? '' : f[0]).trim(), fb = b.filas || [];
+          const iSF0 = fb.findIndex(f => /^saldo final\b/i.test(rot0(f)));
+          if (iSF0 >= 0 && fb.findIndex((f, kk) => kk > iSF0 && /^(formulario|seg[uú]n|declarad|declaraci[oó]n|libros|balance)\b/i.test(rot0(f))) > iSF0 && (b.cab || []).length > 2) continue;
           tabs.push(b);
         }
         if (!tabs.length) return '';
