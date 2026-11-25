@@ -19717,7 +19717,9 @@ ${cont.innerHTML}
     const F104_MES_NOM = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'setiembre', 'octubre', 'noviembre', 'diciembre'];
     function f104LeerTexto(txt, nombre) {
       const nm = String(nombre || '').toLowerCase(); let mes = 0;
-      F104_MES_NOM.forEach((x, i) => { if (!mes && nm.includes(x)) mes = i >= 9 ? i : i + 1; });
+      const pf = /per[ií]odo\s+fiscal\s*:?\s*([A-Za-zÁÉÍÓÚáéíóú]+)\s+(\d{4})/i.exec(txt);
+      if (pf) { const k = F104_MES_NOM.indexOf(pf[1].toLowerCase()); if (k >= 0) mes = k >= 9 ? k : k + 1; }
+      if (!mes) F104_MES_NOM.forEach((x, i) => { if (!mes && nm.includes(x)) mes = i >= 9 ? i : i + 1; });
       if (!mes) { const mm = /(?:mes|per[ií]odo)[^\d\n]{0,25}(\d{1,2})\b/i.exec(txt); if (mm && Number(mm[1]) >= 1 && Number(mm[1]) <= 12) mes = Number(mm[1]); }
       const cas = {}, re = /(?<!\d)(\d{3})(?!\d)[^\d\n]{0,90}?(-?\d[\d.,]*[.,]\d{2})(?!\d)/g; let m;
       while ((m = re.exec(txt))) { if (!F104_CASILLAS.includes(m[1]) || cas[m[1]] !== undefined) continue; let s = m[2]; s = /,\d{2}$/.test(s) ? s.replace(/\./g, '').replace(',', '.') : s.replace(/,/g, ''); const v = Number(s); if (Number.isFinite(v)) cas[m[1]] = v; }
