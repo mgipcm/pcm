@@ -2334,11 +2334,55 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       </div>
     </section>
 
-    <section id="sec-elabinforme" class="hidden bg-white rounded-2xl shadow-xl border border-slate-200 p-6 min-h-[92vh] space-y-6">
+    <section id="sec-elabinforme" class="hidden bg-white rounded-2xl shadow-xl border border-slate-200 p-6 min-h-[92vh] space-y-5">
       <div class="border-b pb-4">
         <h1 class="text-xl font-bold text-slate-800">5h. Herramientas: Elaboración de informe</h1>
-        <p class="text-xs text-slate-500">Esta herramienta está en preparación. Cuando esté lista, se activará desde «Habilitar herramientas».</p>
+        <p class="text-xs text-slate-500">Sube el informe borrador que emite XAAX (Word) y las notas que preparan los auditores (Excel). Claude decide dónde va cada tabla y cada texto, y la aplicación arma un solo Word con las notas ya incluidas.</p>
       </div>
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div class="sm:col-span-2">
+          <h2 class="text-xs font-bold text-slate-600 mb-1">Cliente</h2>
+          <select id="ei-cliente" onchange="eiCargar()" class="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs sm:text-sm outline-none"></select>
+        </div>
+        <div>
+          <h2 class="text-xs font-bold text-slate-600 mb-1">Año</h2>
+          <select id="ei-anio" onchange="eiCargar()" class="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs sm:text-sm outline-none"></select>
+        </div>
+      </div>
+      <div class="flex flex-wrap gap-1 border-b border-slate-200 pb-2">
+        <button type="button" id="ei-tab-subir" onclick="eiTab('subir')" class="px-3 py-1.5 text-xs transition rounded-lg">1. Subir información</button>
+        <button type="button" id="ei-tab-informe" onclick="eiTab('informe')" class="px-3 py-1.5 text-xs transition rounded-lg">2. Informe unificado</button>
+        <span id="ei-msg" class="ml-3 self-center text-[11px] text-slate-500"></span>
+      </div>
+      <div id="ei-p-subir" class="space-y-4">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div>
+            <h2 class="text-xs font-bold text-slate-600 mb-1">Informe borrador de XAAX (Word .docx)</h2>
+            <label for="ei-docx" ondragover="event.preventDefault()" ondrop="event.preventDefault(); eiElegir('docx', event.dataTransfer.files[0])" class="block border-2 border-dashed border-slate-300 hover:border-slate-400 hover:bg-slate-50 rounded-xl p-4 text-center cursor-pointer transition">
+              <p class="text-xs font-bold text-slate-700">Haz clic o arrastra aquí el Word</p>
+              <p class="text-[11px] text-slate-500 mt-1">El informe con los estados financieros y las notas, tal como lo emite XAAX</p>
+              <p id="ei-docx-nombre" class="text-[11px] font-bold text-slate-700 mt-2"></p>
+              <input id="ei-docx" type="file" accept=".docx" class="hidden" onchange="eiElegir('docx', this.files[0])">
+            </label>
+          </div>
+          <div>
+            <h2 class="text-xs font-bold text-slate-600 mb-1">Notas de los auditores (Excel .xlsx)</h2>
+            <label for="ei-xlsx" ondragover="event.preventDefault()" ondrop="event.preventDefault(); eiElegir('xlsx', event.dataTransfer.files[0])" class="block border-2 border-dashed border-slate-300 hover:border-slate-400 hover:bg-slate-50 rounded-xl p-4 text-center cursor-pointer transition">
+              <p class="text-xs font-bold text-slate-700">Haz clic o arrastra aquí el Excel</p>
+              <p class="text-[11px] text-slate-500 mt-1">Las tablas y detalles que se pasan al Word (notas, estado de cambios, flujo, contratos, gastos)</p>
+              <p id="ei-xlsx-nombre" class="text-[11px] font-bold text-slate-700 mt-2"></p>
+              <input id="ei-xlsx" type="file" accept=".xlsx,.xls" class="hidden" onchange="eiElegir('xlsx', this.files[0])">
+            </label>
+          </div>
+        </div>
+        <div>
+          <h2 class="text-xs font-bold text-slate-600 mb-1">Indicaciones para Claude (opcional)</h2>
+          <textarea id="ei-nota" rows="2" class="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs outline-none" placeholder="Por ejemplo: la fecha del acta de junta, un cambio de redacción, algo que no debe tocar…"></textarea>
+        </div>
+        <div><button type="button" onclick="eiSubir()" class="px-4 py-2 rounded-lg text-xs font-bold text-white" style="background:#44443f">Subir y preparar</button></div>
+        <div><h2 class="text-xs font-bold text-slate-600 mb-1">Lo que ya se subió para este cliente y año</h2><div id="ei-lista" class="text-xs"></div></div>
+      </div>
+      <div id="ei-p-informe" class="hidden space-y-3"><div id="ei-informe" class="space-y-3 text-xs"></div></div>
     </section>
     <section id="sec-revinforme" class="hidden bg-white rounded-2xl shadow-xl border border-slate-200 p-6 min-h-[92vh] space-y-6">
       <div class="flex justify-between items-center border-b pb-4">
@@ -3628,6 +3672,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       if (seccion === 'historial') abrirHistorial();
       if (seccion === 'medidor') abrirMedidor();
       if (seccion === 'reuniones') poblarClientesReunion();
+      if (seccion === 'elabinforme') eiAbrir();
       if (seccion === 'revinforme') riAbrir();
       if (seccion === 'sumarias') abrirSumarias();
       if (seccion === 'mayor-contable') abrirMayorContable();
@@ -20133,6 +20178,341 @@ ${cont.innerHTML}
     }
     // ===== Herramienta «Revisión de informe»: se sube el Word, Claude lo revisa y deja el informe de hallazgos =====
     const riE = { lista: [], archivo: null, abierta: null, timer: null };
+    // ===== Elaboración de informe: arma el Word unificado (borrador de XAAX + notas del Excel) =====
+    const EI_W = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
+    const EI_PH = /\?{2,}|@[A-Z_]{3,}@|\.{6,}|(?<![A-Za-z])[0-9]*[xX]{2,}[0-9]*(?![A-Za-z])/;
+    function eiHijos(body) { return [...body.childNodes].filter(n => n.nodeType === 1 && (n.localName === 'p' || n.localName === 'tbl')); }
+    function eiTextoP(p) {
+      let t = '';
+      const rec = n => { for (const c of n.childNodes) { if (c.nodeType !== 1) continue; if (c.localName === 't') t += c.textContent; else if (c.localName === 'tab') t += '\t'; else if (c.localName === 'br') t += ' '; else if (c.localName === 'footnoteReference') t += ''; else rec(c); } };
+      rec(p); return t;
+    }
+    function eiTextoEl(el) { return el.localName === 'p' ? eiTextoP(el) : [...el.getElementsByTagNameNS(EI_W, 'p')].map(eiTextoP).join(' | '); }
+    function eiEstilo(p) { const ps = p.getElementsByTagNameNS(EI_W, 'pStyle')[0]; return ps ? (ps.getAttributeNS(EI_W, 'val') || ps.getAttribute('w:val') || '') : ''; }
+    // Esquema numerado del Word: es lo que lee Claude para decidir dónde va cada cosa
+    function eiEsquemaDoc(body) {
+      return eiHijos(body).map((el, i) => {
+        if (el.localName === 'p') { const tx = eiTextoP(el).replace(/\s+/g, ' ').trim(); return { i, t: 'p', est: eiEstilo(el), tx: tx.slice(0, 120), ph: EI_PH.test(tx) || undefined, vacio: tx ? undefined : true }; }
+        const filas = el.getElementsByTagNameNS(EI_W, 'tr'), r0 = filas[0] ? [...filas[0].getElementsByTagNameNS(EI_W, 'tc')] : [];
+        const txr = r => r ? [...r.getElementsByTagNameNS(EI_W, 'tc')].map(c => [...c.getElementsByTagNameNS(EI_W, 'p')].map(eiTextoP).join(' ').replace(/\s+/g, ' ').trim()).join(' | ') : '';
+        return { i, t: 't', filas: filas.length, cols: r0.length, tx: (txr(filas[0]) + ' // ' + txr(filas[1])).slice(0, 140), ph: EI_PH.test(eiTextoEl(el)) || undefined };
+      }).filter(x => !x.vacio);
+    }
+    function eiNuevo(doc, tag, attrs) { const e = doc.createElementNS(EI_W, 'w:' + tag); for (const k in (attrs || {})) e.setAttributeNS(EI_W, 'w:' + k, String(attrs[k])); return e; }
+    function eiRun(doc, texto, rstyle, extra) {
+      const r = eiNuevo(doc, 'r'), pr = eiNuevo(doc, 'rPr');
+      if (rstyle) pr.appendChild(eiNuevo(doc, 'rStyle', { val: rstyle }));
+      if (extra && extra.negrita) pr.appendChild(eiNuevo(doc, 'b'));
+      if (extra && extra.resaltar) pr.appendChild(eiNuevo(doc, 'highlight', { val: 'yellow' }));
+      if (pr.childNodes.length) r.appendChild(pr);
+      const t = eiNuevo(doc, 't'); t.setAttributeNS('http://www.w3.org/XML/1998/namespace', 'xml:space', 'preserve'); t.textContent = texto; r.appendChild(t); return r;
+    }
+    const EI_NUM = /^[\(\-–]?\s*[\d.,]+\s*%?\)?$|^-$|^\d{1,2}\/\d{1,2}\/\d{2,4}$/;
+    function eiTabla(doc, filas, o) {
+      o = o || {};
+      const n = Math.max(...filas.map(f => f.length)), tbl = eiNuevo(doc, 'tbl');
+      const primera = n <= 3 ? 5000 : (n <= 5 ? 3000 : (n === 6 ? 2200 : 1700)), otras = n > 1 ? Math.min(1500, Math.floor(((o.ancho || 9000) - primera) / (n - 1))) : 0, tam = n >= 7 ? 14 : (n === 6 ? 16 : 0);
+      const ancho = c => Math.round(c === 0 ? primera : otras);
+      const grid = eiNuevo(doc, 'tblGrid'); for (let c = 0; c < n; c++) grid.appendChild(eiNuevo(doc, 'gridCol', { w: ancho(c), type: 'dxa' })); tbl.appendChild(grid);
+      const pr = eiNuevo(doc, 'tblPr'); pr.appendChild(eiNuevo(doc, 'tblStyle', { val: o.estiloTabla || 'myTable' })); tbl.appendChild(pr);
+      const nEnc = o.encabezado === undefined ? 1 : o.encabezado, esTotal = (f, r) => (o.total_filas ? o.total_filas.includes(r) : /^\s*(total|subtotal|saldo al final|saldo final)/i.test(String(f[0] || '')));
+      filas.forEach((f, r) => {
+        const enc = r < nEnc, tot = !enc && esTotal(f, r), tr = eiNuevo(doc, 'tr'); tr.appendChild(eiNuevo(doc, 'trPr'));
+        for (let c = 0; c < n; c++) {
+          let v = f[c] === undefined || f[c] === null ? '' : String(f[c]); if (enc && /^[12],\d{3}$/.test(v) && +v.replace(',', '') >= 1990 && +v.replace(',', '') <= 2100) v = v.replace(',', '');
+          const tc = eiNuevo(doc, 'tc'), tp = eiNuevo(doc, 'tcPr');
+          tp.appendChild(eiNuevo(doc, 'tcW', { w: ancho(c), type: 'dxa' })); tp.appendChild(eiNuevo(doc, 'vAlign', { val: 'center' }));
+          if (tot) tp.appendChild(eiNuevo(doc, 'shd', { val: 'clear', fill: 'EEEEEE' }));
+          const numerica = c > 0 && (EI_NUM.test(v.trim()) || v.trim() === ''); if (numerica && !enc) tp.appendChild(eiNuevo(doc, 'noWrap'));
+          tc.appendChild(tp);
+          const p = eiNuevo(doc, 'p'), ppr = eiNuevo(doc, 'pPr');
+          ppr.appendChild(eiNuevo(doc, 'jc', { val: enc ? 'center' : (numerica ? 'right' : 'left') })); ppr.appendChild(eiNuevo(doc, 'spacing', { after: 0 })); p.appendChild(ppr);
+          const run = eiRun(doc, v, enc ? 'xaaxFuenteTH' : (tot ? 'xaaxFuenteTF' : 'xaaxFuenteBasica'));
+          if (tam) { const rp = run.getElementsByTagNameNS(EI_W, 'rPr')[0]; rp.appendChild(eiNuevo(doc, 'sz', { val: tam })); rp.appendChild(eiNuevo(doc, 'szCs', { val: tam })); }
+          p.appendChild(run);
+          tc.appendChild(p); tr.appendChild(tc);
+        }
+        tbl.appendChild(tr);
+      });
+      return tbl;
+    }
+    // Reemplazo de texto dentro de un elemento, aunque el texto esté partido en varios tramos del Word
+    function eiReemplazarEn(el, buscar, por, todos) {
+      let n = 0;
+      for (const p of [...(el.localName === 'p' ? [el] : el.getElementsByTagNameNS(EI_W, 'p'))]) {
+        for (let guard = 0; guard < 50; guard++) {
+          const ts = [...p.getElementsByTagNameNS(EI_W, 't')]; if (!ts.length) break;
+          const full = ts.map(t => t.textContent).join(''), pos = full.indexOf(buscar); if (pos < 0) break;
+          let acc = 0, ini = -1;
+          for (let k = 0; k < ts.length; k++) {
+            const len = ts[k].textContent.length, a = acc, b = acc + len;
+            if (ini < 0 && pos < b) { ini = k; const off = pos - a; const fin = Math.min(len - off, buscar.length); const resto = buscar.length - fin; ts[k].textContent = ts[k].textContent.slice(0, off) + por + ts[k].textContent.slice(off + fin); let falta = resto, j = k + 1; while (falta > 0 && j < ts.length) { const l2 = ts[j].textContent.length, q = Math.min(l2, falta); ts[j].textContent = ts[j].textContent.slice(q); falta -= q; j++; } break; }
+            acc = b;
+          }
+          n++; if (!todos) break;
+        }
+      }
+      return n;
+    }
+    function eiResaltarRuns(root) {
+      const doc = root.ownerDocument || root; let n = 0; const lista = [];
+      const RX = new RegExp(EI_PH.source, 'g');
+      for (const r of [...root.getElementsByTagNameNS(EI_W, 'r')]) {
+        const ts = [...r.childNodes].filter(c => c.localName === 't'); if (ts.length !== 1) continue;
+        const tx = ts[0].textContent; if (!tx || !EI_PH.test(tx)) continue;
+        const rpr = [...r.childNodes].find(c => c.localName === 'rPr');
+        let p = r.parentNode; while (p && p.localName !== 'p') p = p.parentNode;
+        let tr = r.parentNode; while (tr && tr.localName !== 'tr') tr = tr.parentNode;
+        const ctx = tr ? [...tr.getElementsByTagNameNS(EI_W, 'tc')].map(c => [...c.getElementsByTagNameNS(EI_W, 'p')].map(eiTextoP).join(' ').trim()).join(' | ').slice(0, 110) : (p ? eiTextoP(p).replace(/\s+/g, ' ').trim().slice(0, 110) : '');
+        const trozos = []; let last = 0, m; RX.lastIndex = 0;
+        while ((m = RX.exec(tx))) { if (m.index > last) trozos.push([tx.slice(last, m.index), false]); trozos.push([m[0], true]); last = m.index + m[0].length; if (m[0].length === 0) RX.lastIndex++; }
+        if (last < tx.length) trozos.push([tx.slice(last), false]);
+        const base = rpr ? rpr.cloneNode(true) : null;
+        trozos.forEach(([txt, hl]) => {
+          const nr = eiNuevo(doc, 'r'); let pr = base ? base.cloneNode(true) : eiNuevo(doc, 'rPr');
+          if (hl) pr.appendChild(eiNuevo(doc, 'highlight', { val: 'yellow' }));
+          if (pr.childNodes.length) nr.appendChild(pr);
+          const t = eiNuevo(doc, 't'); t.setAttributeNS('http://www.w3.org/XML/1998/namespace', 'xml:space', 'preserve'); t.textContent = txt; nr.appendChild(t);
+          r.parentNode.insertBefore(nr, r); if (hl) { n++; lista.push(txt.trim() + '  ←  ' + ctx); }
+        });
+        r.parentNode.removeChild(r);
+      }
+      return { n, lista };
+    }
+    // plan: { ops: [ {op:'reemplazar', i?, buscar, por, todos?} | {op:'parrafo', despues, texto, modelo?, pendiente?} | {op:'tabla', despues, bloques:[ids], cols?, excluir_filas?, encabezado?, encabezado_texto?, total_filas?} | {op:'quitar', i} ] }
+    // bloques: { id: { filas: [[texto,...],...] } }
+    async function eiGenerarDocx(buf, plan, bloques) {
+      const zip = await JSZip.loadAsync(buf), xml = await zip.file('word/document.xml').async('string');
+      const doc = new DOMParser().parseFromString(xml, 'application/xml');
+      if (doc.getElementsByTagName('parsererror').length) throw new Error('El Word no se pudo leer (XML dañado).');
+      const body = doc.getElementsByTagNameNS(EI_W, 'body')[0], orig = eiHijos(body);
+      const esquema = eiEsquemaDoc(body), mapaI = new Map(); { let k = 0; eiHijos(body).forEach((el, i) => { mapaI.set(i, el); }); }
+      const cola = new Map(), log = [], errores = [];
+      const colocar = (i, nuevo) => { const ancla = cola.get(i) || orig[i]; ancla.parentNode.insertBefore(nuevo, ancla.nextSibling); cola.set(i, nuevo); };
+      (plan.ops || []).forEach((op, k) => {
+        try {
+          if (op.op === 'reemplazar') {
+            const el = op.i === undefined || op.i === null ? body : orig[op.i]; if (!el) throw new Error('no existe el elemento ' + op.i);
+            const n = eiReemplazarEn(el, op.buscar, op.por, !!op.todos || op.i === undefined || op.i === null);
+            if (!n) throw new Error('no encontré «' + String(op.buscar).slice(0, 40) + '»'); log.push('Reemplazo (' + n + '): ' + String(op.buscar).slice(0, 40));
+          } else if (op.op === 'parrafo') {
+            const anc = orig[op.despues]; if (!anc) throw new Error('no existe el elemento ' + op.despues);
+            let modelo = orig[op.modelo !== undefined ? op.modelo : op.despues]; if (!modelo || modelo.localName !== 'p') { for (let j = op.despues; j >= 0; j--) { if (orig[j].localName === 'p' && eiTextoP(orig[j]).trim() && !/^Heading/i.test(eiEstilo(orig[j]))) { modelo = orig[j]; break; } } }
+            const p = eiNuevo(doc, 'p'); const ppr = modelo && [...modelo.childNodes].find(c => c.localName === 'pPr'); if (ppr) p.appendChild(ppr.cloneNode(true));
+            const r0 = modelo && [...modelo.getElementsByTagNameNS(EI_W, 'r')].find(r => [...r.childNodes].some(c => c.localName === 't')); const rpr = r0 && [...r0.childNodes].find(c => c.localName === 'rPr');
+            const run = eiRun(doc, op.texto, null, { resaltar: !!op.pendiente }); if (rpr) { const pr0 = [...run.childNodes].find(c => c.localName === 'rPr'); const cl = rpr.cloneNode(true); if (op.pendiente) cl.appendChild(eiNuevo(doc, 'highlight', { val: 'yellow' })); if (pr0) run.replaceChild(cl, pr0); else run.insertBefore(cl, run.firstChild); }
+            p.appendChild(run); colocar(op.despues, p); log.push('Párrafo agregado después de ' + op.despues);
+          } else if (op.op === 'tabla') {
+            if (!orig[op.despues]) throw new Error('no existe el elemento ' + op.despues);
+            let filas = []; for (const id of (op.bloques || [])) { const b = bloques[id]; if (!b) throw new Error('no existe el bloque ' + id); filas = filas.concat(b.filas.map(f => f.slice())); }
+            if (!filas.length) throw new Error('el bloque no trae filas');
+            if (op.excluir_filas && op.excluir_filas.length) filas = filas.filter((f, i) => !op.excluir_filas.includes(i));
+            if (op.cols && op.cols.length) filas = filas.map(f => op.cols.map(c => f[c] === undefined ? '' : f[c]));
+            if (op.encabezado_texto) filas.splice(0, op.encabezado === 0 ? 0 : 1, op.encabezado_texto);
+            const t = eiTabla(doc, filas, { encabezado: op.encabezado, total_filas: op.total_filas });
+            colocar(op.despues, t); colocar(op.despues, eiNuevo(doc, 'p')); log.push('Tabla de ' + filas.length + ' filas después de ' + op.despues);
+          } else if (op.op === 'celda') {
+            const t = orig[op.i]; if (!t || t.localName !== 'tbl') throw new Error('el elemento ' + op.i + ' no es una tabla');
+            const tr = [...t.getElementsByTagNameNS(EI_W, 'tr')][op.fila]; if (!tr) throw new Error('no existe la fila ' + op.fila);
+            const tc = [...tr.getElementsByTagNameNS(EI_W, 'tc')][op.col]; if (!tc) throw new Error('no existe la columna ' + op.col);
+            const p = tc.getElementsByTagNameNS(EI_W, 'p')[0]; const ts = [...p.getElementsByTagNameNS(EI_W, 't')];
+            if (ts.length) { ts[0].textContent = op.texto; for (let q = 1; q < ts.length; q++) ts[q].textContent = ''; } else p.appendChild(eiRun(doc, op.texto, null));
+            log.push('Celda ' + op.fila + ',' + op.col + ' de la tabla ' + op.i);
+          } else if (op.op === 'quitar') {
+            const el = orig[op.i]; if (!el) throw new Error('no existe el elemento ' + op.i); el.parentNode.removeChild(el); log.push('Se quitó el elemento ' + op.i);
+          } else throw new Error('operación desconocida: ' + op.op);
+        } catch (e) { errores.push('Paso ' + (k + 1) + ' (' + (op.op || '?') + '): ' + (e.message || e)); }
+      });
+      const pend = eiResaltarRuns(body);
+      let out = new XMLSerializer().serializeToString(doc); if (!/^<\?xml/.test(out)) out = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n' + out;
+      zip.file('word/document.xml', out);
+      const blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+      return { blob, log, errores, pendientes: pend.lista, nPendientes: pend.n };
+    }
+    // ----- Lectura del Excel de notas: bloques (tablas separadas por filas en blanco) con los números tal como se ven en Excel -----
+    function eiFormatoCelda(c) {
+      if (!c || c.v === undefined || c.v === null || c.v === '') return '';
+      if (c.t === 'n') {
+        const z = String(c.z || ''), v = c.v;
+        if (/%/.test(z)) return (v * 100).toFixed(2).replace(/\.00$/, '') + '%';
+        if (/[dmy]/i.test(z.replace(/\[[^\]]*\]/g, '').replace(/"[^"]*"/g, '')) && !/[#0]/.test(z.replace(/[dmy\/\-\.\s:hs]/gi, ''))) { const d = new Date(Math.round((v - 25569) * 86400000)); return d.getUTCDate() + '/' + (d.getUTCMonth() + 1) + '/' + d.getUTCFullYear(); }
+        if (Number.isInteger(v) && v >= 1990 && v <= 2100 && !/,/.test(z)) return String(v);
+        const r = Math.round(v); if (Math.abs(v) < 0.5) return '-';
+        const s = Math.abs(r).toLocaleString('en-US'); return r < 0 ? '(' + s + ')' : s;
+      }
+      if (c.t === 'b') return c.v ? 'Sí' : 'No';
+      return String(c.v).replace(/\s+/g, ' ').trim();
+    }
+    // aoa: matriz de celdas {v, t, z} (o undefined). Devuelve bloques [{id, hoja, ctx, titulo, filas}]
+    function eiBloquesDeMatriz(hoja, aoa) {
+      const filas = aoa.map(r => (r || []).map(eiFormatoCelda)), res = []; let ctx = '', cur = [], n = 0;
+      const cerrar = () => {
+        if (!cur.length) return;
+        let ncol = Math.max(...cur.map(f => { let l = f.length; while (l > 0 && f[l - 1] === '') l--; return l; }));
+        let rows = cur.map(f => f.slice(0, ncol)); const usadas = []; for (let c = 0; c < ncol; c++) if (rows.some(f => f[c] !== '' && f[c] !== undefined)) usadas.push(c);
+        rows = rows.map(f => usadas.map(c => f[c] === undefined ? '' : f[c]));
+        let titulo = ''; while (rows.length && rows[0].filter(x => x !== '').length === 1 && rows.length > 1) { titulo = (titulo ? titulo + ' / ' : '') + rows[0].find(x => x !== ''); rows.shift(); }
+        if (rows.length === 1 && rows[0].filter(x => x !== '').length === 1) { ctx = rows[0].find(x => x !== ''); cur = []; return; }
+        n++; res.push({ id: hoja + '#' + n, hoja, ctx, titulo, filas: rows }); cur = [];
+      };
+      for (const f of filas) { if (f.every(x => x === '')) cerrar(); else cur.push(f); }
+      cerrar(); return res;
+    }
+    // ===== Elaboración de informe: pestañas «Subir información» e «Informe unificado» =====
+    const eiE = { tab: 'subir', docx: null, xlsx: null, lista: [], sel: null, timer: null, gen: null, ocupado: false };
+    function eiMsg(t, rojo) { const m = $im('ei-msg'); if (m) { m.textContent = t || ''; m.style.color = rojo ? '#b42318' : ''; } }
+    function eiAbrir() {
+      asegurarClientesEn('ei-cliente');
+      const sa = $im('ei-anio'), hoy = new Date().getFullYear();
+      if (sa && !sa.options.length) { for (let y = hoy + 1; y >= hoy - 4; y--) sa.add(new Option('Año ' + y, String(y))); sa.value = String(($im('an-anio') || {}).value || hoy); }
+      eiTab(eiE.tab || 'subir'); eiCargar();
+      if (eiE.timer) clearInterval(eiE.timer);
+      eiE.timer = setInterval(() => { const sec = $im('sec-elabinforme'); if (!sec || sec.classList.contains('hidden')) { clearInterval(eiE.timer); eiE.timer = null; return; } if (eiE.lista.some(r => ['solicitado', 'autorizado'].includes(r.estado))) eiCargar(true); }, 20000);
+    }
+    function eiTab(t) {
+      eiE.tab = t;
+      [['subir', 'ei-p-subir'], ['informe', 'ei-p-informe']].forEach(([k, id]) => { const p = $im(id), b = $im('ei-tab-' + k); if (p) p.classList.toggle('hidden', k !== t); if (b) b.className = 'px-3 py-1.5 text-xs transition rounded-lg ' + (k === t ? 'bg-slate-200 text-slate-900 font-bold' : 'text-slate-600 hover:bg-slate-100 font-semibold'); });
+      eiPintar();
+    }
+    function eiElegir(tipo, f) {
+      const ok = tipo === 'docx' ? /\.docx$/i.test(f ? f.name : '') : /\.xlsx?$/i.test(f ? f.name : '');
+      const n = $im('ei-' + tipo + '-nombre'); eiE[tipo] = null; if (n) n.textContent = '';
+      if (!f) return;
+      if (!ok) { eiMsg(tipo === 'docx' ? 'El informe de XAAX debe ser Word (.docx).' : 'Las notas deben ser Excel (.xlsx).', true); return; }
+      if (f.size > 52428800) { eiMsg('El archivo supera los 50 MB.', true); return; }
+      eiE[tipo] = f; eiMsg(''); if (n) n.textContent = f.name + ' (' + Math.round(f.size / 1024).toLocaleString('es-EC') + ' KB)';
+    }
+    async function eiSubir() {
+      if (eiE.ocupado) return; const cli = $im('ei-cliente').value, anio = Number($im('ei-anio').value);
+      if (!usuarioActivo || !nombreUsuarioActivo()) return eiMsg('Ingresa con tu usuario para subir.', true);
+      if (!cli) return eiMsg('Elige el cliente.', true);
+      if (!eiE.docx || !eiE.xlsx) return eiMsg('Sube las dos cosas: el informe de XAAX (Word) y las notas de los auditores (Excel).', true);
+      if (typeof JSZip === 'undefined' || typeof XLSX === 'undefined') return eiMsg('Faltan los lectores de Word y Excel. Recarga la página con Ctrl+F5.', true);
+      eiE.ocupado = true;
+      try {
+        eiMsg('Leyendo el Word y el Excel…');
+        const bufD = await eiE.docx.arrayBuffer(), bufX = await eiE.xlsx.arrayBuffer();
+        const zip = await JSZip.loadAsync(bufD), xml = await zip.file('word/document.xml').async('string');
+        const dom = new DOMParser().parseFromString(xml, 'application/xml'); if (dom.getElementsByTagName('parsererror').length) throw new Error('El Word no se pudo leer.');
+        const estructura = eiEsquemaDoc(dom.getElementsByTagNameNS(EI_W, 'body')[0]);
+        const bloques = eiBloquesDeLibro(XLSX.read(bufX, { type: 'array', cellNF: true }));
+        if (!estructura.length) throw new Error('El Word no tiene contenido legible.'); if (!bloques.length) throw new Error('El Excel no tiene tablas legibles.');
+        const id = crypto.randomUUID ? crypto.randomUUID() : (Date.now() + '-' + Math.random().toString(16).slice(2));
+        const limpio = n => n.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^A-Za-z0-9._-]+/g, '_');
+        const rd = cli + '/elabinforme/' + id + '_' + limpio(eiE.docx.name), rx = cli + '/elabinforme/' + id + '_' + limpio(eiE.xlsx.name);
+        eiMsg('Subiendo los archivos…');
+        const u1 = await supabaseClient.storage.from('papeles-v2').upload(rd, eiE.docx, { contentType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', upsert: true });
+        if (u1.error) throw new Error('No se pudo subir el Word: ' + (u1.error.message || u1.error));
+        const u2 = await supabaseClient.storage.from('papeles-v2').upload(rx, eiE.xlsx, { contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', upsert: true });
+        if (u2.error) { try { await supabaseClient.storage.from('papeles-v2').remove([rd]); } catch (x) { } throw new Error('No se pudo subir el Excel: ' + (u2.error.message || u2.error)); }
+        const fila = { id, cliente_id: cli, anio, visita: 'final', estado: 'cargado', docx_nombre: eiE.docx.name, docx_ruta: rd, xlsx_nombre: eiE.xlsx.name, xlsx_ruta: rx, estructura, bloques, nota: ($im('ei-nota').value || '').trim() || null, solicitado_por: nombreUsuarioActivo(), solicitado_email: usuarioActivo.email || null };
+        const { error } = await supabaseClient.from('elaboracion_informe').insert([fila]);
+        if (error) { try { await supabaseClient.storage.from('papeles-v2').remove([rd, rx]); } catch (x) { } throw new Error('No se pudo registrar: ' + (error.message || error)); }
+        try { registrarActividad('Subió informe de XAAX y notas', eiE.docx.name, { cliente: cli, anio: String(anio) }); } catch (x) { }
+        eiE.docx = null; eiE.xlsx = null; eiE.sel = id; $im('ei-docx').value = ''; $im('ei-xlsx').value = ''; $im('ei-docx-nombre').textContent = ''; $im('ei-xlsx-nombre').textContent = ''; $im('ei-nota').value = '';
+        eiMsg('Listo: se leyeron ' + estructura.length + ' elementos del Word y ' + bloques.length + ' tablas del Excel. Ahora ve a «Informe unificado» para pedirle a Claude que lo arme.');
+        await eiCargar(true);
+      } catch (e) { eiMsg(e.message || String(e), true); }
+      eiE.ocupado = false;
+    }
+    async function eiCargar(silencioso) {
+      const cli = $im('ei-cliente').value, anio = $im('ei-anio').value;
+      if (!cli) { eiE.lista = []; eiPintar(); return; }
+      const { data, error } = await supabaseClient.from('elaboracion_informe').select('id,cliente_id,anio,estado,docx_nombre,docx_ruta,xlsx_nombre,xlsx_ruta,nota,plan,pendientes,resumen,progreso,progreso_texto,solicitado_por,autorizado_por,detenido_motivo,created_at,hecho_at').eq('cliente_id', cli).eq('anio', Number(anio)).order('created_at', { ascending: false });
+      if (cli !== $im('ei-cliente').value) return;
+      if (error) { eiE.lista = []; eiMsg('No se pudo cargar: ' + (error.message || ''), true); eiPintar(); return; }
+      eiE.lista = data || []; if (!eiE.lista.some(r => r.id === eiE.sel)) eiE.sel = eiE.lista.length ? eiE.lista[0].id : null;
+      eiPintar();
+    }
+    function eiEstadoTxt(r) {
+      const sub = t => t ? '<div class="text-[11px] text-slate-500">' + escapeHtml(t) + '</div>' : '';
+      return ({ cargado: '<span class="text-slate-600 font-bold">Subido, falta pedirlo a Claude</span>', solicitado: '<span style="color:#8a5a00;font-weight:700">Por autorizar</span>' + sub('Lo autoriza el Socio o el Supervisor'), autorizado: '<span style="color:#8a5a00;font-weight:700">Autorizado, espera a Claude</span>' + sub(r.progreso_texto || ('Claude revisa los pedidos cada hora, al minuto 3')), hecho: '<span style="color:#1d6b3a;font-weight:700">Listo para descargar</span>', error: '<span style="color:#b42318;font-weight:700">Con error</span>' + sub(r.progreso_texto) })[r.estado] || escapeHtml(r.estado);
+    }
+    function eiPintar() {
+      const e = escapeHtml, L = eiE.lista, cab = $im('ei-lista'), inf = $im('ei-informe');
+      if (cab) {
+        cab.innerHTML = !$im('ei-cliente').value ? '<p class="text-slate-400">Elige el cliente para ver lo que ya se subió.</p>' : (!L.length ? '<p class="text-slate-400">Todavía no se ha subido nada para este cliente y año.</p>' :
+          '<div class="overflow-x-auto"><table class="w-full text-left text-xs border-collapse"><thead><tr class="text-slate-500 border-b border-slate-200"><th class="py-1 pr-2">Archivos</th><th class="py-1 pr-2">Subido</th><th class="py-1 pr-2">Estado</th><th class="py-1"></th></tr></thead><tbody>' +
+          L.map(r => '<tr class="border-b border-slate-100 align-top"><td class="py-1.5 pr-2"><div class="font-semibold text-slate-800">' + e(r.docx_nombre || '') + '</div><div class="text-[11px] text-slate-500">' + e(r.xlsx_nombre || '') + '</div></td><td class="py-1.5 pr-2 text-slate-500">' + e(nmFmt(r.created_at)) + '<div class="text-[11px]">' + e(r.solicitado_por || '') + '</div></td><td class="py-1.5 pr-2">' + eiEstadoTxt(r) + '</td><td class="py-1.5 text-right whitespace-nowrap"><button type="button" onclick="eiSel(\'' + r.id + '\')" class="underline mr-2 text-slate-700">Abrir en «Informe unificado»</button><button type="button" onclick="eiEliminar(\'' + r.id + '\')" class="underline text-red-700">Eliminar</button></td></tr>').join('') + '</tbody></table></div>');
+      }
+      if (!inf) return;
+      const r = L.find(x => x.id === eiE.sel);
+      if (!r) { inf.innerHTML = '<p class="text-xs text-slate-500">Primero sube el informe de XAAX y las notas en la pestaña «Subir información».</p>'; return; }
+      const aut = puedeAutorizarPedidos(), g = eiE.gen && eiE.gen.id === r.id ? eiE.gen : null;
+      const opciones = L.length > 1 ? '<select onchange="eiSel(this.value)" class="p-1.5 bg-white border border-slate-300 rounded-lg text-xs">' + L.map(x => '<option value="' + x.id + '"' + (x.id === r.id ? ' selected' : '') + '>' + e(x.docx_nombre || '') + ' · ' + e(nmFmt(x.created_at)) + '</option>').join('') + '</select>' : '';
+      let h = '<div class="flex flex-wrap items-center gap-3">' + opciones + '<div class="text-xs"><b>Informe de XAAX:</b> ' + e(r.docx_nombre || '') + ' · <b>Notas:</b> ' + e(r.xlsx_nombre || '') + '</div></div>';
+      h += '<div class="p-3 border border-slate-200 rounded-xl text-xs space-y-2"><div class="font-semibold text-slate-800">Estado: ' + eiEstadoTxt(r) + '</div>' + (r.detenido_motivo ? '<div class="p-2 rounded-lg" style="background:#fff7ed;color:#9a3412;border:1px solid #fdba74">' + e(r.detenido_motivo) + '</div>' : '');
+      if (r.estado === 'cargado') h += '<button type="button" onclick="eiPedir(\'' + r.id + '\')" class="px-4 py-2 rounded-lg text-xs font-bold text-white ic-claude" style="background:#44443f">Pedir a Claude que arme el informe unificado</button><p class="text-slate-500">Claude lee el borrador de XAAX y las notas, decide dónde va cada tabla y cada texto, y deja listo el armado. Lo que no pueda resolver queda marcado en amarillo en el Word y en la lista de pendientes.</p>';
+      if (r.estado === 'solicitado' && aut) h += '<button type="button" onclick="eiAutorizar(\'' + r.id + '\')" class="px-4 py-2 rounded-lg text-xs font-bold text-white" style="background:#44443f">Autorizar a Claude</button>';
+      if (r.estado === 'error') h += '<button type="button" onclick="eiPedir(\'' + r.id + '\')" class="px-3 py-1.5 rounded-lg text-xs font-bold border border-slate-300 bg-white">Pedir de nuevo a Claude</button>';
+      if (r.estado === 'hecho') h += '<div class="flex flex-wrap items-center gap-3"><button type="button" onclick="eiDescargar(\'' + r.id + '\')" class="px-4 py-2 rounded-lg text-xs font-bold text-white" style="background:#449964">Armar y descargar el informe unificado (Word)</button><button type="button" onclick="eiPedir(\'' + r.id + '\')" class="text-xs font-bold hover:underline" style="color:#449964">↻ Pedir de nuevo a Claude</button></div>' + (r.resumen ? '<div class="text-slate-700 whitespace-pre-wrap">' + e(r.resumen) + '</div>' : '');
+      h += '</div>';
+      if (g) {
+        h += '<div class="p-3 border border-slate-200 rounded-xl text-xs space-y-1"><div class="font-semibold text-slate-800">Resultado del armado</div><div>Se aplicaron ' + g.log.length + ' cambios al Word.' + (g.errores.length ? ' <b style="color:#b42318">' + g.errores.length + ' no se pudieron aplicar.</b>' : '') + '</div>' + (g.errores.length ? '<ul class="list-disc pl-5 text-red-700">' + g.errores.map(x => '<li>' + e(x) + '</li>').join('') + '</ul>' : '') + '</div>';
+      }
+      const pc = Array.isArray(r.pendientes) ? r.pendientes : [];
+      if (pc.length || (g && g.pendientes.length)) {
+        h += '<div class="p-3 border border-slate-200 rounded-xl text-xs space-y-1"><div class="font-semibold text-slate-800">Pendientes y observaciones</div>' +
+          (pc.length ? '<div class="text-slate-500">Anotadas por Claude:</div><ul class="list-disc pl-5">' + pc.map(x => '<li>' + e(typeof x === 'string' ? x : [x.donde, x.texto].filter(Boolean).join(': ')) + '</li>').join('') + '</ul>' : '') +
+          (g && g.pendientes.length ? '<div class="text-slate-500 mt-1">Marcados en amarillo en el Word (' + g.nPendientes + '):</div><ul class="list-disc pl-5">' + g.pendientes.slice(0, 60).map(x => '<li>' + e(x) + '</li>').join('') + (g.pendientes.length > 60 ? '<li>… y ' + (g.pendientes.length - 60) + ' más</li>' : '') + '</ul>' : '') + '</div>';
+      }
+      inf.innerHTML = h;
+    }
+    function eiSel(id) { eiE.sel = id; eiTab('informe'); }
+    async function eiPedir(id) {
+      if (!usuarioActivo || !nombreUsuarioActivo()) return eiMsg('Ingresa con tu usuario.', true);
+      const aut = puedeAutorizarPedidos();
+      const cambios = aut ? { estado: 'autorizado', autorizado_por: nombreUsuarioActivo(), autorizado_at: new Date().toISOString(), detenido_motivo: null, detenido_at: null, progreso: 0, progreso_texto: null } : { estado: 'solicitado', detenido_motivo: null, detenido_at: null, progreso: 0, progreso_texto: null };
+      const { error } = await supabaseClient.from('elaboracion_informe').update(cambios).eq('id', id);
+      if (error) return eiMsg('No se pudo pedir: ' + (error.message || error), true);
+      try { registrarActividad('Pidió a Claude armar el informe unificado', id, {}); } catch (x) { }
+      eiMsg(aut ? 'Pedido autorizado: Claude lo toma en su próxima revisión (cada hora, al minuto 3).' : 'Pedido enviado: lo debe autorizar el Socio o el Supervisor en esta misma pantalla.');
+      await eiCargar(true);
+    }
+    async function eiAutorizar(id) {
+      if (!puedeAutorizarPedidos()) return;
+      const { error } = await supabaseClient.from('elaboracion_informe').update({ estado: 'autorizado', autorizado_por: nombreUsuarioActivo(), autorizado_at: new Date().toISOString() }).eq('id', id).eq('estado', 'solicitado');
+      if (error) return eiMsg('No se pudo autorizar: ' + (error.message || error), true);
+      eiMsg('Autorizado. Claude lo toma en su próxima revisión.'); await eiCargar(true);
+    }
+    async function eiEliminar(id) {
+      const r = eiE.lista.find(x => x.id === id); if (!r) return;
+      if (!confirm('¿Eliminar estos archivos y su armado? No se puede deshacer.')) return;
+      try { await supabaseClient.storage.from('papeles-v2').remove([r.docx_ruta, r.xlsx_ruta].filter(Boolean)); } catch (x) { }
+      const { error } = await supabaseClient.from('elaboracion_informe').delete().eq('id', id);
+      if (error) return eiMsg('No se pudo eliminar: ' + (error.message || error), true);
+      eiMsg('Eliminado.'); await eiCargar(true);
+    }
+    // Lectura del Excel completo: bloques con todas sus filas
+    function eiBloquesDeLibro(wb) {
+      const res = [];
+      wb.SheetNames.forEach(nombre => {
+        const ws = wb.Sheets[nombre]; if (!ws || !ws['!ref']) return;
+        const rg = XLSX.utils.decode_range(ws['!ref']), aoa = [];
+        for (let R = rg.s.r; R <= rg.e.r; R++) { const fila = []; for (let C = rg.s.c; C <= rg.e.c; C++) { const c = ws[XLSX.utils.encode_cell({ r: R, c: C })]; fila.push(c ? { v: c.v, t: c.t, z: c.z } : undefined); } aoa.push(fila); }
+        eiBloquesDeMatriz(nombre, aoa).forEach(b => res.push(b));
+      });
+      return res;
+    }
+    async function eiDescargar(id) {
+      const r = eiE.lista.find(x => x.id === id); if (!r) return;
+      if (!r.plan || !Array.isArray(r.plan.ops)) return eiMsg('Claude todavía no dejó el plan de armado. Presiona «Pedir de nuevo a Claude».', true);
+      if (eiE.ocupado) return; eiE.ocupado = true;
+      try {
+        eiMsg('Bajando los archivos…');
+        const d = await supabaseClient.storage.from('papeles-v2').download(r.docx_ruta), x = await supabaseClient.storage.from('papeles-v2').download(r.xlsx_ruta);
+        if (d.error || x.error) throw new Error('No se pudieron bajar los archivos subidos (pueden haber vencido): ' + ((d.error || x.error).message || ''));
+        eiMsg('Armando el informe…');
+        const mapa = {}; eiBloquesDeLibro(XLSX.read(await x.data.arrayBuffer(), { type: 'array', cellNF: true })).forEach(b => { mapa[b.id] = b; });
+        const o = await eiGenerarDocx(await d.data.arrayBuffer(), r.plan, mapa);
+        eiE.gen = { id, log: o.log, errores: o.errores, pendientes: o.pendientes, nPendientes: o.nPendientes };
+        const a = document.createElement('a'); a.href = URL.createObjectURL(o.blob); a.download = 'Informe_unificado_' + r.cliente_id + '_' + r.anio + '.docx'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 60000);
+        eiMsg('Listo: se descargó el informe unificado. Revisa en amarillo lo que quedó pendiente.');
+        try { registrarActividad('Descargó el informe unificado', r.cliente_id, { cliente: r.cliente_id, anio: String(r.anio) }); } catch (z) { }
+        eiPintar();
+      } catch (e) { eiMsg(e.message || String(e), true); }
+      eiE.ocupado = false;
+    }
     function riAbrir() {
       asegurarClientesEn('ri-cliente');
       const sa = $im('ri-anio'), hoy = new Date().getFullYear();
