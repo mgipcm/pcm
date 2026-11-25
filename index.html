@@ -517,8 +517,11 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
             <button onclick="navegarMenu('reuniones')" id="nav-reuniones" class="w-full text-left px-2 py-1 rounded-lg text-xs font-medium text-slate-400 hover:bg-slate-800 hover:text-white transition flex items-center gap-2">
               <span style="white-space:nowrap">g) Resumen de reuniones</span>
             </button>
+            <button onclick="navegarMenu('elabinforme')" id="nav-elabinforme" class="w-full text-left px-2 py-1 rounded-lg text-xs font-medium text-slate-400 hover:bg-slate-800 hover:text-white transition flex items-center gap-2">
+              <span style="white-space:nowrap">h) Elaboración de informe</span>
+            </button>
             <button onclick="navegarMenu('revinforme')" id="nav-revinforme" class="w-full text-left px-2 py-1 rounded-lg text-xs font-medium text-slate-400 hover:bg-slate-800 hover:text-white transition flex items-center gap-2">
-              <span style="white-space:nowrap">h) Revisión de informe</span>
+              <span style="white-space:nowrap">i) Revisión de informe</span>
             </button>
             <button onclick="navegarMenu('mas-herramientas')" id="nav-mas-herramientas" class="w-full text-left px-3 py-1.5 rounded-lg text-xs font-medium text-slate-500 hover:bg-slate-800 hover:text-slate-300 transition flex items-center gap-2 border-t border-slate-800/60 pt-2 mt-1 italic">
               <span>+ Espacio para incluir más</span>
@@ -2331,10 +2334,16 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       </div>
     </section>
 
+    <section id="sec-elabinforme" class="hidden bg-white rounded-2xl shadow-xl border border-slate-200 p-6 min-h-[92vh] space-y-6">
+      <div class="border-b pb-4">
+        <h1 class="text-xl font-bold text-slate-800">5h. Herramientas: Elaboración de informe</h1>
+        <p class="text-xs text-slate-500">Esta herramienta está en preparación. Cuando esté lista, se activará desde «Habilitar herramientas».</p>
+      </div>
+    </section>
     <section id="sec-revinforme" class="hidden bg-white rounded-2xl shadow-xl border border-slate-200 p-6 min-h-[92vh] space-y-6">
       <div class="flex justify-between items-center border-b pb-4">
         <div>
-          <h1 class="text-xl font-bold text-slate-800">5h. Herramientas: Revisión de informe</h1>
+          <h1 class="text-xl font-bold text-slate-800">5i. Herramientas: Revisión de informe</h1>
           <p class="text-xs text-slate-500">Sube el informe con los estados financieros y las notas (Word) y Claude lo revisa: sumas, cuadre de las notas contra los estados, cruces entre notas, ortografía y redacción, y la lógica de las revelaciones</p>
         </div>
       </div>
@@ -3591,8 +3600,8 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       }
       if (!['clientes', 'usuarios', 'cuentas', 'habilitar', 'historial', 'medidor', 'programas'].includes(seccion)) guardarVista({ seccion: seccion, sub: sub || null, cuenta: cuenta || null });
 
-      const secciones = ['desarrollo', 'clientes', 'usuarios', 'cuentas', 'habilitar', 'historial', 'medidor', 'programas', 'sumarias', 'mayor-contable', 'pendientes', 'claude-revisar', 'pedidos-claude', 'aprobaciones-claude', 'flujo', 'auditoria', 'analisis', 'visitas', 'asignacion', 'indices', 'mayor', 'contratos', 'arrend', 'import2', 'nomina', 'impuestos', 'gastos', 'concil', 'pce', 'reuniones', 'revinforme', 'mas-herramientas'];
-      const grupoSubmenu = sec => ['auditoria', 'visitas', 'asignacion'].includes(sec) ? 'planificacion' : ['indices', 'mayor', 'contratos', 'flujo', 'pce', 'reuniones', 'revinforme', 'mas-herramientas'].includes(sec)
+      const secciones = ['desarrollo', 'clientes', 'usuarios', 'cuentas', 'habilitar', 'historial', 'medidor', 'programas', 'sumarias', 'mayor-contable', 'pendientes', 'claude-revisar', 'pedidos-claude', 'aprobaciones-claude', 'flujo', 'auditoria', 'analisis', 'visitas', 'asignacion', 'indices', 'mayor', 'contratos', 'arrend', 'import2', 'nomina', 'impuestos', 'gastos', 'concil', 'pce', 'reuniones', 'elabinforme', 'revinforme', 'mas-herramientas'];
+      const grupoSubmenu = sec => ['auditoria', 'visitas', 'asignacion'].includes(sec) ? 'planificacion' : ['indices', 'mayor', 'contratos', 'flujo', 'pce', 'reuniones', 'elabinforme', 'revinforme', 'mas-herramientas'].includes(sec)
         ? 'herramientas'
         : (['clientes', 'usuarios', 'cuentas', 'habilitar', 'historial', 'medidor', 'programas'].includes(sec) ? 'config' : (['sumarias', 'mayor-contable', 'pendientes', 'claude-revisar', 'pedidos-claude', 'aprobaciones-claude'].includes(sec) ? 'analisis' : null));
       const esSubmenu = sec => grupoSubmenu(sec) !== null;
@@ -16343,7 +16352,8 @@ ${cont.innerHTML}
       { clave: 'flujo', nombre: '3d) Flujo de efectivo', btn: 'nav-flujo' },
       { clave: 'pce', nombre: '3f) Matriz de transición - PCE', btn: 'nav-pce' },
       { clave: 'reuniones', nombre: '3g) Resumen de reuniones', btn: 'nav-reuniones' },
-      { clave: 'revinforme', nombre: '3h) Revisión de informe', btn: 'nav-revinforme' }
+      { clave: 'elabinforme', nombre: '3h) Elaboración de informe', btn: 'nav-elabinforme', defecto: false },
+      { clave: 'revinforme', nombre: '3i) Revisión de informe', btn: 'nav-revinforme' }
     ];
     let estadoHerramientas = {}; // clave -> true/false (si no existe, está habilitada)
 
