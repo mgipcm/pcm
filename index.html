@@ -20823,7 +20823,7 @@ ${cont.innerHTML}
       // 1) Tablas marcadas de RC-02.2: fila Total que sume las filas
       tablas.filter(b => b.cuadre).forEach(b => {
         const c0 = Array.isArray(b.cuadre) ? b.cuadre[0] : b.cuadre, tit = String((c0 && c0.titulo) || 'tabla');
-        const obliga = /RC-02\.2/.test(tit), tf = b.filas.find(esTot), filas = b.filas.filter(f => !esTot(f));
+        const obliga = /RC-02\.2/.test(tit), tf = b.filas.find(esTot), filas = (tf ? b.filas.slice(0, b.filas.indexOf(tf)) : b.filas).filter(f => !esTot(f)); // solo las filas de arriba del Total: las de «Explicada» y «Residual» van después y no se suman
         if (!tf) { if (obliga) mal('Falta la fila Total en «' + tit + '».'); return; }
         const malas = [];
         for (let k = 1; k < b.cab.length; k++) {
@@ -20874,10 +20874,10 @@ ${cont.innerHTML}
       ['RC-01 Consolidado de gastos contra el balance', q => /RC-01(?![.\d])/.test(q.titulo || '')],
       ['RC-02 Roles de pago contra el gasto del mayor', q => /RC-02(?![.\d])/.test(q.titulo || '')],
       ['RC-02.2 Aporte patronal', q => /RC-02\.2/.test(q.titulo || '') && /patronal/i.test(q.titulo || '')],
-      ['RC-02.2 Aporte personal', q => /RC-02\.2/.test(q.titulo || '') && /personal/i.test(q.titulo || '')],
+      ['RC-02.2 Aporte personal (o en RC-02.3 contra planilla)', q => /RC-02\.[23]/.test(q.titulo || '') && /aporte personal/i.test(q.titulo || '')],
       ['RC-02.2 Décimo tercer sueldo', q => /RC-02\.2/.test(q.titulo || '') && /d[eé]cimo tercer/i.test(q.titulo || '')],
       ['RC-02.2 Décimo cuarto sueldo', q => /RC-02\.2/.test(q.titulo || '') && /d[eé]cimo cuarto/i.test(q.titulo || '')],
-      ['RC-02.2 Fondo de reserva', q => /RC-02\.2/.test(q.titulo || '') && /fondo de reserva/i.test(q.titulo || '')],
+      ['RC-02.2 Fondo de reserva (o RC-07.1 rol, planilla y mayor)', q => /RC-0(2\.2|7)/.test(q.titulo || '') && /fondo de reserva/i.test(q.titulo || '')],
       ['RC-06 Pasivos laborales e IESS', q => /RC-06(?![.\d])/.test(q.titulo || '')],
       ['RC-06.4 Vacaciones pendientes', q => /RC-06\.4/.test(q.titulo || '')],
       ['RC-02.3 Roles contra planillas del IESS', q => /RC-02\.3/.test(q.titulo || '')],
