@@ -14028,22 +14028,27 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       const parte = l.en_partes ? (l.paginas ? ' · ' + mcNum(l.paginas) + (l.paginas === 1 ? ' archivo' : ' archivos') : '') : (l.paginas ? ' · ' + mcNum(l.paginas) + (l.paginas === 1 ? ' hoja o página' : ' hojas o páginas') : '');
       let r = { txt: 'Leído completo: ' + mcNum(largo) + ' caracteres' + parte, ok: true };
       if (l.en_partes) {
-        if (res && res.listo) { r.txt += ' · Resumen por cuenta: listo (' + mcNum(res.cuentas) + ' cuentas)'; r.cruce = res.cruce; }
+        if (res && res.listo) { r.txt += ' · Resumen por cuenta: listo (' + mcNum(res.cuentas) + ' cuentas)'; r.cruce = res.cruce; r.saldos = res.saldos; }
         else { r.txt += ' · Armando el resumen por cuenta' + (res && res.total ? ' (' + Math.min(100, Math.round(100 * (res.sig || 0) / res.total)) + '%)' : '') + '…'; r.espera = true; }
       }
       return r;
     }
     // Cruce del mayor con el balance de comprobación (el de las sumarias) de la misma visita
-    function mcCruceHtml(id, cr) {
+    function mcSaldosHtml(sa, difs) {
+      if (!sa || !sa.cuentas) return '';
+      if (sa.con_inicial_valor > 0) return '<div class="text-slate-600">Saldos iniciales: el mayor los trae (' + mcNum(sa.con_inicial_valor) + ' de ' + mcNum(sa.cuentas) + ' cuentas con saldo inicial). El saldo final de cada cuenta incluye su saldo inicial.</div>';
+      return '<div style="color:#8a5a00">Saldos iniciales: este mayor NO trae saldos iniciales' + (difs ? '; por eso las diferencias de las cuentas de balance (activos, pasivos y patrimonio) corresponden, en principio, al saldo con que abrió el año. Las cuentas de resultados no se afectan. Pide al cliente el mayor con saldos iniciales o el balance de cierre del año anterior.' : '.') + '</div>';
+    }
+    function mcCruceHtml(id, cr, sa) {
       if (cr === null || cr === undefined) return '';
       const col = '<td colspan="4" class="px-2 pb-2 text-xs">';
-      if (!cr.length || !cr.some(x => x.estado !== 'solo_mayor')) return '<tr>' + col + '<span class="text-slate-600">Cruce con las sumarias (balance de comprobación): no hay balance de comprobación cargado para este cliente, año y visita.</span></td></tr>';
+      if (!cr.length || !cr.some(x => x.estado !== 'solo_mayor')) return '<tr>' + col + '<span class="text-slate-600">Cruce con las sumarias (balance de comprobación): no hay balance de comprobación cargado para este cliente, año y visita.</span>' + mcSaldosHtml(sa, false) + '</td></tr>';
       const n = e => cr.filter(x => x.estado === e).length, cu = n('cuadra'), di = n('diferencia'), sm = n('solo_mayor'), sb = n('solo_balance');
       const cruzan = cu + di, ok = di === 0 && sb === 0;
       let t = '<span class="font-semibold" style="color:' + (ok ? '#1d6b3a' : '#8a5a00') + '">Cruce con las sumarias (balance de comprobación): ' + mcNum(cu) + ' de ' + mcNum(cruzan) + ' cuentas del balance cuadran con el mayor' + (di ? ' · ' + mcNum(di) + ' con diferencia' : '') + (sb ? ' · ' + mcNum(sb) + ' del balance no están en el mayor' : '') + '</span>';
       if (sm) t += '<span class="text-slate-500"> · ' + mcNum(sm) + ' cuentas del mayor no están en el balance (sin saldo o sin sumaria)</span>';
       if (di || sb) t += ' <button type="button" class="font-bold text-slate-700 hover:underline ml-2" onclick="mcVerCruce(\'' + id + '\')">Ver diferencias</button><div id="mc-cruce-' + id + '"></div>';
-      return '<tr>' + col + t + '</td></tr>';
+      return '<tr>' + col + t + mcSaldosHtml(sa, di || sb) + '</td></tr>';
     }
     async function mcVerCruce(id) {
       const caja = document.getElementById('mc-cruce-' + id); if (!caja) return;
@@ -14078,7 +14083,9 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
             if (es && es.listo) { const c = await supabaseClient.from('mayor_resumen_cuentas').select('cuenta', { count: 'exact', head: true }).eq('archivo_id', a.id); cuentas = c.count || 0; }
             let cruce = null;
             if (es && es.listo) { try { const cr = await supabaseClient.rpc('mayor_cruce_bc', { p_archivo: a.id }); if (!cr.error) cruce = cr.data || []; } catch (e) { } }
-            resumenes[a.id] = { listo: !!(es && es.listo), sig: es ? es.siguiente_parte : 0, total: es ? es.total_partes : 0, cuentas, cruce };
+            let saldos = null;
+            if (es && es.listo) { try { const sr = await supabaseClient.rpc('mayor_info_saldos', { p_archivo: a.id }); if (!sr.error) saldos = sr.data; } catch (e) { } }
+            resumenes[a.id] = { listo: !!(es && es.listo), sig: es ? es.siguiente_parte : 0, total: es ? es.total_partes : 0, cuentas, cruce, saldos };
           } catch (e) { resumenes[a.id] = null; }
         }));
       }
@@ -14099,7 +14106,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
         const l = mapa[a.id], est = mcEstadoLectura(a, l, largos[a.id], resumenes[a.id]); if (est.espera) espera = true;
         const vence = l && l.ultimo_uso_at ? new Date(new Date(l.ultimo_uso_at).getTime() + MC_DIAS * 86400000) : null;
         const color = est.ok ? '#1d6b3a' : (est.error ? '#b42318' : '#8a5a00');
-        const cruceHtml = mcCruceHtml(a.id, est.cruce);
+        const cruceHtml = mcCruceHtml(a.id, est.cruce, est.saldos);
         return '<tr style="border-top:1px solid #e5e5e0"><td class="px-2 py-1.5 text-xs">' + escapeHtml(a.nombre) + '<div class="text-[10px] text-slate-500">' + tamanoLegible(a.tamano) + ' · subido por ' + escapeHtml(a.subido_por || '') + ' el ' + mcFecha(a.created_at) + '</div></td>' +
           '<td class="px-2 py-1.5 text-xs" style="color:' + color + '">' + escapeHtml(est.txt) + '</td>' +
           '<td class="px-2 py-1.5 text-xs text-slate-600">' + (est.ok && vence ? 'Hasta el ' + mcFecha(vence.toISOString()) + ' si no se usa' : '') + '</td>' +
