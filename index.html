@@ -19687,6 +19687,15 @@ ${cont.innerHTML}
           archivos.forEach(a => { a.lectura = !(a.id in mapa) ? 'sin' : (mapa[a.id] ? 'error' : 'ok'); a.lecturaError = mapa[a.id] || ''; });
         } catch (er) { /* sin dato de lectura */ }
       }
+      try { // el mayor contable se carga en su propia pantalla: también cuenta como subido
+        const my = await supabaseClient.from('pedidos_claude_archivos').select('id, nombre, ruta, tamano, tipo, subido_por, created_at, eliminado_at, etiqueta').is('pedido_id', null).eq('cliente_id', cli).eq('anio', anio).eq('etiqueta', PC_MAYOR_ETQ).is('eliminado_at', null).order('created_at', { ascending: false });
+        const lm = my.data || [];
+        if (lm.length) {
+          const tx = await supabaseClient.from('pedidos_claude_textos').select('archivo_id, error').in('archivo_id', lm.map(a => a.id)), mp = {};
+          (tx.data || []).forEach(x => { mp[x.archivo_id] = x.error || ''; });
+          lm.forEach(a => { archivos.push({ ...a, pedido: null, lectura: !(a.id in mp) ? 'sin' : (mp[a.id] ? 'error' : 'ok'), lecturaError: mp[a.id] || '' }); });
+        }
+      } catch (er) { /* sin dato del mayor */ }
       if (!nmE.sv || id !== nmE.sv.id) return;
       nmE.sv = { id, cargado: true, error: peT.error ? (peT.error.message || String(peT.error)) : '', pedidos: peT.data || [], archivos };
       if (nmE.tab === 'subir' || nmE.tab === 'programa') nmPintar();
