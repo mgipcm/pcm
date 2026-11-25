@@ -19758,6 +19758,23 @@ ${cont.innerHTML}
       F.mapeo[clave] = { cuentas, modo: modo || '' };
       await f104CargarMov(); f104Pintar(true);
     }
+    function f104AgregarCta(clave, el) {
+      const F = nmE.f104; if (!F) return;
+      const txt = String(el.value || '').trim(); if (!txt) return;
+      const ya = (F.mapeo[clave] && F.mapeo[clave].cuentas) || [];
+      let nuevos = txt.split(/[,;]+/).map(x => x.trim().split(/\s+[—-]\s+/)[0].trim()).filter(Boolean);
+      nuevos = nuevos.filter(k => F.ctas[k]);
+      if (!nuevos.length) { const q = txt.toLowerCase(); nuevos = F.lista.filter(k => (k + ' ' + F.ctas[k].nombre).toLowerCase().includes(q)).slice(0, 1); }
+      el.value = '';
+      if (!nuevos.length) { alert('No encontré esa cuenta en el mayor.'); return; }
+      const m = document.getElementById('f104o-' + clave);
+      f104GuardarMapeo(clave, [...new Set(ya.concat(nuevos))].join(', '), m ? m.value : '');
+    }
+    function f104QuitarCta(clave, cod) {
+      const F = nmE.f104; if (!F) return;
+      const ya = (F.mapeo[clave] && F.mapeo[clave].cuentas) || [], m = document.getElementById('f104o-' + clave);
+      f104GuardarMapeo(clave, ya.filter(k => k !== cod).join(', '), m ? m.value : '');
+    }
     function f104MapeoCambio(clave) {
       const t = document.getElementById('f104m-' + clave), m = document.getElementById('f104o-' + clave);
       f104GuardarMapeo(clave, t ? t.value : '', m ? m.value : '');
@@ -19841,7 +19858,8 @@ ${cont.innerHTML}
         const mp = F.mapeo[cl.k] || { cuentas: [], modo: '' }, modo = mp.modo || cl.modo;
         const nombres = mp.cuentas.map(k => (F.ctas[k] ? F.ctas[k].nombre : '(no está en el mayor)')).join(' · ');
         return '<tr><td class="t">' + e(cl.t) + '</td><td style="font-size:11px;color:#6b6b63;white-space:nowrap;text-align:center">' + e(cl.n) + '</td>'
-          + '<td><input id="f104m-' + cl.k + '" list="f104-cuentas" type="text" value="' + e(mp.cuentas.join(', ')) + '" placeholder="Códigos de cuenta, separados por coma" onchange="f104MapeoCambio(\'' + cl.k + '\')" style="width:100%;border:1px solid #dcdcd6;border-radius:6px;padding:3px 6px;font-size:12px;background:#fff"><div style="font-size:10px;color:#8a8a82;margin-top:1px">' + e(nombres) + '</div></td>'
+          + '<td><input id="f104m-' + cl.k + '" type="hidden" value="' + e(mp.cuentas.join(', ')) + '"><div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:3px">' + mp.cuentas.map(k => '<span title="' + e(F.ctas[k] ? F.ctas[k].nombre : '(no está en el mayor)') + '" style="display:inline-flex;align-items:center;gap:4px;background:#ecece8;border:1px solid #dcdcd6;border-radius:999px;padding:1px 4px 1px 8px;font-size:11px">' + e(k) + ' <span style="color:#6b6b63;max-width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + e(F.ctas[k] ? F.ctas[k].nombre : '(no está en el mayor)') + '</span><button type="button" onclick="f104QuitarCta(\'' + cl.k + '\',\'' + e(k) + '\')" title="Quitar esta cuenta" style="border:0;background:transparent;color:#8a8a82;font-size:14px;line-height:1;cursor:pointer;padding:0 3px">×</button></span>').join('') + '</div>'
+          + '<input id="f104a-' + cl.k + '" list="f104-cuentas" type="text" placeholder="+ Agregar cuenta (escriba código o nombre y elija)" onchange="f104AgregarCta(\'' + cl.k + '\',this)" style="width:100%;border:1px solid #dcdcd6;border-radius:6px;padding:3px 6px;font-size:12px;background:#fff"></td>'
           + '<td><select id="f104o-' + cl.k + '" onchange="f104MapeoCambio(\'' + cl.k + '\')" style="border:1px solid #dcdcd6;border-radius:6px;padding:3px 4px;font-size:11px;background:#fff">' + MODOS.map(m => '<option value="' + m[0] + '"' + (modo === m[0] ? ' selected' : '') + '>' + m[1] + '</option>').join('') + '</select></td></tr>';
       }).join('');
       const nMap = Object.keys(F.mapeo).filter(k => !k.startsWith('tarifa:') && F.mapeo[k].cuentas && F.mapeo[k].cuentas.length).length;
