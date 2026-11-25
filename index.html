@@ -2413,6 +2413,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
           </div>
           <div>
             <h2 class="text-xs font-bold text-slate-600 mb-1">4. Informe en Word (.docx)</h2>
+            <p class="text-[11px] text-slate-500 mb-1">Sube el Word ya corregido por los auditores. Si viene de «Elaboración de informe», no uses el borrador armado: usa la versión con los cambios del equipo.</p>
             <label for="ri-archivo" ondragover="event.preventDefault()" ondrop="event.preventDefault(); riElegirArchivo(event.dataTransfer.files[0])" class="block border-2 border-dashed border-slate-300 hover:border-slate-400 hover:bg-slate-50 rounded-xl p-4 text-center cursor-pointer transition">
               <p class="text-xs font-bold text-slate-700">Haz clic o arrastra aquí el informe</p>
               <p class="text-[11px] text-slate-500 mt-1">Word (.docx) con los estados financieros y las notas · hasta 50 MB</p>
@@ -2423,6 +2424,9 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
           <div>
             <h2 class="text-xs font-bold text-slate-600 mb-1">5. Qué quieres que revise con más cuidado (opcional)</h2>
             <textarea id="ri-nota" rows="3" class="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs outline-none" placeholder="Por ejemplo: partes relacionadas, arrendamientos, un cambio de política contable de este año…"></textarea>
+          </div>
+          <div id="ri-pend-box" class="hidden p-3 border border-slate-200 rounded-xl text-xs text-slate-700 space-y-1">
+            <label class="flex items-start gap-2 cursor-pointer"><input id="ri-pend-chk" type="checkbox" checked class="mt-0.5"><span id="ri-pend-txt"></span></label>
           </div>
           <div class="flex items-center gap-3">
             <button type="button" onclick="riSolicitar()" class="px-4 py-2 rounded-lg text-xs font-bold text-white" style="background:#44443f">Solicitar revisión a Claude</button>
@@ -20445,7 +20449,7 @@ ${cont.innerHTML}
       if (r.estado === 'cargado') h += '<button type="button" onclick="eiPedir(\'' + r.id + '\')" class="px-4 py-2 rounded-lg text-xs font-bold text-white ic-claude" style="background:#44443f">Pedir a Claude que arme el informe unificado</button><p class="text-slate-500">Claude lee el borrador de XAAX y las notas, decide dónde va cada tabla y cada texto, y deja listo el armado. Lo que no pueda resolver queda marcado en amarillo en el Word y en la lista de pendientes.</p>';
       if (r.estado === 'solicitado' && aut) h += '<button type="button" onclick="eiAutorizar(\'' + r.id + '\')" class="px-4 py-2 rounded-lg text-xs font-bold text-white" style="background:#44443f">Autorizar a Claude</button>';
       if (r.estado === 'error') h += '<button type="button" onclick="eiPedir(\'' + r.id + '\')" class="px-3 py-1.5 rounded-lg text-xs font-bold border border-slate-300 bg-white">Pedir de nuevo a Claude</button>';
-      if (r.estado === 'hecho') h += '<div class="flex flex-wrap items-center gap-3"><button type="button" onclick="eiDescargar(\'' + r.id + '\')" class="px-4 py-2 rounded-lg text-xs font-bold text-white" style="background:#449964">Armar y descargar el informe unificado (Word)</button><button type="button" onclick="eiPedir(\'' + r.id + '\')" class="text-xs font-bold hover:underline" style="color:#449964">↻ Pedir de nuevo a Claude</button></div>' + (r.resumen ? '<div class="text-slate-700 whitespace-pre-wrap">' + e(r.resumen) + '</div>' : '');
+      if (r.estado === 'hecho') h += '<div class="flex flex-wrap items-center gap-3"><button type="button" onclick="eiDescargar(\'' + r.id + '\')" class="px-4 py-2 rounded-lg text-xs font-bold text-white" style="background:#449964">Armar y descargar el informe unificado (Word)</button><button type="button" onclick="eiPedir(\'' + r.id + '\')" class="text-xs font-bold hover:underline" style="color:#449964">↻ Pedir de nuevo a Claude</button></div>' + (r.resumen ? '<div class="text-slate-700 whitespace-pre-wrap">' + e(r.resumen) + '</div>' : '') + '<div class="p-2 rounded-lg bg-slate-50 border border-slate-200 text-slate-600">Siguiente paso: descarga el Word, que el equipo resuelva los pendientes y lo corrija, y luego súbelo en «Revisión de informe». Claude comprobará también que cada pendiente quedó cerrado. <button type="button" onclick="navegarMenu(\'revinforme\')" class="font-bold underline ml-1" style="color:#449964">Ir a Revisión de informe</button></div>';
       h += '</div>';
       if (g) {
         h += '<div class="p-3 border border-slate-200 rounded-xl text-xs space-y-1"><div class="font-semibold text-slate-800">Resultado del armado</div><div>Se aplicaron ' + g.log.length + ' cambios al Word.' + (g.errores.length ? ' <b style="color:#b42318">' + g.errores.length + ' no se pudieron aplicar.</b>' : '') + '</div>' + (g.errores.length ? '<ul class="list-disc pl-5 text-red-700">' + g.errores.map(x => '<li>' + e(x) + '</li>').join('') + '</ul>' : '') + '</div>';
@@ -20535,7 +20539,18 @@ ${cont.innerHTML}
       const { data, error } = await supabaseClient.from('revisiones_informe').select('id,cliente_id,anio,marco,nombre_archivo,ruta,texto_ok,estado,progreso,progreso_texto,solicitado_por,created_at,hecho_at,resumen,autorizado_por,motivo_rechazo,detenido_motivo').eq('cliente_id', cli).eq('anio', Number(anio)).order('created_at', { ascending: false });
       if (cli !== $im('ri-cliente').value) return;
       if (error) { box.innerHTML = '<p class="text-red-600 font-bold">No se pudo cargar: ' + escapeHtml(error.message || '') + '</p>'; return; }
-      riE.lista = data || []; riPintarLista(); riPrepararTextos();
+      riE.lista = data || []; riPintarLista(); riPrepararTextos(); riVerPendientesElab(cli, Number(anio));
+    }
+    async function riVerPendientesElab(cli, anio) {
+      const box = $im('ri-pend-box'); if (!box) return; riE.elab = null; box.classList.add('hidden');
+      try {
+        const { data } = await supabaseClient.from('elaboracion_informe').select('id,pendientes,hecho_at,docx_nombre').eq('cliente_id', cli).eq('anio', anio).eq('estado', 'hecho').order('hecho_at', { ascending: false }).limit(1);
+        if (cli !== $im('ri-cliente').value || !data || !data.length) return;
+        const pend = Array.isArray(data[0].pendientes) ? data[0].pendientes : []; if (!pend.length) return;
+        riE.elab = { id: data[0].id, pendientes: pend };
+        $im('ri-pend-txt').innerHTML = '<b>Verificar los ' + pend.length + ' pendientes de «Elaboración de informe»</b> (' + escapeHtml(data[0].docx_nombre || '') + '). Claude comprobará en el Word que subas si cada uno ya quedó resuelto y te dirá cuáles siguen abiertos.';
+        box.classList.remove('hidden');
+      } catch (x) { }
     }
     function riPintarLista() {
       const box = $im('ri-lista'), e = escapeHtml, L = riE.lista;
@@ -20567,6 +20582,7 @@ ${cont.innerHTML}
       if (up.error) return err('No se pudo subir el archivo: ' + (up.error.message || up.error));
       let txt = null; try { msg.textContent = 'Leyendo el informe…'; txt = await riExtraerTexto(await f.arrayBuffer()); } catch (x) { txt = null; }
       const fila = { id, cliente_id: cli, anio, visita: 'final', marco: $im('ri-marco').value, nombre_archivo: f.name, ruta, texto: txt, texto_ok: !!txt, nota: $im('ri-nota').value.trim() || null, solicitado_por: nombreUsuarioActivo(), solicitado_email: usuarioActivo.email || null };
+      if (riE.elab && $im('ri-pend-chk') && $im('ri-pend-chk').checked) { fila.pendientes_origen = riE.elab.pendientes; fila.elaboracion_id = riE.elab.id; }
       const { error } = await supabaseClient.from('revisiones_informe').insert([fila]);
       if (error) { try { await supabaseClient.storage.from('papeles-v2').remove([ruta]); } catch (x) { } return err('No se pudo registrar la revisión: ' + (error.message || error)); }
       try { registrarActividad('Solicitó revisión de informe', f.name, { cliente: cli, anio: String(anio) }); } catch (x) { }
