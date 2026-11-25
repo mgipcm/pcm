@@ -27,6 +27,8 @@
   <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
   <!-- Mammoth para leer contratos en Word (.docx) -->
   <script src="https://cdn.jsdelivr.net/npm/mammoth@1.8.0/mammoth.browser.min.js"></script>
+  <!-- JSZip para abrir los .zip de documentos -->
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
   <style>
     /* Letra de la aplicación: Calibri (si el equipo no la tiene, Carlito / Segoe UI / Arial). Dialog Light queda solo como respaldo interno */
     @font-face {
@@ -4950,6 +4952,27 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       if (ya) return 'El mayor contable de este cliente y año ya está subido en la pantalla Mayor contable del menú (' + ya.nombre + ', del ' + mcFecha(ya.created_at) + '). No hace falta subirlo en el pedido: Claude lo usa solo. Se quitó de la lista: ' + lista + '.';
       return 'El mayor contable no se sube desde el pedido (es muy pesado y se corta). Cárgalo primero en la pantalla Mayor contable del menú (Auditoría/Análisis Claves › Mayor contable), mejor comprimido en zip, y después vuelve a hacer el pedido: Claude lo usa solo. Se quitó de la lista: ' + lista + '.';
     }
+    // Abre los .zip: cada documento de sus carpetas se trata como si se hubiera subido suelto (el nombre lleva la carpeta para no repetirse)
+    async function pcExpandirZips(files) {
+      const salida = [], avisos = [];
+      for (const f of files) {
+        if (!/\.zip$/i.test(f.name)) { salida.push(f); continue; }
+        if (typeof JSZip === 'undefined') { salida.push(f); avisos.push('No se pudo abrir "' + f.name + '" (falta el lector de zip). Recarga la página con Ctrl+F5.'); continue; }
+        try {
+          const z = await JSZip.loadAsync(f); let n = 0;
+          for (const ent of Object.values(z.files)) {
+            if (ent.dir) continue;
+            const partes = ent.name.split('/').filter(Boolean), base = partes[partes.length - 1];
+            if (/^__MACOSX$/i.test(partes[0]) || /^(\.DS_Store|Thumbs\.db|desktop\.ini)$/i.test(base) || base.startsWith('._')) continue;
+            const carpeta = partes.length > 1 ? partes[partes.length - 2] : '';
+            const blob = await ent.async('blob');
+            salida.push(new File([blob], (carpeta ? carpeta + ' - ' : '') + base, { type: blob.type || '' })); n++;
+          }
+          avisos.push('"' + f.name + '": ' + n + ' documento(s) leídos del zip.');
+        } catch (e) { salida.push(f); avisos.push('No se pudo abrir "' + f.name + '" (' + (e.message || 'zip dañado') + ').'); }
+      }
+      return { archivos: salida, avisos };
+    }
     async function pcAgregarSeleccion(inp) {
       let nuevos = [...(inp.files || [])];
       const mayores = nuevos.filter(f => pcEsMayorCompleto(f, pcTipoPrevio));
@@ -4958,6 +4981,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
         inp.value = '';
         alert(await pcMensajeMayor(valorAnalisis('pc-cliente'), valorAnalisis('pc-anio'), mayores.map(f => f.name)));
       }
+      { const ex = await pcExpandirZips(nuevos); nuevos = ex.archivos; if (ex.avisos.length) { const m = document.getElementById('pc-msg'); if (m) { m.textContent = ex.avisos.join(' '); m.className = 'text-[11px] min-h-[1rem] text-slate-500'; } } }
       nuevos.forEach(f => { if (!pcArchivosSel.some(x => x.name === f.name && x.size === f.size)) { pcArchivosSel.push(f); if (pcTipoPrevio) pcEtiquetasElegidas[pcArchivosSel.length - 1] = pcTipoPrevio; } });
       inp.value = '';
       pcArchivosElegidos();
@@ -5006,6 +5030,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       inp.onchange = async () => {
         let fs = [...inp.files]; const p = pedidosClaude.find(x => x.id === id); if (!fs.length || !p) return;
         { const my = fs.filter(f => pcEsMayorCompleto(f, et)); if (my.length) { fs = fs.filter(f => !my.includes(f)); alert(await pcMensajeMayor(p.cliente_id, p.anio, my.map(f => f.name))); if (!fs.length) return; } }
+        { const ex = await pcExpandirZips(fs); fs = ex.archivos; if (!fs.length) { msg.textContent = ex.avisos.join(' ') || 'El zip no trae documentos.'; return; } }
         const grande = fs.find(f => f.size > 209715200); if (grande) { alert('El archivo "' + grande.name + '" supera los 200 MB. Sube una versión resumida o filtrada.'); return; }
         msg.textContent = 'Subiendo ' + fs.length + ' archivo(s)…'; msg.className = 'text-[11px] min-h-[1rem] text-slate-500';
         const falla = [];
