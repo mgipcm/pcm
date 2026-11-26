@@ -18159,6 +18159,43 @@ ${cont.innerHTML}
         ].join('\n')
       };
     }
+    function comBorradorObligaciones() {
+      const yo = (typeof nombreUsuarioActivo === 'function' && nombreUsuarioActivo()) || '';
+      return {
+        asunto: 'PCM Inteligente: ya está disponible Obligaciones financieras (PB)',
+        mensaje: [
+          'Ya está disponible en PCM Inteligente la prueba de **Obligaciones financieras** (sumarias PB, corriente, y PK, no corriente). Está en el menú Análisis Claves › Pasivos › PB Obligaciones financieras. Les cuento qué se sube y qué hace.',
+          '',
+          '## Qué se sube',
+          '- **Mayor contable completo:** no se adjunta en el pedido; se carga una sola vez en el menú **Mayor contable**. Si lo suben en el pedido, la aplicación no lo recibe.',
+          '- **En «Subir información», en un solo pedido:** tablas de amortización de cada crédito; contratos, pagarés y garantías; estados de cuenta o certificados de deuda; confirmaciones bancarias; cálculo de cláusulas de cumplimiento (covenants); comprobantes de pago de capital e intereses, e impuesto a la salida de divisas (ISD) y retención si hay préstamos del exterior.',
+          '- El pedido lo autoriza el Socio o el Supervisor y Claude lo procesa en su siguiente revisión; la barra de avance muestra la etapa. El botón **Informe** indica qué se subió, qué se leyó y qué analizó Claude, con el nombre de cada archivo.',
+          '',
+          '## Qué hace',
+          '- **Revisión analítica (PB-01):** compara el cierre anterior con la fecha de corte.',
+          '- **Composición e intereses (PB-02):** recalcula los intereses de la tabla de amortización, calcula el interés devengado al cierre y cuadra el capital y los intereses contra el mayor y el balance.',
+          '- **Gasto de intereses del período:** revisa que estén los intereses de los créditos que se cancelaron en el año, de los vigentes y de terceros o compañías relacionadas, y muestra la diferencia contra lo esperado.',
+          '- **Corto y largo plazo (PB-04):** clasifica el capital por vencimiento y lo cruza con PB y PK.',
+          '- **Cambios en pasivos de financiamiento (PB-07):** concilia los movimientos con los saldos (NIC 7.44A).',
+          '- **Confirmaciones, covenants, modificaciones de deuda y revelaciones (PB-03, PB-05, PB-06) y préstamos del exterior (PB-08):** los hace si los documentos lo permiten; si no, quedan como pendientes con lo que falta pedir al cliente.',
+          '- **Cuadres, ajustes propuestos y papeles de trabajo:** cada diferencia viene explicada; los papeles se descargan en Excel con fórmulas.',
+          '',
+          '## Pestaña «Anexos y cálculos»',
+          '- Anexo de créditos, una fila por operación: la aplicación calcula sola los días, el interés devengado y el corto y largo plazo, y los compara con PB y PK. Se puede subir en Excel o CSV, o pedir a Claude que lo arme.',
+          '- Análisis del gasto de intereses: un resumen y tres detalles desplegables (cuentas del balance y del mayor, asientos del mayor y otros créditos con intereses).',
+          '',
+          '## Cómo leerlo',
+          '- Todo sale con el sello «Procesado por Claude, sujeto a modificaciones en caso de existir»: el auditor revisa, modifica o ratifica.',
+          '- Los ajustes son propuestas; no se registran en el balance.',
+          '- Al abrir la aplicación, presionar Ctrl+F5.',
+          '',
+          'Cualquier duda o error que vean, avísenme.',
+          '',
+          'Saludos,',
+          yo
+        ].join('\n')
+      };
+    }
     function comBorradorMayor() {
       const yo = (typeof nombreUsuarioActivo === 'function' && nombreUsuarioActivo()) || '';
       return {
@@ -18189,19 +18226,19 @@ ${cont.innerHTML}
       };
     }
     function comPlantilla(clave) {
-      const b = clave === 'mayor' ? comBorradorMayor() : comBorrador();
+      const b = clave === 'mayor' ? comBorradorMayor() : (clave === 'obligaciones' ? comBorradorObligaciones() : comBorrador());
       const a = document.getElementById('com-asunto'), m = document.getElementById('com-mensaje');
       if (a) a.value = b.asunto; if (m) m.value = b.mensaje;
     }
     function comAbrir() {
       if (cargoUsuarioNorm() !== 'socio') { alert('Solo el Socio puede enviar comunicados.'); return; }
-      const b = comBorradorMayor(), us = (listaUsuariosCache || []).filter(u => u.email);
+      const b = comBorradorObligaciones(), us = (listaUsuariosCache || []).filter(u => u.email);
       const ov = document.createElement('div'); ov.id = 'com-overlay';
       ov.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
       ov.innerHTML = '<div class="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[92vh] overflow-auto p-5 space-y-3 text-xs text-slate-700">' +
         '<div class="flex items-center justify-between"><div class="text-sm font-bold text-slate-800">Enviar comunicado por correo</div><button type="button" onclick="comCerrar()" class="text-slate-500 hover:text-slate-800 text-base" title="Cerrar">✕</button></div>' +
         '<p class="text-slate-500">Edita el texto como quieras. Formato sencillo: «## Título» para un subtítulo, «- » para una viñeta y **negrita** con dos asteriscos. Cada persona recibe el correo con su nombre. Se envía desde info@mgipcm.com y las respuestas llegan a tu correo.</p>' +
-        '<label class="block font-bold text-slate-600">Comunicado<select onchange="comPlantilla(this.value)" class="mt-1 w-full p-2 border border-slate-300 rounded-lg outline-none font-normal bg-white"><option value="mayor">El mayor contable se sube una sola vez</option><option value="nomina">Ya está disponible la prueba de Nómina</option></select></label>' +
+        '<label class="block font-bold text-slate-600">Comunicado<select onchange="comPlantilla(this.value)" class="mt-1 w-full p-2 border border-slate-300 rounded-lg outline-none font-normal bg-white"><option value="obligaciones">Ya está disponible Obligaciones financieras (PB)</option><option value="mayor">El mayor contable se sube una sola vez</option><option value="nomina">Ya está disponible la prueba de Nómina</option></select></label>' +
         '<label class="block font-bold text-slate-600">Asunto<input id="com-asunto" type="text" class="mt-1 w-full p-2 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 font-normal" value="' + escapeHtml(b.asunto) + '"></label>' +
         '<label class="block font-bold text-slate-600">Mensaje<textarea id="com-mensaje" rows="18" class="mt-1 w-full p-2 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 font-normal" style="font-family:inherit">' + escapeHtml(b.mensaje) + '</textarea></label>' +
         '<div><div class="font-bold text-slate-600 mb-1">Destinatarios</div><div class="grid sm:grid-cols-2 gap-1">' + us.map(u => '<label class="flex items-center gap-2"><input type="checkbox" class="com-dest" value="' + escapeHtml(String(u.email).toLowerCase()) + '" checked> <span>' + escapeHtml(u.nombre || u.email) + ' <span class="text-slate-400">· ' + escapeHtml(u.cargo || '') + '</span></span></label>').join('') + '</div></div>' +
