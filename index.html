@@ -20163,20 +20163,45 @@ ${cont.innerHTML}
       const prom = obR((capIni + cap) / 2);
       let dias = 0; if (ini && cierre) dias = Math.max(0, Math.round((new Date(cierre) - new Date(ini)) / 86400000));
       const dev = obR(prom * tasa / 100 * dias / base);
-      let reg = null, n = 0;
+      let reg = null, n = 0; const lin = [];
       if (f.gasto !== null && f.gasto !== undefined && f.gasto !== '') reg = Number(f.gasto) || 0;
       else if (obE.gi && obE.gi.cargado && obE.gi.lineas.length && ini) {
         const pal = obPalabras(f.ent); let sum = 0;
+        const otras = obE.filas.filter((y, j) => j !== i).map(y => obPalabras(y.ent)).filter(w => w.length);
         if (pal.length) obE.gi.lineas.forEach(l => {
           const fe = obFecha(l.fecha); if (!fe || fe < ini || (cierre && fe > cierre)) return;
-          const t = obClave(l.ter + ' ' + l.con); if (!pal.some(w => t.indexOf(w) >= 0)) return;
-          if (!obGiIncluye(l)) return; sum += l.deb - l.cre; n++;
+          if (!obGiIncluye(l)) return;
+          const t = obClave(l.ter + ' ' + l.con);
+          const propio = pal.some(w => t.indexOf(w) >= 0);
+          // Asiento interno de cuota sin nombre de entidad: se asigna si no nombra a otra entidad del anexo
+          const interno = !propio && /pr[eé]stamo|prestamo|cuota/i.test(l.con) && !otras.some(ws => ws.some(w => t.indexOf(w) >= 0));
+          if (!propio && !interno) return;
+          sum += l.deb - l.cre; n++; lin.push({ fecha: l.fecha, con: l.con, ter: l.ter, v: obR(l.deb - l.cre), interno });
         });
         if (n) reg = obR(sum);
       }
-      return { ini, dias, capIni, prom, dev, reg, n, manual: f.gasto !== null && f.gasto !== undefined && f.gasto !== '' };
+      return { lin, ini, dias, capIni, prom, dev, reg, n, manual: f.gasto !== null && f.gasto !== undefined && f.gasto !== '' };
     }
+    function obVer(i) { obE.devVer = obE.devVer || {}; obE.devVer[i] = !obE.devVer[i]; obPintar(); }
     function obSetX(i, k, v) { const f = obE.filas[i]; if (!f) return; f[k] = String(v).trim() === '' ? null : obNum(v); obGuardar(); obPintar(); }
+    function obDevDetalle(f, x) {
+      const e = escapeHtml, base = obE.base || 360, tasa = Number(f.tasa) || 0, cap = Number(f.cap) || 0;
+      let h = '<div style="font-size:12px;line-height:1.7;color:#2b2b27"><b>Interés devengado desde el inicio</b><br>'
+        + '1. Capital promedio = (capital original ' + obM(x.capIni) + ' + capital al corte ' + obM(cap) + ') ÷ 2 = <b>' + obM(x.prom) + '</b><br>'
+        + '2. Días = del ' + e(x.ini || '—') + ' al ' + e(obE.cierre || '—') + ' = <b>' + x.dias + '</b><br>'
+        + '3. Interés = ' + obM(x.prom) + ' × ' + tasa + '% × ' + x.dias + ' ÷ ' + base + ' = <b>' + obM(x.dev) + '</b></div>';
+      h += '<div style="font-size:12px;margin-top:8px"><b>Gasto registrado en el mayor</b> ';
+      if (x.manual) h += '(valor escrito por el auditor: ' + obM(x.reg) + '; para volver al cálculo automático, borra el valor de la celda)</div>';
+      else if (!x.lin.length) h += '— no se encontraron asientos de intereses de esta entidad desde la fecha de inicio. Revisa que el mayor esté cargado y que las cuentas de intereses estén marcadas en el detalle 1.</div>';
+      else {
+        h += '— asientos de las cuentas marcadas, posteriores al inicio, que nombran a la entidad (o son cuotas internas de préstamo sin nombre de otra entidad), y que están marcados como interés en el detalle 2:</div>'
+          + '<table class="ob" style="margin-top:4px"><thead><tr><th>Fecha</th><th style="text-align:left">Tercero</th><th style="text-align:left">Concepto</th><th>Valor</th></tr></thead><tbody>'
+          + x.lin.map(l => '<tr><td>' + e(l.fecha) + '</td><td style="white-space:normal">' + e(l.ter) + '</td><td style="white-space:normal">' + e(l.con) + (l.interno ? ' <span style="color:#6b6b63">(asiento interno)</span>' : '') + '</td><td class="n">' + obM(l.v) + '</td></tr>').join('')
+          + '<tr class="tot"><td colspan="3">Total registrado</td><td class="n">' + obM(x.reg) + '</td></tr></tbody></table>'
+          + '<div style="font-size:11px;color:#6b6b63;margin-top:4px">Si falta o sobra algún asiento, márcalo o desmárcalo en el detalle 2 (Asientos del mayor).</div>';
+      }
+      return h;
+    }
     function obDevHtml() {
       const e = escapeHtml; if (!obE.filas.length) return '';
       let tD = 0, tR = 0, hayR = false;
@@ -20184,12 +20209,14 @@ ${cont.innerHTML}
         const x = obDevDesdeInicio(f, i); tD += x.dev; if (x.reg !== null) { tR += x.reg; hayR = true; }
         const d = x.reg === null ? null : obR(x.reg - x.dev), mal = d !== null && Math.abs(d) > 1;
         const inp = (k, v, w) => '<input value="' + e(v === null || v === undefined ? '' : obM(v)) + '" onchange="obSetX(' + i + ',\'' + k + '\',this.value)" style="width:' + w + 'px;text-align:right;" class="ob-i">';
-        return '<tr><td class="ob-c">' + (i + 1) + '</td><td>' + e(f.ent) + '</td><td>' + e(x.ini) + '</td><td class="n">' + (Number(f.tasa) || 0) + '</td><td class="n">' + inp('capIni', f.capIni, 96) + '</td><td class="n">' + obM(Number(f.cap) || 0) + '</td><td class="n">' + obM(x.prom) + '</td><td class="n">' + x.dias + '</td><td class="n">' + obM(x.dev) + '</td><td class="n">' + inp('gasto', x.reg, 96) + '</td><td class="n" style="' + (mal ? 'color:#b91c1c;font-weight:700' : '') + '">' + (d === null ? '' : obM(d)) + '</td><td style="color:#6b6b63;white-space:normal">' + (x.manual ? 'Valor escrito por el auditor.' : (x.reg === null ? 'Sin asientos de esta entidad desde el inicio; escribe el valor.' : x.n + ' asiento(s) del mayor desde el inicio.')) + '</td></tr>';
+        const ojo = '<button type="button" onclick="obVer(' + i + ')" title="Ver cómo se calcula" style="color:' + ((obE.devVer || {})[i] ? '#2b2b27' : '#9a9a92') + '"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>';
+        const det = (obE.devVer || {})[i] ? '<tr><td></td><td colspan="11" style="white-space:normal;padding:8px 10px;background:#fff">' + obDevDetalle(f, x) + '</td></tr>' : '';
+        return '<tr><td class="ob-c">' + ojo + '</td><td>' + e(f.ent) + '</td><td>' + e(x.ini) + '</td><td class="n">' + (Number(f.tasa) || 0) + '</td><td class="n">' + inp('capIni', f.capIni, 96) + '</td><td class="n">' + obM(Number(f.cap) || 0) + '</td><td class="n">' + obM(x.prom) + '</td><td class="n">' + x.dias + '</td><td class="n">' + obM(x.dev) + '</td><td class="n">' + inp('gasto', x.reg, 96) + '</td><td class="n" style="' + (mal ? 'color:#b91c1c;font-weight:700' : '') + '">' + (d === null ? '' : obM(d)) + '</td><td style="color:#6b6b63;white-space:normal">' + (x.manual ? 'Valor escrito por el auditor.' : (x.reg === null ? 'Sin asientos de esta entidad desde el inicio; escribe el valor.' : x.n + ' asiento(s) del mayor desde el inicio.')) + '</td></tr>';
       }).join('');
       const td = hayR ? obR(tR - tD) : null;
       return '<div class="ob-h">Intereses devengados desde la fecha del préstamo contra el gasto registrado</div>'
         + '<p style="padding:0 14px 8px;font-size:12px;color:#6b6b63;line-height:1.6;margin:0">Para cada crédito se calcula el interés desde su fecha de inicio hasta el cierre: capital promedio × tasa × días ÷ base. El capital promedio es el punto medio entre el capital original y el capital al corte, porque el crédito va amortizando; si dejas vacío el capital original se usa el capital al corte. El gasto registrado sale de los asientos del mayor (cuentas marcadas más abajo) de esa entidad, desde su fecha de inicio. Es un cálculo de razonabilidad: si hay tabla de amortización, ella manda.</p>'
-        + '<div style="overflow-x:auto;padding:0 10px 14px"><table class="ob" style="min-width:900px"><thead><tr><th></th><th>Entidad</th><th>Inicio</th><th>Tasa %</th><th>Capital original</th><th>Capital al corte</th><th>Capital promedio</th><th>Días desde el inicio</th><th>Interés devengado desde el inicio</th><th>Gasto registrado en el mayor</th><th>Diferencia (gasto menos devengado)</th><th style="text-align:left">Nota</th></tr></thead><tbody>' + fl
+        + '<div style="overflow-x:auto;padding:0 10px 14px"><table class="ob" style="min-width:900px"><thead><tr><th title="Ver cálculo"></th><th>Entidad</th><th>Inicio</th><th>Tasa %</th><th>Capital original</th><th>Capital al corte</th><th>Capital promedio</th><th>Días desde el inicio</th><th>Interés devengado desde el inicio</th><th>Gasto registrado en el mayor</th><th>Diferencia (gasto menos devengado)</th><th style="text-align:left">Nota</th></tr></thead><tbody>' + fl
         + '<tr class="tot"><td></td><td colspan="7">Total</td><td class="n">' + obM(obR(tD)) + '</td><td class="n">' + (hayR ? obM(obR(tR)) : '') + '</td><td class="n" style="' + (td !== null && Math.abs(td) > 1 ? 'color:#b91c1c;font-weight:700' : '') + '">' + (td === null ? '' : obM(td)) + '</td><td style="color:#6b6b63;white-space:normal">' + (td === null ? '' : (Math.abs(td) <= 1 ? 'Cuadra.' : (td < 0 ? 'Falta registrar intereses (gasto menor al devengado).' : 'El gasto supera al devengado: revisar.'))) + '</td></tr></tbody></table></div>';
     }
     // ----- Análisis del gasto de intereses (balance, mayor y anexo) -----
