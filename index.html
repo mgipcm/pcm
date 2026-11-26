@@ -20102,6 +20102,24 @@ ${cont.innerHTML}
       const ws = XLSX.utils.aoa_to_sheet([['Entidad', 'Operación', 'Fecha de inicio', 'Fecha de vencimiento', 'Tasa de interés', 'Capital al corte', 'Capital a corto plazo', 'Fecha del último pago de intereses'], ['Banco ejemplo', 'Crédito 0001', '15/01/2026', '15/01/2028', '9.5%', 100000, '', '15/09/2026']]);
       const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Anexo'); XLSX.writeFile(wb, 'plantilla_anexo_obligaciones.xlsx');
     }
+    function obExcel() {
+      if (!window.XLSX) { alert('No se pudo cargar el lector de Excel. Revisa tu conexión a internet.'); return; }
+      const c = $im('nm-panel'); if (!c) return;
+      const wb = XLSX.utils.book_new(), usados = {};
+      const num = t => { const x = String(t).replace(/\s/g, ''); return /^-?[\d,]+(\.\d+)?$/.test(x) && /\d/.test(x) ? Number(x.replace(/,/g, '')) : String(t).replace(/\s+/g, ' ').trim(); };
+      let k = 0;
+      c.querySelectorAll('table').forEach(t => {
+        if (t.querySelector('table') || t.closest('table') !== t) return;
+        const aoa = []; t.querySelectorAll('tr').forEach(tr => { const r = []; tr.querySelectorAll('th,td').forEach(td => { const cs = Number(td.getAttribute('colspan')) || 1, inp = td.querySelector('input,select'); r.push(inp ? (inp.type === 'checkbox' ? (inp.checked ? 'Sí' : 'No') : num(inp.value)) : (td.innerText.trim() === '✕' ? '' : num(td.innerText))); for (let q = 1; q < cs; q++) r.push(''); }); if (r.some(v => v !== '')) aoa.push(r); });
+        if (aoa.length < 2) return;
+        let tit = ''; let p = t.previousElementSibling; for (let q = 0; p && q < 4 && !tit; q++, p = p.previousElementSibling) { const b = p.querySelector && (p.querySelector('b,h3,h4') || p); tit = (b && b.innerText || '').replace(/[\\/?*\[\]:]/g, ' ').replace(/\s+/g, ' ').trim(); if (tit.length > 60) tit = ''; }
+        let nom = (k === 0 ? 'Anexo' : (tit || 'Cuadro ' + (k + 1))).slice(0, 28); if (usados[nom]) nom = nom.slice(0, 25) + ' ' + (++usados[nom]); else usados[nom] = 1;
+        const ws = XLSX.utils.aoa_to_sheet(aoa); ws['!cols'] = aoa[0].map((_, i) => ({ wch: Math.min(40, Math.max(10, ...aoa.map(r => String(r[i] === undefined ? '' : r[i]).length))) }));
+        XLSX.utils.book_append_sheet(wb, ws, nom); k++;
+      });
+      if (!k) { alert('No hay datos para descargar.'); return; }
+      XLSX.writeFile(wb, 'anexo_obligaciones_financieras_' + (obE.cierre || '') + '.xlsx');
+    }
     async function obSubir(files) {
       const f = files && files[0]; const inp = $im('ob-archivo'); if (inp) inp.value = ''; if (!f) return;
       try {
@@ -20201,7 +20219,7 @@ ${cont.innerHTML}
       c.innerHTML = '<style>' + css + '</style><div style="background:#f1f1ee">'
         + '<div style="padding:16px 14px 14px;font-size:12px;color:#6b6b63;line-height:1.7">Anexo de los créditos del cliente: cada fila es una operación. Aquí van todos los créditos, vigentes y cancelados. La aplicación calcula el pasivo pendiente por intereses al corte (capital × tasa × días desde el último pago ÷ base), separa el corto y el largo plazo y muestra los intereses devengados del año anterior y del año actual (con la tabla de amortización del banco cuando existe; con asterisco si es una estimación). A la derecha están los pagos de capital y el saldo del mayor para cada préstamo, que se comparan con el anexo y con las sumarias PB (corriente) y PK (no corriente). Sube el Excel o CSV, o pídele a Claude que lo arme desde las tablas de amortización en «Subir información».</div>'
         + '<div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:4px 14px 20px"><label style="font-size:12px;color:#4a4a44">Fecha de cierre <input type="date" value="' + e(obE.cierre) + '" onchange="obCab(\'cierre\',this.value)" style="border:1px solid #dcdcd6;border-radius:6px;padding:2px 6px;font-size:12px"></label><label style="font-size:12px;color:#4a4a44">Base de días <select onchange="obCab(\'base\',this.value)" style="border:1px solid #dcdcd6;border-radius:6px;padding:2px 6px;font-size:12px"><option value="360"' + (obE.base === 360 ? ' selected' : '') + '>360</option><option value="365"' + (obE.base === 365 ? ' selected' : '') + '>365</option></select></label>'
-        + '<label class="ob-b" style="cursor:pointer">Subir anexo (Excel o CSV)<input id="ob-archivo" type="file" accept=".xlsx,.xls,.csv" class="hidden" onchange="obSubir(this.files)"></label><button type="button" class="ob-b" onclick="obPlantilla()">Descargar plantilla</button><button type="button" class="ob-b" onclick="obAgregar()">＋ Agregar fila</button>' + (obE.filas.length ? '<button type="button" class="ob-b" onclick="obVaciar()">Vaciar</button>' : '') + '<span id="ob-msg" style="font-size:11px;color:#6b6b63">' + e(obE.msg || (obE.archivo ? 'Archivo: ' + obE.archivo : '')) + '</span></div>'
+        + '<label class="ob-b" style="cursor:pointer">Subir anexo (Excel o CSV)<input id="ob-archivo" type="file" accept=".xlsx,.xls,.csv" class="hidden" onchange="obSubir(this.files)"></label><button type="button" class="ob-b" onclick="obPlantilla()">Descargar plantilla</button><button type="button" class="ob-b" onclick="obExcel()">Descargar en Excel</button><button type="button" class="ob-b" onclick="obAgregar()">＋ Agregar fila</button>' + (obE.filas.length ? '<button type="button" class="ob-b" onclick="obVaciar()">Vaciar</button>' : '') + '<span id="ob-msg" style="font-size:11px;color:#6b6b63">' + e(obE.msg || (obE.archivo ? 'Archivo: ' + obE.archivo : '')) + '</span></div>'
         + '<div style="overflow-x:auto;padding:6px 10px 16px"><table class="ob"><thead><tr>' + TH.map(x => '<th>' + x + '</th>').join('') + '</tr></thead><tbody>' + (fil || '<tr><td colspan="22" style="padding:14px;color:#9a9a92;white-space:normal">Aún no hay créditos. Sube el anexo o agrega filas.</td></tr>') + tot + '</tbody></table></div>'
         + '<div class="ob-h">Cuadre contra las sumarias del balance</div><div style="overflow-x:auto;padding:0 10px 14px"><table class="ob" style="min-width:760px"><thead><tr><th style="text-align:left">Concepto</th><th>Según anexo</th><th>Según balance</th><th>Diferencia</th><th style="text-align:left">Nota</th></tr></thead><tbody>'
         + filaCua('Capital a corto plazo (sumaria PB)', T.corto, obE.bal.PB, 'Si la sumaria PB incluye intereses por pagar, la diferencia debería explicarse por ellos.')
