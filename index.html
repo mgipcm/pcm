@@ -19992,7 +19992,7 @@ ${cont.innerHTML}
     }
     // ===== PB Obligaciones financieras: anexo de créditos y cálculo de intereses, corto y largo plazo (misma idea del anexo de inversiones) =====
     const OB_CUENTA = 'obligaciones_financieras';
-    const obE = { cargado: false, cargaId: 0, filas: [], cierre: '', base: 360, libros: null, bal: { PB: null, PK: null }, msg: '', archivo: '', guardando: null, gi: { cargado: false, cand: [], sel: {}, filtro: '', intTab: null, man: {}, lineas: [], ids: [], msg: '' } };
+    const obE = { cargado: false, cargaId: 0, filas: [], cierre: '', base: 360, libros: null, bal: { PB: null, PK: null }, msg: '', archivo: '', guardando: null, gi: { cargado: false, cand: [], sel: {}, filtro: '', intTab: null, canc: [], man: {}, lineas: [], ids: [], msg: '' } };
     const obM = v => (v === null || v === undefined || v === '' || isNaN(v)) ? '' : Number(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     const obR = v => Math.round(Number(v) * 100) / 100;
     function obFecha(v) {
@@ -20018,7 +20018,7 @@ ${cont.innerHTML}
     }
     async function obCargar() {
       const cli = nmE.cliente, anio = Number(nmE.anio), vis = nmE.visita; const id = ++obE.cargaId;
-      Object.assign(obE, { cargado: false, filas: [], libros: null, bal: { PB: null, PK: null }, msg: '', archivo: '', gi: { cargado: false, cand: [], sel: {}, filtro: '', intTab: null, man: {}, lineas: [], ids: [], msg: '' } });
+      Object.assign(obE, { cargado: false, filas: [], libros: null, bal: { PB: null, PK: null }, msg: '', archivo: '', gi: { cargado: false, cand: [], sel: {}, filtro: '', intTab: null, canc: [], man: {}, lineas: [], ids: [], msg: '' } });
       if (!cli) return;
       obE.cierre = ($im('nm-fecha') || {}).value || (vis === 'final' ? anio + '-12-31' : anio + '-09-30');
       const [r1, r2] = await Promise.all([
@@ -20118,12 +20118,13 @@ ${cont.innerHTML}
     }
 
     // ----- Análisis del gasto de intereses (balance, mayor y anexo) -----
-    function obGiGuardable() { const g = obE.gi; return { sel: Object.keys(g.sel).filter(k => g.sel[k]), filtro: g.filtro || '', intTab: g.intTab, man: g.man || {} }; }
+    function obGiGuardable() { const g = obE.gi; return { sel: Object.keys(g.sel).filter(k => g.sel[k]), filtro: g.filtro || '', intTab: g.intTab, canc: g.canc || [], man: g.man || {} }; }
     function obGiNum(t) { const x = String(t === undefined || t === null ? '' : t).trim().replace(/,/g, ''); if (x === '' || x === '-') return 0; return /^-?[0-9]*\.?[0-9]+$/.test(x) ? Number(x) : NaN; }
     function obGiIncluye(l) {
       if (obE.gi.man[l.k] !== undefined) return !!obE.gi.man[l.k];
       const t = l.con + ' ' + l.ter;
-      return /inter[eé]s|prestamo|préstamo|cuota|devengo|regulariz/i.test(t) && !/comis|aval|servic/i.test(t);
+      if (/inter[eé]s/i.test(t) && /mora/i.test(t)) return true;
+      return /inter[eé]s|prestamo|préstamo|cuota|devengo|regulariz/i.test(t) && !/comis|aval|servic|interbanc|diferidos|nuevo plan|cuentas de gasto|autoconsumo/i.test(t);
     }
     async function obGiCargar(guardado, id) {
       const cli = nmE.cliente, anio = Number(nmE.anio), vis = nmE.visita, g = obE.gi;
@@ -20141,7 +20142,7 @@ ${cont.innerHTML}
         g.ids = ids;
         g.cand = bal.map(b => { const c = String(b.codigo || '').trim(), m = may.filter(x => x.cuenta === c); return { sumaria: String(b.sumaria || '').trim(), cod: c, nom: b.cuenta, bal: Number(b.saldo) || 0, deb: m.length ? m.reduce((a, x) => a + (Number(x.debitos) || 0), 0) : null, cre: m.length ? m.reduce((a, x) => a + (Number(x.creditos) || 0), 0) : null, may: m.length ? m.reduce((a, x) => a + (Number(x.saldo_final) || 0), 0) : null }; }).filter(x => x.cod).sort((a, b) => a.sumaria.localeCompare(b.sumaria) || a.cod.localeCompare(b.cod));
         const sv = guardado && !Array.isArray(guardado) ? guardado : null;
-        if (sv) { g.sel = {}; (sv.sel || []).forEach(k => { g.sel[k] = true; }); g.filtro = sv.filtro || ''; g.intTab = sv.intTab === undefined ? null : sv.intTab; g.man = sv.man || {}; }
+        if (sv) { g.sel = {}; (sv.sel || []).forEach(k => { g.sel[k] = true; }); g.filtro = sv.filtro || ''; g.intTab = sv.intTab === undefined ? null : sv.intTab; g.canc = Array.isArray(sv.canc) ? sv.canc : []; g.man = sv.man || {}; }
         else { g.sel = {}; g.cand.forEach(x => { if (/^R/i.test(x.sumaria) && /inter|intrs/i.test(x.nom) && !/gdos|ganad|vtas|ventas|multas|public|cobr/i.test(x.nom)) g.sel[x.cod] = true; }); g.filtro = (obE.filas[0] && obE.filas[0].ent) || ''; }
         g.cargado = true;
         await obGiLineas(id);
@@ -20169,6 +20170,9 @@ ${cont.innerHTML}
     async function obGiSel(cod, v) { obE.gi.sel[cod] = !!v; obGuardar(); try { await obGiLineas(); } catch (er) { obE.gi.msg = String(er.message || er); } obPintar(); }
     async function obGiFiltro(v) { obE.gi.filtro = String(v || '').trim(); obGuardar(); try { await obGiLineas(); } catch (er) { obE.gi.msg = String(er.message || er); } obPintar(); }
     function obGiMan(k, v) { obE.gi.man[k] = !!v; obGuardar(); obPintar(); }
+    function obGiCancSet(i, k, v) { const f = obE.gi.canc[i]; if (!f) return; f[k] = k === 'int' || k === 'cap' ? (String(v).trim() === '' ? null : obNum(v)) : v; obGuardar(); obPintar(); }
+    function obGiCancAdd() { obE.gi.canc.push({ ent: '', op: '', cap: null, fecha: '', int: null, nota: '' }); obGuardar(); obPintar(); }
+    function obGiCancDel(i) { obE.gi.canc.splice(i, 1); obGuardar(); obPintar(); }
     function obGiInt(v) { obE.gi.intTab = String(v).trim() === '' ? null : obNum(v); obGuardar(); obPintar(); }
     function obGiHtml(T) {
       const g = obE.gi, e = escapeHtml, M = x => (x === null || x === undefined) ? '<span style="color:#9a9a92">sin dato</span>' : obM(x);
@@ -20184,12 +20188,16 @@ ${cont.innerHTML}
       let reg = 0;
       const fl = g.lineas.map(l => { const on = obGiIncluye(l); if (on) reg += l.deb - l.cre; return '<tr><td class="ob-c"><input type="checkbox" ' + (on ? 'checked ' : '') + 'onchange="obGiMan(\'' + e(l.k).replace(/'/g, '&#39;') + '\',this.checked)"></td><td>' + e(l.fecha) + '</td><td>' + e(l.cta) + '</td><td style="white-space:normal">' + e(l.ter) + '</td><td style="white-space:normal">' + e(l.con) + (l.raro ? ' <span style="color:#b91c1c">(revisar importe)</span>' : '') + '</td><td class="n">' + (l.deb ? obM(l.deb) : '') + '</td><td class="n">' + (l.cre ? obM(l.cre) : '') + '</td></tr>'; }).join('');
       h += '<div style="overflow:auto;max-height:340px;padding:0 10px 12px"><table class="ob" style="min-width:760px"><thead><tr><th></th><th>Fecha</th><th>Cuenta</th><th style="text-align:left">Tercero</th><th style="text-align:left">Concepto</th><th>Débito</th><th>Crédito</th></tr></thead><tbody>' + (fl || '<tr><td colspan="7" style="padding:10px;color:#9a9a92;white-space:normal">Sin asientos: marca una cuenta, cambia el texto de búsqueda o revisa que el mayor esté cargado.</td></tr>') + '</tbody></table></div>';
-      const dev = obR(obE.libros === null ? T.int : T.int - obE.libros), tab = g.intTab === null ? null : g.intTab;
-      const esp = tab === null ? null : obR(tab + dev), regR = obR(reg);
+      const dev = obR(obE.libros === null ? T.int : T.int - obE.libros), canT = obR((g.canc || []).reduce((a, x) => a + (Number(x.int) || 0), 0)), tab = g.intTab === null ? null : g.intTab;
+      const esp = (tab === null && !g.canc.length) ? null : obR((tab || 0) + canT + dev), regR = obR(reg);
+      const ci = (i, k, v, w, num) => '<input value="' + e(v === null || v === undefined ? '' : String(v)) + '" onchange="obGiCancSet(' + i + ',\'' + k + '\',this.value)" style="width:' + w + 'px;' + (num ? 'text-align:right;' : '') + '" class="ob-i">';
+      h += '<div style="padding:0 14px 6px;font-size:12px;color:#4a4a44;font-weight:600">Otros créditos y financiamientos con intereses en el período</div><p style="padding:0 14px 6px;font-size:12px;color:#6b6b63;line-height:1.6;margin:0">Incluye los créditos cancelados en el año que venían de antes, y los intereses facturados por terceros o compañías relacionadas. Escribe los intereses del período según la tabla de amortización o la factura.</p>';
+      h += '<div style="overflow-x:auto;padding:0 10px 8px"><table class="ob"><thead><tr><th></th><th>Entidad</th><th>Operación</th><th>Capital inicial</th><th>Cancelado o nota</th><th>Intereses del período</th><th></th></tr></thead><tbody>' + (g.canc.map((x, i) => '<tr><td class="ob-c">' + (i + 1) + '</td><td>' + ci(i, 'ent', x.ent, 190) + '</td><td>' + ci(i, 'op', x.op, 230) + '</td><td>' + ci(i, 'cap', x.cap === null ? '' : obM(x.cap), 96, true) + '</td><td>' + ci(i, 'fecha', x.fecha, 190) + '</td><td>' + ci(i, 'int', x.int === null ? '' : obM(x.int), 96, true) + '</td><td class="ob-c" style="cursor:pointer" onclick="obGiCancDel(' + i + ')">✕</td></tr>').join('') || '<tr><td colspan="7" style="padding:10px;color:#9a9a92;white-space:normal">Sin filas. Agrega los créditos cancelados en el año y otros intereses.</td></tr>') + '<tr class="tot"><td></td><td colspan="4">Total</td><td class="n">' + obM(canT) + '</td><td></td></tr></tbody></table><button type="button" class="ob-b" style="margin-top:6px" onclick="obGiCancAdd()">＋ Agregar crédito o financiamiento</button></div>';
       h += '<div style="overflow-x:auto;padding:0 10px 14px"><table class="ob" style="min-width:760px"><thead><tr><th style="text-align:left">Conclusión del gasto de intereses</th><th>USD</th><th style="text-align:left">Nota</th></tr></thead><tbody>'
         + '<tr><td>Gasto de intereses registrado (asientos marcados)</td><td class="n">' + obM(regR) + '</td><td style="color:#6b6b63;white-space:normal">Débitos menos créditos de los asientos marcados arriba.</td></tr>'
-        + '<tr><td>Intereses del período según las tablas de amortización</td><td class="n"><input value="' + e(g.intTab === null ? '' : obM(g.intTab)) + '" onchange="obGiInt(this.value)" placeholder="Escribe el total" style="width:110px;text-align:right;border:0;border-bottom:1px solid #dcdcd6;background:transparent;font-size:12px"></td><td style="color:#6b6b63;white-space:normal">Suma de los intereses de las cuotas del año de todos los créditos, incluidos los ya cancelados.</td></tr>'
+        + '<tr><td>Intereses del período de los créditos vigentes según sus tablas</td><td class="n"><input value="' + e(g.intTab === null ? '' : obM(g.intTab)) + '" onchange="obGiInt(this.value)" placeholder="Escribe el total" style="width:110px;text-align:right;border:0;border-bottom:1px solid #dcdcd6;background:transparent;font-size:12px"></td><td style="color:#6b6b63;white-space:normal">Intereses de las cuotas del año de los créditos que siguen vigentes al cierre.</td></tr>'
         + '<tr><td>Más: devengo al cierre aún no registrado (anexo menos libros)</td><td class="n">' + obM(dev) + '</td><td style="color:#6b6b63;white-space:normal">Usa el valor de intereses por pagar en libros escrito en el cuadre de arriba.</td></tr>'
+        + '<tr><td>Más: otros créditos y financiamientos (tabla de arriba)</td><td class="n">' + obM(canT) + '</td><td></td></tr>'
         + '<tr class="tot"><td>Gasto esperado del período</td><td class="n">' + (esp === null ? '' : obM(esp)) + '</td><td></td></tr>'
         + '<tr><td>Diferencia (registrado menos esperado)</td><td class="n" style="' + (esp !== null && Math.abs(regR - esp) > 1 ? 'color:#b91c1c;font-weight:700' : '') + '">' + (esp === null ? '' : obM(obR(regR - esp))) + '</td><td style="color:#6b6b63;white-space:normal">' + (esp === null ? 'Escribe los intereses según las tablas para ver la diferencia.' : (Math.abs(regR - esp) > 1 ? 'Si es positiva, el gasto está sobrevalorado; si es negativa, falta registrar intereses.' : 'Cuadra.')) + '</td></tr>'
         + '</tbody></table></div>';
