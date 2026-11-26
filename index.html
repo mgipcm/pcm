@@ -20102,23 +20102,59 @@ ${cont.innerHTML}
       const ws = XLSX.utils.aoa_to_sheet([['Entidad', 'Operación', 'Fecha de inicio', 'Fecha de vencimiento', 'Tasa de interés', 'Capital al corte', 'Capital a corto plazo', 'Fecha del último pago de intereses'], ['Banco ejemplo', 'Crédito 0001', '15/01/2026', '15/01/2028', '9.5%', 100000, '', '15/09/2026']]);
       const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Anexo'); XLSX.writeFile(wb, 'plantilla_anexo_obligaciones.xlsx');
     }
-    function obExcel() {
-      if (!window.XLSX) { alert('No se pudo cargar el lector de Excel. Revisa tu conexión a internet.'); return; }
+    async function obExcel() {
       const c = $im('nm-panel'); if (!c) return;
-      const wb = XLSX.utils.book_new(), usados = {};
+      if (!window.ExcelJS) { alert('No se pudo cargar el generador de Excel. Revisa tu conexión a internet.'); return; }
       const num = t => { const x = String(t).replace(/\s/g, ''); return /^-?[\d,]+(\.\d+)?$/.test(x) && /\d/.test(x) ? Number(x.replace(/,/g, '')) : String(t).replace(/\s+/g, ' ').trim(); };
-      let k = 0;
+      const sel = document.getElementById('nm-cliente'), cli = ((sel && sel.selectedOptions[0] || {}).textContent || '').trim() || String(nmE.cliente || '');
+      const tablas = [];
       c.querySelectorAll('table').forEach(t => {
         if (t.querySelector('table') || t.closest('table') !== t) return;
-        const aoa = []; t.querySelectorAll('tr').forEach(tr => { const r = []; tr.querySelectorAll('th,td').forEach(td => { const cs = Number(td.getAttribute('colspan')) || 1, inp = td.querySelector('input,select'); r.push(inp ? (inp.type === 'checkbox' ? (inp.checked ? 'Sí' : 'No') : num(inp.value)) : (td.innerText.trim() === '✕' ? '' : num(td.innerText))); for (let q = 1; q < cs; q++) r.push(''); }); if (r.some(v => v !== '')) aoa.push(r); });
-        if (aoa.length < 2) return;
-        let tit = ''; let p = t.previousElementSibling; for (let q = 0; p && q < 4 && !tit; q++, p = p.previousElementSibling) { const b = p.querySelector && (p.querySelector('b,h3,h4') || p); tit = (b && b.innerText || '').replace(/[\\/?*\[\]:]/g, ' ').replace(/\s+/g, ' ').trim(); if (tit.length > 60) tit = ''; }
-        let nom = (k === 0 ? 'Anexo' : (tit || 'Cuadro ' + (k + 1))).slice(0, 28); if (usados[nom]) nom = nom.slice(0, 25) + ' ' + (++usados[nom]); else usados[nom] = 1;
-        const ws = XLSX.utils.aoa_to_sheet(aoa); ws['!cols'] = aoa[0].map((_, i) => ({ wch: Math.min(40, Math.max(10, ...aoa.map(r => String(r[i] === undefined ? '' : r[i]).length))) }));
-        XLSX.utils.book_append_sheet(wb, ws, nom); k++;
+        const filas = []; t.querySelectorAll('tr').forEach(tr => {
+          const r = []; tr.querySelectorAll('th,td').forEach(td => { const cs = Number(td.getAttribute('colspan')) || 1, inp = td.querySelector('input,select'); const tx = td.innerText.trim(); r.push(inp ? (inp.type === 'checkbox' ? (inp.checked ? 'Sí' : 'No') : num(inp.value)) : (tx === '✕' ? '' : num(tx))); for (let q = 1; q < cs; q++) r.push(''); });
+          if (r.some(v => v !== '')) filas.push({ r, enc: !!tr.querySelector('th'), tot: tr.classList.contains('tot') || /^total/i.test(String(r.find(v => v !== '') || '')) });
+        });
+        if (filas.length < 2) return;
+        let tit = ''; let p = t.previousElementSibling; for (let q = 0; p && q < 4 && !tit; q++, p = p.previousElementSibling) { const b = p.querySelector && (p.querySelector('b,h3,h4') || p); tit = (b && b.innerText || '').replace(/\s+/g, ' ').trim(); if (tit.length > 70) tit = ''; }
+        tablas.push({ filas, tit });
       });
-      if (!k) { alert('No hay datos para descargar.'); return; }
-      XLSX.writeFile(wb, 'anexo_obligaciones_financieras_' + (obE.cierre || '') + '.xlsx');
+      if (!tablas.length) { alert('No hay datos para descargar.'); return; }
+      const corte = obE.cierre || '';
+      const dCar = { titulo: 'Anexo de obligaciones financieras', cuenta: (NM_CTX.ref || '') + ' · Obligaciones financieras', ref: 'Anexo de obligaciones financieras', cliente: cli, anioVisita: nmE.anio + ' · ' + nmE.visita,
+        fechaCorte: corte ? pcFechaLarga(corte) : '', fechaAnalisis: pcFechaCorta(new Date()), elaboro: (typeof nombreUsuarioActivo === 'function' && nombreUsuarioActivo()) || '', reviso: 'Pendiente de revisión', objetivo: 'Comprobar el pasivo por intereses, el corto y el largo plazo, y los intereses devengados de cada crédito contra el mayor y las sumarias.', procedimiento: '', fuente: obE.archivo || '', responsable: '', conclusion: '' };
+      Object.keys(dCar).forEach(k => { dCar[k] = ptLimpiaTexto(dCar[k]); });
+      try {
+        const NAVY = 'FF0B2C4D', GRIS = 'FFD9D9D9', TOT = 'FFF1F5F9', FN = '#,##0.00;[Red]-#,##0.00';
+        const bd = { style: 'thin', color: { argb: 'FFCBD5E1' } }, bordes = { top: bd, left: bd, bottom: bd, right: bd };
+        const wb = new ExcelJS.Workbook(); wb.creator = 'MGI Guerra'; wb.created = new Date();
+        pcCaratulaExcel(wb, dCar);
+        const usados = {};
+        tablas.forEach((T, k) => {
+          let nom = (k === 0 ? '1. Anexo y cálculos' : (T.tit || 'Cuadro ' + (k + 1))).replace(/[\\/?*\[\]:]/g, ' ').slice(0, 28).trim(); if (usados[nom]) nom = nom.slice(0, 25) + ' ' + (++usados[nom]); else usados[nom] = 1;
+          const ws = wb.addWorksheet(nom, { views: [{ showGridLines: false }], pageSetup: { orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 0 } });
+          const ancho = Math.max(...T.filas.map(f => f.r.length));
+          ws.getCell('A1').value = k === 0 ? 'Anexo de obligaciones financieras' : (T.tit || 'Cuadro'); ws.getCell('A1').font = { name: 'Calibri', size: 14, bold: true, underline: true, color: { argb: NAVY } }; ws.getRow(1).height = 28;
+          [['Cliente', cli], ['Año · visita', nmE.anio + ' · ' + nmE.visita], ['Fecha de corte', dCar.fechaCorte], ['Base de días', obE.base || 360], ['Elaboró', dCar.elaboro], ['Revisó', dCar.reviso]].forEach(([a, b], q) => {
+            const ca = ws.getCell(3 + q, 1), cb = ws.getCell(3 + q, 2); ca.value = a; ca.font = { bold: true, color: { argb: NAVY } }; cb.value = b; cb.alignment = { horizontal: 'left' };
+          });
+          const r0 = 10;
+          T.filas.forEach((F, q) => {
+            const row = ws.getRow(r0 + q);
+            F.r.forEach((v, j) => {
+              const x = row.getCell(j + 1); x.value = v === '' ? null : v; x.border = bordes;
+              if (typeof v === 'number') { x.numFmt = FN; x.alignment = { horizontal: 'right' }; }
+              else x.alignment = { vertical: 'middle', horizontal: F.enc && j > 0 ? 'center' : 'left', wrapText: true };
+              if (F.enc) { x.font = { bold: true, color: { argb: 'FF1F2937' } }; x.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: GRIS } }; }
+              else if (F.tot) { x.font = { bold: true }; x.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: TOT } }; x.border = { ...bordes, top: { style: 'thin', color: { argb: 'FF94A3B8' } } }; }
+            });
+            if (F.enc) row.height = 46;
+          });
+          for (let j = 0; j < ancho; j++) { let w = 10; T.filas.forEach(F => { const v = F.r[j]; if (v !== undefined && !F.enc) w = Math.max(w, Math.min(46, String(typeof v === 'number' ? v.toFixed(2) : v).length + 3)); }); ws.getColumn(j + 1).width = j === 0 && k === 0 ? 8 : (k === 0 && j > 6 ? 17 : w); }
+          if (k === 0) { ws.getColumn(1).width = 30; }
+        });
+        const buf = await wb.xlsx.writeBuffer();
+        ptBajarArchivo(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), ('Anexo obligaciones financieras - ' + cli + '.xlsx').replace(/[\\\/:*?"<>|\r\n\t]/g, '-').replace(/\s+/g, ' '));
+      } catch (er) { console.error('Excel del anexo:', er); alert('No se pudo generar el Excel: ' + (er.message || er)); }
     }
     async function obSubir(files) {
       const f = files && files[0]; const inp = $im('ob-archivo'); if (inp) inp.value = ''; if (!f) return;
@@ -20219,7 +20255,7 @@ ${cont.innerHTML}
       c.innerHTML = '<style>' + css + '</style><div style="background:#f1f1ee">'
         + '<div style="padding:16px 14px 14px;font-size:12px;color:#6b6b63;line-height:1.7">Anexo de los créditos del cliente: cada fila es una operación. Aquí van todos los créditos, vigentes y cancelados. La aplicación calcula el pasivo pendiente por intereses al corte (capital × tasa × días desde el último pago ÷ base), separa el corto y el largo plazo y muestra los intereses devengados del año anterior y del año actual (con la tabla de amortización del banco cuando existe; con asterisco si es una estimación). A la derecha están los pagos de capital y el saldo del mayor para cada préstamo, que se comparan con el anexo y con las sumarias PB (corriente) y PK (no corriente). Sube el Excel o CSV, o pídele a Claude que lo arme desde las tablas de amortización en «Subir información».</div>'
         + '<div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:4px 14px 20px"><label style="font-size:12px;color:#4a4a44">Fecha de cierre <input type="date" value="' + e(obE.cierre) + '" onchange="obCab(\'cierre\',this.value)" style="border:1px solid #dcdcd6;border-radius:6px;padding:2px 6px;font-size:12px"></label><label style="font-size:12px;color:#4a4a44">Base de días <select onchange="obCab(\'base\',this.value)" style="border:1px solid #dcdcd6;border-radius:6px;padding:2px 6px;font-size:12px"><option value="360"' + (obE.base === 360 ? ' selected' : '') + '>360</option><option value="365"' + (obE.base === 365 ? ' selected' : '') + '>365</option></select></label>'
-        + '<label class="ob-b" style="cursor:pointer">Subir anexo (Excel o CSV)<input id="ob-archivo" type="file" accept=".xlsx,.xls,.csv" class="hidden" onchange="obSubir(this.files)"></label><button type="button" class="ob-b" onclick="obPlantilla()">Descargar plantilla</button><button type="button" class="ob-b" onclick="obExcel()">Descargar en Excel</button><button type="button" class="ob-b" onclick="obAgregar()">＋ Agregar fila</button>' + (obE.filas.length ? '<button type="button" class="ob-b" onclick="obVaciar()">Vaciar</button>' : '') + '<span id="ob-msg" style="font-size:11px;color:#6b6b63">' + e(obE.msg || (obE.archivo ? 'Archivo: ' + obE.archivo : '')) + '</span></div>'
+        + '<label class="ob-b" style="cursor:pointer">Subir anexo (Excel o CSV)<input id="ob-archivo" type="file" accept=".xlsx,.xls,.csv" class="hidden" onchange="obSubir(this.files)"></label><button type="button" class="ob-b" onclick="obPlantilla()">Descargar plantilla</button><button type="button" class="ob-b" onclick="obAgregar()">＋ Agregar fila</button>' + (obE.filas.length ? '<button type="button" class="ob-b" onclick="obVaciar()">Vaciar</button>' : '') + '<span id="ob-msg" style="font-size:11px;color:#6b6b63">' + e(obE.msg || (obE.archivo ? 'Archivo: ' + obE.archivo : '')) + '</span><button type="button" onclick="obExcel()" style="margin-left:auto;padding:6px 4px;font-size:12px;font-weight:700;background:transparent;border:0;color:#449964;cursor:pointer">⬇ Descargar Excel</button></div>'
         + '<div style="overflow-x:auto;padding:6px 10px 16px"><table class="ob"><thead><tr>' + TH.map(x => '<th>' + x + '</th>').join('') + '</tr></thead><tbody>' + (fil || '<tr><td colspan="22" style="padding:14px;color:#9a9a92;white-space:normal">Aún no hay créditos. Sube el anexo o agrega filas.</td></tr>') + tot + '</tbody></table></div>'
         + '<div class="ob-h">Cuadre contra las sumarias del balance</div><div style="overflow-x:auto;padding:0 10px 14px"><table class="ob" style="min-width:760px"><thead><tr><th style="text-align:left">Concepto</th><th>Según anexo</th><th>Según balance</th><th>Diferencia</th><th style="text-align:left">Nota</th></tr></thead><tbody>'
         + filaCua('Capital a corto plazo (sumaria PB)', T.corto, obE.bal.PB, 'Si la sumaria PB incluye intereses por pagar, la diferencia debería explicarse por ellos.')
