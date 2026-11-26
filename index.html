@@ -20132,19 +20132,25 @@ ${cont.innerHTML}
       const sc = c.scrollTop;
       const T = obTotales(), dif = (a, b) => (b === null || b === undefined) ? null : obR(a - b);
       const inp = (i, k, v, w, num) => '<input value="' + e(v === null || v === undefined ? '' : String(v)) + '" onchange="obSet(' + i + ',\'' + k + '\',this.value)" style="width:' + w + 'px;' + (num ? 'text-align:right;' : '') + '" class="ob-i">';
+      const PF = obMovPorFila(), yc = Number(String(obE.cierre || '').slice(0, 4)) || Number(nmE.anio) || 0;
+      const dsum = { a: 0, b: 0, ha: false, hb: false, pag: 0, sal: 0, dif: 0, hm: false };
+      const celdaD = (D, k) => { if (!D) return '<td class="n" style="color:#cbd5e1">—</td>'; dsum[k] += D.v; dsum['h' + (k === 'a' ? 'a' : 'b')] = true; return '<td class="n"' + (D.est ? ' title="Estimado sin tabla de amortización" style="color:#6b6b63;font-style:italic"' : '') + '>' + obM(D.v) + (D.est ? '*' : '') + '</td>'; };
       const fil = obE.filas.map((f, i) => {
-        const x = obCalc(f, obE.cierre, obE.base);
-        return '<tr><td class="ob-c">' + (i + 1) + '</td><td>' + inp(i, 'ent', f.ent, 130) + '</td><td>' + inp(i, 'op', f.op, 110) + '</td><td>' + inp(i, 'ini', f.ini, 86) + '</td><td>' + inp(i, 'ven', f.ven, 86) + '</td><td>' + inp(i, 'tasa', f.tasa, 52, true) + '</td><td>' + inp(i, 'cap', f.cap === '' ? '' : obM(f.cap), 96, true) + '</td><td>' + inp(i, 'corto', f.corto === null || f.corto === undefined ? '' : obM(f.corto), 96, true) + '</td><td>' + inp(i, 'ult', f.ult, 86) + '</td><td class="n">' + x.dias + '</td><td class="n">' + obM(x.interes) + '</td><td class="n">' + obM(x.corto) + '</td><td class="n">' + obM(x.largo) + '</td><td>' + (x.vencido ? '<span style="color:#b91c1c;font-weight:700">Vencido</span>' : '') + '</td><td class="ob-c"><button type="button" onclick="obQuitar(' + i + ')" title="Quitar" style="color:#9a9a92">✕</button></td></tr>';
+        const x = obCalc(f, obE.cierre, obE.base), Da = obDevengadoAnio(f, 1), Db = obDevengadoAnio(f, 0), mv = PF ? PF[i] : null;
+        let cm;
+        if (mv) { dsum.pag += mv.pagos; dsum.sal += mv.rest; const d = obR((Number(f.cap) || 0) - mv.rest); dsum.dif += d; dsum.hm = true; cm = '<td class="n">' + obM(mv.pagos) + '</td><td class="n">' + obM(mv.rest) + '</td><td class="n" style="' + (Math.abs(d) > 1 ? 'color:#b91c1c;font-weight:700' : '') + '">' + obM(d) + '</td>'; }
+        else cm = '<td class="n" style="color:#cbd5e1">—</td><td class="n" style="color:#cbd5e1">—</td><td class="n" style="color:#cbd5e1">—</td>';
+        return '<tr><td class="ob-c">' + (i + 1) + '</td><td>' + inp(i, 'ent', f.ent, 130) + '</td><td>' + inp(i, 'op', f.op, 110) + '</td><td>' + inp(i, 'ini', f.ini, 86) + '</td><td>' + inp(i, 'ven', f.ven, 86) + '</td><td>' + inp(i, 'tasa', f.tasa, 52, true) + '</td><td>' + inp(i, 'cap', f.cap === '' ? '' : obM(f.cap), 96, true) + '</td><td>' + inp(i, 'corto', f.corto === null || f.corto === undefined ? '' : obM(f.corto), 96, true) + '</td><td>' + inp(i, 'ult', f.ult, 86) + '</td><td class="n">' + ((Number(f.cap) || 0) > 0 ? x.dias : '') + '</td><td class="n">' + obM(x.interes) + '</td><td class="n">' + obM(x.corto) + '</td><td class="n">' + obM(x.largo) + '</td>' + celdaD(Da, 'a') + celdaD(Db, 'b') + cm + '<td>' + (x.vencido ? '<span style="color:#b91c1c;font-weight:700">Vencido</span>' : '') + '</td><td class="ob-c"><button type="button" onclick="obQuitar(' + i + ')" title="Quitar" style="color:#9a9a92">✕</button></td></tr>';
       }).join('');
-      const tot = '<tr class="tot"><td></td><td colspan="5">Total</td><td class="n">' + obM(T.cap) + '</td><td class="n">' + obM(T.corto) + '</td><td></td><td></td><td class="n">' + obM(T.int) + '</td><td class="n">' + obM(T.corto) + '</td><td class="n">' + obM(T.largo) + '</td><td></td><td></td></tr>';
+      const tot = '<tr class="tot"><td></td><td colspan="5">Total</td><td class="n">' + obM(T.cap) + '</td><td class="n">' + obM(T.corto) + '</td><td></td><td></td><td class="n">' + obM(T.int) + '</td><td class="n">' + obM(T.corto) + '</td><td class="n">' + obM(T.largo) + '</td><td class="n">' + (dsum.ha ? obM(obR(dsum.a)) : '') + '</td><td class="n">' + (dsum.hb ? obM(obR(dsum.b)) : '') + '</td><td class="n">' + (dsum.hm ? obM(obR(dsum.pag)) : '') + '</td><td class="n">' + (dsum.hm ? obM(obR(dsum.sal)) : '') + '</td><td class="n">' + (dsum.hm ? obM(obR(dsum.dif)) : '') + '</td><td></td><td></td></tr>';
       const filaCua = (n, a, b, nota) => { const d = dif(a, b), mal = d !== null && Math.abs(d) > 1; return '<tr><td>' + n + '</td><td class="n">' + obM(a) + '</td><td class="n">' + (b === null || b === undefined ? '<span style="color:#9a9a92">sin dato</span>' : obM(b)) + '</td><td class="n" style="' + (mal ? 'color:#b91c1c;font-weight:700' : '') + '">' + (d === null ? '' : obM(d)) + '</td><td style="color:#6b6b63;white-space:normal">' + (nota || '') + '</td></tr>'; };
       const css = '.ob{border-collapse:collapse;font-size:12px;color:#2b2b27}.ob th{background:#fff;border:1px solid #dfdfdb;padding:4px 6px;font-weight:700;font-size:10.5px;text-align:center;line-height:1.25}.ob td{background:#f1f1ee;border:1px solid #e2e2dd;padding:1px 4px;white-space:nowrap}.ob td.n{text-align:right}.ob td.ob-c{text-align:center;color:#9a9a92;width:26px}.ob tr.tot td{font-weight:700;border-top:1px solid #cfcfc8;background:#fff}.ob-i{border:0;background:transparent;font-size:12px;padding:2px 2px;outline:none;color:#2b2b27}.ob-i:focus{background:#fff;box-shadow:inset 0 0 0 1px #c9c9c0;border-radius:3px}.ob-b{font-size:12px;font-weight:600;color:#4a4a44;border:1px solid #dcdcd6;border-radius:8px;padding:4px 10px;background:#fff}.ob-h{font-size:13px;font-weight:700;color:#2b2b27;padding:12px 14px 6px}';
-      const TH = ['', 'Entidad', 'Operación', 'Inicio', 'Vencimiento', 'Tasa %', 'Capital al corte', 'Capital corto plazo (si se deja vacío: lo que vence en 12 meses)', 'Último pago de intereses', 'Días', 'Intereses devengados', 'Corto plazo', 'Largo plazo', 'Alerta', ''];
+      const TH = ['', 'Entidad', 'Operación', 'Inicio', 'Vencimiento', 'Tasa %', 'Capital al corte', 'Capital corto plazo (si se deja vacío: lo que vence en 12 meses)', 'Último pago de intereses', 'Días', 'Pasivo pendiente por intereses al corte', 'Corto plazo', 'Largo plazo', 'Intereses devengados ' + (yc - 1), 'Intereses devengados ' + yc, 'Pagos de capital ' + yc + ' (mayor)', 'Saldo de capital al corte (mayor)', 'Diferencia anexo menos mayor', 'Alerta', ''];
       c.innerHTML = '<style>' + css + '</style><div style="background:#f1f1ee">'
-        + '<div style="padding:16px 14px 14px;font-size:12px;color:#6b6b63;line-height:1.7">Anexo de los créditos del cliente: cada fila es una operación. La aplicación calcula los días y los intereses devengados hasta la fecha de cierre (capital × tasa × días ÷ base) y separa el corto y el largo plazo; luego los compara con las sumarias PB (corriente) y PK (no corriente). Sube el Excel o CSV, o pídele a Claude que lo arme desde las tablas de amortización en «Subir información».</div>'
+        + '<div style="padding:16px 14px 14px;font-size:12px;color:#6b6b63;line-height:1.7">Anexo de los créditos del cliente: cada fila es una operación. Aquí van todos los créditos, vigentes y cancelados. La aplicación calcula el pasivo pendiente por intereses al corte (capital × tasa × días desde el último pago ÷ base), separa el corto y el largo plazo y muestra los intereses devengados del año anterior y del año actual (con la tabla de amortización del banco cuando existe; con asterisco si es una estimación). A la derecha están los pagos de capital y el saldo del mayor para cada préstamo, que se comparan con el anexo y con las sumarias PB (corriente) y PK (no corriente). Sube el Excel o CSV, o pídele a Claude que lo arme desde las tablas de amortización en «Subir información».</div>'
         + '<div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:4px 14px 20px"><label style="font-size:12px;color:#4a4a44">Fecha de cierre <input type="date" value="' + e(obE.cierre) + '" onchange="obCab(\'cierre\',this.value)" style="border:1px solid #dcdcd6;border-radius:6px;padding:2px 6px;font-size:12px"></label><label style="font-size:12px;color:#4a4a44">Base de días <select onchange="obCab(\'base\',this.value)" style="border:1px solid #dcdcd6;border-radius:6px;padding:2px 6px;font-size:12px"><option value="360"' + (obE.base === 360 ? ' selected' : '') + '>360</option><option value="365"' + (obE.base === 365 ? ' selected' : '') + '>365</option></select></label>'
         + '<label class="ob-b" style="cursor:pointer">Subir anexo (Excel o CSV)<input id="ob-archivo" type="file" accept=".xlsx,.xls,.csv" class="hidden" onchange="obSubir(this.files)"></label><button type="button" class="ob-b" onclick="obPlantilla()">Descargar plantilla</button><button type="button" class="ob-b" onclick="obAgregar()">＋ Agregar fila</button>' + (obE.filas.length ? '<button type="button" class="ob-b" onclick="obVaciar()">Vaciar</button>' : '') + '<span id="ob-msg" style="font-size:11px;color:#6b6b63">' + e(obE.msg || (obE.archivo ? 'Archivo: ' + obE.archivo : '')) + '</span></div>'
-        + '<div style="overflow-x:auto;padding:6px 10px 16px"><table class="ob"><thead><tr>' + TH.map(x => '<th>' + x + '</th>').join('') + '</tr></thead><tbody>' + (fil || '<tr><td colspan="15" style="padding:14px;color:#9a9a92;white-space:normal">Aún no hay créditos. Sube el anexo o agrega filas.</td></tr>') + tot + '</tbody></table></div>'
+        + '<div style="overflow-x:auto;padding:6px 10px 16px"><table class="ob"><thead><tr>' + TH.map(x => '<th>' + x + '</th>').join('') + '</tr></thead><tbody>' + (fil || '<tr><td colspan="20" style="padding:14px;color:#9a9a92;white-space:normal">Aún no hay créditos. Sube el anexo o agrega filas.</td></tr>') + tot + '</tbody></table></div>'
         + '<div class="ob-h">Cuadre contra las sumarias del balance</div><div style="overflow-x:auto;padding:0 10px 14px"><table class="ob" style="min-width:760px"><thead><tr><th style="text-align:left">Concepto</th><th>Según anexo</th><th>Según balance</th><th>Diferencia</th><th style="text-align:left">Nota</th></tr></thead><tbody>'
         + filaCua('Capital a corto plazo (sumaria PB)', T.corto, obE.bal.PB, 'Si la sumaria PB incluye intereses por pagar, la diferencia debería explicarse por ellos.')
         + filaCua('Capital a largo plazo (sumaria PK)', T.largo, obE.bal.PK, '')
@@ -20157,6 +20163,31 @@ ${cont.innerHTML}
     // ----- Intereses devengados desde la fecha del préstamo contra el gasto registrado -----
     function obClave(t) { return String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase(); }
     function obPalabras(ent) { return obClave(ent).split(/[^a-z0-9]+/).filter(w => w.length >= 4 && !/^(banco|cooperativa|compania|ltda|s\.?a\.?|cia|sociedad|anonima|financiera|mutualista|corporacion)$/.test(w)); }
+    // Interés devengado en un año (0 = año del cierre, 1 = año anterior): con la tabla del banco se reparte cada cuota por los días de su período
+    function obDevengadoAnio(f, off) {
+      const cierre = obE.cierre; if (!cierre) return null;
+      const yc = Number(cierre.slice(0, 4)), y = yc - off, ini = obFecha(f.ini), fin = obFecha(f.fin);
+      const Y0 = (y - 1) + '-12-31', Y1 = off === 0 ? ((fin && fin < cierre) ? fin : cierre) : y + '-12-31';
+      if (ini && ini > Y1) return { v: 0, det: [], est: false, Y0, Y1 };
+      const dd = (a, b) => Math.round((new Date(b) - new Date(a)) / 86400000);
+      if (Array.isArray(f.tabla) && f.tabla.length) {
+        const cu = f.tabla.map(c => ({ ...c, fe: obFecha(c.fecha) })).filter(c => c.fe).sort((a, b) => a.fe.localeCompare(b.fe));
+        let prev = ini || ''; const det = []; let tot = 0;
+        cu.forEach(c => {
+          const st = prev || c.fe, en = c.fe, per = Math.max(1, dd(st, en));
+          const a = st > Y0 ? st : Y0, b = en < Y1 ? en : Y1, dias = Math.max(0, dd(a, b));
+          if (dias > 0) { const dev = obR((Number(c.int) || 0) * dias / per); tot += dev; det.push({ n: c.n, desde: a, hasta: b, dias, per, int: Number(c.int) || 0, dev }); }
+          prev = c.fe;
+        });
+        return { v: obR(tot), det, est: false, Y0, Y1 };
+      }
+      // Sin tabla: solo se estima el año del cierre
+      if (off !== 0) return null;
+      const cap = Number(f.cap) || 0, tasa = Number(f.tasa) || 0, capIni = (f.capIni === null || f.capIni === undefined || f.capIni === '') ? cap : Number(f.capIni) || 0;
+      const desde = ini && ini > Y0 ? ini : Y0, dias = Math.max(0, dd(desde, Y1));
+      const prom = (ini && ini > Y0) ? (capIni + cap) / 2 : cap;
+      return { v: obR(prom * tasa / 100 * dias / (obE.base || 360)), det: [], est: true, Y0, Y1 };
+    }
     function obDevDesdeInicio(f, i) {
       const cierre = obE.cierre, ini = obFecha(f.ini), cap = Number(f.cap) || 0, tasa = Number(f.tasa) || 0, base = obE.base || 360;
       const capIni = (f.capIni === null || f.capIni === undefined || f.capIni === '') ? cap : (Number(f.capIni) || 0);
@@ -20166,11 +20197,8 @@ ${cont.innerHTML}
       let tablaUsada = null, desdeP = ini;
       let dev2 = dev, dias2 = dias;
       if (Array.isArray(f.tabla) && f.tabla.length) {
-        const fin = obFecha(f.fin) || cierre, y0 = (cierre || '').slice(0, 4) + '-01-01';
-        desdeP = ini && ini > y0 ? ini : y0;
-        tablaUsada = f.tabla.filter(c => { const d = obFecha(c.fecha); return d && d >= desdeP && d <= fin; });
-        dev2 = obR(tablaUsada.reduce((a, c) => a + (Number(c.int) || 0), 0));
-        dias2 = Math.max(0, Math.round((new Date(fin) - new Date(desdeP)) / 86400000));
+        const D = obDevengadoAnio(f, 0); tablaUsada = D.det; desdeP = D.Y0;
+        dev2 = D.v; dias2 = Math.max(0, Math.round((new Date(D.Y1) - new Date(ini && ini > D.Y0 ? ini : D.Y0)) / 86400000));
       }
       let reg = null, n = 0; const lin = [];
       if (f.gasto !== null && f.gasto !== undefined && f.gasto !== '') reg = Number(f.gasto) || 0;
@@ -20195,11 +20223,11 @@ ${cont.innerHTML}
     function obSetX(i, k, v) { const f = obE.filas[i]; if (!f) return; f[k] = String(v).trim() === '' ? null : obNum(v); obGuardar(); obPintar(); }
     function obDevDetalle(f, x) {
       const e = escapeHtml, base = obE.base || 360, tasa = Number(f.tasa) || 0, cap = Number(f.cap) || 0;
-      const hTabla = x.tablaUsada ? ('<div style="font-size:12px;line-height:1.7;color:#2b2b27"><b>Interés según la tabla de amortización del banco</b>, de las cuotas con fecha entre el ' + e(x.desdeP) + ' y la cancelación (' + e(obFecha(f.fin) || obE.cierre) + '):</div>'
-        + '<table class="ob" style="margin-top:4px"><thead><tr><th>Cuota</th><th>Fecha</th><th>Capital</th><th>Interés</th></tr></thead><tbody>'
-        + x.tablaUsada.map(c => '<tr><td class="n">' + e(String(c.n)) + '</td><td>' + e(obFecha(c.fecha)) + '</td><td class="n">' + obM(Number(c.cap) || 0) + '</td><td class="n">' + obM(Number(c.int) || 0) + '</td></tr>').join('')
-        + '<tr class="tot"><td colspan="3">Interés según tabla</td><td class="n">' + obM(x.dev) + '</td></tr></tbody></table>'
-        + '<div style="font-size:11px;color:#6b6b63;margin-top:4px">Las cuotas posteriores a la cancelación no se causaron. El detalle completo de la tabla está en el papel de trabajo PB-02.3, hoja Tabla 2025.</div>') : '';
+      const hTabla = x.tablaUsada ? ('<div style="font-size:12px;line-height:1.7;color:#2b2b27"><b>Interés devengado según la tabla de amortización del banco</b>, repartido por los días de cada cuota que caen en el año (desde el ' + e(x.desdeP) + ' hasta la cancelación o el cierre):</div>'
+        + '<table class="ob" style="margin-top:4px"><thead><tr><th>Cuota</th><th>Desde</th><th>Hasta</th><th>Días del año</th><th>Días de la cuota</th><th>Interés de la cuota</th><th>Devengado en el año</th></tr></thead><tbody>'
+        + x.tablaUsada.map(c => '<tr><td class="n">' + e(String(c.n)) + '</td><td>' + e(c.desde) + '</td><td>' + e(c.hasta) + '</td><td class="n">' + c.dias + '</td><td class="n">' + c.per + '</td><td class="n">' + obM(c.int) + '</td><td class="n">' + obM(c.dev) + '</td></tr>').join('')
+        + '<tr class="tot"><td colspan="6">Interés devengado según tabla</td><td class="n">' + obM(x.dev) + '</td></tr></tbody></table>'
+        + '<div style="font-size:11px;color:#6b6b63;margin-top:4px">Las cuotas posteriores a la cancelación no se causaron. El detalle completo de la tabla está en el papel de trabajo PB-02.3.</div>') : '';
       let h = x.tablaUsada ? hTabla : (
 '<div style="font-size:12px;line-height:1.7;color:#2b2b27"><b>Interés devengado desde el inicio</b><br>'
         + '1. Capital promedio = (capital original ' + obM(x.capIni) + ' + capital al corte ' + obM(cap) + ') ÷ 2 = <b>' + obM(x.prom) + '</b><br>'
@@ -20226,7 +20254,7 @@ ${cont.innerHTML}
         const inp = (k, v, w) => '<input value="' + e(v === null || v === undefined ? '' : obM(v)) + '" onchange="obSetX(' + i + ',\'' + k + '\',this.value)" style="width:' + w + 'px;text-align:right;" class="ob-i">';
         const ojo = '<button type="button" onclick="obVer(' + i + ')" title="Ver cómo se calcula" style="color:' + ((obE.devVer || {})[i] ? '#2b2b27' : '#9a9a92') + '"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>';
         const det = (obE.devVer || {})[i] ? '<tr><td></td><td colspan="11" style="white-space:normal;padding:8px 10px;background:#fff">' + obDevDetalle(f, x) + '</td></tr>' : '';
-        return '<tr><td class="ob-c">' + ojo + '</td><td>' + e(f.ent) + '</td><td>' + e(x.ini) + '</td><td class="n">' + (Number(f.tasa) || 0) + '</td><td class="n">' + inp('capIni', f.capIni, 96) + '</td><td class="n">' + obM(Number(f.cap) || 0) + '</td><td class="n">' + (x.tablaUsada ? '' : obM(x.prom)) + '</td><td class="n">' + x.dias + '</td><td class="n">' + obM(x.dev) + '</td><td class="n">' + inp('gasto', x.reg, 96) + '</td><td class="n" style="' + (mal ? 'color:#b91c1c;font-weight:700' : '') + '">' + (d === null ? '' : obM(d)) + '</td><td style="color:#6b6b63;white-space:normal">' + (x.tablaUsada ? 'Interés de la tabla del banco, desde ' + e(x.desdeP) + ' hasta la cancelación. ' + (x.manual ? 'Gasto: valor escrito por el auditor.' : '') : x.manual ? 'Valor escrito por el auditor.' : (x.reg === null ? 'Sin asientos de esta entidad desde el inicio; escribe el valor.' : x.n + ' asiento(s) del mayor desde el inicio.')) + '</td></tr>';
+        return '<tr><td class="ob-c">' + ojo + '</td><td>' + e(f.ent) + '</td><td>' + e(x.ini) + '</td><td class="n">' + (Number(f.tasa) || 0) + '</td><td class="n">' + inp('capIni', f.capIni, 96) + '</td><td class="n">' + obM(Number(f.cap) || 0) + '</td><td class="n">' + (x.tablaUsada ? '' : obM(x.prom)) + '</td><td class="n">' + x.dias + '</td><td class="n">' + obM(x.dev) + '</td><td class="n">' + inp('gasto', x.reg, 96) + '</td><td class="n" style="' + (mal ? 'color:#b91c1c;font-weight:700' : '') + '">' + (d === null ? '' : obM(d)) + '</td><td style="color:#6b6b63;white-space:normal">' + (x.tablaUsada ? 'Interés de la tabla del banco repartido por días, desde ' + e(x.desdeP) + ' hasta la cancelación o el cierre. ' + (x.manual ? 'Gasto: valor escrito por el auditor.' : '') : x.manual ? 'Valor escrito por el auditor.' : (x.reg === null ? 'Sin asientos de esta entidad desde el inicio; escribe el valor.' : x.n + ' asiento(s) del mayor desde el inicio.')) + '</td></tr>';
       }).join('');
       const td = hayR ? obR(tR - tD) : null;
       return '<div class="ob-h">Intereses devengados desde la fecha del préstamo contra el gasto registrado</div>'
@@ -20264,6 +20292,7 @@ ${cont.innerHTML}
         g.cargado = true;
         await obGiLineas(id);
       } catch (er) { g.msg = 'No se pudo cargar el análisis de intereses: ' + (er.message || er); g.cargado = true; }
+      if (!obE.mov) obMovCargar();
       if (nmE.tab === 'anexos') obPintar();
       if (nmE.tab === 'cuadres') nmCuaPintar();
     }
@@ -21868,22 +21897,25 @@ ${cont.innerHTML}
         });
         M.filas = Object.values(cuentas).sort((a, b) => a.cod.localeCompare(b.cod));
         M.cargado = true;
+        if (nmE.tab === 'cuadres') nmCuaPintar(); else if (nmE.tab === 'anexos') obPintar();
+        for (const c of M.filas) { if (c.grupo === 'interes' || !M.ids.length || M.det[c.cod]) continue; try { M.det[c.cod] = { lineas: await obMovLineas(c.cod) }; } catch (er) { M.det[c.cod] = { error: String(er.message || er) }; } if (obE.cargaId !== id) return; }
       } catch (er) { M.msg = 'No se pudo armar el movimiento: ' + (er.message || er); M.cargado = true; }
       if (nmE.tab === 'cuadres') nmCuaPintar();
+    }
+    async function obMovLineas(cod) {
+      const M = obE.mov, out = [];
+      for (const a of M.ids) {
+        const r = await supabaseClient.rpc('mayor_lineas_cuenta_app', { p_archivo: a, p_cuenta: cod, p_filtro: null, p_limite: 2000 });
+        if (r.error) throw r.error;
+        (r.data || []).forEach(x => { const q = String(x.linea || '').split(';'); if (!String(q[3] || '').trim()) return; const d = obGiNum(q[14]), h = obGiNum(q[15]); out.push({ fecha: String(q[3]).trim(), ter: String(q[6] || '').trim(), con: String(q[10] || '').trim(), deb: isNaN(d) ? 0 : d, cre: isNaN(h) ? 0 : h }); });
+      }
+      return out;
     }
     async function obMovVer(cod) {
       const M = obE.mov; if (!M) return; M.ver[cod] = !M.ver[cod];
       if (M.ver[cod] && !M.det[cod]) {
         M.det[cod] = { cargando: true }; nmCuaPintar();
-        try {
-          const out = [];
-          for (const a of M.ids) {
-            const r = await supabaseClient.rpc('mayor_lineas_cuenta_app', { p_archivo: a, p_cuenta: cod, p_filtro: null, p_limite: 2000 });
-            if (r.error) throw r.error;
-            (r.data || []).forEach(x => { const q = String(x.linea || '').split(';'); if (!String(q[3] || '').trim()) return; const d = obGiNum(q[14]), h = obGiNum(q[15]); out.push({ fecha: String(q[3]).trim(), ter: String(q[6] || '').trim(), con: String(q[10] || '').trim(), deb: isNaN(d) ? 0 : d, cre: isNaN(h) ? 0 : h }); });
-          }
-          M.det[cod] = { lineas: out };
-        } catch (er) { M.det[cod] = { error: String(er.message || er) }; }
+        try { M.det[cod] = { lineas: await obMovLineas(cod) }; } catch (er) { M.det[cod] = { error: String(er.message || er) }; }
       }
       nmCuaPintar();
     }
@@ -21904,13 +21936,29 @@ ${cont.innerHTML}
           if (r > 0.005) { sin.pagos.push({ fecha: l.fecha, con: l.con, v: R2(r) }); sin.monto = R2(sin.monto + r); }
         }
       });
-      // ¿Está en el anexo de créditos?
-      const dias = (a, b) => Math.abs((new Date(a) - new Date(b)) / 86400000), y0 = (obE.cierre || '').slice(0, 4) + '-01-01';
+      // ¿Está en el anexo de créditos? (se prefiere la fila cuya entidad aparece en el nombre de la cuenta)
+      const dias = (a, b) => Math.abs((new Date(a) - new Date(b)) / 86400000), y0 = (obE.cierre || '').slice(0, 4) + '-01-01', usados = new Set();
+      const nomC = obClave(cta.nom || '');
       tr.forEach(t => {
-        const m = obE.filas.find(f => { const ini = obFecha(f.ini); if (!ini) return false; return t.tipo === 'credito' ? dias(ini, t.fecha) <= 10 : ini < y0; });
-        t.anexo = m ? ((m.ent || '') + (m.op ? ', ' + m.op : '')) : null;
+        const cand = obE.filas.map((f, k) => ({ f, k, ini: obFecha(f.ini) })).filter(c => !usados.has(c.k) && c.ini && (t.tipo === 'credito' ? dias(c.ini, t.fecha) <= 10 : c.ini < y0));
+        const m = cand.find(c => obPalabras(c.f.ent).some(w => nomC.indexOf(w) >= 0)) || cand[0];
+        if (m) { usados.add(m.k); t.filaIdx = m.k; t.anexo = (m.f.ent || '') + (m.f.op ? ', ' + m.f.op : ''); } else { t.filaIdx = null; t.anexo = null; }
       });
       return { tr, sin };
+    }
+    // Pagos del año y saldo de capital según el mayor para cada fila del anexo (por el préstamo al que corresponde)
+    function obMovPorFila() {
+      const M = obE.mov, out = {}; if (!M || !M.cargado) return null;
+      let hay = false;
+      M.filas.forEach(c => {
+        if (c.grupo === 'interes') return; const d = M.det[c.cod]; if (!d || !d.lineas) return;
+        obMovPrestamos(c, d.lineas).tr.forEach(t => {
+          if (t.filaIdx === null || t.filaIdx === undefined) return; hay = true;
+          const o = out[t.filaIdx] = out[t.filaIdx] || { pagos: 0, rest: 0 };
+          o.pagos = obR(o.pagos + t.pagos.reduce((a, x) => a + x.v, 0)); o.rest = obR(o.rest + t.rest);
+        });
+      });
+      return hay ? out : {};
     }
     function obMovPrestamosHtml(cta, lineas) {
       const e = escapeHtml, R2 = obR, P = obMovPrestamos(cta, lineas);
