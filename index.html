@@ -3555,7 +3555,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       'claude-revisar': { cliente: 'cr-cliente', anio: 'cr-anio', visita: 'cr-visita' },
       'pedidos-claude': { cliente: 'pc-cliente', anio: 'pc-anio', visita: 'pc-visita' },
       contratos: { cliente: 'contr-cliente' }, flujo: { cliente: 'fl-cliente', anio: 'fl-anio' },
-      arrend: { cliente: 'ar-cliente', anio: 'ar-anio', visita: 'ar-visita' }, import2: { cliente: 'v2-cliente', anio: 'v2-anio', visita: 'v2-visita' }, nomina: { cliente: 'nm-cliente', anio: 'nm-anio', visita: 'nm-visita' }, impuestos: { cliente: 'nm-cliente', anio: 'nm-anio', visita: 'nm-visita' }, gastos: { cliente: 'nm-cliente', anio: 'nm-anio', visita: 'nm-visita' }, concil: { cliente: 'cb-cliente', anio: 'cb-anio', visita: 'cb-visita' },
+      arrend: { cliente: 'ar-cliente', anio: 'ar-anio', visita: 'ar-visita' }, import2: { cliente: 'v2-cliente', anio: 'v2-anio', visita: 'v2-visita' }, nomina: { cliente: 'nm-cliente', anio: 'nm-anio', visita: 'nm-visita' }, impuestos: { cliente: 'nm-cliente', anio: 'nm-anio', visita: 'nm-visita' }, obligaciones: { cliente: 'nm-cliente', anio: 'nm-anio', visita: 'nm-visita' }, gastos: { cliente: 'nm-cliente', anio: 'nm-anio', visita: 'nm-visita' }, concil: { cliente: 'cb-cliente', anio: 'cb-anio', visita: 'cb-visita' },
       pce: { cliente: 'pce-cliente' }, reuniones: { cliente: 'reu-cliente' }, mayor: { cliente: 'my-cliente' },
       asignacion: { cliente: 'as-cliente', anio: 'as-anio', visita: 'as-visita' }
     };
@@ -3641,14 +3641,14 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       }
 
       const claveLinea = (seccion === 'analisis' && cuenta) ? (cuenta === 'equivalentes' ? 'concil' : 'cta:' + cuenta) : (seccion === 'aprobaciones-claude' ? 'pedidos-claude' : seccion);
-      if ((seccion === 'sumarias' || seccion === 'pendientes' || seccion === 'claude-revisar' || seccion === 'pedidos-claude' || seccion === 'aprobaciones-claude' || seccion === 'arrend' || seccion === 'import2' || seccion === 'nomina' || seccion === 'impuestos' || seccion === 'gastos' || seccion === 'concil' || (seccion === 'analisis' && cuenta)) && !herramientaHabilitada(claveLinea)) { avisarEnDesarrollo(); return; }
+      if ((seccion === 'sumarias' || seccion === 'pendientes' || seccion === 'claude-revisar' || seccion === 'pedidos-claude' || seccion === 'aprobaciones-claude' || seccion === 'arrend' || seccion === 'import2' || seccion === 'nomina' || seccion === 'impuestos' || seccion === 'obligaciones' || seccion === 'gastos' || seccion === 'concil' || (seccion === 'analisis' && cuenta)) && !herramientaHabilitada(claveLinea)) { avisarEnDesarrollo(); return; }
       if (!herramientaHabilitada(seccion === 'aprobaciones-claude' ? 'pedidos-claude' : seccion)) {
         if (seccion === 'auditoria') seccion = 'desarrollo'; // pantalla principal: se muestra un aviso en vez de un mensaje emergente
         else { avisarEnDesarrollo(); return; }
       }
       if (!['clientes', 'usuarios', 'cuentas', 'habilitar', 'historial', 'medidor', 'programas'].includes(seccion)) guardarVista({ seccion: seccion, sub: sub || null, cuenta: cuenta || null });
 
-      const secciones = ['desarrollo', 'clientes', 'usuarios', 'cuentas', 'habilitar', 'historial', 'medidor', 'programas', 'sumarias', 'mayor-contable', 'pendientes', 'claude-revisar', 'pedidos-claude', 'aprobaciones-claude', 'flujo', 'auditoria', 'analisis', 'visitas', 'asignacion', 'indices', 'mayor', 'contratos', 'arrend', 'import2', 'nomina', 'impuestos', 'gastos', 'concil', 'pce', 'reuniones', 'elabinforme', 'revinforme', 'mas-herramientas'];
+      const secciones = ['desarrollo', 'clientes', 'usuarios', 'cuentas', 'habilitar', 'historial', 'medidor', 'programas', 'sumarias', 'mayor-contable', 'pendientes', 'claude-revisar', 'pedidos-claude', 'aprobaciones-claude', 'flujo', 'auditoria', 'analisis', 'visitas', 'asignacion', 'indices', 'mayor', 'contratos', 'arrend', 'import2', 'nomina', 'impuestos', 'obligaciones', 'gastos', 'concil', 'pce', 'reuniones', 'elabinforme', 'revinforme', 'mas-herramientas'];
       const grupoSubmenu = sec => ['auditoria', 'visitas', 'asignacion'].includes(sec) ? 'planificacion' : ['indices', 'mayor', 'contratos', 'flujo', 'pce', 'reuniones', 'elabinforme', 'revinforme', 'mas-herramientas'].includes(sec)
         ? 'herramientas'
         : (['clientes', 'usuarios', 'cuentas', 'habilitar', 'historial', 'medidor', 'programas'].includes(sec) ? 'config' : (['sumarias', 'mayor-contable', 'pendientes', 'claude-revisar', 'pedidos-claude', 'aprobaciones-claude'].includes(sec) ? 'analisis' : null));
@@ -3668,7 +3668,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
         }
       });
 
-      const activeSec = document.getElementById((seccion === 'impuestos' || seccion === 'gastos') ? 'sec-nomina' : `sec-${seccion}`);
+      const activeSec = document.getElementById((seccion === 'impuestos' || seccion === 'obligaciones' || seccion === 'gastos') ? 'sec-nomina' : `sec-${seccion}`);
       if (activeSec) activeSec.classList.remove('hidden');
       setTimeout(() => aplicarContextoActivo(seccion), 250); setTimeout(() => aplicarContextoActivo(seccion), 1000); // espera a que la pantalla cargue sus clientes
       if (seccion === 'contratos') { poblarClientesContratos(); cargarResumenesGuardados(); }
@@ -3688,6 +3688,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       if (seccion === 'import2') abrirImport2();
       if (seccion === 'nomina') abrirNomina();
       if (seccion === 'impuestos') abrirImpuestos();
+      if (seccion === 'obligaciones') abrirObligaciones();
       if (seccion === 'gastos') abrirGastos();
       if (seccion === 'concil') abrirConcil();
       if (seccion === 'pce') abrirPce();
@@ -3714,7 +3715,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
         abrirAnalisis(rubro, cuentaElegida);
       }
 
-      const desdeAnalisis = ((seccion === 'arrend' || seccion === 'import2' || seccion === 'nomina' || seccion === 'impuestos' || seccion === 'gastos' || seccion === 'concil') && sub === 'analisis');
+      const desdeAnalisis = ((seccion === 'arrend' || seccion === 'import2' || seccion === 'nomina' || seccion === 'impuestos' || seccion === 'obligaciones' || seccion === 'gastos' || seccion === 'concil') && sub === 'analisis');
       if (seccion === 'arrend') { const t = document.getElementById('ar-titulo'); if (t) t.textContent = desdeAnalisis ? '2. Activos por derecho de uso y pasivos por arrendamiento' : 'Arrendamientos NIIF 16'; }
       if (seccion === 'concil') { pintarHojasAA(); const t = document.getElementById('cb-titulo'); if (t) t.textContent = '2. Bancos'; }
       if (desdeAnalisis) {
@@ -3766,6 +3767,9 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
         { sumaria: 'AOO', id: 'arrend', nombre: 'AOO Activos por derecho de uso y pasivos por arrendamiento' }
       ]
     };
+    EXTRAS_ANALISIS['pasivos'] = [
+      { sumaria: 'PB', id: 'obligaciones', nombre: 'PB Obligaciones financieras' }
+    ];
     EXTRAS_ANALISIS['costos-gastos'] = [
       { sumaria: 'RC', id: 'nomina', nombre: 'RC01 Nómina (prueba)' },
       { sumaria: 'RC', id: 'gastos', nombre: 'RC02 Gastos (prueba)' }
@@ -4277,7 +4281,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
     async function agregarProcedimientoPlantilla() {
       const s = valorAnalisis('pg-sumaria'), est = document.getElementById('pg-estado');
       if (!s) { est.textContent = 'Elige primero una sumaria para agregarle el procedimiento.'; est.className = 'text-[11px] min-h-[1rem] text-red-600 font-bold'; return; }
-      const hoja = s === 'AH' ? 'impuestos' : ((s === 'AA' || s === 'RC') ? valorAnalisis('pg-hoja') : '');
+      const hoja = s === 'PB' ? 'obligaciones' : s === 'AH' ? 'impuestos' : ((s === 'AA' || s === 'RC') ? valorAnalisis('pg-hoja') : '');
       if (s === 'RC' && !hoja) { est.textContent = 'Para la cuenta RC elige también el tema (Nómina, Depreciaciones o Gastos en general).'; est.className = 'text-[11px] min-h-[1rem] text-red-600 font-bold'; return; }
       if (s === 'AA' && !hoja) { est.textContent = 'Para la cuenta AA elige también la hoja (Caja, Bancos o Equivalentes de efectivo).'; est.className = 'text-[11px] min-h-[1rem] text-red-600 font-bold'; return; }
       const maxOrden = programasPlantilla.reduce((m, r) => Math.max(m, r.orden || 0), 0);
@@ -4930,6 +4934,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
 
     // ===== Tipos de documento por cuenta y lista de qué subir =====
     const PC_ETIQ = {
+      'PB:obligaciones': ['Mayor contable completo', 'Mayor de obligaciones financieras', 'Mayor de intereses por pagar', 'Mayor de gastos financieros', 'Tabla de amortización', 'Contrato de préstamo o pagaré', 'Garantías', 'Estado de cuenta o certificado de deuda', 'Confirmación bancaria', 'Cálculo de covenants', 'Comprobante de pago', 'Comprobante de ISD y retención', 'Otro'],
       'RC:nomina': ['Planilla de fondos de reserva del IESS', 'Planilla de préstamos hipotecarios del IESS', 'Planilla de préstamos quirografarios del IESS', 'Mayor contable completo', 'Mayor contable de nómina', 'Mayor de pasivos laborales (beneficios sociales)', 'Mayor de IESS por pagar', 'Mayor de anticipos a empleados', 'Rol de pagos (por mes y por persona)', 'Planilla del IESS', 'Listado de personal con fecha de ingreso', 'Cálculo de décimos', 'Cálculo de fondo de reserva', 'Utilidades a trabajadores', 'Finiquitos', 'Liquidaciones', 'Formulario 107', 'Contrato o expediente del colaborador', 'Otro'],
       'RC:gastos': ['Factura de compra o gasto', 'Nota de crédito', 'Comprobante de retención', 'Otro'],
       'AH:impuestos': ['Mayor de IVA en compras (crédito tributario IVA)', 'Mayor de retenciones de IVA recibidas', 'Mayor de retenciones en la fuente de renta recibidas', 'Mayor de ISD (crédito tributario)', 'Mayor contable completo', 'Formulario 104 (declaración de IVA)', 'ATS (anexo transaccional)', 'Reporte de compras', 'Reporte de ventas', 'Formulario 103 (retenciones en la fuente)', 'Comprobantes de retención recibidos (SRI)', 'Declaración de impuesto a la renta (Formulario 101)', 'Documentos del ISD (pago y partida arancelaria)', 'Balance de comprobación', 'Otro'],
@@ -4946,12 +4951,12 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       AB: ['Certificado o póliza de inversión', 'Estado de cuenta', 'Confirmación bancaria', 'Detalle o anexo de inversiones', 'Otro'],
       AS: ['Certificado o póliza de inversión', 'Estado de cuenta', 'Confirmación bancaria', 'Detalle o anexo de inversiones', 'Otro']
     };
-    const PC_HOJAS = { impuestos: 'Activos por impuestos corrientes', caja: 'Caja', bancos: 'Bancos', equivalentes: 'Equivalentes de efectivo', venta: 'Inventario para la venta, importaciones en tránsito y kárdex', costo_ventas: 'Costo de ventas → salidas', kardex: 'Movimiento de kárdex', import: 'Importaciones (liquidaciones)', voucheo: 'Revisión de documentación (voucheo)', nomina: 'Nómina', depreciaciones: 'Depreciaciones', gastos: 'Gastos en general' };
-    const PC_HOJAS_SUM = { AA: [['caja', 'Caja'], ['bancos', 'Bancos'], ['equivalentes', 'Equivalentes de efectivo']], AF: [['venta', 'Inventario para la venta, importaciones en tránsito y kárdex']], RC: [['nomina', 'Nómina'], ['gastos', 'Gastos en general']], AH: [['impuestos', 'Activos por impuestos corrientes']] };
+    const PC_HOJAS = { obligaciones: 'Obligaciones financieras', impuestos: 'Activos por impuestos corrientes', caja: 'Caja', bancos: 'Bancos', equivalentes: 'Equivalentes de efectivo', venta: 'Inventario para la venta, importaciones en tránsito y kárdex', costo_ventas: 'Costo de ventas → salidas', kardex: 'Movimiento de kárdex', import: 'Importaciones (liquidaciones)', voucheo: 'Revisión de documentación (voucheo)', nomina: 'Nómina', depreciaciones: 'Depreciaciones', gastos: 'Gastos en general' };
+    const PC_HOJAS_SUM = { AA: [['caja', 'Caja'], ['bancos', 'Bancos'], ['equivalentes', 'Equivalentes de efectivo']], AF: [['venta', 'Inventario para la venta, importaciones en tránsito y kárdex']], RC: [['nomina', 'Nómina'], ['gastos', 'Gastos en general']], AH: [['impuestos', 'Activos por impuestos corrientes']], PB: [['obligaciones', 'Obligaciones financieras']] };
     function pcNombreHoja(h) { return PC_HOJAS[h] || h || ''; }
     const PC_TODO = 'Todo en un archivo (todos los documentos juntos)';
     function pcEtiquetas(sumaria, hoja) {
-      const l = (PC_ETIQ[(sumaria === 'AA' || sumaria === 'AF' || sumaria === 'RC' || sumaria === 'AH') ? sumaria + ':' + (hoja || '') : sumaria] || ['Documento de soporte', 'Otro']).filter(x => x !== PC_MAYOR_ETQ);
+      const l = (PC_ETIQ[(sumaria === 'AA' || sumaria === 'AF' || sumaria === 'RC' || sumaria === 'AH' || sumaria === 'PB') ? sumaria + ':' + (hoja || '') : sumaria] || ['Documento de soporte', 'Otro']).filter(x => x !== PC_MAYOR_ETQ);
       const i = l.indexOf('Otro');
       return i < 0 ? l.concat([PC_TODO]) : l.slice(0, i).concat([PC_TODO], l.slice(i));
     }
@@ -5743,10 +5748,10 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       pcIrAPedido(m[0], valorAnalisis('an-cliente'), valorAnalisis('an-anio'), visitaAnalisis(), m[1]);
     }
     // Barra fija para enviar un pedido a Claude desde la propia pantalla (cuando ya hay datos y se quiere actualizar)
-    function pcSumDeHoja(h) { return ({ nomina: 'RC', depreciaciones: 'RC', gastos: 'RC', impuestos: 'AH' })[h] || 'AF'; }
+    function pcSumDeHoja(h) { return ({ nomina: 'RC', depreciaciones: 'RC', gastos: 'RC', impuestos: 'AH', obligaciones: 'PB' })[h] || 'AF'; }
     function pcBarraPedido(hoja, cli, anio, vis, texto) {
       if (!cli) return '';
-      const T = { venta: ['Ingreso de información: todo se pide a Claude', 'Pedir a Claude (mayor contable + cuentas de inventario, tránsito y costo de ventas + kárdex + liquidaciones)'], costo_ventas: ['Costo de ventas: todo se pide a Claude', 'Pedir a Claude (mayor contable + cuentas de costo de ventas)'], kardex: ['Kárdex: todo se pide a Claude', 'Pedir a Claude (kárdex)'], nomina: ['Nómina: todo se pide a Claude', 'Pedir a Claude (mayor contable + roles de pago + IESS + décimos, fondo de reserva y utilidades + finiquitos)'], gastos: ['Gastos: se piden a Claude los soportes de la muestra', 'Pedir a Claude (facturas, notas de crédito y retenciones de la muestra; el mayor se carga en Mayor contable)'], impuestos: ['Impuestos corrientes: todo se pide a Claude', 'Pedir a Claude (mayores de impuestos + formularios 104 + ATS + retenciones)'] }[hoja] || ['Todo se pide a Claude', 'Pedir a Claude'];
+      const T = { venta: ['Ingreso de información: todo se pide a Claude', 'Pedir a Claude (mayor contable + cuentas de inventario, tránsito y costo de ventas + kárdex + liquidaciones)'], costo_ventas: ['Costo de ventas: todo se pide a Claude', 'Pedir a Claude (mayor contable + cuentas de costo de ventas)'], kardex: ['Kárdex: todo se pide a Claude', 'Pedir a Claude (kárdex)'], nomina: ['Nómina: todo se pide a Claude', 'Pedir a Claude (mayor contable + roles de pago + IESS + décimos, fondo de reserva y utilidades + finiquitos)'], gastos: ['Gastos: se piden a Claude los soportes de la muestra', 'Pedir a Claude (facturas, notas de crédito y retenciones de la muestra; el mayor se carga en Mayor contable)'], obligaciones: ['Obligaciones financieras: todo se pide a Claude', 'Pedir a Claude (mayor contable + tablas de amortización + contratos + estados de cuenta + confirmaciones)'], impuestos: ['Impuestos corrientes: todo se pide a Claude', 'Pedir a Claude (mayores de impuestos + formularios 104 + ATS + retenciones)'] }[hoja] || ['Todo se pide a Claude', 'Pedir a Claude'];
       return '<div class="mt-3 p-3 bg-white border border-slate-200 rounded-xl space-y-2 text-xs text-slate-700"><div class="text-[13px] font-semibold text-slate-800 ic-claude ic-tomate">' + T[0] + '</div><p class="text-slate-600">' + escapeHtml(texto) + '</p><div class="flex flex-wrap items-center gap-2"><button type="button" onclick="pcIrAPedido(\'' + pcSumDeHoja(hoja) + '\', \'' + escapeHtml(cli) + '\', \'' + escapeHtml(anio) + '\', \'' + escapeHtml(vis) + '\', \'' + hoja + '\')" class="px-3 py-1.5 rounded-lg text-xs transition bg-slate-200 text-slate-900 hover:bg-slate-300 font-semibold ic-claude">' + T[1] + '</button>' + ((hoja === 'venta' || hoja === 'nomina' || hoja === 'impuestos' || hoja === 'gastos') ? '<button type="button" onclick="pcReprocesarPedido(\'' + escapeHtml(cli) + '\', \'' + escapeHtml(anio) + '\', \'' + escapeHtml(vis) + '\', \'' + hoja + '\')" class="px-1 py-1.5 text-xs font-bold bg-transparent border-0 hover:underline transition" style="color:#449964" title="Crea un pedido nuevo con los mismos archivos y cuentas del último pedido">↻ Pedir de nuevo a Claude (mismos archivos)</button>' : '') + '</div>' + (hoja === 'venta' ? '<p class="text-[11px] text-slate-500">«Pedir de nuevo» hace que Claude vuelva a leer los archivos (por ejemplo, si cambió algo en los datos). Para solo recalcular con lo ya leído use «↻ Recalcular» en cada pestaña.</p>' : '') + '</div>';
     }
     // Repite el último pedido de la hoja con los mismos archivos y cuentas (los archivos se copian, no se vuelven a subir)
@@ -13976,6 +13981,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       if (clave === 'nomina') return 'RC01 Nómina (prueba) › Conclusiones de la cuenta';
       if (clave === 'gastos') return 'RC02 Gastos (prueba) › Conclusiones de la cuenta';
       if (clave === 'impuestos') return 'AH Activos por impuestos corrientes › Conclusiones de la cuenta';
+      if (clave === 'obligaciones') return 'PB Obligaciones financieras › Conclusiones de la cuenta';
       for (const r of Object.values(RUBROS_ANALISIS)) {
         const c = r.cuentas.find(x => x.clave === clave);
         if (c) return c.nombre;
@@ -16392,6 +16398,7 @@ ${cont.innerHTML}
       { clave: 'arrend', nombre: '     ↳ 2. Análisis Claves › Activos › Activos por derecho de uso y pasivos por arrendamiento', btn: 'nav-cuenta-extra-activos-arrend', defecto: false },
       { clave: 'import2', nombre: '     ↳ 2. Análisis Claves › Activos › AF Inventarios', btn: 'nav-cuenta-extra-activos-import2', defecto: false },
       { clave: 'nomina', nombre: '     ↳ 2. Análisis Claves › Costos y gastos › RC01 Nómina (prueba)', btn: 'nav-cuenta-extra-costos-gastos-nomina', defecto: false },
+      { clave: 'obligaciones', nombre: '     ↳ 2. Análisis Claves › Pasivos › PB Obligaciones financieras', btn: 'nav-cuenta-extra-pasivos-obligaciones', defecto: false },
       { clave: 'gastos', nombre: '     ↳ 2. Análisis Claves › Costos y gastos › RC02 Gastos (prueba)', btn: 'nav-cuenta-extra-costos-gastos-gastos', defecto: false },
       { clave: 'concil', nombre: '     ↳ 2. Análisis Claves › Activos › AA Efectivo y equivalentes de efectivo (hojas Bancos y Equivalentes)', btn: 'nav-cuenta-extra-activos-concil', defecto: false },
       { clave: 'visitas', nombre: '1b) Auditoría/Planificación › Visitas (Calendario)', btn: 'nav-visitas' },
@@ -19580,6 +19587,15 @@ ${cont.innerHTML}
         { n: 'Documentos del ISD', req: false, et: ['Documentos del ISD (pago y partida arancelaria)'] }
       ], tabs: [['programa', 'Programa'], ['subir', 'Subir información'], ['resultado', 'Resultado del análisis – Claude'], ['f104', 'Anexo IVA (formulario 104)'], ['cuadres', 'Resumen de cuadres y cruces'], ['conclusiones', 'Conclusiones de la cuenta']], sum: 'AH', hoja: 'impuestos', titulo: '2. AH Activos por impuestos corrientes', subtit: 'Análisis guiado por el programa de auditoría: Claude arma el movimiento de las cuentas de impuestos y los cruces con los formularios 104, el ATS y las retenciones; el auditor revisa.', nombre: 'AH - Activos por impuestos corrientes', ref: 'AH · Impuestos corrientes', corto: 'Impuestos corrientes', txtSubir: 'Aquí se sube todo en un solo pedido: los mayores contables de IVA en compras, retenciones de IVA y retenciones de renta recibidas (y de ISD si hay), los formularios 104 de cada mes, el ATS de cada mes (PDF, XML o Excel), los comprobantes de retención del SRI o el formulario 103, y la declaración de renta del año anterior. Claude lo lee junto y las demás pestañas leen de aquí. Cuando el pedido pase a "hecho", presiona «Actualizar».' }
     };
+    NM_CFGS.obligaciones = { cob: [
+        { n: 'Mayor contable (completo o por cuenta)', req: true, et: ['Mayor contable completo', 'Mayor de obligaciones financieras', 'Mayor de intereses por pagar', 'Mayor de gastos financieros'] },
+        { n: 'Tablas de amortización de cada crédito', req: true, et: ['Tabla de amortización'] },
+        { n: 'Contratos de préstamo, pagarés y garantías', req: true, et: ['Contrato de préstamo o pagaré', 'Garantías'] },
+        { n: 'Estados de cuenta o certificados de deuda de las instituciones', req: false, et: ['Estado de cuenta o certificado de deuda'] },
+        { n: 'Confirmaciones bancarias', req: false, et: ['Confirmación bancaria'] },
+        { n: 'Cálculo de cláusulas de cumplimiento (covenants)', req: false, et: ['Cálculo de covenants'] },
+        { n: 'Comprobantes de pago de capital e intereses', req: false, et: ['Comprobante de pago', 'Comprobante de ISD y retención'] }
+      ], tabs: [['programa', 'Programa'], ['subir', 'Subir información'], ['resultado', 'Resultado del análisis – Claude'], ['anexos', 'Anexos y cálculos'], ['cuadres', 'Resumen de cuadres y cruces'], ['conclusiones', 'Conclusiones de la cuenta']], sum: 'PB', hoja: 'obligaciones', titulo: '2. PB Obligaciones financieras', subtit: 'Análisis guiado por el programa de auditoría: Claude arma el anexo de créditos, calcula los intereses y el corto y largo plazo, y cruza con las confirmaciones y el mayor; el auditor revisa.', nombre: 'PB - Obligaciones financieras', ref: 'PB · Obligaciones financieras', corto: 'Obligaciones financieras', txtSubir: 'Aquí se sube todo en un solo pedido: el mayor contable de las obligaciones financieras, los intereses por pagar y los gastos financieros, las tablas de amortización de cada crédito, los contratos o pagarés con sus garantías, los estados de cuenta o certificados de deuda de las instituciones y las confirmaciones bancarias. Claude lo lee junto, arma el anexo de la pestaña «Anexos y cálculos» y las demás pestañas leen de aquí. Cuando el pedido pase a "hecho", presiona «Actualizar».' };
     let NM_CTX = NM_CFGS.nomina;
     const nmE = { cliente: '', anio: '', visita: '', procs: [], filas: {}, cargaId: 0, abiertos: {}, tab: 'programa', sv: null };
     const NM_TABS = [['programa', 'Programa'], ['subir', 'Subir información'], ['resultado', 'Resultado del análisis – Claude'], ['cuadres', 'Resumen de cuadres y cruces'], ['conclusiones', 'Conclusiones de la cuenta']];
@@ -19974,6 +19990,132 @@ ${cont.innerHTML}
       const t = $im('nm-titulo'), st = $im('nm-subtit'); if (t) t.innerHTML = NM_CTX.titulo; if (st) st.textContent = NM_CTX.subtit;
       if (antes !== NM_CTX) { nmE.tab = NM_CTX.tab0 || 'programa'; nmE.cons = null; nmE.res = null; nmE.bal = null; nmE.conc = null; }
     }
+    // ===== PB Obligaciones financieras: anexo de créditos y cálculo de intereses, corto y largo plazo (misma idea del anexo de inversiones) =====
+    const OB_CUENTA = 'obligaciones_financieras';
+    const obE = { cargado: false, cargaId: 0, filas: [], cierre: '', base: 360, libros: null, bal: { PB: null, PK: null }, msg: '', archivo: '', guardando: null };
+    const obM = v => (v === null || v === undefined || v === '' || isNaN(v)) ? '' : Number(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const obR = v => Math.round(Number(v) * 100) / 100;
+    function obFecha(v) {
+      if (v === null || v === undefined || v === '') return '';
+      if (typeof v === 'number' && isFinite(v)) { const d = new Date(Math.round((v - 25569) * 86400000)); return isNaN(d) ? '' : d.toISOString().slice(0, 10); }
+      if (v instanceof Date) return isNaN(v) ? '' : v.toISOString().slice(0, 10);
+      const t = String(v).trim(); let m;
+      if ((m = t.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/))) return m[1] + '-' + m[2].padStart(2, '0') + '-' + m[3].padStart(2, '0');
+      if ((m = t.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})$/))) { const y = m[3].length === 2 ? '20' + m[3] : m[3]; return y + '-' + m[2].padStart(2, '0') + '-' + m[1].padStart(2, '0'); }
+      return '';
+    }
+    function obNum(v) { if (typeof v === 'number') return v; const t = String(v === null || v === undefined ? '' : v).replace(/[$\s%]/g, '').replace(/,/g, ''); const n = parseFloat(t); return isNaN(n) ? null : n; }
+    function obTasa(v) { if (v === null || v === undefined || v === '') return null; const esPct = typeof v === 'string' && /%/.test(v); const n = obNum(v); if (n === null) return null; return (!esPct && typeof v === 'number' && n > 0 && n < 1) ? obR(n * 10000) / 100 : n; }
+    function obCalc(f, cierre, base) {
+      const cap = Number(f.cap) || 0, ven = obFecha(f.ven), ini = obFecha(f.ini), ult = obFecha(f.ult);
+      const desde = ult || ini; let dias = 0;
+      if (desde && cierre) dias = Math.max(0, Math.round((new Date(cierre) - new Date(desde)) / 86400000));
+      const interes = obR(cap * (Number(f.tasa) || 0) / 100 * dias / (base || 360));
+      let corto;
+      if (f.corto !== null && f.corto !== undefined && f.corto !== '') corto = Number(f.corto) || 0;
+      else { let lim = ''; if (cierre) { const d = new Date(cierre); d.setUTCFullYear(d.getUTCFullYear() + 1); lim = d.toISOString().slice(0, 10); } corto = (ven && lim && ven <= lim) ? cap : 0; }
+      return { dias, interes, corto: obR(corto), largo: obR(cap - corto), vencido: !!(ven && cierre && ven < cierre && cap > 0) };
+    }
+    async function obCargar() {
+      const cli = nmE.cliente, anio = Number(nmE.anio), vis = nmE.visita; const id = ++obE.cargaId;
+      Object.assign(obE, { cargado: false, filas: [], libros: null, bal: { PB: null, PK: null }, msg: '', archivo: '' });
+      if (!cli) return;
+      obE.cierre = ($im('nm-fecha') || {}).value || (vis === 'final' ? anio + '-12-31' : anio + '-09-30');
+      const [r1, r2] = await Promise.all([
+        supabaseClient.from('anexo_inversiones').select('*').eq('cliente_id', cli).eq('anio', anio).eq('cuenta', OB_CUENTA).eq('visita', vis).maybeSingle(),
+        supabaseClient.from('balance_comprobacion').select('sumaria, saldo').eq('cliente_id', cli).eq('anio', anio).eq('visita', vis).in('sumaria', ['PB', 'PK']).limit(5000)
+      ]);
+      if (id !== obE.cargaId) return;
+      const d = r1.data;
+      if (d) { obE.filas = Array.isArray(d.filas) ? d.filas : []; if (d.fecha_cierre) obE.cierre = d.fecha_cierre; obE.base = d.base_dias || 360; obE.libros = d.valor_libros === null || d.valor_libros === undefined ? null : Number(d.valor_libros); obE.archivo = d.archivo_nombre || ''; }
+      ['PB', 'PK'].forEach(s => { const f = (r2.data || []).filter(x => String(x.sumaria).trim().toUpperCase() === s); obE.bal[s] = f.length ? Math.abs(obR(f.reduce((a, x) => a + (Number(x.saldo) || 0), 0))) : null; });
+      obE.cargado = true; if (nmE.tab === 'anexos') obPintar();
+    }
+    function obGuardar() {
+      clearTimeout(obE.guardando);
+      obE.guardando = setTimeout(async () => {
+        if (!nmE.cliente) return;
+        const T = obTotales();
+        const fila = { cliente_id: nmE.cliente, anio: Number(nmE.anio), visita: nmE.visita, cuenta: OB_CUENTA, archivo_nombre: obE.archivo || null, filas: obE.filas, fecha_cierre: obE.cierre || null, base_dias: obE.base, valor_libros: obE.libros, intereses_resultados: T.int, balance_corto: obE.bal.PB, balance_largo: obE.bal.PK, auditor: (typeof nombreUsuarioActivo === 'function' ? nombreUsuarioActivo() : '') || null, updated_at: new Date().toISOString() };
+        const { error } = await supabaseClient.from('anexo_inversiones').upsert(fila, { onConflict: 'cliente_id,anio,cuenta,visita' });
+        obE.msg = error ? 'No se pudo guardar: ' + (error.message || error) : 'Guardado ' + new Date().toLocaleTimeString('es-EC');
+        const m = $im('ob-msg'); if (m) { m.textContent = obE.msg; m.style.color = error ? '#b91c1c' : '#6b6b63'; }
+      }, 500);
+    }
+    function obTotales() {
+      const T = { cap: 0, corto: 0, largo: 0, int: 0 };
+      obE.filas.forEach(f => { const c = obCalc(f, obE.cierre, obE.base); T.cap += Number(f.cap) || 0; T.corto += c.corto; T.largo += c.largo; T.int += c.interes; });
+      Object.keys(T).forEach(k => { T[k] = obR(T[k]); }); return T;
+    }
+    function obSet(i, k, v) {
+      const f = obE.filas[i]; if (!f) return;
+      if (k === 'ini' || k === 'ven' || k === 'ult') f[k] = v ? obFecha(v) : '';
+      else if (k === 'cap' || k === 'tasa') f[k] = obNum(v) === null ? '' : (k === 'tasa' ? obTasa(String(v).includes('%') ? v : obNum(v)) : obNum(v));
+      else if (k === 'corto') f[k] = String(v).trim() === '' ? null : obNum(v);
+      else f[k] = v;
+      obGuardar(); obPintar();
+    }
+    function obCab(k, v) { if (k === 'cierre') obE.cierre = v; else if (k === 'base') obE.base = Number(v) || 360; else if (k === 'libros') obE.libros = String(v).trim() === '' ? null : obNum(v); obGuardar(); obPintar(); }
+    function obAgregar() { obE.filas.push({ ent: '', op: '', ini: '', ven: '', tasa: '', cap: '', corto: null, ult: '' }); obGuardar(); obPintar(); }
+    async function obQuitar(i) { if (!(await confirmarApp('¿Quitar esta fila del anexo?'))) return; obE.filas.splice(i, 1); obGuardar(); obPintar(); }
+    async function obVaciar() { if (!obE.filas.length) return; if (!(await confirmarApp('Se borrarán las ' + obE.filas.length + ' filas del anexo. ¿Continuar?'))) return; obE.filas = []; obE.archivo = ''; obGuardar(); obPintar(); }
+    function obPlantilla() {
+      if (!window.XLSX) { alert('No se pudo cargar el lector de Excel. Revisa tu conexión a internet.'); return; }
+      const ws = XLSX.utils.aoa_to_sheet([['Entidad', 'Operación', 'Fecha de inicio', 'Fecha de vencimiento', 'Tasa de interés', 'Capital al corte', 'Capital a corto plazo', 'Fecha del último pago de intereses'], ['Banco ejemplo', 'Crédito 0001', '15/01/2026', '15/01/2028', '9.5%', 100000, '', '15/09/2026']]);
+      const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Anexo'); XLSX.writeFile(wb, 'plantilla_anexo_obligaciones.xlsx');
+    }
+    async function obSubir(files) {
+      const f = files && files[0]; const inp = $im('ob-archivo'); if (inp) inp.value = ''; if (!f) return;
+      try {
+        if (!window.XLSX) throw new Error('No se pudo cargar el lector de Excel. Revisa tu conexión a internet.');
+        if (obE.filas.length && !(await confirmarApp('Ya hay ' + obE.filas.length + ' fila(s) en el anexo. Si subes "' + f.name + '" se reemplazarán. ¿Continuar?'))) return;
+        const wb = XLSX.read(await f.arrayBuffer(), { type: 'array' });
+        let M = null; for (const n of wb.SheetNames) { const m = XLSX.utils.sheet_to_json(wb.Sheets[n], { header: 1, raw: true, defval: null }); if (m.length > 1) { M = m; break; } }
+        if (!M) throw new Error('El archivo no tiene datos.');
+        const reg = { ent: /entidad|banco|instituci|acreedor|prestamista/i, op: /operaci|cr[eé]dito|pr[eé]stamo|n[uú]mero|n[°º]|contrato|pagar[eé]/i, ini: /inicio|desembolso|emisi|concesi/i, ven: /vencim|final/i, tasa: /tasa|inter[eé]s.*%|%/i, cap: /capital|saldo|valor|monto/i, corto: /corto|corriente|12 meses|porci/i, ult: /[uú]ltimo|pago.*inter|inter.*pag/i };
+        let fe = 0, mp = {}, mejor = -1;
+        for (let r = 0; r < Math.min(15, M.length); r++) { const cand = {}; (M[r] || []).forEach((h, j) => { const t = String(h === null ? '' : h); if (!t) return; for (const k of ['ult', 'corto', 'ven', 'ini', 'tasa', 'cap', 'ent', 'op']) { if (cand[k] === undefined && reg[k].test(t) && !Object.values(cand).includes(j)) { cand[k] = j; break; } } }); const n = Object.keys(cand).length; if (n > mejor) { mejor = n; fe = r; mp = cand; } }
+        if (mp.cap === undefined) throw new Error('No encontré la columna del capital o saldo. Usa la plantilla.');
+        const filas = [];
+        for (let r = fe + 1; r < M.length; r++) {
+          const R = M[r] || []; const g = k => mp[k] === undefined ? null : R[mp[k]];
+          const cap = obNum(g('cap')); if (cap === null && !g('ent') && !g('op')) continue; if (cap === null) continue;
+          const c = g('corto');
+          filas.push({ ent: String(g('ent') || '').trim(), op: String(g('op') || '').trim(), ini: obFecha(g('ini')), ven: obFecha(g('ven')), tasa: obTasa(g('tasa')) === null ? '' : obTasa(g('tasa')), cap, corto: (c === null || c === '' || obNum(c) === null) ? null : obNum(c), ult: obFecha(g('ult')) });
+        }
+        if (!filas.length) throw new Error('No encontré filas con capital.');
+        obE.filas = filas; obE.archivo = f.name; obE.msg = 'Se cargaron ' + filas.length + ' fila(s) de "' + f.name + '".'; obGuardar(); obPintar();
+      } catch (e) { obE.msg = 'No se pudo leer el archivo: ' + (e && e.message ? e.message : e); obPintar(); }
+    }
+    function obPintar() {
+      const c = $im('nm-panel'), e = escapeHtml; if (!c) return;
+      if (!nmE.cliente) { c.innerHTML = '<p class="text-xs text-slate-500 p-4">Selecciona el cliente para comenzar.</p>'; return; }
+      if (!obE.cargado) { c.innerHTML = '<p class="text-xs text-slate-500 p-4">Cargando…</p>'; return; }
+      const sc = c.scrollTop;
+      const T = obTotales(), dif = (a, b) => (b === null || b === undefined) ? null : obR(a - b);
+      const inp = (i, k, v, w, num) => '<input value="' + e(v === null || v === undefined ? '' : String(v)) + '" onchange="obSet(' + i + ',\'' + k + '\',this.value)" style="width:' + w + 'px;' + (num ? 'text-align:right;' : '') + '" class="ob-i">';
+      const fil = obE.filas.map((f, i) => {
+        const x = obCalc(f, obE.cierre, obE.base);
+        return '<tr><td class="ob-c">' + (i + 1) + '</td><td>' + inp(i, 'ent', f.ent, 130) + '</td><td>' + inp(i, 'op', f.op, 110) + '</td><td>' + inp(i, 'ini', f.ini, 86) + '</td><td>' + inp(i, 'ven', f.ven, 86) + '</td><td>' + inp(i, 'tasa', f.tasa, 52, true) + '</td><td>' + inp(i, 'cap', f.cap === '' ? '' : obM(f.cap), 96, true) + '</td><td>' + inp(i, 'corto', f.corto === null || f.corto === undefined ? '' : obM(f.corto), 96, true) + '</td><td>' + inp(i, 'ult', f.ult, 86) + '</td><td class="n">' + x.dias + '</td><td class="n">' + obM(x.interes) + '</td><td class="n">' + obM(x.corto) + '</td><td class="n">' + obM(x.largo) + '</td><td>' + (x.vencido ? '<span style="color:#b91c1c;font-weight:700">Vencido</span>' : '') + '</td><td class="ob-c"><button type="button" onclick="obQuitar(' + i + ')" title="Quitar" style="color:#9a9a92">✕</button></td></tr>';
+      }).join('');
+      const tot = '<tr class="tot"><td></td><td colspan="5">Total</td><td class="n">' + obM(T.cap) + '</td><td class="n">' + obM(T.corto) + '</td><td></td><td></td><td class="n">' + obM(T.int) + '</td><td class="n">' + obM(T.corto) + '</td><td class="n">' + obM(T.largo) + '</td><td></td><td></td></tr>';
+      const filaCua = (n, a, b, nota) => { const d = dif(a, b), mal = d !== null && Math.abs(d) > 1; return '<tr><td>' + n + '</td><td class="n">' + obM(a) + '</td><td class="n">' + (b === null || b === undefined ? '<span style="color:#9a9a92">sin dato</span>' : obM(b)) + '</td><td class="n" style="' + (mal ? 'color:#b91c1c;font-weight:700' : '') + '">' + (d === null ? '' : obM(d)) + '</td><td style="color:#6b6b63;white-space:normal">' + (nota || '') + '</td></tr>'; };
+      const css = '.ob{border-collapse:collapse;font-size:12px;color:#2b2b27}.ob th{background:#f4f4f1;border:1px solid #dfdfdb;padding:4px 6px;font-weight:700;font-size:10.5px;text-align:center;line-height:1.25}.ob td{border:1px solid #ececE8;padding:1px 4px;white-space:nowrap}.ob td.n{text-align:right}.ob td.ob-c{text-align:center;color:#9a9a92;width:26px}.ob tr.tot td{font-weight:700;border-top:1px solid #cfcfc8;background:#faf9f6}.ob-i{border:0;background:transparent;font-size:12px;padding:2px 2px;outline:none;color:#2b2b27}.ob-i:focus{background:#fff;box-shadow:inset 0 0 0 1px #c9c9c0;border-radius:3px}.ob-b{font-size:12px;font-weight:600;color:#4a4a44;border:1px solid #dcdcd6;border-radius:8px;padding:4px 10px;background:#fff}.ob-h{font-size:13px;font-weight:700;color:#2b2b27;padding:12px 14px 6px}';
+      const TH = ['', 'Entidad', 'Operación', 'Inicio', 'Vencimiento', 'Tasa %', 'Capital al corte', 'Capital corto plazo (si se deja vacío: lo que vence en 12 meses)', 'Último pago de intereses', 'Días', 'Intereses devengados', 'Corto plazo', 'Largo plazo', 'Alerta', ''];
+      c.innerHTML = '<style>' + css + '</style><div style="background:#fff">'
+        + '<div style="padding:10px 14px;font-size:12px;color:#6b6b63;line-height:1.55">Anexo de los créditos del cliente: cada fila es una operación. La aplicación calcula los días y los intereses devengados hasta la fecha de cierre (capital × tasa × días ÷ base) y separa el corto y el largo plazo; luego los compara con las sumarias PB (corriente) y PK (no corriente). Sube el Excel o CSV, o pídele a Claude que lo arme desde las tablas de amortización en «Subir información».</div>'
+        + '<div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:0 14px 10px"><label style="font-size:12px;color:#4a4a44">Fecha de cierre <input type="date" value="' + e(obE.cierre) + '" onchange="obCab(\'cierre\',this.value)" style="border:1px solid #dcdcd6;border-radius:6px;padding:2px 6px;font-size:12px"></label><label style="font-size:12px;color:#4a4a44">Base de días <select onchange="obCab(\'base\',this.value)" style="border:1px solid #dcdcd6;border-radius:6px;padding:2px 6px;font-size:12px"><option value="360"' + (obE.base === 360 ? ' selected' : '') + '>360</option><option value="365"' + (obE.base === 365 ? ' selected' : '') + '>365</option></select></label>'
+        + '<label class="ob-b" style="cursor:pointer">Subir anexo (Excel o CSV)<input id="ob-archivo" type="file" accept=".xlsx,.xls,.csv" class="hidden" onchange="obSubir(this.files)"></label><button type="button" class="ob-b" onclick="obPlantilla()">Descargar plantilla</button><button type="button" class="ob-b" onclick="obAgregar()">＋ Agregar fila</button>' + (obE.filas.length ? '<button type="button" class="ob-b" onclick="obVaciar()">Vaciar</button>' : '') + '<span id="ob-msg" style="font-size:11px;color:#6b6b63">' + e(obE.msg || (obE.archivo ? 'Archivo: ' + obE.archivo : '')) + '</span></div>'
+        + '<div style="overflow-x:auto;padding:0 10px 10px"><table class="ob"><thead><tr>' + TH.map(x => '<th>' + x + '</th>').join('') + '</tr></thead><tbody>' + (fil || '<tr><td colspan="15" style="padding:14px;color:#9a9a92;white-space:normal">Aún no hay créditos. Sube el anexo o agrega filas.</td></tr>') + tot + '</tbody></table></div>'
+        + '<div class="ob-h">Cuadre contra las sumarias del balance</div><div style="overflow-x:auto;padding:0 10px 14px"><table class="ob" style="min-width:760px"><thead><tr><th style="text-align:left">Concepto</th><th>Según anexo</th><th>Según balance</th><th>Diferencia</th><th style="text-align:left">Nota</th></tr></thead><tbody>'
+        + filaCua('Capital a corto plazo (sumaria PB)', T.corto, obE.bal.PB, 'Si la sumaria PB incluye intereses por pagar, la diferencia debería explicarse por ellos.')
+        + filaCua('Capital a largo plazo (sumaria PK)', T.largo, obE.bal.PK, '')
+        + filaCua('Total de capital', T.cap, (obE.bal.PB === null && obE.bal.PK === null) ? null : obR((obE.bal.PB || 0) + (obE.bal.PK || 0)), '')
+        + '<tr><td>Intereses devengados al cierre (anexo) contra intereses por pagar en libros</td><td class="n">' + obM(T.int) + '</td><td class="n"><input value="' + e(obE.libros === null ? '' : obM(obE.libros)) + '" onchange="obCab(\'libros\',this.value)" placeholder="Escribe el valor en libros" style="width:130px;text-align:right;border:0;border-bottom:1px solid #dcdcd6;background:transparent;font-size:12px"></td><td class="n" style="' + (obE.libros !== null && Math.abs(T.int - obE.libros) > 1 ? 'color:#b91c1c;font-weight:700' : '') + '">' + (obE.libros === null ? '' : obM(obR(T.int - obE.libros))) + '</td><td style="color:#6b6b63;white-space:normal">Tomar de la cuenta de intereses por pagar del mayor.</td></tr>'
+        + '</tbody></table></div></div>';
+      c.scrollTop = sc;
+    }
+    async function abrirObligaciones() { nmUsarContexto('obligaciones'); return abrirNomina(true); }
     async function abrirGastos() { nmUsarContexto('gastos'); return abrirNomina(true); }
     async function abrirImpuestos() { nmUsarContexto('impuestos'); return abrirNomina(true); }
     async function abrirNomina(ya) {
@@ -20011,6 +20153,7 @@ ${cont.innerHTML}
       nmResCargar();
       nmConcCargar();
       if (NM_CTX.hoja === 'gastos') gaCargar();
+      if (NM_CTX.hoja === 'obligaciones') obCargar();
     }
     // Si la referencia no está tal cual en la base de normas (p. ej. "NIC 2.9 y 2.36"), la arma desde sus partes
     function nmArmarChips(txt) {
@@ -20047,6 +20190,7 @@ ${cont.innerHTML}
       if (tb) { const cbN = nmCobertura().n; tb.innerHTML = (NM_CTX.tabs || NM_TABS).map(([k, n]) => '<button type="button" onclick="nmIrTab(\'' + k + '\')" class="px-3 py-1.5 text-xs transition rounded-lg ' + (nmE.tab === k ? 'bg-slate-200 text-slate-900 font-semibold' : 'text-slate-600 hover:bg-slate-100 font-medium') + '">' + n + (k === 'subir' && cbN ? '<span title="Información incompleta: abra Informe" style="display:inline-block;min-width:18px;padding:0 5px;margin-left:6px;border-radius:9px;background:#dc2626;color:#fff;font-size:11px;font-weight:700;line-height:18px;text-align:center">' + cbN + '</span>' : '') + (k === 'conclusiones' ? pcConcBadgeHtml('nm') : '') + '</button>').join(''); }
       if (nmE.tab === 'subir') { nmSubirPintar(); return; }
       if (nmE.tab === 'f104' && NM_CTX.hoja === 'impuestos') { f104Pintar(); return; }
+      if (nmE.tab === 'anexos' && NM_CTX.hoja === 'obligaciones') { obPintar(); return; }
       if (NM_CTX.hoja === 'gastos') { if (nmE.tab === 'validacion') gaValPintar(); else gaResPintar(); return; }
       if (nmE.tab === 'resultado') { nmResPintar(); return; }
       if (nmE.tab === 'cuadres') { nmCuaPintar(); return; }
@@ -21639,7 +21783,7 @@ ${cont.innerHTML}
       const cob = '<div class="v2r-h3" style="margin:6px 0 6px;display:flex;justify-content:space-between;align-items:center;gap:8px"><span>1. Consolidado de gastos de nómina</span></div><div class="v2r-tw"><table class="v2r-t"><thead><tr><th>Rubro</th>' + NMK_COLS.map(([, nm]) => th(nm, true)).join('') + th('Total', true) + '</tr></thead><tbody>' + cobCuerpo + '</tbody></table></div>';
       const chip = (n, t, P) => '<span style="display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:99px;font-size:12px;font-weight:700;background:' + P[1] + ';color:' + P[2] + '"><span style="font-size:14px">' + n + '</span>' + t + '</span>';
       const resumen = '<div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:6px">' + '<span style="font-size:11px;color:#64748b;">Tolerancia: ' + fmE(NMC_TOL) + ' · la sumaria se lee en vivo del balance de comprobación</span><button type="button" onclick="nmCuaExcelTodo()" style="margin-left:auto;font-size:12px;font-weight:700;color:#449964" class="hover:underline" title="Baja un Excel con todos los cuadros de esta pantalla, uno por hoja">Descargar todos los cuadros en Excel</button></div>';
-      const faltan = (NM_CTX.sum === 'RC' ? NMC_ESPERADOS_RC : NMC_ESPERADOS_AH).filter(x => !cu.some(x[1])).map(x => x[0]);
+      const faltan = (NM_CTX.sum === 'RC' ? NMC_ESPERADOS_RC : (NM_CTX.sum === 'AH' ? NMC_ESPERADOS_AH : [])).filter(x => !cu.some(x[1])).map(x => x[0]);
       const faltanHtml = faltan.length ? '<div style="margin:14px 0;padding:10px 14px;border:1px dashed #d97706;background:#fffbeb;border-radius:8px;font-size:13px;color:#8a5a00"><b>No generado:</b> faltan ' + faltan.length + ' cuadro(s) que siempre debe haber en ' + NM_CTX.corto + ': ' + faltan.map(e).join('; ') + '. Se completan al volver a procesar el pedido o al agregarlos en el análisis de Claude.</div>' : '';
       const ctl = NM_CTX.sum === 'RC' ? nmControles(R.data, cu) : [], ctlMal = ctl.filter(x => !x.ok), ctlBien = ctl.length - ctlMal.length;
       const ctlHtml = !ctl.length ? '' : (ctlMal.length
