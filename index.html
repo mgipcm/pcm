@@ -3555,7 +3555,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       'claude-revisar': { cliente: 'cr-cliente', anio: 'cr-anio', visita: 'cr-visita' },
       'pedidos-claude': { cliente: 'pc-cliente', anio: 'pc-anio', visita: 'pc-visita' },
       contratos: { cliente: 'contr-cliente' }, flujo: { cliente: 'fl-cliente', anio: 'fl-anio' },
-      arrend: { cliente: 'ar-cliente', anio: 'ar-anio', visita: 'ar-visita' }, import2: { cliente: 'v2-cliente', anio: 'v2-anio', visita: 'v2-visita' }, nomina: { cliente: 'nm-cliente', anio: 'nm-anio', visita: 'nm-visita' }, impuestos: { cliente: 'nm-cliente', anio: 'nm-anio', visita: 'nm-visita' }, obligaciones: { cliente: 'nm-cliente', anio: 'nm-anio', visita: 'nm-visita' }, gastos: { cliente: 'nm-cliente', anio: 'nm-anio', visita: 'nm-visita' }, concil: { cliente: 'cb-cliente', anio: 'cb-anio', visita: 'cb-visita' },
+      arrend: { cliente: 'ar-cliente', anio: 'ar-anio', visita: 'ar-visita' }, import2: { cliente: 'v2-cliente', anio: 'v2-anio', visita: 'v2-visita' }, nomina: { cliente: 'nm-cliente', anio: 'nm-anio', visita: 'nm-visita' }, impuestos: { cliente: 'nm-cliente', anio: 'nm-anio', visita: 'nm-visita' }, obligaciones: { cliente: 'nm-cliente', anio: 'nm-anio', visita: 'nm-visita' }, ppe: { cliente: 'nm-cliente', anio: 'nm-anio', visita: 'nm-visita' }, gastos: { cliente: 'nm-cliente', anio: 'nm-anio', visita: 'nm-visita' }, concil: { cliente: 'cb-cliente', anio: 'cb-anio', visita: 'cb-visita' },
       pce: { cliente: 'pce-cliente' }, reuniones: { cliente: 'reu-cliente' }, mayor: { cliente: 'my-cliente' },
       asignacion: { cliente: 'as-cliente', anio: 'as-anio', visita: 'as-visita' }
     };
@@ -3641,14 +3641,14 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       }
 
       const claveLinea = (seccion === 'analisis' && cuenta) ? (cuenta === 'equivalentes' ? 'concil' : 'cta:' + cuenta) : (seccion === 'aprobaciones-claude' ? 'pedidos-claude' : seccion);
-      if ((seccion === 'sumarias' || seccion === 'pendientes' || seccion === 'claude-revisar' || seccion === 'pedidos-claude' || seccion === 'aprobaciones-claude' || seccion === 'arrend' || seccion === 'import2' || seccion === 'nomina' || seccion === 'impuestos' || seccion === 'obligaciones' || seccion === 'gastos' || seccion === 'concil' || (seccion === 'analisis' && cuenta)) && !herramientaHabilitada(claveLinea)) { avisarEnDesarrollo(); return; }
+      if ((seccion === 'sumarias' || seccion === 'pendientes' || seccion === 'claude-revisar' || seccion === 'pedidos-claude' || seccion === 'aprobaciones-claude' || seccion === 'arrend' || seccion === 'import2' || seccion === 'nomina' || seccion === 'impuestos' || seccion === 'obligaciones' || seccion === 'ppe' || seccion === 'gastos' || seccion === 'concil' || (seccion === 'analisis' && cuenta)) && !herramientaHabilitada(claveLinea)) { avisarEnDesarrollo(); return; }
       if (!herramientaHabilitada(seccion === 'aprobaciones-claude' ? 'pedidos-claude' : seccion)) {
         if (seccion === 'auditoria') seccion = 'desarrollo'; // pantalla principal: se muestra un aviso en vez de un mensaje emergente
         else { avisarEnDesarrollo(); return; }
       }
       if (!['clientes', 'usuarios', 'cuentas', 'habilitar', 'historial', 'medidor', 'programas'].includes(seccion)) guardarVista({ seccion: seccion, sub: sub || null, cuenta: cuenta || null });
 
-      const secciones = ['desarrollo', 'clientes', 'usuarios', 'cuentas', 'habilitar', 'historial', 'medidor', 'programas', 'sumarias', 'mayor-contable', 'pendientes', 'claude-revisar', 'pedidos-claude', 'aprobaciones-claude', 'flujo', 'auditoria', 'analisis', 'visitas', 'asignacion', 'indices', 'mayor', 'contratos', 'arrend', 'import2', 'nomina', 'impuestos', 'obligaciones', 'gastos', 'concil', 'pce', 'reuniones', 'elabinforme', 'revinforme', 'mas-herramientas'];
+      const secciones = ['desarrollo', 'clientes', 'usuarios', 'cuentas', 'habilitar', 'historial', 'medidor', 'programas', 'sumarias', 'mayor-contable', 'pendientes', 'claude-revisar', 'pedidos-claude', 'aprobaciones-claude', 'flujo', 'auditoria', 'analisis', 'visitas', 'asignacion', 'indices', 'mayor', 'contratos', 'arrend', 'import2', 'nomina', 'impuestos', 'obligaciones', 'ppe', 'gastos', 'concil', 'pce', 'reuniones', 'elabinforme', 'revinforme', 'mas-herramientas'];
       const grupoSubmenu = sec => ['auditoria', 'visitas', 'asignacion'].includes(sec) ? 'planificacion' : ['indices', 'mayor', 'contratos', 'flujo', 'pce', 'reuniones', 'elabinforme', 'revinforme', 'mas-herramientas'].includes(sec)
         ? 'herramientas'
         : (['clientes', 'usuarios', 'cuentas', 'habilitar', 'historial', 'medidor', 'programas'].includes(sec) ? 'config' : (['sumarias', 'mayor-contable', 'pendientes', 'claude-revisar', 'pedidos-claude', 'aprobaciones-claude'].includes(sec) ? 'analisis' : null));
@@ -3668,7 +3668,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
         }
       });
 
-      const activeSec = document.getElementById((seccion === 'impuestos' || seccion === 'obligaciones' || seccion === 'gastos') ? 'sec-nomina' : `sec-${seccion}`);
+      const activeSec = document.getElementById((seccion === 'impuestos' || seccion === 'obligaciones' || seccion === 'ppe' || seccion === 'gastos') ? 'sec-nomina' : `sec-${seccion}`);
       if (activeSec) activeSec.classList.remove('hidden');
       setTimeout(() => aplicarContextoActivo(seccion), 250); setTimeout(() => aplicarContextoActivo(seccion), 1000); // espera a que la pantalla cargue sus clientes
       if (seccion === 'contratos') { poblarClientesContratos(); cargarResumenesGuardados(); }
@@ -3689,6 +3689,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       if (seccion === 'nomina') abrirNomina();
       if (seccion === 'impuestos') abrirImpuestos();
       if (seccion === 'obligaciones') abrirObligaciones();
+      if (seccion === 'ppe') abrirPpe();
       if (seccion === 'gastos') abrirGastos();
       if (seccion === 'concil') abrirConcil();
       if (seccion === 'pce') abrirPce();
@@ -3715,7 +3716,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
         abrirAnalisis(rubro, cuentaElegida);
       }
 
-      const desdeAnalisis = ((seccion === 'arrend' || seccion === 'import2' || seccion === 'nomina' || seccion === 'impuestos' || seccion === 'obligaciones' || seccion === 'gastos' || seccion === 'concil') && sub === 'analisis');
+      const desdeAnalisis = ((seccion === 'arrend' || seccion === 'import2' || seccion === 'nomina' || seccion === 'impuestos' || seccion === 'obligaciones' || seccion === 'ppe' || seccion === 'gastos' || seccion === 'concil') && sub === 'analisis');
       if (seccion === 'arrend') { const t = document.getElementById('ar-titulo'); if (t) t.textContent = desdeAnalisis ? '2. Activos por derecho de uso y pasivos por arrendamiento' : 'Arrendamientos NIIF 16'; }
       if (seccion === 'concil') { pintarHojasAA(); const t = document.getElementById('cb-titulo'); if (t) t.textContent = '2. Bancos'; }
       if (desdeAnalisis) {
@@ -3764,6 +3765,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       'activos': [
         { sumaria: 'AA', id: 'concil', nombre: 'AA Efectivo y equivalentes de efectivo' },
         { sumaria: 'AF', id: 'import2', nombre: 'AF Inventarios' },
+        { sumaria: 'AO', id: 'ppe', nombre: 'AO Propiedad, planta y equipo' },
         { sumaria: 'AOO', id: 'arrend', nombre: 'AOO Activos por derecho de uso y pasivos por arrendamiento' }
       ]
     };
@@ -4281,7 +4283,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
     async function agregarProcedimientoPlantilla() {
       const s = valorAnalisis('pg-sumaria'), est = document.getElementById('pg-estado');
       if (!s) { est.textContent = 'Elige primero una sumaria para agregarle el procedimiento.'; est.className = 'text-[11px] min-h-[1rem] text-red-600 font-bold'; return; }
-      const hoja = s === 'PB' ? 'obligaciones' : s === 'AH' ? 'impuestos' : ((s === 'AA' || s === 'RC') ? valorAnalisis('pg-hoja') : '');
+      const hoja = s === 'PB' ? 'obligaciones' : s === 'AO' ? 'ppe' : s === 'AH' ? 'impuestos' : ((s === 'AA' || s === 'RC') ? valorAnalisis('pg-hoja') : '');
       if (s === 'RC' && !hoja) { est.textContent = 'Para la cuenta RC elige también el tema (Nómina, Depreciaciones o Gastos en general).'; est.className = 'text-[11px] min-h-[1rem] text-red-600 font-bold'; return; }
       if (s === 'AA' && !hoja) { est.textContent = 'Para la cuenta AA elige también la hoja (Caja, Bancos o Equivalentes de efectivo).'; est.className = 'text-[11px] min-h-[1rem] text-red-600 font-bold'; return; }
       const maxOrden = programasPlantilla.reduce((m, r) => Math.max(m, r.orden || 0), 0);
@@ -4934,6 +4936,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
 
     // ===== Tipos de documento por cuenta y lista de qué subir =====
     const PC_ETIQ = {
+      'AO:ppe': ['Anexo de activos fijos', 'Factura de compra de activo fijo', 'Contrato de compra o construcción', 'Acta de baja de activos', 'Documento de venta de activo', 'Informe de avalúo o reavalúo', 'Póliza de seguro', 'Escritura o matrícula', 'Acta de toma física de activos', 'Otro'],
       'PB:obligaciones': ['Tabla de amortización', 'Contrato de préstamo o pagaré', 'Garantías', 'Estado de cuenta o certificado de deuda', 'Confirmación bancaria', 'Cálculo de covenants', 'Comprobante de pago', 'Comprobante de ISD y retención', 'Otro'],
       'RC:nomina': ['Planilla de fondos de reserva del IESS', 'Planilla de préstamos hipotecarios del IESS', 'Planilla de préstamos quirografarios del IESS', 'Mayor contable completo', 'Mayor contable de nómina', 'Mayor de pasivos laborales (beneficios sociales)', 'Mayor de IESS por pagar', 'Mayor de anticipos a empleados', 'Rol de pagos (por mes y por persona)', 'Planilla del IESS', 'Listado de personal con fecha de ingreso', 'Cálculo de décimos', 'Cálculo de fondo de reserva', 'Utilidades a trabajadores', 'Finiquitos', 'Liquidaciones', 'Formulario 107', 'Contrato o expediente del colaborador', 'Otro'],
       'RC:gastos': ['Factura de compra o gasto', 'Nota de crédito', 'Comprobante de retención', 'Otro'],
@@ -4951,12 +4954,12 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       AB: ['Certificado o póliza de inversión', 'Estado de cuenta', 'Confirmación bancaria', 'Detalle o anexo de inversiones', 'Otro'],
       AS: ['Certificado o póliza de inversión', 'Estado de cuenta', 'Confirmación bancaria', 'Detalle o anexo de inversiones', 'Otro']
     };
-    const PC_HOJAS = { obligaciones: 'Obligaciones financieras', impuestos: 'Activos por impuestos corrientes', caja: 'Caja', bancos: 'Bancos', equivalentes: 'Equivalentes de efectivo', venta: 'Inventario para la venta, importaciones en tránsito y kárdex', costo_ventas: 'Costo de ventas → salidas', kardex: 'Movimiento de kárdex', import: 'Importaciones (liquidaciones)', voucheo: 'Revisión de documentación (voucheo)', nomina: 'Nómina', depreciaciones: 'Depreciaciones', gastos: 'Gastos en general' };
-    const PC_HOJAS_SUM = { AA: [['caja', 'Caja'], ['bancos', 'Bancos'], ['equivalentes', 'Equivalentes de efectivo']], AF: [['venta', 'Inventario para la venta, importaciones en tránsito y kárdex']], RC: [['nomina', 'Nómina'], ['gastos', 'Gastos en general']], AH: [['impuestos', 'Activos por impuestos corrientes']], PB: [['obligaciones', 'Obligaciones financieras']] };
+    const PC_HOJAS = { ppe: 'Propiedad, planta y equipo', obligaciones: 'Obligaciones financieras', impuestos: 'Activos por impuestos corrientes', caja: 'Caja', bancos: 'Bancos', equivalentes: 'Equivalentes de efectivo', venta: 'Inventario para la venta, importaciones en tránsito y kárdex', costo_ventas: 'Costo de ventas → salidas', kardex: 'Movimiento de kárdex', import: 'Importaciones (liquidaciones)', voucheo: 'Revisión de documentación (voucheo)', nomina: 'Nómina', depreciaciones: 'Depreciaciones', gastos: 'Gastos en general' };
+    const PC_HOJAS_SUM = { AA: [['caja', 'Caja'], ['bancos', 'Bancos'], ['equivalentes', 'Equivalentes de efectivo']], AF: [['venta', 'Inventario para la venta, importaciones en tránsito y kárdex']], RC: [['nomina', 'Nómina'], ['gastos', 'Gastos en general']], AH: [['impuestos', 'Activos por impuestos corrientes']], PB: [['obligaciones', 'Obligaciones financieras']], AO: [['ppe', 'Propiedad, planta y equipo']] };
     function pcNombreHoja(h) { return PC_HOJAS[h] || h || ''; }
     const PC_TODO = 'Todo en un archivo (todos los documentos juntos)';
     function pcEtiquetas(sumaria, hoja) {
-      const l = (PC_ETIQ[(sumaria === 'AA' || sumaria === 'AF' || sumaria === 'RC' || sumaria === 'AH' || sumaria === 'PB') ? sumaria + ':' + (hoja || '') : sumaria] || ['Documento de soporte', 'Otro']).filter(x => x !== PC_MAYOR_ETQ);
+      const l = (PC_ETIQ[(sumaria === 'AA' || sumaria === 'AF' || sumaria === 'RC' || sumaria === 'AH' || sumaria === 'PB' || sumaria === 'AO') ? sumaria + ':' + (hoja || '') : sumaria] || ['Documento de soporte', 'Otro']).filter(x => x !== PC_MAYOR_ETQ);
       const i = l.indexOf('Otro');
       return i < 0 ? l.concat([PC_TODO]) : l.slice(0, i).concat([PC_TODO], l.slice(i));
     }
@@ -5750,10 +5753,10 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       pcIrAPedido(m[0], valorAnalisis('an-cliente'), valorAnalisis('an-anio'), visitaAnalisis(), m[1]);
     }
     // Barra fija para enviar un pedido a Claude desde la propia pantalla (cuando ya hay datos y se quiere actualizar)
-    function pcSumDeHoja(h) { return ({ nomina: 'RC', depreciaciones: 'RC', gastos: 'RC', impuestos: 'AH', obligaciones: 'PB' })[h] || 'AF'; }
+    function pcSumDeHoja(h) { return ({ nomina: 'RC', depreciaciones: 'RC', gastos: 'RC', impuestos: 'AH', obligaciones: 'PB', ppe: 'AO' })[h] || 'AF'; }
     function pcBarraPedido(hoja, cli, anio, vis, texto) {
       if (!cli) return '';
-      const T = { venta: ['Ingreso de información: todo se pide a Claude', 'Pedir a Claude (mayor contable + cuentas de inventario, tránsito y costo de ventas + kárdex + liquidaciones)'], costo_ventas: ['Costo de ventas: todo se pide a Claude', 'Pedir a Claude (mayor contable + cuentas de costo de ventas)'], kardex: ['Kárdex: todo se pide a Claude', 'Pedir a Claude (kárdex)'], nomina: ['Nómina: todo se pide a Claude', 'Pedir a Claude (mayor contable + roles de pago + IESS + décimos, fondo de reserva y utilidades + finiquitos)'], gastos: ['Gastos: se piden a Claude los soportes de la muestra', 'Pedir a Claude (facturas, notas de crédito y retenciones de la muestra; el mayor se carga en Mayor contable)'], obligaciones: ['Obligaciones financieras: todo se pide a Claude', 'Pedir a Claude (tablas de amortización + contratos + estados de cuenta + confirmaciones; el mayor se carga en Mayor contable)'], impuestos: ['Impuestos corrientes: todo se pide a Claude', 'Pedir a Claude (mayores de impuestos + formularios 104 + ATS + retenciones)'] }[hoja] || ['Todo se pide a Claude', 'Pedir a Claude'];
+      const T = { ppe: ['Propiedad, planta y equipo: todo se pide a Claude', 'Pedir a Claude (anexo de activos fijos + facturas de adiciones + actas de baja + avalúos; el mayor se carga en Mayor contable)'], venta: ['Ingreso de información: todo se pide a Claude', 'Pedir a Claude (mayor contable + cuentas de inventario, tránsito y costo de ventas + kárdex + liquidaciones)'], costo_ventas: ['Costo de ventas: todo se pide a Claude', 'Pedir a Claude (mayor contable + cuentas de costo de ventas)'], kardex: ['Kárdex: todo se pide a Claude', 'Pedir a Claude (kárdex)'], nomina: ['Nómina: todo se pide a Claude', 'Pedir a Claude (mayor contable + roles de pago + IESS + décimos, fondo de reserva y utilidades + finiquitos)'], gastos: ['Gastos: se piden a Claude los soportes de la muestra', 'Pedir a Claude (facturas, notas de crédito y retenciones de la muestra; el mayor se carga en Mayor contable)'], obligaciones: ['Obligaciones financieras: todo se pide a Claude', 'Pedir a Claude (tablas de amortización + contratos + estados de cuenta + confirmaciones; el mayor se carga en Mayor contable)'], impuestos: ['Impuestos corrientes: todo se pide a Claude', 'Pedir a Claude (mayores de impuestos + formularios 104 + ATS + retenciones)'] }[hoja] || ['Todo se pide a Claude', 'Pedir a Claude'];
       return '<div class="mt-3 p-3 bg-white border border-slate-200 rounded-xl space-y-2 text-xs text-slate-700"><div class="text-[13px] font-semibold text-slate-800 ic-claude ic-tomate">' + T[0] + '</div><p class="text-slate-600">' + escapeHtml(texto) + '</p><div class="flex flex-wrap items-center gap-2"><button type="button" onclick="pcIrAPedido(\'' + pcSumDeHoja(hoja) + '\', \'' + escapeHtml(cli) + '\', \'' + escapeHtml(anio) + '\', \'' + escapeHtml(vis) + '\', \'' + hoja + '\')" class="px-3 py-1.5 rounded-lg text-xs transition bg-slate-200 text-slate-900 hover:bg-slate-300 font-semibold ic-claude">' + T[1] + '</button>' + ((hoja === 'venta' || hoja === 'nomina' || hoja === 'impuestos' || hoja === 'gastos') ? '<button type="button" onclick="pcReprocesarPedido(\'' + escapeHtml(cli) + '\', \'' + escapeHtml(anio) + '\', \'' + escapeHtml(vis) + '\', \'' + hoja + '\')" class="px-1 py-1.5 text-xs font-bold bg-transparent border-0 hover:underline transition" style="color:#449964" title="Crea un pedido nuevo con los mismos archivos y cuentas del último pedido">↻ Pedir de nuevo a Claude (mismos archivos)</button>' : '') + '</div>' + (hoja === 'venta' ? '<p class="text-[11px] text-slate-500">«Pedir de nuevo» hace que Claude vuelva a leer los archivos (por ejemplo, si cambió algo en los datos). Para solo recalcular con lo ya leído use «↻ Recalcular» en cada pestaña.</p>' : '') + '</div>';
     }
     // Repite el último pedido de la hoja con los mismos archivos y cuentas (los archivos se copian, no se vuelven a subir)
@@ -13984,6 +13987,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       if (clave === 'gastos') return 'RC02 Gastos (prueba) › Conclusiones de la cuenta';
       if (clave === 'impuestos') return 'AH Activos por impuestos corrientes › Conclusiones de la cuenta';
       if (clave === 'obligaciones') return 'PB Obligaciones financieras › Conclusiones de la cuenta';
+      if (clave === 'ppe') return 'AO Propiedad, planta y equipo › Conclusiones de la cuenta';
       for (const r of Object.values(RUBROS_ANALISIS)) {
         const c = r.cuentas.find(x => x.clave === clave);
         if (c) return c.nombre;
@@ -16400,6 +16404,7 @@ ${cont.innerHTML}
       { clave: 'arrend', nombre: '     ↳ 2. Análisis Claves › Activos › Activos por derecho de uso y pasivos por arrendamiento', btn: 'nav-cuenta-extra-activos-arrend', defecto: false },
       { clave: 'import2', nombre: '     ↳ 2. Análisis Claves › Activos › AF Inventarios', btn: 'nav-cuenta-extra-activos-import2', defecto: false },
       { clave: 'nomina', nombre: '     ↳ 2. Análisis Claves › Costos y gastos › RC01 Nómina (prueba)', btn: 'nav-cuenta-extra-costos-gastos-nomina', defecto: false },
+      { clave: 'ppe', nombre: '     ↳ 2. Análisis Claves › Activos › AO Propiedad, planta y equipo', btn: 'nav-cuenta-extra-activos-ppe', defecto: false },
       { clave: 'obligaciones', nombre: '     ↳ 2. Análisis Claves › Pasivos › PB Obligaciones financieras', btn: 'nav-cuenta-extra-pasivos-obligaciones', defecto: false },
       { clave: 'gastos', nombre: '     ↳ 2. Análisis Claves › Costos y gastos › RC02 Gastos (prueba)', btn: 'nav-cuenta-extra-costos-gastos-gastos', defecto: false },
       { clave: 'concil', nombre: '     ↳ 2. Análisis Claves › Activos › AA Efectivo y equivalentes de efectivo (hojas Bancos y Equivalentes)', btn: 'nav-cuenta-extra-activos-concil', defecto: false },
@@ -19635,6 +19640,15 @@ ${cont.innerHTML}
         { n: 'Cálculo de cláusulas de cumplimiento (covenants)', req: false, et: ['Cálculo de covenants'] },
         { n: 'Comprobantes de pago de capital e intereses', req: false, et: ['Comprobante de pago', 'Comprobante de ISD y retención'] }
       ], tabs: [['programa', 'Programa'], ['subir', 'Subir información'], ['resultado', 'Resultado del análisis – Claude'], ['anexos', 'Anexos y cálculos'], ['cuadres', 'Resumen de cuadres y cruces'], ['conclusiones', 'Conclusiones de la cuenta']], sum: 'PB', hoja: 'obligaciones', titulo: '2. PB Obligaciones financieras', subtit: 'Análisis guiado por el programa de auditoría: Claude arma el anexo de créditos, calcula los intereses y el corto y largo plazo, y cruza con las confirmaciones y el mayor; el auditor revisa.', nombre: 'PB - Obligaciones financieras', ref: 'PB · Obligaciones financieras', corto: 'Obligaciones financieras', txtSubir: 'Aquí se sube todo en un solo pedido, menos el mayor contable, que se carga en la pantalla Mayor contable del menú (Claude lo usa solo): las tablas de amortización de cada crédito, los contratos o pagarés con sus garantías, los estados de cuenta o certificados de deuda de las instituciones y las confirmaciones bancarias. Claude lo lee junto, arma el anexo de la pestaña «Anexos y cálculos» y las demás pestañas leen de aquí. Cuando el pedido pase a "hecho", presiona «Actualizar».' };
+    NM_CFGS.ppe = { cob: [
+        { n: 'Mayor contable completo (se carga en la pantalla Mayor contable)', req: true, et: ['Mayor contable completo'] },
+        { n: 'Anexo o listado de activos fijos (con depreciación) del cliente', req: true, et: ['Anexo de activos fijos'] },
+        { n: 'Facturas y contratos de compra de las adiciones del año', req: true, et: ['Factura de compra de activo fijo', 'Contrato de compra o construcción'] },
+        { n: 'Actas de baja, ventas o siniestros de activos', req: false, et: ['Acta de baja de activos', 'Documento de venta de activo'] },
+        { n: 'Avalúos o informes de reavalúo', req: false, et: ['Informe de avalúo o reavalúo'] },
+        { n: 'Pólizas de seguro y escrituras o matrículas', req: false, et: ['Póliza de seguro', 'Escritura o matrícula'] },
+        { n: 'Actas de toma física', req: false, et: ['Acta de toma física de activos'] }
+      ], tabs: [['programa', 'Programa'], ['subir', 'Subir información'], ['resultado', 'Resultado del análisis – Claude'], ['anexos', 'Anexos y cálculos'], ['cuadres', 'Resumen de cuadres y cruces'], ['conclusiones', 'Conclusiones de la cuenta']], sum: 'AO', hoja: 'ppe', titulo: '2. AO Propiedad, planta y equipo', subtit: 'Análisis guiado por el programa de auditoría: Claude arma el anexo de activos fijos, recalcula la depreciación por año y por mes y la cuadra con las sumarias AO y AOO; el auditor revisa.', nombre: 'AO - Propiedad, planta y equipo', ref: 'AO · Propiedad, planta y equipo', corto: 'Propiedad, planta y equipo', txtSubir: 'Aquí se sube todo en un solo pedido: el anexo o listado de activos fijos del cliente (Excel), las facturas y contratos de las adiciones, las actas de baja o venta, los avalúos y lo que sirva para respaldar los saldos. El mayor contable se carga una sola vez en la pantalla Mayor contable.' };
     let NM_CTX = NM_CFGS.nomina;
     const nmE = { cliente: '', anio: '', visita: '', procs: [], filas: {}, cargaId: 0, abiertos: {}, tab: 'programa', sv: null };
     const NM_TABS = [['programa', 'Programa'], ['subir', 'Subir información'], ['resultado', 'Resultado del análisis – Claude'], ['cuadres', 'Resumen de cuadres y cruces'], ['conclusiones', 'Conclusiones de la cuenta']];
@@ -20390,6 +20404,301 @@ ${cont.innerHTML}
         + det('b', '2. Asientos del mayor (' + g.lineas.length + ' encontrados; registrado ' + obM(regR) + ')', pL)
         + det('c', '3. Otros créditos y financiamientos con intereses (' + obM(canT) + ')', pC);
     }
+    // ===== AO Propiedad, planta y equipo: anexo de activos fijos, depreciación por año y mes, y cuadre con las sumarias (AO y AOO) =====
+    const PP_CUENTA = 'propiedad_planta_equipo';
+    const ppE = { cargado: false, cargaId: 0, filas: [], cierre: '', bal: [], mapa: {}, msg: '', archivo: '', guardando: null, filtro: '', cla: '', pag: 0, ver: {} };
+    const PP_COLS = [['cod', 'Código de activo'], ['cla', 'Clasificación (tipo de activo)'], ['nom', 'Nombre del activo'], ['det', 'Detalle'], ['est', 'Estado'], ['cmp', 'Valor de compra'], ['fcm', 'Fecha de compra'], ['rev', 'Valor de reavalúo'], ['frv', 'Fecha de reavalúo'], ['res', 'Valor residual'], ['vid', 'Meses de vida útil'], ['fid', 'Fecha de inicio de depreciación'], ['sis', 'Depreciación acumulada según el sistema (opcional)']];
+    const PP_REF = { anexo: 'AO-02', dep: 'AO-03', cuadre: 'AO-04', du: 'AOO' };
+    const PP_CSS = '.ob{border-collapse:collapse;font-size:12px;color:#2b2b27}.ob th{background:#fff;border:1px solid #dfdfdb;padding:4px 6px;font-weight:700;font-size:10.5px;text-align:center;line-height:1.25}.ob td{background:#f1f1ee;border:1px solid #e2e2dd;padding:1px 4px;white-space:nowrap}.ob td.n{text-align:right}.ob td.ob-c{text-align:center;color:#9a9a92;width:26px}.ob tr.tot td{font-weight:700;border-top:1px solid #cfcfc8;background:#fff}.ob-i{border:0;background:transparent;font-size:12px;padding:2px 2px;outline:none;color:#2b2b27}.ob-i:focus{background:#fff;box-shadow:inset 0 0 0 1px #c9c9c0;border-radius:3px}.ob-b{font-size:12px;font-weight:600;color:#4a4a44;border:1px solid #dcdcd6;border-radius:8px;padding:4px 10px;background:#fff}.ob-h{font-size:13px;font-weight:700;color:#2b2b27;padding:12px 14px 6px}';
+    const ppN = v => { const n = obNum(v); return n === null ? 0 : n; };
+    const ppF2 = n => Number(n).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const ppClave = f => String(f.cla || '').trim().toUpperCase() || 'SIN CLASIFICACIÓN';
+    const ppEsDU = f => /derecho.*uso|niif ?16|arrendam/i.test(String(f.cla || ''));
+    // Meses depreciados hasta el fin del mes (Y, M): el mes de inicio se prorratea por días (mes de 30 días)
+    function ppUnidades(s, Y, M) { const sy = +s.slice(0, 4), sm = +s.slice(5, 7), sd = +s.slice(8, 10), m = (Y - sy) * 12 + (M - sm); return m < 0 ? 0 : m + (30 - Math.min(sd, 30) + 1) / 30; }
+    // Depreciación acumulada al fin del mes (Y, M): línea recta sobre (costo − residual) ÷ meses de vida útil; con reavalúo, el saldo por depreciar se reparte en la vida restante
+    function ppAcum(f, Y, M) {
+      const cost = ppN(f.cmp), res = ppN(f.res), vid = ppN(f.vid), s = obFecha(f.fid) || obFecha(f.fcm);
+      if (!s || !cost || !vid) return 0;
+      const base = Math.max(0, cost - res), mens = obR(base / vid), normal = (y, m) => obR(Math.min(base, mens * ppUnidades(s, y, m)));
+      const rev = ppN(f.rev), fr = obFecha(f.frv);
+      if (!(rev > 0 && fr) || (Y * 12 + M) < (+fr.slice(0, 4)) * 12 + (+fr.slice(5, 7))) return normal(Y, M);
+      const ry = +fr.slice(0, 4), rm = +fr.slice(5, 7), py = rm === 1 ? ry - 1 : ry, pm = rm === 1 ? 12 : rm - 1;
+      const A1 = normal(py, pm), rest = Math.max(1, vid - ppUnidades(s, py, pm)), m2 = Math.max(0, (rev - res - A1) / rest);
+      return obR(Math.max(A1, Math.min(rev - res, A1 + m2 * ((Y * 12 + M) - (ry * 12 + rm) + 1))));
+    }
+    function ppFila(f) {
+      const c = ppE.cierre; if (!c) return null;
+      const Yc = +c.slice(0, 4), Mc = +c.slice(5, 7), fc = obFecha(f.fcm) || obFecha(f.fid), rev = ppN(f.rev), fr = obFecha(f.frv);
+      let bruto = (rev > 0 && fr && fr <= c) ? rev : ppN(f.cmp); if (fc && fc > c) bruto = 0;
+      const ap = ppAcum(f, Yc - 1, 12), ac = ppAcum(f, Yc, Mc), sis = (f.sis === '' || f.sis === null || f.sis === undefined) ? null : ppN(f.sis);
+      return { bruto, ap, ac, gasto: obR(ac - ap), neto: obR(bruto - ac), sis, dif: sis === null ? null : obR(ac - sis) };
+    }
+    function ppMapaCuentas(claves) {
+      const stop = ['activo', 'activos', 'fijo', 'fijos', 'depreciacion', 'acumulada', 'acum', 'gastos', 'gasto', 'mejora', 'mejoras', 'arrendamiento', 'arriendo'];
+      const stems = t => obClave(t).split(/[^a-z0-9]+/).filter(w => w.length >= 4 && !stop.includes(w)).map(w => w.slice(0, 5));
+      const cs = claves.map(k => ({ k, st: stems(k) })), cuenta = {};
+      cs.forEach(c => c.st.forEach(s => { cuenta[s] = (cuenta[s] || new Set()).add(c.k); }));
+      const porCta = {};
+      ppE.bal.forEach(b => {
+        if (b.sumaria === 'AOO') return;
+        const ov = ppE.mapa[b.codigo]; let k = null;
+        if (ov !== undefined) k = ov === '-' ? null : ov;
+        else { const as = stems(b.cuenta); let mejor = 0; cs.forEach(c => { const sc = c.st.filter(s => as.includes(s)).reduce((a, s) => a + 1 / cuenta[s].size, 0); if (sc > mejor + 1e-9 || (Math.abs(sc - mejor) < 1e-9 && sc > 0 && k && c.st.length < (cs.find(x => x.k === k) || { st: [] }).st.length)) { mejor = sc; k = c.k; } }); if (!mejor) k = null; }
+        porCta[b.codigo] = k;
+      });
+      return porCta;
+    }
+    // Datos de todos los cuadros (sirven a la pantalla y al Excel)
+    function ppDatos() {
+      const c = ppE.cierre; if (!c || !ppE.filas.length) return null;
+      const Yc = +c.slice(0, 4), Mc = +c.slice(5, 7), R = obR;
+      const items = ppE.filas.map((f, i) => ({ f, i, r: ppFila(f), k: ppClave(f), du: ppEsDU(f) }));
+      const ao = items.filter(x => !x.du), du = items.filter(x => x.du);
+      const claves = [...new Set(ao.map(x => x.k))];
+      const suma = (arr, g) => R(arr.reduce((a, x) => a + (g(x) || 0), 0));
+      const porCta = ppMapaCuentas(claves);
+      const cuentas = ppE.bal.filter(b => b.sumaria !== 'AOO');
+      const g = {};
+      claves.forEach(k => { g[k] = { k, items: ao.filter(x => x.k === k), costo: [], dep: [] }; });
+      const sin = [];
+      cuentas.forEach(b => { const k = porCta[b.codigo]; const dep = b.saldo < 0 || /deprec|dep\./i.test(b.cuenta); if (k && g[k]) (dep ? g[k].dep : g[k].costo).push(b); else if (b.sumaria === 'AO') sin.push({ b, dep }); });
+      const clases = Object.values(g).map(x => ({ ...x, n: x.items.length, bruto: suma(x.items, y => y.r.bruto), ap: suma(x.items, y => y.r.ap), gasto: suma(x.items, y => y.r.gasto), ac: suma(x.items, y => y.r.ac), neto: suma(x.items, y => y.r.neto), sis: x.items.every(y => y.r.sis === null) ? null : suma(x.items, y => y.r.sis), balC: R(x.costo.reduce((a, b) => a + b.saldo, 0)), balD: R(Math.abs(x.dep.reduce((a, b) => a + b.saldo, 0))) })).sort((a, b) => b.bruto - a.bruto);
+      const aoo = ppE.bal.filter(b => b.sumaria === 'AOO');
+      const aooC = R(aoo.filter(b => !(b.saldo < 0 || /deprec|dep\./i.test(b.cuenta))).reduce((a, b) => a + b.saldo, 0)), aooD = R(Math.abs(aoo.filter(b => b.saldo < 0 || /deprec|dep\./i.test(b.cuenta)).reduce((a, b) => a + b.saldo, 0)));
+      // por año
+      const yIni = Math.min(...ao.map(x => +(obFecha(x.f.fid) || obFecha(x.f.fcm) || (Yc + '')).slice(0, 4)), Yc);
+      const anios = []; let accPrev = 0;
+      for (let y = yIni; y <= Yc; y++) { const fin = y === Yc ? Mc : 12, porK = {}; let tot = 0, ac = 0; ao.forEach(x => { const a = ppAcum(x.f, y, fin), p = ppAcum(x.f, y - 1, 12); porK[x.k] = R((porK[x.k] || 0) + a - p); tot += a - p; ac += a; }); anios.push({ y, porK, gasto: R(tot), ac: R(ac), parcial: y === Yc && Mc < 12 }); }
+      // por mes del año del cierre
+      const mm = [], meses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'].slice(0, Mc);
+      claves.forEach(k => { const row = meses.map((_, m) => R(g[k].items.reduce((a, x) => a + ppAcum(x.f, Yc, m + 1) - ppAcum(x.f, Yc, m), 0))); mm.push({ k, v: row, t: R(row.reduce((a, b) => a + b, 0)) }); });
+      mm.sort((a, b) => b.t - a.t);
+      const sinCalc = items.filter(x => !(obFecha(x.f.fid) || obFecha(x.f.fcm)) || !ppN(x.f.vid) || !ppN(x.f.cmp)).length;
+      return { Yc, Mc, items, ao, du, clases, sin, aooC, aooD, aoo, anios, meses, mm, claves, sinCalc, porCta,
+        tot: { n: ao.length, bruto: suma(ao, x => x.r.bruto), ap: suma(ao, x => x.r.ap), gasto: suma(ao, x => x.r.gasto), ac: suma(ao, x => x.r.ac), neto: suma(ao, x => x.r.neto), sis: ao.every(x => x.r.sis === null) ? null : suma(ao, x => x.r.sis), balC: R(clases.reduce((a, x) => a + x.balC, 0) + sin.filter(s => !s.dep).reduce((a, s) => a + s.b.saldo, 0)), balD: R(clases.reduce((a, x) => a + x.balD, 0) + Math.abs(sin.filter(s => s.dep).reduce((a, s) => a + s.b.saldo, 0))) } };
+    }
+    async function ppCargar() {
+      const cli = nmE.cliente, anio = Number(nmE.anio), vis = nmE.visita, id = ++ppE.cargaId;
+      Object.assign(ppE, { cargado: false, filas: [], bal: [], mapa: {}, msg: '', archivo: '', pag: 0, ver: {} });
+      if (!cli) return;
+      ppE.cierre = ($im('nm-fecha') || {}).value || (vis === 'final' ? anio + '-12-31' : anio + '-09-30');
+      const [r1, r2] = await Promise.all([
+        supabaseClient.from('anexo_inversiones').select('*').eq('cliente_id', cli).eq('anio', anio).eq('cuenta', PP_CUENTA).eq('visita', vis).maybeSingle(),
+        supabaseClient.from('balance_comprobacion').select('sumaria, codigo, cuenta, saldo').eq('cliente_id', cli).eq('anio', anio).eq('visita', vis).in('sumaria', ['AO', 'AOO', 'AR']).limit(5000)
+      ]);
+      if (id !== ppE.cargaId) return;
+      const d = r1.data;
+      if (d) { ppE.filas = Array.isArray(d.filas) ? d.filas : []; if (d.fecha_cierre) ppE.cierre = d.fecha_cierre; ppE.archivo = d.archivo_nombre || ''; ppE.mapa = (d.partidas && !Array.isArray(d.partidas) && d.partidas.mapa) || {}; }
+      const acc = {}; (r2.data || []).forEach(x => { const s = String(x.sumaria).trim().toUpperCase(), k = s + '|' + x.codigo; acc[k] = acc[k] || { sumaria: s, codigo: String(x.codigo), cuenta: x.cuenta, saldo: 0 }; acc[k].saldo += Number(x.saldo) || 0; });
+      ppE.bal = Object.values(acc).map(x => ({ ...x, saldo: obR(x.saldo) }));
+      ppE.cargado = true;
+      if (nmE.tab === 'anexos') ppPintar(); else if (nmE.tab === 'cuadres') nmCuaPintar();
+    }
+    function ppGuardar() {
+      clearTimeout(ppE.guardando);
+      ppE.guardando = setTimeout(async () => {
+        if (!nmE.cliente) return;
+        const fila = { cliente_id: nmE.cliente, anio: Number(nmE.anio), visita: nmE.visita, cuenta: PP_CUENTA, archivo_nombre: ppE.archivo || null, filas: ppE.filas, fecha_cierre: ppE.cierre || null, base_dias: 360, partidas: { mapa: ppE.mapa }, auditor: (typeof nombreUsuarioActivo === 'function' ? nombreUsuarioActivo() : '') || null, updated_at: new Date().toISOString() };
+        const { error } = await supabaseClient.from('anexo_inversiones').upsert(fila, { onConflict: 'cliente_id,anio,cuenta,visita' });
+        ppE.msg = error ? 'No se pudo guardar: ' + (error.message || error) : 'Guardado ' + new Date().toLocaleTimeString('es-EC');
+        const m = $im('pp-msg'); if (m) { m.textContent = ppE.msg; m.style.color = error ? '#b91c1c' : '#6b6b63'; }
+      }, 700);
+    }
+    function ppCab(v) { ppE.cierre = v; ppGuardar(); ppPintar(); }
+    function ppSet(i, k, v) {
+      const f = ppE.filas[i]; if (!f) return;
+      if (k === 'fcm' || k === 'frv' || k === 'fid') f[k] = v ? obFecha(v) : '';
+      else if (['cmp', 'rev', 'res', 'vid', 'sis'].includes(k)) f[k] = String(v).trim() === '' ? '' : (obNum(v) === null ? '' : obNum(v));
+      else f[k] = v;
+      ppGuardar(); ppPintar();
+    }
+    function ppAgregar() { ppE.filas.push({ cod: '', cla: '', nom: '', det: '', est: 'VIGENTE', cmp: '', fcm: '', rev: '', frv: '', res: '', vid: '', fid: '', sis: '' }); ppE.filtro = ''; ppE.cla = ''; ppE.pag = Math.floor((ppE.filas.length - 1) / 100); ppGuardar(); ppPintar(); }
+    async function ppQuitar(i) { if (!(await confirmarApp('¿Quitar este activo del anexo?'))) return; ppE.filas.splice(i, 1); ppGuardar(); ppPintar(); }
+    async function ppVaciar() { if (!ppE.filas.length) return; if (!(await confirmarApp('Se borrarán los ' + ppE.filas.length + ' activos del anexo. ¿Continuar?'))) return; ppE.filas = []; ppE.archivo = ''; ppGuardar(); ppPintar(); }
+    function ppFiltro(k, v) { ppE[k] = v; ppE.pag = 0; ppPintar(); const el = $im(k === 'filtro' ? 'pp-q' : 'pp-c'); if (el && k === 'filtro') { el.focus(); el.setSelectionRange(v.length, v.length); } }
+    function ppPag(d) { ppE.pag = Math.max(0, ppE.pag + d); ppPintar(); }
+    function ppVer(k) { ppE.ver[k] = !ppE.ver[k]; nmCuaPintar(); }
+    function ppMapear(cod, k) { ppE.mapa[cod] = k; ppGuardar(); nmCuaPintar(); }
+    function ppPlantilla() {
+      if (!window.XLSX) { alert('No se pudo cargar el lector de Excel. Revisa tu conexión a internet.'); return; }
+      const ws = XLSX.utils.aoa_to_sheet([PP_COLS.map(c => c[1]), ['AF-0001', 'Muebles y enseres', 'Escritorio gerencia', 'Escritorio de madera 1.60 m', 'VIGENTE', 1200, '2022-03-15', '', '', 100, 120, '2022-03-15', '']]);
+      const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Activos'); XLSX.writeFile(wb, 'plantilla_anexo_activos_fijos.xlsx');
+    }
+    function ppClaseColumna(t0) {
+      const t = obClave(t0).replace(/\s+/g, ' ').trim();
+      if (/deprec.*acum|acum.*deprec/.test(t)) return 'sis';
+      if (/ultim/.test(t)) return null;
+      if (/inicio.*deprec|fecha.*deprec/.test(t)) return 'fid';
+      if (/residual/.test(t)) return 'res';
+      if (/vida|meses/.test(t)) return 'vid';
+      if (/fecha/.test(t)) { if (/reval|reavalu/.test(t) && !/compra/.test(t)) return 'frv'; if (/compra|adquis/.test(t)) return 'fcm'; return null; }
+      if (/valor|costo/.test(t)) { if (/referencia/.test(t)) return null; if (/reval|reavalu/.test(t) && !/compra|costo/.test(t)) return 'rev'; if (/compra|costo|adquis/.test(t)) return 'cmp'; return null; }
+      if (/clasific|tipo de activo|categor/.test(t)) return 'cla';
+      if (/^cod(igo)?( de| del)? activo|^codigo$/.test(t)) return 'cod';
+      if (/nombre detalle|^detalle|descrip/.test(t)) return 'det';
+      if (/nombre.*activ|^activo$|^nombre$/.test(t)) return 'nom';
+      if (/^estado( activo)?$/.test(t)) return 'est';
+      return null;
+    }
+    async function ppSubir(files) {
+      const f = files && files[0]; const inp = $im('pp-archivo'); if (inp) inp.value = ''; if (!f) return;
+      try {
+        if (!window.XLSX) throw new Error('No se pudo cargar el lector de Excel. Revisa tu conexión a internet.');
+        if (ppE.filas.length && !(await confirmarApp('Ya hay ' + ppE.filas.length + ' activos en el anexo. Si subes "' + f.name + '" se reemplazarán. ¿Continuar?'))) return;
+        const wb = XLSX.read(await f.arrayBuffer(), { type: 'array', cellDates: true });
+        let mejor = null;
+        wb.SheetNames.forEach(n => {
+          const M = XLSX.utils.sheet_to_json(wb.Sheets[n], { header: 1, raw: true, defval: null });
+          for (let r = 0; r < Math.min(30, M.length); r++) {
+            const mp = {}; (M[r] || []).forEach((h, j) => { if (h === null || h === '') return; const k = ppClaseColumna(String(h)); if (k && mp[k] === undefined) mp[k] = j; });
+            const nk = Object.keys(mp).length; if (!(mp.cmp !== undefined && (mp.nom !== undefined || mp.cod !== undefined))) continue;
+            const sc = nk * 100000 + M.length - r;
+            if (!mejor || sc > mejor.sc) mejor = { sc, M, r, mp, n };
+          }
+        });
+        if (!mejor) throw new Error('No encontré las columnas del anexo (código, nombre y valor de compra). Usa la plantilla.');
+        const { M, r, mp } = mejor, filas = [];
+        for (let i = r + 1; i < M.length; i++) {
+          const row = M[i] || [], g = k => mp[k] === undefined ? null : row[mp[k]];
+          const cmp = obNum(g('cmp')); if (cmp === null && !String(g('nom') || '').trim()) continue; if (cmp === null) continue;
+          const s = k => String(g(k) === null ? '' : g(k)).trim(), n = k => obNum(g(k)) === null ? '' : obNum(g(k));
+          filas.push({ cod: s('cod'), cla: s('cla'), nom: s('nom'), det: s('det') && s('det') !== s('nom') ? s('det') : '', est: s('est'), cmp, fcm: obFecha(g('fcm')), rev: n('rev'), frv: obFecha(g('frv')), res: n('res'), vid: n('vid'), fid: obFecha(g('fid')) || obFecha(g('fcm')), sis: n('sis') });
+        }
+        if (!filas.length) throw new Error('No encontré activos con valor de compra.');
+        ppE.filas = filas; ppE.archivo = f.name; ppE.pag = 0; ppE.filtro = ''; ppE.cla = '';
+        ppE.msg = 'Se cargaron ' + filas.length + ' activos de "' + f.name + '" (hoja ' + mejor.n + ').'; ppGuardar(); ppPintar();
+      } catch (e) { ppE.msg = 'No se pudo leer el archivo: ' + (e && e.message ? e.message : e); ppPintar(); }
+    }
+    // Pestaña «Anexos y cálculos»: registro de activos fijos
+    function ppPintar() {
+      const c = $im('nm-panel'), e = escapeHtml, M = obM; if (!c) return;
+      if (!nmE.cliente) { c.innerHTML = '<p class="text-xs text-slate-500 p-4">Selecciona el cliente para comenzar.</p>'; return; }
+      if (!ppE.cargado) { c.innerHTML = '<p class="text-xs text-slate-500 p-4">Cargando…</p>'; return; }
+      const sc = c.scrollTop, hs = c.scrollLeft, Yc = ppE.cierre ? +ppE.cierre.slice(0, 4) : '';
+      const q = obClave(ppE.filtro).trim(), PAG = 100;
+      let idx = ppE.filas.map((f, i) => i).filter(i => { const f = ppE.filas[i]; return (!ppE.cla || ppClave(f) === ppE.cla) && (!q || obClave([f.cod, f.nom, f.det, f.cla, f.est].join(' ')).indexOf(q) >= 0); });
+      const tp = Math.max(1, Math.ceil(idx.length / PAG)); if (ppE.pag >= tp) ppE.pag = tp - 1;
+      const vis = idx.slice(ppE.pag * PAG, ppE.pag * PAG + PAG);
+      const inp = (i, k, v, w, num) => '<input class="ob-i" style="width:' + w + 'px;' + (num ? 'text-align:right' : '') + '" value="' + e(num && v !== '' && v !== null && v !== undefined ? M(v) : (v === null || v === undefined ? '' : v)) + '" onchange="ppSet(' + i + ',\'' + k + '\',this.value)">';
+      const rows = vis.map(i => {
+        const f = ppE.filas[i], r = ppFila(f) || { ap: 0, gasto: 0, ac: 0, neto: 0, sis: null, dif: null }, col = r.dif !== null && Math.abs(r.dif) > 1 ? ' style="color:#b42318;font-weight:700"' : '';
+        return '<tr><td class="ob-c">' + (i + 1) + '</td><td>' + inp(i, 'cod', f.cod, 84) + '</td><td>' + inp(i, 'cla', f.cla, 110) + '</td><td>' + inp(i, 'nom', f.nom, 230) + '</td><td>' + inp(i, 'det', f.det, 150) + '</td><td>' + inp(i, 'est', f.est, 78) + '</td><td>' + inp(i, 'cmp', f.cmp, 82, 1) + '</td><td>' + inp(i, 'fcm', f.fcm, 82) + '</td><td>' + inp(i, 'rev', f.rev, 74, 1) + '</td><td>' + inp(i, 'frv', f.frv, 82) + '</td><td>' + inp(i, 'res', f.res, 64, 1) + '</td><td>' + inp(i, 'vid', f.vid === '' ? '' : f.vid, 46) + '</td><td>' + inp(i, 'fid', f.fid, 82) + '</td><td class="n">' + M(r.ap) + '</td><td class="n">' + M(r.gasto) + '</td><td class="n">' + M(r.ac) + '</td><td class="n">' + M(r.neto) + '</td><td>' + inp(i, 'sis', f.sis, 82, 1) + '</td><td class="n"' + col + '>' + (r.dif === null ? '' : M(r.dif)) + '</td><td class="ob-c" style="cursor:pointer" onclick="ppQuitar(' + i + ')" title="Quitar">✕</td></tr>';
+      }).join('');
+      const TH = ['', 'Código de activo', 'Clasificación', 'Nombre del activo', 'Detalle', 'Estado', 'Valor de compra', 'Fecha de compra', 'Valor de reavalúo', 'Fecha de reavalúo', 'Valor residual', 'Meses de vida útil', 'Inicio de depreciación', 'Dep. acumulada al 31-dic ' + (Yc - 1), 'Gasto de depreciación ' + Yc, 'Dep. acumulada al corte', 'Valor neto al corte', 'Dep. acumulada según el sistema', 'Diferencia (cálculo menos sistema)', ''];
+      const clas = [...new Set(ppE.filas.map(ppClave))].sort();
+      const sel = '<select onchange="ppFiltro(\'cla\',this.value)" style="border:1px solid #dcdcd6;border-radius:6px;padding:2px 6px;font-size:12px"><option value="">Todas las clasificaciones</option>' + clas.map(k => '<option value="' + e(k) + '"' + (ppE.cla === k ? ' selected' : '') + '>' + e(k) + '</option>').join('') + '</select>';
+      c.innerHTML = '<style>' + PP_CSS + '</style><div style="background:#f1f1ee">'
+        + '<div style="padding:16px 14px 14px;font-size:12px;color:#6b6b63;line-height:1.7">Anexo de activos fijos del cliente (ref. ' + PP_REF.anexo + '): un activo por fila, con su clasificación, valor de compra, reavalúo, valor residual, vida útil y fecha de inicio de depreciación. La aplicación recalcula la depreciación acumulada (línea recta; el mes de inicio se prorratea por días), el gasto del año y por mes, y la compara con la que entrega el sistema del cliente. Los cuadros contra las sumarias AO y AOO, la depreciación por año y por mes y los derechos de uso están en «Resumen de cuadres y cruces». Los activos cuya clasificación diga «derecho de uso» se tratan aparte.</div>'
+        + '<div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:4px 14px 12px"><label style="font-size:12px;color:#4a4a44">Fecha de cierre <input type="date" value="' + e(ppE.cierre) + '" onchange="ppCab(this.value)" style="border:1px solid #dcdcd6;border-radius:6px;padding:2px 6px;font-size:12px"></label>'
+        + '<label class="ob-b" style="cursor:pointer">Subir anexo (Excel o CSV)<input id="pp-archivo" type="file" accept=".xlsx,.xls,.csv" class="hidden" onchange="ppSubir(this.files)"></label><button type="button" class="ob-b" onclick="ppPlantilla()">Descargar plantilla</button><button type="button" class="ob-b" onclick="ppAgregar()">＋ Agregar activo</button>' + (ppE.filas.length ? '<button type="button" class="ob-b" onclick="ppVaciar()">Vaciar</button>' : '') + '<span id="pp-msg" style="font-size:11px;color:#6b6b63">' + e(ppE.msg || (ppE.archivo ? 'Archivo: ' + ppE.archivo : '')) + '</span>'
+        + '<button type="button" onclick="ppExcel()" style="margin-left:auto;padding:6px 4px;font-size:12px;font-weight:700;background:transparent;border:0;color:#449964;cursor:pointer">⬇ Descargar Excel</button></div>'
+        + (ppE.filas.length ? '<div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:0 14px 10px;font-size:12px;color:#4a4a44"><input id="pp-q" placeholder="Buscar por código, nombre o estado" value="' + e(ppE.filtro) + '" oninput="ppFiltro(\'filtro\',this.value)" style="border:1px solid #dcdcd6;border-radius:6px;padding:3px 8px;font-size:12px;width:260px">' + sel + '<span>' + idx.length + ' de ' + ppE.filas.length + ' activos</span><button type="button" class="ob-b" onclick="ppPag(-1)"' + (ppE.pag ? '' : ' disabled style="opacity:.4"') + '>‹</button><span>Página ' + (ppE.pag + 1) + ' de ' + tp + '</span><button type="button" class="ob-b" onclick="ppPag(1)"' + (ppE.pag + 1 < tp ? '' : ' disabled style="opacity:.4"') + '>›</button></div>' : '')
+        + '<div style="overflow-x:auto;padding:6px 10px 16px"><table class="ob"><thead><tr>' + TH.map(x => '<th>' + x + '</th>').join('') + '</tr></thead><tbody>' + (rows || '<tr><td colspan="20" style="padding:14px;color:#9a9a92;white-space:normal">Aún no hay activos. Sube el anexo del cliente o agrega filas.</td></tr>') + '</tbody></table></div></div>';
+      c.scrollTop = sc; c.scrollLeft = hs;
+    }
+    // Pestaña «Resumen de cuadres y cruces»: detalle de activos fijos arriba del resto
+    function ppCuadresHtml() {
+      const e = escapeHtml, cab = t => '<div class="v2r-h3" style="margin:6px 0 6px"><span>' + t + '</span></div>', ay = t => '<p style="font-size:12px;color:#6b6b63;line-height:1.6;margin:0 0 8px">' + t + '</p>';
+      const tit = 'Detalle de activos fijos (propiedad, planta y equipo)';
+      if (!ppE.cargado) return cab(tit) + '<p class="text-xs text-slate-500" style="margin-bottom:14px">Cargando el anexo…</p>';
+      const D = ppDatos();
+      if (!D) return cab(tit) + ay('Todavía no hay anexo de activos fijos. Sube el Excel del cliente en la pestaña «Anexos y cálculos» para ver aquí el cuadre con las sumarias AO y AOO, la depreciación por año y por mes y los derechos de uso.');
+      const R2 = obR, num = x => (x === null || x === undefined) ? '<span style="color:#cbd5e1">—</span>' : ppF2(x), TOL = 1;
+      const th = (t, d) => '<th' + (d ? ' style="text-align:right"' : '') + '>' + t + '</th>';
+      const col = d => (d === null ? '' : (Math.abs(d) <= TOL ? 'color:#1d6b3a;font-weight:700' : 'color:#b42318;font-weight:700'));
+      const dif = (a, b) => (b === null || b === undefined) ? null : R2(a - b);
+      const btn = (k, t) => '<button type="button" class="v2r-i" onclick="ppVer(\'' + e(k) + '\')" title="' + e(t) + '">' + IC_OJO + '</button>';
+      const btnA = (k, t) => '<button type="button" class="v2r-i" style="color:#b45309" onclick="ppVer(\'' + e(k) + '\')" title="' + e(t) + '">' + IC_OJO.replace('#449964', '#b45309') + '</button>';
+      const lista = (arr, lim) => {
+        const sh = arr.slice(0, lim);
+        return '<table class="v2r-t" style="margin:4px 0"><thead><tr>' + th('Código') + th('Nombre') + th('Estado') + th('Compra', 1) + th('Fecha') + th('Vida (meses)', 1) + th('Dep. al 31-dic ' + (D.Yc - 1), 1) + th('Gasto ' + D.Yc, 1) + th('Dep. al corte', 1) + th('Neto', 1) + th('Sistema', 1) + th('Diferencia', 1) + '</tr></thead><tbody>'
+          + sh.map(x => '<tr><td>' + e(x.f.cod) + '</td><td>' + e(x.f.nom) + '</td><td>' + e(x.f.est) + '</td><td class="n">' + num(ppN(x.f.cmp)) + '</td><td style="white-space:nowrap">' + e(obFecha(x.f.fcm) || obFecha(x.f.fid)) + '</td><td class="n">' + e(String(x.f.vid || '')) + '</td><td class="n">' + num(x.r.ap) + '</td><td class="n">' + num(x.r.gasto) + '</td><td class="n">' + num(x.r.ac) + '</td><td class="n">' + num(x.r.neto) + '</td><td class="n">' + num(x.r.sis) + '</td><td class="n" style="' + (x.r.dif === null ? '' : col(x.r.dif)) + '">' + num(x.r.dif) + '</td></tr>').join('')
+          + '</tbody></table>' + (arr.length > lim ? '<div style="font-size:11px;color:#6b6b63">Se muestran los primeros ' + lim + ' de ' + arr.length + '. El Excel trae todos.</div>' : '');
+      };
+      // 1. Cuadre con las sumarias
+      let tb = '';
+      D.clases.forEach(x => {
+        const ctas = x.costo.concat(x.dep).map(b => b.codigo + (b.sumaria === 'AR' ? ' (AR)' : '')).join(' · ');
+        const dC = R2(x.bruto - x.balC), dD = R2(x.ac - x.balD);
+        tb += '<tr><td>' + e(x.k) + btn('c' + x.k, 'Ver los activos de esta clasificación') + (ctas ? '<div style="font-size:10.5px;color:#9a9a92">Cuentas del balance: ' + e(ctas) + '</div>' : '<div style="font-size:10.5px;color:#b45309">Sin cuenta del balance asignada</div>') + '</td><td class="n">' + x.n + '</td><td class="n">' + num(x.bruto) + '</td><td class="n">' + num(x.balC) + '</td><td class="n" style="' + col(dC) + '">' + num(dC) + '</td><td class="n">' + num(x.ac) + '</td><td class="n">' + num(x.balD) + '</td><td class="n" style="' + col(dD) + '">' + num(dD) + '</td><td class="n">' + num(x.neto) + '</td><td class="n">' + num(R2(x.balC - x.balD)) + '</td></tr>';
+        if (ppE.ver['c' + x.k]) tb += '<tr><td colspan="10" style="padding:6px 14px;background:#fff;white-space:normal;font-size:12px">' + lista(x.items, 400) + '</td></tr>';
+      });
+      const opts = k => '<option value="-"' + (k === '-' ? ' selected' : '') + '>No va en el anexo</option>' + D.claves.map(c => '<option value="' + e(c) + '"' + (k === c ? ' selected' : '') + '>' + e(c) + '</option>').join('');
+      D.sin.forEach(s => {
+        const v = Math.abs(s.b.saldo), k = ppE.mapa[s.b.codigo];
+        tb += '<tr><td><span style="color:#b45309">Cuenta del balance sin activos en el anexo:</span> ' + e(s.b.codigo) + ' ' + e(s.b.cuenta) + ' <select onchange="ppMapear(\'' + e(s.b.codigo) + '\',this.value)" style="font-size:11px;border:1px solid #dcdcd6;border-radius:6px;margin-left:4px"><option value="">Asignar a una clasificación…</option>' + opts(k) + '</select></td><td class="n"></td><td class="n">' + num(0) + '</td><td class="n">' + (s.dep ? num(0) : num(v)) + '</td><td class="n" style="' + col(s.dep ? 0 : -v) + '">' + num(s.dep ? 0 : -v) + '</td><td class="n">' + num(0) + '</td><td class="n">' + (s.dep ? num(v) : num(0)) + '</td><td class="n" style="' + col(s.dep ? -v : 0) + '">' + num(s.dep ? -v : 0) + '</td><td class="n">' + num(0) + '</td><td class="n">' + num(s.dep ? -v : v) + '</td></tr>';
+      });
+      const T = D.tot, dTC = R2(T.bruto - T.balC), dTD = R2(T.ac - T.balD);
+      tb += '<tr class="tot"><td>Total propiedad, planta y equipo (sumaria AO)</td><td class="n">' + T.n + '</td><td class="n">' + num(T.bruto) + '</td><td class="n">' + num(T.balC) + '</td><td class="n" style="' + col(dTC) + '">' + num(dTC) + '</td><td class="n">' + num(T.ac) + '</td><td class="n">' + num(T.balD) + '</td><td class="n" style="' + col(dTD) + '">' + num(dTD) + '</td><td class="n">' + num(T.neto) + '</td><td class="n">' + num(R2(T.balC - T.balD)) + '</td></tr>';
+      const sis = T.sis === null ? '' : '<tr><td colspan="5">Depreciación acumulada según el sistema del cliente (columna del Excel)</td><td class="n">' + num(T.sis) + '</td><td colspan="2"></td><td colspan="2"></td></tr><tr><td colspan="5">Diferencia: depreciación recalculada menos la del sistema <span style="color:#6b6b63;font-weight:400">(' + D.ao.filter(x => x.r.dif !== null && Math.abs(x.r.dif) > 1).length + ' activo(s) con diferencia mayor a 1,00)</span>' + btnA('dsis', 'Ver los activos con diferencia contra el sistema') + '</td><td class="n" style="' + col(R2(T.ac - T.sis)) + '">' + num(R2(T.ac - T.sis)) + '</td><td colspan="2"></td><td colspan="2"></td></tr>';
+      let h = cab(tit + ' (ref. ' + PP_REF.cuadre + ')') + ay('Sale del anexo de activos fijos (pestaña «Anexos y cálculos») y del balance de comprobación: costo y depreciación acumulada de cada clasificación contra las cuentas de la sumaria AO. Las cuentas del balance se asignan solas por su nombre; si alguna quedó mal puedes cambiarla. Diferencias en rojo.');
+      h += '<div class="v2r-tw" style="margin-bottom:12px"><table class="v2r-t"><thead><tr>' + th('Clasificación') + th('Activos', 1) + th('Costo según anexo', 1) + th('Costo según balance', 1) + th('Diferencia', 1) + th('Dep. acumulada según anexo', 1) + th('Dep. acumulada según balance', 1) + th('Diferencia', 1) + th('Valor neto según anexo', 1) + th('Valor neto según balance', 1) + '</tr></thead><tbody>' + tb + sis + '</tbody></table></div>';
+      if (D.sinCalc) h += '<p style="font-size:11px;color:#b45309;margin:-4px 0 10px">' + D.sinCalc + ' activo(s) sin fecha de inicio, vida útil o valor de compra: no se pudo calcular su depreciación.</p>';
+      if (ppE.ver.dsis) h += '<div style="margin-bottom:12px;font-size:12px"><div style="font-weight:700;margin-bottom:2px">Activos con diferencia contra la depreciación del sistema</div>' + lista(D.ao.filter(x => x.r.dif !== null && Math.abs(x.r.dif) > 1).sort((a, b) => Math.abs(b.r.dif) - Math.abs(a.r.dif)), 200) + '</div>';
+      // 2. Derechos de uso (desplegable)
+      const du = D.du, dBr = R2(du.reduce((a, x) => a + x.r.bruto, 0)), dAc = R2(du.reduce((a, x) => a + x.r.ac, 0));
+      h += '<div class="v2r-h3" style="margin:14px 0 6px"><span>Activos por derecho de uso (sumaria AOO, ref. ' + PP_REF.du + ')</span>' + btn('du', 'Desplegar el detalle de derechos de uso') + '</div>';
+      h += '<div class="v2r-tw" style="margin-bottom:12px"><table class="v2r-t"><thead><tr>' + th('Concepto') + th('Activos', 1) + th('Costo', 1) + th('Dep. acumulada', 1) + th('Valor neto', 1) + '</tr></thead><tbody>'
+        + '<tr><td>Según el anexo (activos clasificados como derecho de uso)</td><td class="n">' + du.length + '</td><td class="n">' + num(dBr) + '</td><td class="n">' + num(dAc) + '</td><td class="n">' + num(R2(dBr - dAc)) + '</td></tr>'
+        + '<tr><td>Según el balance (sumaria AOO)</td><td class="n"></td><td class="n">' + num(D.aooC) + '</td><td class="n">' + num(D.aooD) + '</td><td class="n">' + num(R2(D.aooC - D.aooD)) + '</td></tr>'
+        + '<tr class="tot"><td>Diferencia</td><td class="n"></td><td class="n" style="' + col(R2(dBr - D.aooC)) + '">' + num(R2(dBr - D.aooC)) + '</td><td class="n" style="' + col(R2(dAc - D.aooD)) + '">' + num(R2(dAc - D.aooD)) + '</td><td class="n" style="' + col(R2((dBr - dAc) - (D.aooC - D.aooD))) + '">' + num(R2((dBr - dAc) - (D.aooC - D.aooD))) + '</td></tr></tbody></table></div>';
+      if (ppE.ver.du) h += '<div style="margin-bottom:12px;font-size:12px">' + (du.length ? lista(du, 400) : '<p style="color:#6b6b63;line-height:1.6">El anexo no trae activos por derecho de uso. Si el cliente los lleva en su listado, ponles la clasificación «Derecho de uso» para que se calculen aquí; el detalle por contrato de arrendamiento está en la herramienta de Activos por derecho de uso (AOO).</p>')
+        + (D.aoo.length ? '<table class="v2r-t" style="margin:6px 0"><thead><tr>' + th('Cuenta del balance (AOO)') + th('Saldo', 1) + '</tr></thead><tbody>' + D.aoo.map(b => '<tr><td>' + e(b.codigo) + ' ' + e(b.cuenta) + '</td><td class="n">' + num(b.saldo) + '</td></tr>').join('') + '</tbody></table>' : '') + '</div>';
+      // 3. Depreciación por año
+      const ks = D.claves.slice().sort((a, b) => (D.clases.find(x => x.k === b) || { bruto: 0 }).bruto - (D.clases.find(x => x.k === a) || { bruto: 0 }).bruto);
+      h += cab('Depreciación por año (ref. ' + PP_REF.dep + ')') + ay('Gasto de depreciación de cada año por clasificación y depreciación acumulada al cierre de cada año, recalculados con las fechas de inicio y la vida útil del anexo. El último año llega solo hasta la fecha de cierre.');
+      h += '<div class="v2r-tw" style="margin-bottom:12px"><table class="v2r-t"><thead><tr>' + th('Año') + ks.map(k => th(e(k), 1)).join('') + th('Gasto del año', 1) + th('Dep. acumulada al cierre del año', 1) + '</tr></thead><tbody>'
+        + D.anios.map(a => '<tr><td>' + a.y + (a.parcial ? ' (hasta ' + e(ppE.cierre) + ')' : '') + '</td>' + ks.map(k => '<td class="n">' + num(a.porK[k] || 0) + '</td>').join('') + '<td class="n">' + num(a.gasto) + '</td><td class="n">' + num(a.ac) + '</td></tr>').join('') + '</tbody></table></div>';
+      // 4. Por mes
+      const tm = D.meses.map((_, m) => R2(D.mm.reduce((a, r) => a + r.v[m], 0)));
+      h += cab('Gasto de depreciación por mes, año ' + D.Yc + ' (ref. ' + PP_REF.dep + ')') + ay('Gasto mensual por clasificación del año de la auditoría, hasta el mes del corte. Sirve para compararlo con el gasto registrado mes a mes en el mayor.');
+      h += '<div class="v2r-tw" style="margin-bottom:18px"><table class="v2r-t"><thead><tr>' + th('Clasificación') + D.meses.map(m => th(m, 1)).join('') + th('Total del año', 1) + '</tr></thead><tbody>'
+        + D.mm.map(r => '<tr><td>' + e(r.k) + '</td>' + r.v.map(v => '<td class="n">' + num(v) + '</td>').join('') + '<td class="n">' + num(r.t) + '</td></tr>').join('')
+        + '<tr class="tot"><td>Total</td>' + tm.map(v => '<td class="n">' + num(v) + '</td>').join('') + '<td class="n">' + num(R2(tm.reduce((a, b) => a + b, 0))) + '</td></tr></tbody></table></div>';
+      return h;
+    }
+    function ppCuaPrepend() {
+      const c = $im('nm-panel'); if (!c || nmE.tab !== 'cuadres' || !nmE.cliente) return;
+      c.innerHTML = '<div style="padding:4px 2px">' + ppCuadresHtml() + '</div>' + c.innerHTML;
+    }
+    // Excel con carátula y una hoja por cuadro
+    async function ppExcel() {
+      if (!window.ExcelJS) { alert('No se pudo cargar el generador de Excel. Revisa tu conexión a internet.'); return; }
+      const D = ppDatos(); if (!D) { alert('No hay activos para descargar.'); return; }
+      const sel = document.getElementById('nm-cliente'), cli = ((sel && sel.selectedOptions[0] || {}).textContent || '').trim() || String(nmE.cliente || '');
+      const dCar = { titulo: 'Anexo de propiedad, planta y equipo', cuenta: (NM_CTX.ref || '') + ' · Propiedad, planta y equipo', ref: 'Anexo de propiedad, planta y equipo (' + PP_REF.anexo + ')', cliente: cli, anioVisita: nmE.anio + ' · ' + nmE.visita, fechaCorte: pcFechaLarga(ppE.cierre), fechaAnalisis: pcFechaCorta(new Date()), elaboro: (typeof nombreUsuarioActivo === 'function' && nombreUsuarioActivo()) || '', reviso: 'Pendiente de revisión', objetivo: 'Comprobar el costo, la depreciación acumulada y el gasto de depreciación de propiedad, planta y equipo contra las sumarias AO y AOO.', procedimiento: '', fuente: ppE.archivo || '', responsable: '', conclusion: '' };
+      Object.keys(dCar).forEach(k => { dCar[k] = ptLimpiaTexto(dCar[k]); });
+      try {
+        const NAVY = 'FF0B2C4D', GRIS = 'FFD9D9D9', TOT = 'FFF1F5F9', FN = '#,##0.00;[Red]-#,##0.00', bd = { style: 'thin', color: { argb: 'FFCBD5E1' } }, bordes = { top: bd, left: bd, bottom: bd, right: bd };
+        const wb = new ExcelJS.Workbook(); wb.creator = 'MGI Guerra'; wb.created = new Date(); pcCaratulaExcel(wb, dCar);
+        const hoja = (nom, titulo, enc, filas, totales) => {
+          const ws = wb.addWorksheet(nom, { views: [{ showGridLines: false }], pageSetup: { orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 0 } });
+          ws.getCell('A1').value = titulo; ws.getCell('A1').font = { name: 'Calibri', size: 14, bold: true, underline: true, color: { argb: NAVY } }; ws.getRow(1).height = 28;
+          [['Cliente', cli], ['Año · visita', nmE.anio + ' · ' + nmE.visita], ['Fecha de corte', dCar.fechaCorte], ['Elaboró', dCar.elaboro], ['Revisó', dCar.reviso]].forEach(([a, b], q) => { const ca = ws.getCell(3 + q, 1), cb = ws.getCell(3 + q, 2); ca.value = a; ca.font = { bold: true, color: { argb: NAVY } }; cb.value = b; cb.alignment = { horizontal: 'left' }; });
+          const r0 = 9, all = [enc].concat(filas);
+          all.forEach((fl, q) => { const row = ws.getRow(r0 + q), esEnc = q === 0, esTot = totales && totales.includes(q - 1); fl.forEach((v, j) => { const x = row.getCell(j + 1); x.value = (v === '' || v === null || v === undefined) ? null : v; x.border = bordes; if (typeof v === 'number') { x.numFmt = (Number.isInteger(v) && j > 0 && esEnc === false && Math.abs(v) < 1000 && false) ? '0' : FN; x.alignment = { horizontal: 'right' }; } else x.alignment = { vertical: 'middle', horizontal: esEnc && j > 0 ? 'center' : 'left', wrapText: esEnc }; if (esEnc) { x.font = { bold: true, color: { argb: 'FF1F2937' } }; x.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: GRIS } }; } else if (esTot) { x.font = { bold: true }; x.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: TOT } }; } }); if (esEnc) row.height = 44; });
+          enc.forEach((_, j) => { let w = 11; filas.forEach(fl => { const v = fl[j]; if (v !== undefined && v !== null) w = Math.max(w, Math.min(48, String(typeof v === 'number' ? v.toFixed(2) : v).length + 3)); }); ws.getColumn(j + 1).width = w; });
+          ws.getColumn(1).width = Math.max(ws.getColumn(1).width, 30);
+          return ws;
+        };
+        const Yc = D.Yc;
+        const fa = D.items.map(x => [x.f.cod, x.f.cla, x.f.nom, x.f.det, x.f.est, ppN(x.f.cmp), obFecha(x.f.fcm), x.f.rev === '' ? null : ppN(x.f.rev), obFecha(x.f.frv), ppN(x.f.res), ppN(x.f.vid), obFecha(x.f.fid), x.r.bruto, x.r.ap, x.r.gasto, x.r.ac, x.r.neto, x.r.sis, x.r.dif, x.du ? 'Derecho de uso' : '']);
+        hoja('1. Anexo de activos', 'Anexo de propiedad, planta y equipo (' + PP_REF.anexo + ')', ['Código de activo', 'Clasificación', 'Nombre del activo', 'Detalle', 'Estado', 'Valor de compra', 'Fecha de compra', 'Valor de reavalúo', 'Fecha de reavalúo', 'Valor residual', 'Meses de vida útil', 'Fecha de inicio de depreciación', 'Valor bruto al corte', 'Dep. acumulada al 31-dic ' + (Yc - 1), 'Gasto de depreciación ' + Yc, 'Dep. acumulada al corte', 'Valor neto al corte', 'Dep. acumulada según el sistema', 'Diferencia (cálculo menos sistema)', 'Grupo'], fa);
+        const fc = D.clases.map(x => [x.k, x.n, x.bruto, x.balC, obR(x.bruto - x.balC), x.ac, x.balD, obR(x.ac - x.balD), x.neto, obR(x.balC - x.balD), x.costo.concat(x.dep).map(b => b.codigo).join(' · ')]);
+        D.sin.forEach(s => { const v = Math.abs(s.b.saldo); fc.push(['Cuenta del balance sin activos en el anexo: ' + s.b.codigo + ' ' + s.b.cuenta, null, 0, s.dep ? 0 : v, s.dep ? 0 : -v, 0, s.dep ? v : 0, s.dep ? -v : 0, 0, s.dep ? -v : v, s.b.codigo]); });
+        const T = D.tot; fc.push(['Total propiedad, planta y equipo (sumaria AO)', T.n, T.bruto, T.balC, obR(T.bruto - T.balC), T.ac, T.balD, obR(T.ac - T.balD), T.neto, obR(T.balC - T.balD), '']);
+        fc.push(['Activos por derecho de uso según el anexo', D.du.length, obR(D.du.reduce((a, x) => a + x.r.bruto, 0)), D.aooC, obR(D.du.reduce((a, x) => a + x.r.bruto, 0) - D.aooC), obR(D.du.reduce((a, x) => a + x.r.ac, 0)), D.aooD, obR(D.du.reduce((a, x) => a + x.r.ac, 0) - D.aooD), null, null, 'Sumaria AOO']);
+        hoja('2. Cuadre con sumarias', 'Cuadre con las sumarias AO y AOO (' + PP_REF.cuadre + ')', ['Clasificación', 'Activos', 'Costo según anexo', 'Costo según balance', 'Diferencia', 'Dep. acumulada según anexo', 'Dep. acumulada según balance', 'Diferencia', 'Valor neto según anexo', 'Valor neto según balance', 'Cuentas del balance'], fc, [fc.length - 2]);
+        const ks = D.clases.map(x => x.k);
+        hoja('3. Depreciación por año', 'Depreciación por año (' + PP_REF.dep + ')', ['Año'].concat(ks, ['Gasto del año', 'Dep. acumulada al cierre del año']), D.anios.map(a => [String(a.y) + (a.parcial ? ' (hasta ' + ppE.cierre + ')' : '')].concat(ks.map(k => a.porK[k] || 0), [a.gasto, a.ac])));
+        const tm = D.meses.map((_, m) => obR(D.mm.reduce((a, r) => a + r.v[m], 0)));
+        hoja('4. Depreciación por mes', 'Gasto de depreciación por mes, año ' + Yc + ' (' + PP_REF.dep + ')', ['Clasificación'].concat(D.meses, ['Total del año']), D.mm.map(r => [r.k].concat(r.v, [r.t])).concat([['Total'].concat(tm, [obR(tm.reduce((a, b) => a + b, 0))])]), [D.mm.length]);
+        const buf = await wb.xlsx.writeBuffer();
+        ptBajarArchivo(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), ('Anexo propiedad planta y equipo - ' + cli + '.xlsx').replace(/[\\\/:*?"<>|\r\n\t]/g, '-').replace(/\s+/g, ' '));
+      } catch (er) { console.error('Excel de PPE:', er); alert('No se pudo generar el Excel: ' + (er.message || er)); }
+    }
+    async function abrirPpe() { nmUsarContexto('ppe'); return abrirNomina(true); }
     async function abrirObligaciones() { nmUsarContexto('obligaciones'); return abrirNomina(true); }
     async function abrirGastos() { nmUsarContexto('gastos'); return abrirNomina(true); }
     async function abrirImpuestos() { nmUsarContexto('impuestos'); return abrirNomina(true); }
@@ -20429,6 +20738,7 @@ ${cont.innerHTML}
       nmConcCargar();
       if (NM_CTX.hoja === 'gastos') gaCargar();
       if (NM_CTX.hoja === 'obligaciones') obCargar();
+      if (NM_CTX.hoja === 'ppe') ppCargar();
     }
     // Si la referencia no está tal cual en la base de normas (p. ej. "NIC 2.9 y 2.36"), la arma desde sus partes
     function nmArmarChips(txt) {
@@ -20466,6 +20776,7 @@ ${cont.innerHTML}
       if (nmE.tab === 'subir') { nmSubirPintar(); return; }
       if (nmE.tab === 'f104' && NM_CTX.hoja === 'impuestos') { f104Pintar(); return; }
       if (nmE.tab === 'anexos' && NM_CTX.hoja === 'obligaciones') { obPintar(); return; }
+      if (nmE.tab === 'anexos' && NM_CTX.hoja === 'ppe') { ppPintar(); return; }
       if (NM_CTX.hoja === 'gastos') { if (nmE.tab === 'validacion') gaValPintar(); else gaResPintar(); return; }
       if (nmE.tab === 'resultado') { nmResPintar(); return; }
       if (nmE.tab === 'cuadres') { nmCuaPintar(); return; }
@@ -22067,7 +22378,7 @@ ${cont.innerHTML}
       const th = (t, d) => '<th' + (d ? ' style="text-align:right"' : '') + '>' + t + '</th>';
       return cab + ayuda + '<div class="v2r-tw" style="margin-bottom:18px"><table class="v2r-t"><thead><tr><th>Cuenta</th><th>Nombre</th>' + th('Saldo inicial', 1) + th('(+) Préstamos recibidos', 1) + th('(−) Pagos de capital', 1) + th('(+) Intereses devengados', 1) + th('(−) Intereses pagados', 1) + th('Saldo final según mayor', 1) + th('Saldo según balance', 1) + th('Diferencia', 1) + '</tr></thead><tbody>' + tb + ult + '</tbody></table></div>';
     }
-    function nmCuaPintar() { nmCuaPintarBase(); if (NM_CTX.hoja === 'obligaciones') obMovPrepend(); }
+    function nmCuaPintar() { nmCuaPintarBase(); if (NM_CTX.hoja === 'obligaciones') obMovPrepend(); if (NM_CTX.hoja === 'ppe') ppCuaPrepend(); }
     function obMovPrepend() {
       const c = $im('nm-panel'); if (!c || nmE.tab !== 'cuadres' || !nmE.cliente) return;
       if (!obE.cargado || !obE.gi || !obE.gi.cargado) { c.innerHTML = '<div style="padding:4px 2px">' + obMovHtml() + '</div>' + c.innerHTML; return; }
