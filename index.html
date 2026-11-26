@@ -21944,6 +21944,7 @@ ${cont.innerHTML}
       }
       return out;
     }
+    function obMovNota(k) { const M = obE.mov; if (!M) return; M.nota = M.nota || {}; M.nota[k] = !M.nota[k]; nmCuaPintar(); }
     async function obMovVer(cod) {
       const M = obE.mov; if (!M) return; M.ver[cod] = !M.ver[cod];
       if (M.ver[cod] && !M.det[cod]) {
@@ -22022,6 +22023,7 @@ ${cont.innerHTML}
       const grupos = [['corto', 'Corto plazo (sumaria PB)'], ['largo', 'Largo plazo (sumaria PK)'], ['interes', 'Intereses por pagar (si hay registro)']];
       const NC = 10, sumar = (fs, k) => R2(fs.reduce((a, x) => a + (Number(x[k]) || 0), 0));
       let tb = '', tot = { ini: 0, cre: 0, deb: 0, fin: 0, bal: 0 }, nCap = 0;
+      const notaBtn = (k, t) => '<button type="button" class="v2r-i" style="color:#b45309" onclick="obMovNota(\'' + e(k) + '\')" title="' + e(t) + '">' + IC_OJO + '</button>', notaOn = k => !!(M.nota && M.nota[k]);
       const btn = c => '<button type="button" class="v2r-i" onclick="obMovVer(\'' + e(c) + '\')" title="Ver el movimiento por préstamo y sus pagos">' + IC_OJO + '</button>';
       grupos.forEach(([k, tit]) => {
         const fs = M.filas.filter(x => x.grupo === k); if (!fs.length) return;
@@ -22030,8 +22032,8 @@ ${cont.innerHTML}
           const esInt = k === 'interes', dif = (x.fin !== null && x.bal !== null) ? R2(x.fin - x.bal) : null;
           let xcre = x.cre, xdeb = x.deb, par = null;
           if (esInt && M.det[x.cod] && M.det[x.cod].lineas) { par = obMovPares(M.det[x.cod].lineas); if (par.n && x.cre !== null) { xcre = R2(x.cre - par.monto); xdeb = R2(x.deb - par.monto); } }
-          tb += '<tr><td>' + e(x.cod) + btn(x.cod) + '</td><td>' + e(x.nom || '') + '</td><td class="n">' + num(x.ini) + '</td><td class="n">' + (esInt ? num(null) : num(x.cre)) + '</td><td class="n">' + (esInt ? num(null) : num(x.deb)) + '</td><td class="n">' + (esInt ? num(xcre) : num(null)) + '</td><td class="n">' + (esInt ? num(xdeb) : num(null)) + '</td><td class="n">' + num(x.fin) + '</td><td class="n">' + num(x.bal) + '</td><td class="n" style="' + (dif !== null && Math.abs(dif) > NMC_TOL ? 'color:#b42318;font-weight:700' : '') + '">' + num(dif) + '</td></tr>';
-          if (par && par.n) tb += '<tr><td colspan="' + NC + '" style="white-space:normal;font-size:11px;color:#6b6b63;padding-left:26px">Se anulan entre sí ' + fmE(par.monto) + ' (registro y reverso de la misma cantidad: ' + par.fechas.map(e).join('; ') + '); no se cuentan como intereses devengados ni como pagos.</td></tr>';
+          tb += '<tr><td>' + e(x.cod) + btn(x.cod) + (par && par.n ? notaBtn('par' + x.cod, 'Ver qué asientos se anulan entre sí') : '') + '</td><td>' + e(x.nom || '') + '</td><td class="n">' + num(x.ini) + '</td><td class="n">' + (esInt ? num(null) : num(x.cre)) + '</td><td class="n">' + (esInt ? num(null) : num(x.deb)) + '</td><td class="n">' + (esInt ? num(xcre) : num(null)) + '</td><td class="n">' + (esInt ? num(xdeb) : num(null)) + '</td><td class="n">' + num(x.fin) + '</td><td class="n">' + num(x.bal) + '</td><td class="n" style="' + (dif !== null && Math.abs(dif) > NMC_TOL ? 'color:#b42318;font-weight:700' : '') + '">' + num(dif) + '</td></tr>';
+          if (par && par.n && notaOn('par' + x.cod)) tb += '<tr><td colspan="' + NC + '" style="white-space:normal;font-size:11px;color:#6b6b63;padding-left:26px">Se anulan entre sí ' + fmE(par.monto) + ' (registro y reverso de la misma cantidad: ' + par.fechas.map(e).join('; ') + '); no se cuentan como intereses devengados ni como pagos.</td></tr>';
           if (M.ver[x.cod]) {
             const d = M.det[x.cod]; let h;
             if (!d || d.cargando) h = 'Cargando los asientos…';
@@ -22055,7 +22057,7 @@ ${cont.innerHTML}
       let dAnx = 0, gAnx = 0, hayG = false, ycM = Number(String(obE.cierre || '').slice(0, 4));
       obE.filas.forEach((f, i) => { const D = obDevengadoAnio(f, 0), G = obGastoFila(f, i); if (D) dAnx += D.v; if (G.reg !== null) { gAnx += G.reg; hayG = true; } });
       const concInt = '<tr><td colspan="7">Intereses devengados ' + ycM + ' de todos los préstamos del anexo (cuadro de Anexos y cálculos)</td><td class="n">' + fmE(R2(dAnx)) + '</td><td></td><td></td></tr>'
-        + (hayG ? '<tr><td colspan="7">Gasto de intereses registrado en el mayor de esos préstamos</td><td class="n">' + fmE(R2(gAnx)) + '</td><td></td><td class="n" style="' + (Math.abs(R2(gAnx - dAnx)) > NMC_TOL ? 'color:#b42318;font-weight:700' : 'color:#1d6b3a;font-weight:700') + '">' + fmE(R2(gAnx - dAnx)) + '</td></tr><tr><td colspan="10" style="white-space:normal;color:#6b6b63;font-size:11px">Una diferencia negativa significa que el gasto registrado es menor al devengado (falta registrar intereses); positiva, que el gasto lo supera. El detalle por préstamo está en el ojito de la tabla de Anexos y cálculos.</td></tr>' : '');
+        + (hayG ? '<tr><td colspan="7">Gasto de intereses registrado en el mayor de esos préstamos' + notaBtn('dif', 'Cómo leer la diferencia') + '</td><td class="n">' + fmE(R2(gAnx)) + '</td><td></td><td class="n" style="' + (Math.abs(R2(gAnx - dAnx)) > NMC_TOL ? 'color:#b42318;font-weight:700' : 'color:#1d6b3a;font-weight:700') + '">' + fmE(R2(gAnx - dAnx)) + '</td></tr>' + (notaOn('dif') ? '<tr><td colspan="10" style="white-space:normal;color:#6b6b63;font-size:11px">Una diferencia negativa significa que el gasto registrado es menor al devengado (falta registrar intereses); positiva, que el gasto lo supera. El detalle por préstamo está en el ojito de la tabla de Anexos y cálculos.</td></tr>' : '') : '');
       const ult = concInt + '<tr><td colspan="7">Capital al cierre según el anexo de créditos (pestaña Anexos y cálculos: ' + obE.filas.filter(f => Number(f.cap) > 0).length + ' crédito(s) vigente(s))</td><td class="n">' + fmE(T.cap) + '</td><td></td><td class="n" style="' + (malAn ? 'color:#b42318;font-weight:700' : 'color:#1d6b3a;font-weight:700') + '">' + fmE(dAn) + '</td></tr>'
         + '<tr><td colspan="10" style="white-space:normal;color:' + (malAn ? '#b42318' : '#1d6b3a') + ';font-weight:600">' + (malAn ? 'El capital del mayor no coincide con el anexo: probablemente falta algún crédito en el anexo (o sobra uno). Revisa los asientos de préstamos con el ojito antes de calcular el devengo de intereses.' : 'Cuadra: el capital del mayor coincide con los créditos del anexo.') + '</td></tr>'
         + (gasto !== null ? '<tr><td colspan="7">Gasto de intereses del período registrado (cuentas marcadas en Anexos y cálculos)</td><td class="n">' + fmE(gasto) + '</td><td></td><td></td></tr>' : '');
