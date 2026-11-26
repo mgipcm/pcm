@@ -21887,12 +21887,53 @@ ${cont.innerHTML}
       }
       nmCuaPintar();
     }
+    // Separa el movimiento de una cuenta de capital por préstamo: saldo inicial y cada préstamo recibido; los pagos se aplican al préstamo más antiguo que siga abierto
+    function obMovPrestamos(cta, lineas) {
+      const R2 = obR, tr = [];
+      if ((cta.ini || 0) > 0.005) tr.push({ tipo: 'inicial', fecha: '', monto: R2(cta.ini), rest: R2(cta.ini), pagos: [], con: '' });
+      const ev = lineas.map((l, i) => ({ ...l, f: obFecha(l.fecha), i })).sort((a, b) => (a.f || '').localeCompare(b.f || '') || ((a.cre > 0 ? 0 : 1) - (b.cre > 0 ? 0 : 1)) || a.i - b.i);
+      const sin = { pagos: [], monto: 0 };
+      ev.forEach(l => {
+        if (l.cre > 0) { tr.push({ tipo: 'credito', fecha: l.f, monto: R2(l.cre), rest: R2(l.cre), pagos: [], con: l.con }); }
+        if (l.deb > 0) {
+          let r = l.deb;
+          tr.filter(t => t.rest > 0.005 && (t.tipo === 'inicial' || t.fecha <= l.f)).forEach(t => {
+            if (r <= 0.005) return; const x = Math.min(r, t.rest); t.rest = R2(t.rest - x); r = R2(r - x);
+            t.pagos.push({ fecha: l.fecha, con: l.con, v: R2(x), saldo: t.rest, parcial: x < l.deb - 0.005 });
+          });
+          if (r > 0.005) { sin.pagos.push({ fecha: l.fecha, con: l.con, v: R2(r) }); sin.monto = R2(sin.monto + r); }
+        }
+      });
+      // ¿Está en el anexo de créditos?
+      const dias = (a, b) => Math.abs((new Date(a) - new Date(b)) / 86400000), y0 = (obE.cierre || '').slice(0, 4) + '-01-01';
+      tr.forEach(t => {
+        const m = obE.filas.find(f => { const ini = obFecha(f.ini); if (!ini) return false; return t.tipo === 'credito' ? dias(ini, t.fecha) <= 10 : ini < y0; });
+        t.anexo = m ? ((m.ent || '') + (m.op ? ', ' + m.op : '')) : null;
+      });
+      return { tr, sin };
+    }
+    function obMovPrestamosHtml(cta, lineas) {
+      const e = escapeHtml, R2 = obR, P = obMovPrestamos(cta, lineas);
+      const fmE = n => Number(n).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      if (!P.tr.length && !P.sin.pagos.length) return '<span style="color:#9a9a92">Esta cuenta no tiene saldo inicial ni movimientos.</span>';
+      let h = '<div style="font-weight:700;margin:2px 0 4px">Movimiento por préstamo</div><table class="v2r-t" style="margin-bottom:6px"><thead><tr><th>Préstamo</th><th style="text-align:right">Saldo inicial</th><th style="text-align:right">Recibido en el año</th><th style="text-align:right">Pagos del año</th><th style="text-align:right">Saldo final</th><th>¿Está en el anexo de créditos?</th></tr></thead><tbody>';
+      P.tr.forEach(t => {
+        const pag = R2(t.pagos.reduce((a, x) => a + x.v, 0)), ini = t.tipo === 'inicial' ? t.monto : 0, rec = t.tipo === 'credito' ? t.monto : 0;
+        const nom = t.tipo === 'inicial' ? 'Saldo inicial (préstamos de años anteriores)' : 'Préstamo recibido el ' + e(t.fecha) + (t.con ? ' <span style="color:#6b6b63">(' + e(t.con) + ')</span>' : '');
+        const okA = t.anexo !== null, ven = t.rest > 0.005;
+        h += '<tr><td style="white-space:normal;font-weight:600">' + nom + '</td><td class="n">' + (ini ? fmE(ini) : '—') + '</td><td class="n">' + (rec ? fmE(rec) : '—') + '</td><td class="n">' + fmE(pag) + '</td><td class="n">' + fmE(t.rest) + '</td><td style="white-space:normal;color:' + (okA ? '#1d6b3a' : (ven ? '#b42318;font-weight:700' : '#6b6b63')) + '">' + (okA ? 'Sí: ' + e(t.anexo) : (ven ? 'No está en el anexo y queda saldo: agregarlo' : 'No está en el anexo (ya pagado)')) + '</td></tr>';
+        if (t.pagos.length) h += '<tr><td colspan="6" style="padding:2px 10px 8px 26px;background:#fafaf8;white-space:normal"><table class="v2r-t"><thead><tr><th>Fecha del pago</th><th>Concepto</th><th style="text-align:right">Pago aplicado a este préstamo</th><th style="text-align:right">Saldo del préstamo después del pago</th></tr></thead><tbody>' + t.pagos.map(x => '<tr><td style="white-space:nowrap">' + e(x.fecha) + '</td><td>' + e(x.con) + (x.parcial ? ' <span style="color:#6b6b63">(parte del asiento)</span>' : '') + '</td><td class="n">' + fmE(x.v) + '</td><td class="n">' + fmE(x.saldo) + '</td></tr>').join('') + '</tbody></table></td></tr>';
+      });
+      if (P.sin.pagos.length) h += '<tr><td colspan="6" style="color:#b42318;font-weight:700;white-space:normal">Pagos que no se pudieron asignar a ningún préstamo: ' + fmE(P.sin.monto) + ' (' + P.sin.pagos.map(x => e(x.fecha)).join(', ') + '). Falta un préstamo en el mayor o el saldo inicial no alcanza.</td></tr>';
+      h += '</tbody></table><div style="font-size:11px;color:#6b6b63">Los pagos se aplican primero al préstamo más antiguo que siga abierto. Si el cliente pagó varios préstamos a la vez, revisa el reparto.</div>';
+      return h;
+    }
     function obMovHtml() {
       const e = escapeHtml, M = obE.mov, R2 = obR;
       const fmE = n => Number(n).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
       const num = x => (x === null || x === undefined) ? '<span style="color:#cbd5e1">—</span>' : fmE(x);
       const cab = '<div class="v2r-h3" style="margin:6px 0 6px"><span>Movimiento de las obligaciones financieras (corto y largo plazo)</span></div>';
-      const ayuda = '<p style="font-size:12px;color:#6b6b63;line-height:1.6;margin:0 0 8px">Sale del mayor contable y del balance: saldo inicial, préstamos recibidos en el año, pagos, intereses y saldo final de cada cuenta de las sumarias PB (corto plazo) y PK (largo plazo), más las cuentas de intereses por pagar. Sirve para comprobar de primera mano que están todos los créditos antes de calcular el devengo de intereses. Con el ojito ves los asientos de préstamos y de pagos.</p>';
+      const ayuda = '<p style="font-size:12px;color:#6b6b63;line-height:1.6;margin:0 0 8px">Sale del mayor contable y del balance: saldo inicial, préstamos recibidos en el año, pagos, intereses y saldo final de cada cuenta de las sumarias PB (corto plazo) y PK (largo plazo), más las cuentas de intereses por pagar. Sirve para comprobar de primera mano que están todos los créditos antes de calcular el devengo de intereses. Con el ojito de cada cuenta ves el movimiento separado por préstamo y a cuál corresponde cada pago.</p>';
       if (!M || !M.cargado) return cab + ayuda + '<p class="text-xs text-slate-500" style="margin-bottom:14px">Cargando el movimiento…</p>';
       if (M.msg) return cab + ayuda + '<p style="font-size:12px;color:#b42318;margin-bottom:14px">' + e(M.msg) + '</p>';
       if (!M.ids.length) return cab + ayuda + '<p style="font-size:12px;color:#b45309;margin-bottom:14px">No hay mayor contable cargado para este cliente, año y visita. Cárgalo en la pantalla Mayor contable para ver el movimiento.</p>';
@@ -21900,7 +21941,7 @@ ${cont.innerHTML}
       const grupos = [['corto', 'Corto plazo (sumaria PB)'], ['largo', 'Largo plazo (sumaria PK)'], ['interes', 'Intereses por pagar (si hay registro)']];
       const NC = 10, sumar = (fs, k) => R2(fs.reduce((a, x) => a + (Number(x[k]) || 0), 0));
       let tb = '', tot = { ini: 0, cre: 0, deb: 0, fin: 0, bal: 0 }, nCap = 0;
-      const btn = c => '<button type="button" class="v2r-i" onclick="obMovVer(\'' + e(c) + '\')" title="Ver los asientos de préstamos y de pagos">' + IC_OJO + '</button>';
+      const btn = c => '<button type="button" class="v2r-i" onclick="obMovVer(\'' + e(c) + '\')" title="Ver el movimiento por préstamo y sus pagos">' + IC_OJO + '</button>';
       grupos.forEach(([k, tit]) => {
         const fs = M.filas.filter(x => x.grupo === k); if (!fs.length) return;
         tb += '<tr><td colspan="' + NC + '" style="font-weight:700;background:#f7f7f4">' + tit + '</td></tr>';
@@ -21914,7 +21955,7 @@ ${cont.innerHTML}
             else {
               const lst = (tit2, arr, key) => { const t = R2(arr.reduce((a, l) => a + l[key], 0)); return '<div style="font-weight:700;margin:6px 0 2px">' + tit2 + ' (' + arr.length + ' asiento' + (arr.length === 1 ? '' : 's') + ', total ' + fmE(t) + ')</div>' + (arr.length ? '<table class="v2r-t" style="margin-bottom:4px"><thead><tr><th>Fecha</th><th>Tercero</th><th>Concepto</th><th style="text-align:right">Valor</th></tr></thead><tbody>' + arr.slice(0, 80).map(l => '<tr><td style="white-space:nowrap">' + e(l.fecha) + '</td><td>' + e(l.ter) + '</td><td>' + e(l.con) + '</td><td class="n">' + fmE(l[key]) + '</td></tr>').join('') + '</tbody></table>' + (arr.length > 80 ? '<div style="font-size:11px;color:#6b6b63">Se muestran los primeros 80 asientos.</div>' : '') : '<div style="color:#9a9a92">Ninguno.</div>'); };
               const cr = d.lineas.filter(l => l.cre > 0), db = d.lineas.filter(l => l.deb > 0);
-              h = lst(esInt ? 'Intereses devengados (créditos)' : 'Préstamos recibidos (créditos)', cr, 'cre') + lst(esInt ? 'Intereses pagados (débitos)' : 'Pagos (débitos)', db, 'deb');
+              h = esInt ? lst('Intereses devengados (créditos)', cr, 'cre') + lst('Intereses pagados (débitos)', db, 'deb') : obMovPrestamosHtml(x, d.lineas);
             }
             tb += '<tr><td colspan="' + NC + '" style="padding:6px 14px;background:#fff;white-space:normal;font-size:12px">' + h + '</td></tr>';
           }
