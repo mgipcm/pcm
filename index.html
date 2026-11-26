@@ -20055,7 +20055,7 @@ ${cont.innerHTML}
     }
     async function obCargar() {
       const cli = nmE.cliente, anio = Number(nmE.anio), vis = nmE.visita; const id = ++obE.cargaId;
-      Object.assign(obE, { cargado: false, filas: [], libros: null, bal: { PB: null, PK: null }, msg: '', archivo: '', gi: { cargado: false, cand: [], sel: {}, filtro: '', intTab: null, canc: [], man: {}, lineas: [], ids: [], msg: '' } });
+      Object.assign(obE, { cargado: false, filas: [], libros: null, bal: { PB: null, PK: null }, msg: '', archivo: '', mov: null, gi: { cargado: false, cand: [], sel: {}, filtro: '', intTab: null, canc: [], man: {}, lineas: [], ids: [], msg: '' } });
       if (!cli) return;
       obE.cierre = ($im('nm-fecha') || {}).value || (vis === 'final' ? anio + '-12-31' : anio + '-09-30');
       const [r1, r2] = await Promise.all([
@@ -20265,6 +20265,7 @@ ${cont.innerHTML}
         await obGiLineas(id);
       } catch (er) { g.msg = 'No se pudo cargar el análisis de intereses: ' + (er.message || er); g.cargado = true; }
       if (nmE.tab === 'anexos') obPintar();
+      if (nmE.tab === 'cuadres') nmCuaPintar();
     }
     async function obGiLineas(id) {
       const g = obE.gi; g.lineas = [];
@@ -21840,7 +21841,105 @@ ${cont.innerHTML}
       const carC = await nmCaratulaDatos(($im('nm-cliente').selectedOptions[0] || {}).textContent || nmE.cliente, 'Consolidado de gastos de nómina');
       try { await arrXlsxConFormato(hojas, 'Consolidado de gastos de nómina', 'Consolidado_nomina_' + String(nmE.cliente).replace(/[^A-Za-z0-9]+/g, '_') + '_' + nmE.anio + '.xlsx', carC); } catch (er) { alert('No se pudo armar el Excel: ' + (er.message || er)); }
     }
-    function nmCuaPintar() { nmCuaPintarBase(); }
+    // ----- Movimiento de las obligaciones financieras (corto y largo plazo) desde el mayor: valida que estén todos los créditos -----
+    async function obMovCargar() {
+      const cli = nmE.cliente, anio = Number(nmE.anio), vis = nmE.visita, g = obE.gi, id = obE.cargaId;
+      obE.mov = { cargado: false, filas: [], ids: g.ids || [], msg: '', ver: {}, det: {} };
+      const M = obE.mov;
+      try {
+        if (!cli) return;
+        const bal = await f104Pag(() => supabaseClient.from('balance_comprobacion').select('sumaria, codigo, cuenta, saldo').eq('cliente_id', cli).eq('anio', anio).eq('visita', vis).in('sumaria', ['PB', 'PK']));
+        const cuentas = {};
+        bal.forEach(b => { const c = String(b.codigo || '').trim(); if (!c) return; const k = String(b.sumaria).trim().toUpperCase(); cuentas[c] = cuentas[c] || { cod: c, nom: b.cuenta, grupo: k === 'PK' ? 'largo' : 'corto', bal: 0, enBal: true }; cuentas[c].bal += Number(b.saldo) || 0; });
+        let may = [];
+        if (M.ids.length) {
+          const cods = Object.keys(cuentas);
+          if (cods.length) may = may.concat(await f104Pag(() => supabaseClient.from('mayor_resumen_cuentas').select('cuenta, nombre, saldo_inicial, debitos, creditos, saldo_final, archivo_id').in('archivo_id', M.ids).in('cuenta', cods)));
+          const ints = await f104Pag(() => supabaseClient.from('mayor_resumen_cuentas').select('cuenta, nombre, saldo_inicial, debitos, creditos, saldo_final, archivo_id').in('archivo_id', M.ids).like('cuenta', '2%').or('nombre.ilike.%inter%,nombre.ilike.%intrs%'));
+          ints.forEach(x => { const c = String(x.cuenta || '').trim(); if (!cuentas[c] && /inter|intrs/i.test(x.nombre || '') && /pagar|prest|ptmo|financ|bancar|obligac/i.test(x.nombre || '')) { cuentas[c] = { cod: c, nom: x.nombre, grupo: 'interes', bal: null, enBal: false }; may.push(x); } });
+        }
+        if (obE.cargaId !== id) return;
+        Object.values(cuentas).forEach(c => {
+          const m = may.filter(x => String(x.cuenta).trim() === c.cod), sum = k => m.reduce((a, x) => a + (Number(x[k]) || 0), 0);
+          if (m.length) { c.ini = obR(-sum('saldo_inicial')); c.deb = obR(sum('debitos')); c.cre = obR(sum('creditos')); c.fin = obR(-sum('saldo_final')); if (!c.nom) c.nom = m[0].nombre; }
+          else { c.ini = c.deb = c.cre = c.fin = null; }
+          if (c.bal !== null) c.bal = obR(-c.bal);
+          if (c.grupo !== 'interes' && /inter|intrs/i.test(c.nom || '') && /pagar/i.test(c.nom || '')) c.grupo = 'interes';
+        });
+        M.filas = Object.values(cuentas).sort((a, b) => a.cod.localeCompare(b.cod));
+        M.cargado = true;
+      } catch (er) { M.msg = 'No se pudo armar el movimiento: ' + (er.message || er); M.cargado = true; }
+      if (nmE.tab === 'cuadres') nmCuaPintar();
+    }
+    async function obMovVer(cod) {
+      const M = obE.mov; if (!M) return; M.ver[cod] = !M.ver[cod];
+      if (M.ver[cod] && !M.det[cod]) {
+        M.det[cod] = { cargando: true }; nmCuaPintar();
+        try {
+          const out = [];
+          for (const a of M.ids) {
+            const r = await supabaseClient.rpc('mayor_lineas_cuenta_app', { p_archivo: a, p_cuenta: cod, p_filtro: null, p_limite: 2000 });
+            if (r.error) throw r.error;
+            (r.data || []).forEach(x => { const q = String(x.linea || '').split(';'); if (!String(q[3] || '').trim()) return; const d = obGiNum(q[14]), h = obGiNum(q[15]); out.push({ fecha: String(q[3]).trim(), ter: String(q[6] || '').trim(), con: String(q[10] || '').trim(), deb: isNaN(d) ? 0 : d, cre: isNaN(h) ? 0 : h }); });
+          }
+          M.det[cod] = { lineas: out };
+        } catch (er) { M.det[cod] = { error: String(er.message || er) }; }
+      }
+      nmCuaPintar();
+    }
+    function obMovHtml() {
+      const e = escapeHtml, M = obE.mov, R2 = obR;
+      const fmE = n => Number(n).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      const num = x => (x === null || x === undefined) ? '<span style="color:#cbd5e1">—</span>' : fmE(x);
+      const cab = '<div class="v2r-h3" style="margin:6px 0 6px"><span>Movimiento de las obligaciones financieras (corto y largo plazo)</span></div>';
+      const ayuda = '<p style="font-size:12px;color:#6b6b63;line-height:1.6;margin:0 0 8px">Sale del mayor contable y del balance: saldo inicial, préstamos recibidos en el año, pagos, intereses y saldo final de cada cuenta de las sumarias PB (corto plazo) y PK (largo plazo), más las cuentas de intereses por pagar. Sirve para comprobar de primera mano que están todos los créditos antes de calcular el devengo de intereses. Con el ojito ves los asientos de préstamos y de pagos.</p>';
+      if (!M || !M.cargado) return cab + ayuda + '<p class="text-xs text-slate-500" style="margin-bottom:14px">Cargando el movimiento…</p>';
+      if (M.msg) return cab + ayuda + '<p style="font-size:12px;color:#b42318;margin-bottom:14px">' + e(M.msg) + '</p>';
+      if (!M.ids.length) return cab + ayuda + '<p style="font-size:12px;color:#b45309;margin-bottom:14px">No hay mayor contable cargado para este cliente, año y visita. Cárgalo en la pantalla Mayor contable para ver el movimiento.</p>';
+      if (!M.filas.length) return cab + ayuda + '<p style="font-size:12px;color:#6b6b63;margin-bottom:14px">El balance no tiene cuentas en las sumarias PB ni PK para este cliente, año y visita.</p>';
+      const grupos = [['corto', 'Corto plazo (sumaria PB)'], ['largo', 'Largo plazo (sumaria PK)'], ['interes', 'Intereses por pagar (si hay registro)']];
+      const NC = 10, sumar = (fs, k) => R2(fs.reduce((a, x) => a + (Number(x[k]) || 0), 0));
+      let tb = '', tot = { ini: 0, cre: 0, deb: 0, fin: 0, bal: 0 }, nCap = 0;
+      const btn = c => '<button type="button" class="v2r-i" onclick="obMovVer(\'' + e(c) + '\')" title="Ver los asientos de préstamos y de pagos">' + IC_OJO + '</button>';
+      grupos.forEach(([k, tit]) => {
+        const fs = M.filas.filter(x => x.grupo === k); if (!fs.length) return;
+        tb += '<tr><td colspan="' + NC + '" style="font-weight:700;background:#f7f7f4">' + tit + '</td></tr>';
+        fs.forEach(x => {
+          const esInt = k === 'interes', dif = (x.fin !== null && x.bal !== null) ? R2(x.fin - x.bal) : null;
+          tb += '<tr><td>' + e(x.cod) + btn(x.cod) + '</td><td>' + e(x.nom || '') + '</td><td class="n">' + num(x.ini) + '</td><td class="n">' + (esInt ? num(null) : num(x.cre)) + '</td><td class="n">' + (esInt ? num(null) : num(x.deb)) + '</td><td class="n">' + (esInt ? num(x.cre) : num(null)) + '</td><td class="n">' + (esInt ? num(x.deb) : num(null)) + '</td><td class="n">' + num(x.fin) + '</td><td class="n">' + num(x.bal) + '</td><td class="n" style="' + (dif !== null && Math.abs(dif) > NMC_TOL ? 'color:#b42318;font-weight:700' : '') + '">' + num(dif) + '</td></tr>';
+          if (M.ver[x.cod]) {
+            const d = M.det[x.cod]; let h;
+            if (!d || d.cargando) h = 'Cargando los asientos…';
+            else if (d.error) h = '<span style="color:#b42318">' + e(d.error) + '</span>';
+            else {
+              const lst = (tit2, arr, key) => { const t = R2(arr.reduce((a, l) => a + l[key], 0)); return '<div style="font-weight:700;margin:6px 0 2px">' + tit2 + ' (' + arr.length + ' asiento' + (arr.length === 1 ? '' : 's') + ', total ' + fmE(t) + ')</div>' + (arr.length ? '<table class="v2r-t" style="margin-bottom:4px"><thead><tr><th>Fecha</th><th>Tercero</th><th>Concepto</th><th style="text-align:right">Valor</th></tr></thead><tbody>' + arr.slice(0, 80).map(l => '<tr><td style="white-space:nowrap">' + e(l.fecha) + '</td><td>' + e(l.ter) + '</td><td>' + e(l.con) + '</td><td class="n">' + fmE(l[key]) + '</td></tr>').join('') + '</tbody></table>' + (arr.length > 80 ? '<div style="font-size:11px;color:#6b6b63">Se muestran los primeros 80 asientos.</div>' : '') : '<div style="color:#9a9a92">Ninguno.</div>'); };
+              const cr = d.lineas.filter(l => l.cre > 0), db = d.lineas.filter(l => l.deb > 0);
+              h = lst(esInt ? 'Intereses devengados (créditos)' : 'Préstamos recibidos (créditos)', cr, 'cre') + lst(esInt ? 'Intereses pagados (débitos)' : 'Pagos (débitos)', db, 'deb');
+            }
+            tb += '<tr><td colspan="' + NC + '" style="padding:6px 14px;background:#fff;white-space:normal;font-size:12px">' + h + '</td></tr>';
+          }
+          if (k !== 'interes') { nCap++; tot.ini += x.ini || 0; tot.cre += x.cre || 0; tot.deb += x.deb || 0; tot.fin += x.fin || 0; tot.bal += x.bal || 0; }
+        });
+        const cf = fs.filter(x => k !== 'interes');
+        if (k !== 'interes' && fs.length > 1) tb += '<tr class="tot"><td colspan="2">Subtotal ' + tit.toLowerCase() + '</td><td class="n">' + fmE(sumar(fs, 'ini')) + '</td><td class="n">' + fmE(sumar(fs, 'cre')) + '</td><td class="n">' + fmE(sumar(fs, 'deb')) + '</td><td></td><td></td><td class="n">' + fmE(sumar(fs, 'fin')) + '</td><td class="n">' + fmE(sumar(fs, 'bal')) + '</td><td></td></tr>';
+      });
+      tb += '<tr class="tot"><td colspan="2">Total del capital (corto y largo plazo)</td><td class="n">' + fmE(R2(tot.ini)) + '</td><td class="n">' + fmE(R2(tot.cre)) + '</td><td class="n">' + fmE(R2(tot.deb)) + '</td><td></td><td></td><td class="n">' + fmE(R2(tot.fin)) + '</td><td class="n">' + fmE(R2(tot.bal)) + '</td><td></td></tr>';
+      // Comprobación contra el anexo de créditos y gasto de intereses
+      const T = obTotales(), dAn = R2(tot.fin - T.cap), malAn = Math.abs(dAn) > NMC_TOL;
+      const g = obE.gi; let gasto = null; if (g && g.cargado && g.cand) { const sel = g.cand.filter(x => g.sel[x.cod]); if (sel.length) gasto = R2(sel.reduce((a, x) => a + (x.deb || 0) - (x.cre || 0), 0)); }
+      const ult = '<tr><td colspan="7">Capital al cierre según el anexo de créditos (pestaña Anexos y cálculos: ' + obE.filas.filter(f => Number(f.cap) > 0).length + ' crédito(s) vigente(s))</td><td class="n">' + fmE(T.cap) + '</td><td></td><td class="n" style="' + (malAn ? 'color:#b42318;font-weight:700' : 'color:#1d6b3a;font-weight:700') + '">' + fmE(dAn) + '</td></tr>'
+        + '<tr><td colspan="10" style="white-space:normal;color:' + (malAn ? '#b42318' : '#1d6b3a') + ';font-weight:600">' + (malAn ? 'El capital del mayor no coincide con el anexo: probablemente falta algún crédito en el anexo (o sobra uno). Revisa los asientos de préstamos con el ojito antes de calcular el devengo de intereses.' : 'Cuadra: el capital del mayor coincide con los créditos del anexo.') + '</td></tr>'
+        + (gasto !== null ? '<tr><td colspan="7">Gasto de intereses del período registrado (cuentas marcadas en Anexos y cálculos)</td><td class="n">' + fmE(gasto) + '</td><td></td><td></td></tr>' : '');
+      const th = (t, d) => '<th' + (d ? ' style="text-align:right"' : '') + '>' + t + '</th>';
+      return cab + ayuda + '<div class="v2r-tw" style="margin-bottom:18px"><table class="v2r-t"><thead><tr><th>Cuenta</th><th>Nombre</th>' + th('Saldo inicial', 1) + th('(+) Préstamos recibidos', 1) + th('(−) Pagos de capital', 1) + th('(+) Intereses devengados', 1) + th('(−) Intereses pagados', 1) + th('Saldo final según mayor', 1) + th('Saldo según balance', 1) + th('Diferencia', 1) + '</tr></thead><tbody>' + tb + ult + '</tbody></table></div>';
+    }
+    function nmCuaPintar() { nmCuaPintarBase(); if (NM_CTX.hoja === 'obligaciones') obMovPrepend(); }
+    function obMovPrepend() {
+      const c = $im('nm-panel'); if (!c || nmE.tab !== 'cuadres' || !nmE.cliente) return;
+      if (!obE.cargado || !obE.gi || !obE.gi.cargado) { c.innerHTML = '<div style="padding:4px 2px">' + obMovHtml() + '</div>' + c.innerHTML; return; }
+      if (!obE.mov) obMovCargar();
+      c.innerHTML = '<div style="padding:4px 2px">' + obMovHtml() + '</div>' + c.innerHTML;
+    }
     function nmCtaAlt(b) { const tr = b.closest('tr'); let n = tr && tr.nextElementSibling; if (n && n.classList.contains('v2r-exp')) n = n.nextElementSibling; if (n && n.classList.contains('nmc-cta')) { const ab = n.style.display === 'none'; n.style.display = ab ? '' : 'none'; const ch = b.querySelector('.nmc-chev2'); if (ch) ch.textContent = ab ? '▾' : '▸'; } }
     function nmGrpAlt(b, g) { const tb = b.closest('tbody'), rs = tb ? tb.querySelectorAll('tr.' + g) : []; if (!rs.length) return; const ab = rs[0].style.display === 'none'; rs.forEach(r => { r.style.display = ab ? '' : 'none'; }); }
     function nmCuaPintarBase() {
