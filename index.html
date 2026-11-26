@@ -16101,7 +16101,7 @@ ${cont.innerHTML}
     function flechasDesplazar(panelId, dir) {
       const pn = document.getElementById(panelId); if (!pn) return;
       const vh = window.innerHeight;
-      const anchas = [pn, ...pn.querySelectorAll('.overflow-x-auto, .overflow-auto')].filter(c => c.scrollWidth > c.clientWidth + 2);
+      const anchas = [pn, ...pn.querySelectorAll('.overflow-x-auto, .overflow-auto, .v2r-tw, [style*="overflow-x:auto"]')].filter(c => c.scrollWidth > c.clientWidth + 2);
       // Se mueven juntas todas las tablas anchas que se ven en pantalla, para que no queden desalineadas
       let uso = anchas.filter(c => { const r = c.getBoundingClientRect(); return Math.min(r.bottom, vh) - Math.max(r.top, 0) > 0; });
       if (!uso.length) uso = anchas.slice(0, 1);
