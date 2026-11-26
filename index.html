@@ -20150,10 +20150,48 @@ ${cont.innerHTML}
         + filaCua('Capital a largo plazo (sumaria PK)', T.largo, obE.bal.PK, '')
         + filaCua('Total de capital', T.cap, (obE.bal.PB === null && obE.bal.PK === null) ? null : obR((obE.bal.PB || 0) + (obE.bal.PK || 0)), '')
         + '<tr><td>Intereses devengados al cierre (anexo) contra intereses por pagar en libros</td><td class="n">' + obM(T.int) + '</td><td class="n"><input value="' + e(obE.libros === null ? '' : obM(obE.libros)) + '" onchange="obCab(\'libros\',this.value)" placeholder="Escribe el valor en libros" style="width:130px;text-align:right;border:0;border-bottom:1px solid #dcdcd6;background:transparent;font-size:12px"></td><td class="n" style="' + (obE.libros !== null && Math.abs(T.int - obE.libros) > 1 ? 'color:#b91c1c;font-weight:700' : '') + '">' + (obE.libros === null ? '' : obM(obR(T.int - obE.libros))) + '</td><td style="color:#6b6b63;white-space:normal">Tomar de la cuenta de intereses por pagar del mayor.</td></tr>'
-        + '</tbody></table></div>' + obGiHtml(T) + '</div>';
+        + '</tbody></table></div>' + obDevHtml() + obGiHtml(T) + '</div>';
       c.scrollTop = sc;
     }
 
+    // ----- Intereses devengados desde la fecha del préstamo contra el gasto registrado -----
+    function obClave(t) { return String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase(); }
+    function obPalabras(ent) { return obClave(ent).split(/[^a-z0-9]+/).filter(w => w.length >= 4 && !/^(banco|cooperativa|compania|ltda|s\.?a\.?|cia|sociedad|anonima|financiera|mutualista|corporacion)$/.test(w)); }
+    function obDevDesdeInicio(f, i) {
+      const cierre = obE.cierre, ini = obFecha(f.ini), cap = Number(f.cap) || 0, tasa = Number(f.tasa) || 0, base = obE.base || 360;
+      const capIni = (f.capIni === null || f.capIni === undefined || f.capIni === '') ? cap : (Number(f.capIni) || 0);
+      const prom = obR((capIni + cap) / 2);
+      let dias = 0; if (ini && cierre) dias = Math.max(0, Math.round((new Date(cierre) - new Date(ini)) / 86400000));
+      const dev = obR(prom * tasa / 100 * dias / base);
+      let reg = null, n = 0;
+      if (f.gasto !== null && f.gasto !== undefined && f.gasto !== '') reg = Number(f.gasto) || 0;
+      else if (obE.gi && obE.gi.cargado && obE.gi.lineas.length && ini) {
+        const pal = obPalabras(f.ent); let sum = 0;
+        if (pal.length) obE.gi.lineas.forEach(l => {
+          const fe = obFecha(l.fecha); if (!fe || fe < ini || (cierre && fe > cierre)) return;
+          const t = obClave(l.ter + ' ' + l.con); if (!pal.some(w => t.indexOf(w) >= 0)) return;
+          if (!obGiIncluye(l)) return; sum += l.deb - l.cre; n++;
+        });
+        if (n) reg = obR(sum);
+      }
+      return { ini, dias, capIni, prom, dev, reg, n, manual: f.gasto !== null && f.gasto !== undefined && f.gasto !== '' };
+    }
+    function obSetX(i, k, v) { const f = obE.filas[i]; if (!f) return; f[k] = String(v).trim() === '' ? null : obNum(v); obGuardar(); obPintar(); }
+    function obDevHtml() {
+      const e = escapeHtml; if (!obE.filas.length) return '';
+      let tD = 0, tR = 0, hayR = false;
+      const fl = obE.filas.map((f, i) => {
+        const x = obDevDesdeInicio(f, i); tD += x.dev; if (x.reg !== null) { tR += x.reg; hayR = true; }
+        const d = x.reg === null ? null : obR(x.reg - x.dev), mal = d !== null && Math.abs(d) > 1;
+        const inp = (k, v, w) => '<input value="' + e(v === null || v === undefined ? '' : obM(v)) + '" onchange="obSetX(' + i + ',\'' + k + '\',this.value)" style="width:' + w + 'px;text-align:right;" class="ob-i">';
+        return '<tr><td class="ob-c">' + (i + 1) + '</td><td>' + e(f.ent) + '</td><td>' + e(x.ini) + '</td><td class="n">' + (Number(f.tasa) || 0) + '</td><td class="n">' + inp('capIni', f.capIni, 96) + '</td><td class="n">' + obM(Number(f.cap) || 0) + '</td><td class="n">' + obM(x.prom) + '</td><td class="n">' + x.dias + '</td><td class="n">' + obM(x.dev) + '</td><td class="n">' + inp('gasto', x.reg, 96) + '</td><td class="n" style="' + (mal ? 'color:#b91c1c;font-weight:700' : '') + '">' + (d === null ? '' : obM(d)) + '</td><td style="color:#6b6b63;white-space:normal">' + (x.manual ? 'Valor escrito por el auditor.' : (x.reg === null ? 'Sin asientos de esta entidad desde el inicio; escribe el valor.' : x.n + ' asiento(s) del mayor desde el inicio.')) + '</td></tr>';
+      }).join('');
+      const td = hayR ? obR(tR - tD) : null;
+      return '<div class="ob-h">Intereses devengados desde la fecha del préstamo contra el gasto registrado</div>'
+        + '<p style="padding:0 14px 8px;font-size:12px;color:#6b6b63;line-height:1.6;margin:0">Para cada crédito se calcula el interés desde su fecha de inicio hasta el cierre: capital promedio × tasa × días ÷ base. El capital promedio es el punto medio entre el capital original y el capital al corte, porque el crédito va amortizando; si dejas vacío el capital original se usa el capital al corte. El gasto registrado sale de los asientos del mayor (cuentas marcadas más abajo) de esa entidad, desde su fecha de inicio. Es un cálculo de razonabilidad: si hay tabla de amortización, ella manda.</p>'
+        + '<div style="overflow-x:auto;padding:0 10px 14px"><table class="ob" style="min-width:900px"><thead><tr><th></th><th>Entidad</th><th>Inicio</th><th>Tasa %</th><th>Capital original</th><th>Capital al corte</th><th>Capital promedio</th><th>Días desde el inicio</th><th>Interés devengado desde el inicio</th><th>Gasto registrado en el mayor</th><th>Diferencia (gasto menos devengado)</th><th style="text-align:left">Nota</th></tr></thead><tbody>' + fl
+        + '<tr class="tot"><td></td><td colspan="7">Total</td><td class="n">' + obM(obR(tD)) + '</td><td class="n">' + (hayR ? obM(obR(tR)) : '') + '</td><td class="n" style="' + (td !== null && Math.abs(td) > 1 ? 'color:#b91c1c;font-weight:700' : '') + '">' + (td === null ? '' : obM(td)) + '</td><td style="color:#6b6b63;white-space:normal">' + (td === null ? '' : (Math.abs(td) <= 1 ? 'Cuadra.' : (td < 0 ? 'Falta registrar intereses (gasto menor al devengado).' : 'El gasto supera al devengado: revisar.'))) + '</td></tr></tbody></table></div>';
+    }
     // ----- Análisis del gasto de intereses (balance, mayor y anexo) -----
     function obGiGuardable() { const g = obE.gi; return { sel: Object.keys(g.sel).filter(k => g.sel[k]), filtro: g.filtro || '', intTab: g.intTab, canc: g.canc || [], man: g.man || {} }; }
     function obGiNum(t) { const x = String(t === undefined || t === null ? '' : t).trim().replace(/,/g, ''); if (x === '' || x === '-') return 0; return /^-?[0-9]*\.?[0-9]+$/.test(x) ? Number(x) : NaN; }
