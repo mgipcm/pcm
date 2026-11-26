@@ -20591,7 +20591,7 @@ ${cont.innerHTML}
         if (d && d.nota) obs.push(d.nota);
         const prob = (g.req && subido === 'no') || leido === 'parcial' || leido === 'no' || an === 'parcial' || an === 'no';
         if (prob) n++;
-        return { g, nf: f.length, ok, subido, leido, an, obs, prob };
+        return { g, nf: f.length, ok, subido, leido, an, obs, prob, nombres: f.map(a => a.nombre).filter(Boolean) };
       });
       return { filas, n, todo: todo.length, otros: arch.filter(a => a.etiqueta !== PC_TODO && !(grupos || []).some(g => g.et.includes(a.etiqueta))).length, hayRes: !!R, vacio: false };
     }
@@ -20628,7 +20628,7 @@ ${cont.innerHTML}
       const chip = (v, txt) => { const col = { si: '#15803d', parcial: '#b45309', no: '#b91c1c', junto: '#b45309', sd: '#64748b', pend: '#64748b' }[v] || '#64748b', t = txt || { si: 'Sí', parcial: 'Parcial', no: 'No', junto: 'Revisar', sd: 'Sin detalle', pend: 'Pendiente' }[v] || '—'; return '<span style="color:' + col + ';font-weight:600">' + t + '</span>'; };
       const celda = 'padding:3px 8px;border-bottom:1px solid #e5e7eb;vertical-align:top';
       const cuerpo = C.filas.map(r => '<tr><td style="' + celda + ';font-weight:600;color:#1e293b">' + e(r.g.n) + (r.g.req ? '' : ' <span style="font-weight:400;color:#94a3b8">(opcional)</span>') + '</td>' +
-        '<td style="' + celda + ';white-space:nowrap">' + chip(r.subido, r.subido === 'si' ? 'Sí (' + r.nf + ')' : '') + '</td>' +
+        '<td style="' + celda + ';white-space:nowrap">' + chip(r.subido, r.subido === 'si' ? 'Sí (' + r.nf + ')' : '') + (r.nombres && r.nombres.length ? r.nombres.map(n => '<div style="font-weight:400;font-size:11px;color:#64748b;white-space:normal;max-width:300px;word-break:break-word">' + e(n) + '</div>').join('') : '') + '</td>' +
         '<td style="' + celda + ';white-space:nowrap">' + (r.leido ? chip(r.leido, r.leido === 'si' ? 'Sí' : (r.leido === 'parcial' ? 'Parcial (' + r.ok + ' de ' + r.nf + ')' : 'No')) : '<span style="color:#cbd5e1">—</span>') + '</td>' +
         '<td style="' + celda + ';white-space:nowrap">' + (r.an ? chip(r.an) : '<span style="color:#cbd5e1">—</span>') + '</td>' +
         '<td style="' + celda + ';color:#475569">' + (r.obs.length ? e(r.obs.join(' ')) : '') + '</td></tr>').join('');
