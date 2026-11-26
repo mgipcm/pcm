@@ -19648,7 +19648,7 @@ ${cont.innerHTML}
         { n: 'Avalúos o informes de reavalúo', req: false, et: ['Informe de avalúo o reavalúo'] },
         { n: 'Pólizas de seguro y escrituras o matrículas', req: false, et: ['Póliza de seguro', 'Escritura o matrícula'] },
         { n: 'Actas de toma física', req: false, et: ['Acta de toma física de activos'] }
-      ], tabs: [['programa', 'Programa'], ['subir', 'Subir información'], ['resultado', 'Resultado del análisis – Claude'], ['anexos', 'Anexos y cálculos'], ['cuadres', 'Resumen de cuadres y cruces'], ['conclusiones', 'Conclusiones de la cuenta']], sum: 'AO', hoja: 'ppe', titulo: '2. AO Propiedad, planta y equipo', subtit: 'Análisis guiado por el programa de auditoría: Claude arma el anexo de activos fijos, recalcula la depreciación por año y por mes y la cuadra con las sumarias AO y AOO; el auditor revisa.', nombre: 'AO - Propiedad, planta y equipo', ref: 'AO · Propiedad, planta y equipo', corto: 'Propiedad, planta y equipo', txtSubir: 'Aquí se sube todo en un solo pedido: el anexo o listado de activos fijos del cliente (Excel), las facturas y contratos de las adiciones, las actas de baja o venta, los avalúos y lo que sirva para respaldar los saldos. El mayor contable se carga una sola vez en la pantalla Mayor contable.' };
+      ], tabs: [['programa', 'Programa'], ['subir', 'Subir información'], ['resultado', 'Resultado del análisis – Claude'], ['anexos', 'Anexos y cálculos'], ['cuadres', 'Resumen de cuadres y cruces'], ['conclusiones', 'Conclusiones de la cuenta']], sum: 'AO', hoja: 'ppe', titulo: '2. AO Propiedad, planta y equipo', subtit: 'Análisis guiado por el programa de auditoría: Claude arma el anexo de activos fijos, recalcula la depreciación por año y por mes y la cuadra con las sumaria AO; el auditor revisa.', nombre: 'AO - Propiedad, planta y equipo', ref: 'AO · Propiedad, planta y equipo', corto: 'Propiedad, planta y equipo', txtSubir: 'Aquí se sube todo en un solo pedido: el anexo o listado de activos fijos del cliente (Excel), las facturas y contratos de las adiciones, las actas de baja o venta, los avalúos y lo que sirva para respaldar los saldos. El mayor contable se carga una sola vez en la pantalla Mayor contable.' };
     let NM_CTX = NM_CFGS.nomina;
     const nmE = { cliente: '', anio: '', visita: '', procs: [], filas: {}, cargaId: 0, abiertos: {}, tab: 'programa', sv: null };
     const NM_TABS = [['programa', 'Programa'], ['subir', 'Subir información'], ['resultado', 'Resultado del análisis – Claude'], ['cuadres', 'Resumen de cuadres y cruces'], ['conclusiones', 'Conclusiones de la cuenta']];
@@ -20408,13 +20408,12 @@ ${cont.innerHTML}
     const PP_CUENTA = 'propiedad_planta_equipo';
     const ppE = { cargado: false, cargaId: 0, filas: [], cierre: '', bal: [], mapa: {}, msg: '', archivo: '', guardando: null, filtro: '', cla: '', pag: 0, ver: {} };
     const PP_COLS = [['cod', 'Código de activo'], ['cla', 'Clasificación (tipo de activo)'], ['nom', 'Nombre del activo'], ['det', 'Detalle'], ['est', 'Estado'], ['cmp', 'Valor de compra'], ['fcm', 'Fecha de compra'], ['rev', 'Valor de reavalúo'], ['frv', 'Fecha de reavalúo'], ['res', 'Valor residual'], ['vid', 'Meses de vida útil'], ['fid', 'Fecha de inicio de depreciación'], ['sis', 'Depreciación acumulada según el sistema (opcional)']];
-    const PP_REF = { anexo: 'AO-02', dep: 'AO-03', cuadre: 'AO-04', du: 'AOO' };
+    const PP_REF = { anexo: 'AO-02', dep: 'AO-03', cuadre: 'AO-04' };
     const PP_CSS = '.ob{border-collapse:collapse;font-size:12px;color:#2b2b27}.ob th{background:#fff;border:1px solid #dfdfdb;padding:4px 6px;font-weight:700;font-size:10.5px;text-align:center;line-height:1.25}.ob td{background:#f1f1ee;border:1px solid #e2e2dd;padding:1px 4px;white-space:nowrap}.ob td.n{text-align:right}.ob td.ob-c{text-align:center;color:#9a9a92;width:26px}.ob tr.tot td{font-weight:700;border-top:1px solid #cfcfc8;background:#fff}.ob-i{border:0;background:transparent;font-size:12px;padding:2px 2px;outline:none;color:#2b2b27}.ob-i:focus{background:#fff;box-shadow:inset 0 0 0 1px #c9c9c0;border-radius:3px}.ob-b{font-size:12px;font-weight:600;color:#4a4a44;border:1px solid #dcdcd6;border-radius:8px;padding:4px 10px;background:#fff}.ob-h{font-size:13px;font-weight:700;color:#2b2b27;padding:12px 14px 6px}';
     const ppN = v => { const n = obNum(v); return n === null ? 0 : n; };
     const ppF2 = n => Number(n).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     const ppClave = f => String(f.cla || '').trim().toUpperCase() || 'SIN CLASIFICACIÓN';
-    const ppEsDU = f => /derecho.*uso|niif ?16|arrendam/i.test(String(f.cla || ''));
-    // Meses depreciados hasta el fin del mes (Y, M): el mes de inicio se prorratea por días (mes de 30 días)
+        // Meses depreciados hasta el fin del mes (Y, M): el mes de inicio se prorratea por días (mes de 30 días)
     function ppUnidades(s, Y, M) { const sy = +s.slice(0, 4), sm = +s.slice(5, 7), sd = +s.slice(8, 10), m = (Y - sy) * 12 + (M - sm); return m < 0 ? 0 : m + (30 - Math.min(sd, 30) + 1) / 30; }
     // Depreciación acumulada al fin del mes (Y, M): línea recta sobre (costo − residual) ÷ meses de vida útil; con reavalúo, el saldo por depreciar se reparte en la vida restante
     function ppAcum(f, Y, M) {
@@ -20441,7 +20440,6 @@ ${cont.innerHTML}
       cs.forEach(c => c.st.forEach(s => { cuenta[s] = (cuenta[s] || new Set()).add(c.k); }));
       const porCta = {};
       ppE.bal.forEach(b => {
-        if (b.sumaria === 'AOO') return;
         const ov = ppE.mapa[b.codigo]; let k = null;
         if (ov !== undefined) k = ov === '-' ? null : ov;
         else { const as = stems(b.cuenta); let mejor = 0; cs.forEach(c => { const sc = c.st.filter(s => as.includes(s)).reduce((a, s) => a + 1 / cuenta[s].size, 0); if (sc > mejor + 1e-9 || (Math.abs(sc - mejor) < 1e-9 && sc > 0 && k && c.st.length < (cs.find(x => x.k === k) || { st: [] }).st.length)) { mejor = sc; k = c.k; } }); if (!mejor) k = null; }
@@ -20453,19 +20451,17 @@ ${cont.innerHTML}
     function ppDatos() {
       const c = ppE.cierre; if (!c || !ppE.filas.length) return null;
       const Yc = +c.slice(0, 4), Mc = +c.slice(5, 7), R = obR;
-      const items = ppE.filas.map((f, i) => ({ f, i, r: ppFila(f), k: ppClave(f), du: ppEsDU(f) }));
-      const ao = items.filter(x => !x.du), du = items.filter(x => x.du);
+      const items = ppE.filas.map((f, i) => ({ f, i, r: ppFila(f), k: ppClave(f) }));
+      const ao = items;
       const claves = [...new Set(ao.map(x => x.k))];
       const suma = (arr, g) => R(arr.reduce((a, x) => a + (g(x) || 0), 0));
       const porCta = ppMapaCuentas(claves);
-      const cuentas = ppE.bal.filter(b => b.sumaria !== 'AOO');
+      const cuentas = ppE.bal;
       const g = {};
       claves.forEach(k => { g[k] = { k, items: ao.filter(x => x.k === k), costo: [], dep: [] }; });
       const sin = [];
       cuentas.forEach(b => { const k = porCta[b.codigo]; const dep = b.saldo < 0 || /deprec|dep\./i.test(b.cuenta); if (k && g[k]) (dep ? g[k].dep : g[k].costo).push(b); else if (b.sumaria === 'AO') sin.push({ b, dep }); });
       const clases = Object.values(g).map(x => ({ ...x, n: x.items.length, bruto: suma(x.items, y => y.r.bruto), ap: suma(x.items, y => y.r.ap), gasto: suma(x.items, y => y.r.gasto), ac: suma(x.items, y => y.r.ac), neto: suma(x.items, y => y.r.neto), sis: x.items.every(y => y.r.sis === null) ? null : suma(x.items, y => y.r.sis), balC: R(x.costo.reduce((a, b) => a + b.saldo, 0)), balD: R(Math.abs(x.dep.reduce((a, b) => a + b.saldo, 0))) })).sort((a, b) => b.bruto - a.bruto);
-      const aoo = ppE.bal.filter(b => b.sumaria === 'AOO');
-      const aooC = R(aoo.filter(b => !(b.saldo < 0 || /deprec|dep\./i.test(b.cuenta))).reduce((a, b) => a + b.saldo, 0)), aooD = R(Math.abs(aoo.filter(b => b.saldo < 0 || /deprec|dep\./i.test(b.cuenta)).reduce((a, b) => a + b.saldo, 0)));
       // por año
       const yIni = Math.min(...ao.map(x => +(obFecha(x.f.fid) || obFecha(x.f.fcm) || (Yc + '')).slice(0, 4)), Yc);
       const anios = []; let accPrev = 0;
@@ -20475,7 +20471,7 @@ ${cont.innerHTML}
       claves.forEach(k => { const row = meses.map((_, m) => R(g[k].items.reduce((a, x) => a + ppAcum(x.f, Yc, m + 1) - ppAcum(x.f, Yc, m), 0))); mm.push({ k, v: row, t: R(row.reduce((a, b) => a + b, 0)) }); });
       mm.sort((a, b) => b.t - a.t);
       const sinCalc = items.filter(x => !(obFecha(x.f.fid) || obFecha(x.f.fcm)) || !ppN(x.f.vid) || !ppN(x.f.cmp)).length;
-      return { Yc, Mc, items, ao, du, clases, sin, aooC, aooD, aoo, anios, meses, mm, claves, sinCalc, porCta,
+      return { Yc, Mc, items, ao, clases, sin, anios, meses, mm, claves, sinCalc, porCta,
         tot: { n: ao.length, bruto: suma(ao, x => x.r.bruto), ap: suma(ao, x => x.r.ap), gasto: suma(ao, x => x.r.gasto), ac: suma(ao, x => x.r.ac), neto: suma(ao, x => x.r.neto), sis: ao.every(x => x.r.sis === null) ? null : suma(ao, x => x.r.sis), balC: R(clases.reduce((a, x) => a + x.balC, 0) + sin.filter(s => !s.dep).reduce((a, s) => a + s.b.saldo, 0)), balD: R(clases.reduce((a, x) => a + x.balD, 0) + Math.abs(sin.filter(s => s.dep).reduce((a, s) => a + s.b.saldo, 0))) } };
     }
     async function ppCargar() {
@@ -20485,7 +20481,7 @@ ${cont.innerHTML}
       ppE.cierre = ($im('nm-fecha') || {}).value || (vis === 'final' ? anio + '-12-31' : anio + '-09-30');
       const [r1, r2] = await Promise.all([
         supabaseClient.from('anexo_inversiones').select('*').eq('cliente_id', cli).eq('anio', anio).eq('cuenta', PP_CUENTA).eq('visita', vis).maybeSingle(),
-        supabaseClient.from('balance_comprobacion').select('sumaria, codigo, cuenta, saldo').eq('cliente_id', cli).eq('anio', anio).eq('visita', vis).in('sumaria', ['AO', 'AOO', 'AR']).limit(5000)
+        supabaseClient.from('balance_comprobacion').select('sumaria, codigo, cuenta, saldo').eq('cliente_id', cli).eq('anio', anio).eq('visita', vis).in('sumaria', ['AO', 'AR']).limit(5000)
       ]);
       if (id !== ppE.cargaId) return;
       const d = r1.data;
@@ -20589,7 +20585,7 @@ ${cont.innerHTML}
       const clas = [...new Set(ppE.filas.map(ppClave))].sort();
       const sel = '<select onchange="ppFiltro(\'cla\',this.value)" style="border:1px solid #dcdcd6;border-radius:6px;padding:2px 6px;font-size:12px"><option value="">Todas las clasificaciones</option>' + clas.map(k => '<option value="' + e(k) + '"' + (ppE.cla === k ? ' selected' : '') + '>' + e(k) + '</option>').join('') + '</select>';
       c.innerHTML = '<style>' + PP_CSS + '</style><div style="background:#f1f1ee">'
-        + '<div style="padding:16px 14px 14px;font-size:12px;color:#6b6b63;line-height:1.7">Anexo de activos fijos del cliente (ref. ' + PP_REF.anexo + '): un activo por fila, con su clasificación, valor de compra, reavalúo, valor residual, vida útil y fecha de inicio de depreciación. La aplicación recalcula la depreciación acumulada (línea recta; el mes de inicio se prorratea por días), el gasto del año y por mes, y la compara con la que entrega el sistema del cliente. Los cuadros contra las sumarias AO y AOO, la depreciación por año y por mes y los derechos de uso están en «Resumen de cuadres y cruces». Los activos cuya clasificación diga «derecho de uso» se tratan aparte.</div>'
+        + '<div style="padding:16px 14px 14px;font-size:12px;color:#6b6b63;line-height:1.7">Anexo de activos fijos del cliente (ref. ' + PP_REF.anexo + '): un activo por fila, con su clasificación, valor de compra, reavalúo, valor residual, vida útil y fecha de inicio de depreciación. La aplicación recalcula la depreciación acumulada (línea recta; el mes de inicio se prorratea por días), el gasto del año y por mes, y la compara con la que entrega el sistema del cliente. Los cuadros contra la sumaria AO y la depreciación por año y por mes están en «Resumen de cuadres y cruces». Los derechos de uso (AOO) no van aquí: tienen su propia herramienta.</div>'
         + '<div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:4px 14px 12px"><label style="font-size:12px;color:#4a4a44">Fecha de cierre <input type="date" value="' + e(ppE.cierre) + '" onchange="ppCab(this.value)" style="border:1px solid #dcdcd6;border-radius:6px;padding:2px 6px;font-size:12px"></label>'
         + '<label class="ob-b" style="cursor:pointer">Subir anexo (Excel o CSV)<input id="pp-archivo" type="file" accept=".xlsx,.xls,.csv" class="hidden" onchange="ppSubir(this.files)"></label><button type="button" class="ob-b" onclick="ppPlantilla()">Descargar plantilla</button><button type="button" class="ob-b" onclick="ppAgregar()">＋ Agregar activo</button>' + (ppE.filas.length ? '<button type="button" class="ob-b" onclick="ppVaciar()">Vaciar</button>' : '') + '<span id="pp-msg" style="font-size:11px;color:#6b6b63">' + e(ppE.msg || (ppE.archivo ? 'Archivo: ' + ppE.archivo : '')) + '</span>'
         + '<button type="button" onclick="ppExcel()" style="margin-left:auto;padding:6px 4px;font-size:12px;font-weight:700;background:transparent;border:0;color:#449964;cursor:pointer">⬇ Descargar Excel</button></div>'
@@ -20603,7 +20599,7 @@ ${cont.innerHTML}
       const tit = 'Detalle de activos fijos (propiedad, planta y equipo)';
       if (!ppE.cargado) return cab(tit) + '<p class="text-xs text-slate-500" style="margin-bottom:14px">Cargando el anexo…</p>';
       const D = ppDatos();
-      if (!D) return cab(tit) + ay('Todavía no hay anexo de activos fijos. Sube el Excel del cliente en la pestaña «Anexos y cálculos» para ver aquí el cuadre con las sumarias AO y AOO, la depreciación por año y por mes y los derechos de uso.');
+      if (!D) return cab(tit) + ay('Todavía no hay anexo de activos fijos. Sube el Excel del cliente en la pestaña «Anexos y cálculos» para ver aquí el cuadre con la sumaria AO y la depreciación por año y por mes.');
       const R2 = obR, num = x => (x === null || x === undefined) ? '<span style="color:#cbd5e1">—</span>' : ppF2(x), TOL = 1;
       const th = (t, d) => '<th' + (d ? ' style="text-align:right"' : '') + '>' + t + '</th>';
       const col = d => (d === null ? '' : (Math.abs(d) <= TOL ? 'color:#1d6b3a;font-weight:700' : 'color:#b42318;font-weight:700'));
@@ -20632,25 +20628,16 @@ ${cont.innerHTML}
       const T = D.tot, dTC = R2(T.bruto - T.balC), dTD = R2(T.ac - T.balD);
       tb += '<tr class="tot"><td>Total propiedad, planta y equipo (sumaria AO)</td><td class="n">' + T.n + '</td><td class="n">' + num(T.bruto) + '</td><td class="n">' + num(T.balC) + '</td><td class="n" style="' + col(dTC) + '">' + num(dTC) + '</td><td class="n">' + num(T.ac) + '</td><td class="n">' + num(T.balD) + '</td><td class="n" style="' + col(dTD) + '">' + num(dTD) + '</td><td class="n">' + num(T.neto) + '</td><td class="n">' + num(R2(T.balC - T.balD)) + '</td></tr>';
       const sis = T.sis === null ? '' : '<tr><td colspan="5">Depreciación acumulada según el sistema del cliente (columna del Excel)</td><td class="n">' + num(T.sis) + '</td><td colspan="2"></td><td colspan="2"></td></tr><tr><td colspan="5">Diferencia: depreciación recalculada menos la del sistema <span style="color:#6b6b63;font-weight:400">(' + D.ao.filter(x => x.r.dif !== null && Math.abs(x.r.dif) > 1).length + ' activo(s) con diferencia mayor a 1,00)</span>' + btnA('dsis', 'Ver los activos con diferencia contra el sistema') + '</td><td class="n" style="' + col(R2(T.ac - T.sis)) + '">' + num(R2(T.ac - T.sis)) + '</td><td colspan="2"></td><td colspan="2"></td></tr>';
-      let h = cab(tit + ' (ref. ' + PP_REF.cuadre + ')') + ay('Sale del anexo de activos fijos (pestaña «Anexos y cálculos») y del balance de comprobación: costo y depreciación acumulada de cada clasificación contra las cuentas de la sumaria AO. Las cuentas del balance se asignan solas por su nombre; si alguna quedó mal puedes cambiarla. Diferencias en rojo.');
+      let h = cab(tit + ' (ref. ' + PP_REF.cuadre + ')') + ay('Sale del anexo de activos fijos (pestaña «Anexos y cálculos») y del balance de comprobación: costo y depreciación acumulada de cada clasificación contra las cuentas de la sumaria AO (y las de software de la sumaria AR cuando el cliente las lleva en el mismo listado). Las cuentas del balance se asignan solas por su nombre; si alguna quedó mal puedes cambiarla. Diferencias en rojo.');
       h += '<div class="v2r-tw" style="margin-bottom:12px"><table class="v2r-t"><thead><tr>' + th('Clasificación') + th('Activos', 1) + th('Costo según anexo', 1) + th('Costo según balance', 1) + th('Diferencia', 1) + th('Dep. acumulada según anexo', 1) + th('Dep. acumulada según balance', 1) + th('Diferencia', 1) + th('Valor neto según anexo', 1) + th('Valor neto según balance', 1) + '</tr></thead><tbody>' + tb + sis + '</tbody></table></div>';
       if (D.sinCalc) h += '<p style="font-size:11px;color:#b45309;margin:-4px 0 10px">' + D.sinCalc + ' activo(s) sin fecha de inicio, vida útil o valor de compra: no se pudo calcular su depreciación.</p>';
       if (ppE.ver.dsis) h += '<div style="margin-bottom:12px;font-size:12px"><div style="font-weight:700;margin-bottom:2px">Activos con diferencia contra la depreciación del sistema</div>' + lista(D.ao.filter(x => x.r.dif !== null && Math.abs(x.r.dif) > 1).sort((a, b) => Math.abs(b.r.dif) - Math.abs(a.r.dif)), 200) + '</div>';
-      // 2. Derechos de uso (desplegable)
-      const du = D.du, dBr = R2(du.reduce((a, x) => a + x.r.bruto, 0)), dAc = R2(du.reduce((a, x) => a + x.r.ac, 0));
-      h += '<div class="v2r-h3" style="margin:14px 0 6px"><span>Activos por derecho de uso (sumaria AOO, ref. ' + PP_REF.du + ')</span>' + btn('du', 'Desplegar el detalle de derechos de uso') + '</div>';
-      h += '<div class="v2r-tw" style="margin-bottom:12px"><table class="v2r-t"><thead><tr>' + th('Concepto') + th('Activos', 1) + th('Costo', 1) + th('Dep. acumulada', 1) + th('Valor neto', 1) + '</tr></thead><tbody>'
-        + '<tr><td>Según el anexo (activos clasificados como derecho de uso)</td><td class="n">' + du.length + '</td><td class="n">' + num(dBr) + '</td><td class="n">' + num(dAc) + '</td><td class="n">' + num(R2(dBr - dAc)) + '</td></tr>'
-        + '<tr><td>Según el balance (sumaria AOO)</td><td class="n"></td><td class="n">' + num(D.aooC) + '</td><td class="n">' + num(D.aooD) + '</td><td class="n">' + num(R2(D.aooC - D.aooD)) + '</td></tr>'
-        + '<tr class="tot"><td>Diferencia</td><td class="n"></td><td class="n" style="' + col(R2(dBr - D.aooC)) + '">' + num(R2(dBr - D.aooC)) + '</td><td class="n" style="' + col(R2(dAc - D.aooD)) + '">' + num(R2(dAc - D.aooD)) + '</td><td class="n" style="' + col(R2((dBr - dAc) - (D.aooC - D.aooD))) + '">' + num(R2((dBr - dAc) - (D.aooC - D.aooD))) + '</td></tr></tbody></table></div>';
-      if (ppE.ver.du) h += '<div style="margin-bottom:12px;font-size:12px">' + (du.length ? lista(du, 400) : '<p style="color:#6b6b63;line-height:1.6">El anexo no trae activos por derecho de uso. Si el cliente los lleva en su listado, ponles la clasificación «Derecho de uso» para que se calculen aquí; el detalle por contrato de arrendamiento está en la herramienta de Activos por derecho de uso (AOO).</p>')
-        + (D.aoo.length ? '<table class="v2r-t" style="margin:6px 0"><thead><tr>' + th('Cuenta del balance (AOO)') + th('Saldo', 1) + '</tr></thead><tbody>' + D.aoo.map(b => '<tr><td>' + e(b.codigo) + ' ' + e(b.cuenta) + '</td><td class="n">' + num(b.saldo) + '</td></tr>').join('') + '</tbody></table>' : '') + '</div>';
-      // 3. Depreciación por año
+      // 2. Depreciación por año
       const ks = D.claves.slice().sort((a, b) => (D.clases.find(x => x.k === b) || { bruto: 0 }).bruto - (D.clases.find(x => x.k === a) || { bruto: 0 }).bruto);
       h += cab('Depreciación por año (ref. ' + PP_REF.dep + ')') + ay('Gasto de depreciación de cada año por clasificación y depreciación acumulada al cierre de cada año, recalculados con las fechas de inicio y la vida útil del anexo. El último año llega solo hasta la fecha de cierre.');
       h += '<div class="v2r-tw" style="margin-bottom:12px"><table class="v2r-t"><thead><tr>' + th('Año') + ks.map(k => th(e(k), 1)).join('') + th('Gasto del año', 1) + th('Dep. acumulada al cierre del año', 1) + '</tr></thead><tbody>'
         + D.anios.map(a => '<tr><td>' + a.y + (a.parcial ? ' (hasta ' + e(ppE.cierre) + ')' : '') + '</td>' + ks.map(k => '<td class="n">' + num(a.porK[k] || 0) + '</td>').join('') + '<td class="n">' + num(a.gasto) + '</td><td class="n">' + num(a.ac) + '</td></tr>').join('') + '</tbody></table></div>';
-      // 4. Por mes
+      // 3. Por mes
       const tm = D.meses.map((_, m) => R2(D.mm.reduce((a, r) => a + r.v[m], 0)));
       h += cab('Gasto de depreciación por mes, año ' + D.Yc + ' (ref. ' + PP_REF.dep + ')') + ay('Gasto mensual por clasificación del año de la auditoría, hasta el mes del corte. Sirve para compararlo con el gasto registrado mes a mes en el mayor.');
       h += '<div class="v2r-tw" style="margin-bottom:18px"><table class="v2r-t"><thead><tr>' + th('Clasificación') + D.meses.map(m => th(m, 1)).join('') + th('Total del año', 1) + '</tr></thead><tbody>'
@@ -20667,7 +20654,7 @@ ${cont.innerHTML}
       if (!window.ExcelJS) { alert('No se pudo cargar el generador de Excel. Revisa tu conexión a internet.'); return; }
       const D = ppDatos(); if (!D) { alert('No hay activos para descargar.'); return; }
       const sel = document.getElementById('nm-cliente'), cli = ((sel && sel.selectedOptions[0] || {}).textContent || '').trim() || String(nmE.cliente || '');
-      const dCar = { titulo: 'Anexo de propiedad, planta y equipo', cuenta: (NM_CTX.ref || '') + ' · Propiedad, planta y equipo', ref: 'Anexo de propiedad, planta y equipo (' + PP_REF.anexo + ')', cliente: cli, anioVisita: nmE.anio + ' · ' + nmE.visita, fechaCorte: pcFechaLarga(ppE.cierre), fechaAnalisis: pcFechaCorta(new Date()), elaboro: (typeof nombreUsuarioActivo === 'function' && nombreUsuarioActivo()) || '', reviso: 'Pendiente de revisión', objetivo: 'Comprobar el costo, la depreciación acumulada y el gasto de depreciación de propiedad, planta y equipo contra las sumarias AO y AOO.', procedimiento: '', fuente: ppE.archivo || '', responsable: '', conclusion: '' };
+      const dCar = { titulo: 'Anexo de propiedad, planta y equipo', cuenta: (NM_CTX.ref || '') + ' · Propiedad, planta y equipo', ref: 'Anexo de propiedad, planta y equipo (' + PP_REF.anexo + ')', cliente: cli, anioVisita: nmE.anio + ' · ' + nmE.visita, fechaCorte: pcFechaLarga(ppE.cierre), fechaAnalisis: pcFechaCorta(new Date()), elaboro: (typeof nombreUsuarioActivo === 'function' && nombreUsuarioActivo()) || '', reviso: 'Pendiente de revisión', objetivo: 'Comprobar el costo, la depreciación acumulada y el gasto de depreciación de propiedad, planta y equipo contra la sumaria AO.', procedimiento: '', fuente: ppE.archivo || '', responsable: '', conclusion: '' };
       Object.keys(dCar).forEach(k => { dCar[k] = ptLimpiaTexto(dCar[k]); });
       try {
         const NAVY = 'FF0B2C4D', GRIS = 'FFD9D9D9', TOT = 'FFF1F5F9', FN = '#,##0.00;[Red]-#,##0.00', bd = { style: 'thin', color: { argb: 'FFCBD5E1' } }, bordes = { top: bd, left: bd, bottom: bd, right: bd };
@@ -20683,13 +20670,12 @@ ${cont.innerHTML}
           return ws;
         };
         const Yc = D.Yc;
-        const fa = D.items.map(x => [x.f.cod, x.f.cla, x.f.nom, x.f.det, x.f.est, ppN(x.f.cmp), obFecha(x.f.fcm), x.f.rev === '' ? null : ppN(x.f.rev), obFecha(x.f.frv), ppN(x.f.res), ppN(x.f.vid), obFecha(x.f.fid), x.r.bruto, x.r.ap, x.r.gasto, x.r.ac, x.r.neto, x.r.sis, x.r.dif, x.du ? 'Derecho de uso' : '']);
-        hoja('1. Anexo de activos', 'Anexo de propiedad, planta y equipo (' + PP_REF.anexo + ')', ['Código de activo', 'Clasificación', 'Nombre del activo', 'Detalle', 'Estado', 'Valor de compra', 'Fecha de compra', 'Valor de reavalúo', 'Fecha de reavalúo', 'Valor residual', 'Meses de vida útil', 'Fecha de inicio de depreciación', 'Valor bruto al corte', 'Dep. acumulada al 31-dic ' + (Yc - 1), 'Gasto de depreciación ' + Yc, 'Dep. acumulada al corte', 'Valor neto al corte', 'Dep. acumulada según el sistema', 'Diferencia (cálculo menos sistema)', 'Grupo'], fa);
+        const fa = D.items.map(x => [x.f.cod, x.f.cla, x.f.nom, x.f.det, x.f.est, ppN(x.f.cmp), obFecha(x.f.fcm), x.f.rev === '' ? null : ppN(x.f.rev), obFecha(x.f.frv), ppN(x.f.res), ppN(x.f.vid), obFecha(x.f.fid), x.r.bruto, x.r.ap, x.r.gasto, x.r.ac, x.r.neto, x.r.sis, x.r.dif]);
+        hoja('1. Anexo de activos', 'Anexo de propiedad, planta y equipo (' + PP_REF.anexo + ')', ['Código de activo', 'Clasificación', 'Nombre del activo', 'Detalle', 'Estado', 'Valor de compra', 'Fecha de compra', 'Valor de reavalúo', 'Fecha de reavalúo', 'Valor residual', 'Meses de vida útil', 'Fecha de inicio de depreciación', 'Valor bruto al corte', 'Dep. acumulada al 31-dic ' + (Yc - 1), 'Gasto de depreciación ' + Yc, 'Dep. acumulada al corte', 'Valor neto al corte', 'Dep. acumulada según el sistema', 'Diferencia (cálculo menos sistema)'], fa);
         const fc = D.clases.map(x => [x.k, x.n, x.bruto, x.balC, obR(x.bruto - x.balC), x.ac, x.balD, obR(x.ac - x.balD), x.neto, obR(x.balC - x.balD), x.costo.concat(x.dep).map(b => b.codigo).join(' · ')]);
         D.sin.forEach(s => { const v = Math.abs(s.b.saldo); fc.push(['Cuenta del balance sin activos en el anexo: ' + s.b.codigo + ' ' + s.b.cuenta, null, 0, s.dep ? 0 : v, s.dep ? 0 : -v, 0, s.dep ? v : 0, s.dep ? -v : 0, 0, s.dep ? -v : v, s.b.codigo]); });
         const T = D.tot; fc.push(['Total propiedad, planta y equipo (sumaria AO)', T.n, T.bruto, T.balC, obR(T.bruto - T.balC), T.ac, T.balD, obR(T.ac - T.balD), T.neto, obR(T.balC - T.balD), '']);
-        fc.push(['Activos por derecho de uso según el anexo', D.du.length, obR(D.du.reduce((a, x) => a + x.r.bruto, 0)), D.aooC, obR(D.du.reduce((a, x) => a + x.r.bruto, 0) - D.aooC), obR(D.du.reduce((a, x) => a + x.r.ac, 0)), D.aooD, obR(D.du.reduce((a, x) => a + x.r.ac, 0) - D.aooD), null, null, 'Sumaria AOO']);
-        hoja('2. Cuadre con sumarias', 'Cuadre con las sumarias AO y AOO (' + PP_REF.cuadre + ')', ['Clasificación', 'Activos', 'Costo según anexo', 'Costo según balance', 'Diferencia', 'Dep. acumulada según anexo', 'Dep. acumulada según balance', 'Diferencia', 'Valor neto según anexo', 'Valor neto según balance', 'Cuentas del balance'], fc, [fc.length - 2]);
+        hoja('2. Cuadre con sumarias', 'Cuadre con la sumaria AO (' + PP_REF.cuadre + ')', ['Clasificación', 'Activos', 'Costo según anexo', 'Costo según balance', 'Diferencia', 'Dep. acumulada según anexo', 'Dep. acumulada según balance', 'Diferencia', 'Valor neto según anexo', 'Valor neto según balance', 'Cuentas del balance'], fc, [fc.length - 2]);
         const ks = D.clases.map(x => x.k);
         hoja('3. Depreciación por año', 'Depreciación por año (' + PP_REF.dep + ')', ['Año'].concat(ks, ['Gasto del año', 'Dep. acumulada al cierre del año']), D.anios.map(a => [String(a.y) + (a.parcial ? ' (hasta ' + ppE.cierre + ')' : '')].concat(ks.map(k => a.porK[k] || 0), [a.gasto, a.ac])));
         const tm = D.meses.map((_, m) => obR(D.mm.reduce((a, r) => a + r.v[m], 0)));
