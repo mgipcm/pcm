@@ -15403,7 +15403,7 @@ ${cont.innerHTML}
     async function cbCargar() {
       const cli = $cb('cb-cliente').value, anio = $cb('cb-anio').value, vis = $cb('cb-visita').value;
       const llaveAnt = cbE.cliente + '|' + cbE.anio + '|' + cbE.visita, borradorAnt = (cbE.draft && llaveAnt === cli + '|' + anio + '|' + vis) ? cbE.draft : null;
-      Object.assign(cbE, { cliente: cli, anio, visita: vis, cuentas: [], config: {}, programa: [], analisis: null, det: null, act: null, crit: null, draft: null, sv: null });
+      Object.assign(cbE, { cliente: cli, anio, visita: vis, cuentas: [], config: {}, programa: [], pts: [], analisis: null, det: null, act: null, crit: null, draft: null, sv: null });
       const aviso = $cb('cb-aviso'), esp = $cb('cb-espacio');
       if (!cli) { aviso.classList.remove('hidden'); esp.classList.add('hidden'); cbSync(); return; }
       aviso.classList.add('hidden'); esp.classList.remove('hidden');
@@ -15420,6 +15420,8 @@ ${cont.innerHTML}
       if (d) { cbE.cuentas = Array.isArray(d.cuentas) ? d.cuentas : []; cbE.config = d.config || {}; cbE.programa = Array.isArray(d.programa) ? d.programa : []; cbE.corte = d.corte || ''; cbE.act = { por: d.actualizado_por, en: d.updated_at }; cbE.org = { origen: d.origen, estado_revision: d.estado_revision, revisado_por: d.revisado_por, revisado_at: d.revisado_at }; } else cbE.org = null;
       if (!cbE.corte) cbE.corte = vis === 'final' ? anio + '-12-31' : anio + '-09-30';
       cbE.analisis = (r2.data && r2.data[0]) || null;
+      try { const rp = await supabaseClient.from('v2_pt').select('*').eq('cliente_id', cli).eq('anio', Number(anio)).eq('visita', vis).eq('sumaria', 'AA').eq('hoja', 'bancos').order('ref'); cbE.pts = rp.error ? [] : (rp.data || []); } catch (e) { cbE.pts = []; }
+      if (id !== cbE.cargaId) return;
       cbE.crit = (r4 && !r4.error && r4.data) ? r4.data : null; cbE.draft = borradorAnt || cbDraftLocal() || cbDraftDesde(cbE.crit);
       cbE.ctx = await traerContextoRiesgo(cli, anio, vis);
       if (id !== cbE.cargaId) return;
@@ -15972,7 +15974,7 @@ ${cont.innerHTML}
       bitacoraClaude('Guardó criterio final', 'Bancos (conciliaciones)', cbE.cliente, String(a.anio));
     }
     function cbFilasPrograma(todo) {
-      const todas = (cbE.plantilla || []).map(x => { const g = cbE.programa.find(k => k.k === x.k) || {}; return { ...x, donde: g.donde || '', quien: g.quien || '', estado: g.estado || 'pendiente', otro: false, registrado_por: g.registrado_por || '', nota: g.nota || '', pt: Array.isArray(g.pt) ? g.pt : [], revisado_por: g.revisado_por || '', revisado_at: g.revisado_at || '', noAplica: motivosNoAplica(x, 'AA', cbE.ctx) }; });
+      const todas = (cbE.plantilla || []).map(x => { const g = cbE.programa.find(k => k.k === x.k) || {}; return { ...x, donde: g.donde || '', quien: g.quien || '', estado: (g.estado || ((cbE.pts || []).some(t => t.codigo === x.codigo) ? 'hecho' : 'pendiente')), otro: false, registrado_por: g.registrado_por || '', nota: g.nota || '', pt: Array.isArray(g.pt) ? g.pt : [], ptsC: (cbE.pts || []).filter(t => t.codigo === x.codigo), revisado_por: g.revisado_por || '', revisado_at: g.revisado_at || '', noAplica: motivosNoAplica(x, 'AA', cbE.ctx) }; });
       return todo ? todas : todas.filter(x => !x.noAplica.length || x.estado === 'hecho');
     }
     function cbVerTodosProg(v) { cbE.verTodos = !!v; cbRender(); }
@@ -15984,10 +15986,12 @@ ${cont.innerHTML}
       let h = '<div class="p-4 text-sm text-slate-700">' + htmlContextoPrograma(cbE.ctx, 'AA', cbE.plantilla.length, cbFilasPrograma().length, cbE.verTodos, 'cbVerTodosProg') + '<div class="flex flex-wrap items-center gap-2 mb-3"><span class="pill-origen rev">Hechos: ' + hechos + '</span><span class="pill-origen mod">Pendientes: ' + (filas.length - hechos - nas) + '</span>' + (nas ? '<span class="pill-origen">N/A: ' + nas + '</span>' : '') + '</div><div class="overflow-x-auto border border-slate-200 rounded-xl"><table class="w-full text-left text-xs text-slate-700 border-collapse"><thead class="bg-slate-100 text-slate-600 text-[10px] font-bold border-b border-slate-200"><tr><th class="p-3 border-r border-slate-200 min-w-[90px]">Código</th><th class="p-3 border-r border-slate-200 min-w-[360px] w-full">Procedimiento</th><th class="p-3 border-r border-slate-200 min-w-[170px]">Norma de referencia</th><th class="p-3 border-r border-slate-200 min-w-[130px]">Elaborado por<br><span class="font-normal">(Claude)</span></th><th class="p-3 border-r border-slate-200 min-w-[150px]">Revisado por<br><span class="font-normal">(quien completa)</span></th><th class="p-3 min-w-[200px]">P/T</th><th class="p-3 min-w-[220px] border-l border-slate-200">Comentario</th><th class="p-3 min-w-[150px] border-l border-slate-200">Estado</th></tr></thead><tbody class="divide-y divide-slate-200">';
       filas.forEach(x => {
         const k = hh(x.k).replace(/'/g, '&#39;');
-        const elab = claudeAn ? '<div class="font-semibold text-slate-700">Claude</div><div class="text-[10px] text-slate-400 mt-0.5">' + v2Fmt(claudeAn.created_at) + '</div>' : '<div class="font-semibold text-slate-600">Claude</div><div class="text-[10px] text-slate-400 mt-0.5">Sin análisis</div>';
+        const ptU = x.ptsC.length ? x.ptsC.slice().sort((a, b) => String(b.elaborado_at).localeCompare(String(a.elaborado_at)))[0] : null;
+        const elab = ptU ? '<div class="font-semibold text-slate-700">' + hh(ptU.elaborado_por || 'Claude') + '</div><div class="text-[10px] text-slate-400 mt-0.5">' + v2Fmt(ptU.elaborado_at) + '</div>' : claudeAn ? '<div class="font-semibold text-slate-700">Claude</div><div class="text-[10px] text-slate-400 mt-0.5">' + v2Fmt(claudeAn.created_at) + '</div>' : '<div class="font-semibold text-slate-600">Claude</div><div class="text-[10px] text-slate-400 mt-0.5">Sin análisis</div>';
         const rev = x.revisado_at ? '<div class="font-semibold text-emerald-700">✔ ' + hh(nombreMostrado(x.revisado_por) || '') + '</div><div class="text-[10px] text-slate-400 mt-0.5">' + v2Fmt(x.revisado_at) + '</div><button type="button" onclick="cbProgRevisar(\'' + k + '\', false)" class="text-[10px] text-slate-400 hover:underline mt-1">Quitar revisión</button>' : '<button type="button" onclick="cbProgRevisar(\'' + k + '\', true)" class="px-2.5 py-1 text-[11px] font-semibold border border-slate-300 rounded-lg bg-white hover:bg-slate-50">Marcar revisado</button>';
-        const pts = x.pt.map((t, i) => '<div class="flex items-center gap-1 py-0.5"><input type="text" value="' + hh(t.ref || '') + '" placeholder="Ref" title="Referencia del papel de trabajo" onchange="cbPtRef(\'' + k + '\', ' + i + ', this.value)" class="w-14 p-1 border border-slate-300 rounded text-[11px] outline-none focus:ring-2 focus:ring-indigo-500"><button type="button" onclick="cbPtBajar(\'' + k + '\', ' + i + ')" class="text-indigo-700 hover:underline text-left" title="Descargar">📎 ' + hh(t.nombre || '') + '</button><button type="button" onclick="cbPtQuitar(\'' + k + '\', ' + i + ')" class="text-slate-400 hover:text-red-600" title="Quitar">✕</button></div>').join('');
-        const antes = !x.pt.length && x.donde ? '<div class="text-[11px] text-slate-500">' + hh(x.donde) + '</div>' : '';
+        const ptsV2 = x.ptsC.map(t => '<div class="py-0.5"><button type="button" onclick="nmPtVer(\'' + t.id + '\')" class="text-indigo-700 hover:underline text-left" title="Abrir papel de trabajo">📊 ' + hh(t.ref) + ' · ' + hh(t.titulo) + '</button></div>').join('');
+        const pts = ptsV2 + x.pt.map((t, i) => '<div class="flex items-center gap-1 py-0.5"><input type="text" value="' + hh(t.ref || '') + '" placeholder="Ref" title="Referencia del papel de trabajo" onchange="cbPtRef(\'' + k + '\', ' + i + ', this.value)" class="w-14 p-1 border border-slate-300 rounded text-[11px] outline-none focus:ring-2 focus:ring-indigo-500"><button type="button" onclick="cbPtBajar(\'' + k + '\', ' + i + ')" class="text-indigo-700 hover:underline text-left" title="Descargar">📎 ' + hh(t.nombre || '') + '</button><button type="button" onclick="cbPtQuitar(\'' + k + '\', ' + i + ')" class="text-slate-400 hover:text-red-600" title="Quitar">✕</button></div>').join('');
+        const antes = !x.pt.length && !x.ptsC.length && x.donde ? '<div class="text-[11px] text-slate-500">' + hh(x.donde) + '</div>' : '';
         const op = (v, t) => '<option value="' + v + '"' + (x.estado === v || (v === 'hecho' && x.estado === 'hecho') ? ' selected' : '') + '>' + t + '</option>';
         const est = '<select onchange="cbProgSet(\'' + k + '\', \'estado\', this.value)" style="min-width:130px;width:100%" class="p-2 border border-slate-300 rounded-lg text-xs bg-white outline-none focus:ring-2 focus:ring-indigo-500">' + op('pendiente', 'Pendiente') + op('hecho', 'Hecho') + op('na', 'N/A') + '</select>';
         h += '<tr id="cb-prog-' + hh(x.codigo) + '" class="align-top' + (x.noAplica.length ? ' opacity-60' : '') + '"><td class="p-3 border-r border-slate-200 font-semibold text-slate-700 whitespace-nowrap">' + hh(x.codigo) + '</td>' +
@@ -20084,7 +20088,7 @@ ${cont.innerHTML}
     function nmPtCol(n) { let s = ''; n++; while (n > 0) { const m = (n - 1) % 26; s = String.fromCharCode(65 + m) + s; n = Math.floor((n - 1) / 26); } return s; }
     function nmPtCelda(c) { return (c !== null && typeof c === 'object') ? c : { v: c }; }
     function nmPtVer(id, hi) {
-      const t = (nmE.pts || []).find(x => x.id === id); if (!t) return;
+      const t = (nmE.pts || []).concat(cbE.pts || []).find(x => x.id === id); if (!t) return;
       nmE.ptVer = { id, hi: hi || 0 };
       const h = escapeHtml, hojas = t.hojas || [], H = hojas[nmE.ptVer.hi] || { filas: [] };
       const tabs = hojas.map((x, i) => `<button type="button" onclick="nmPtVer('${id}',${i})" class="px-3 py-1 text-xs rounded-lg ${i === nmE.ptVer.hi ? 'bg-indigo-50 text-indigo-700 font-bold' : 'text-slate-500 hover:bg-slate-50'}">${h(x.nombre)}</button>`).join('');
@@ -20107,9 +20111,11 @@ ${cont.innerHTML}
         </div></div>`;
     }
     async function nmPtExcel(id) {
-      const t = (nmE.pts || []).find(x => x.id === id); if (!t) { alert('No se encontró el papel de trabajo. Presiona «Actualizar» y vuelve a intentar.'); return; }
-      const cli = ($im('nm-cliente').selectedOptions[0] || {}).textContent || nmE.cliente;
-      await ptExcelComun(t, cli, NM_CTX.ref, nmE.anio + ' · ' + nmE.visita, nmFmt(t.elaborado_at));
+      const t = (nmE.pts || []).concat(cbE.pts || []).find(x => x.id === id); if (!t) { alert('No se encontró el papel de trabajo. Presiona «Actualizar» y vuelve a intentar.'); return; }
+      const esCb = (cbE.pts || []).some(x => x.id === id);
+      const sel = document.getElementById(esCb ? 'cb-cliente' : 'nm-cliente');
+      const cli = (sel && sel.selectedOptions[0] || {}).textContent || (esCb ? cbE.cliente : nmE.cliente);
+      await ptExcelComun(t, cli, esCb ? 'AA · Bancos' : NM_CTX.ref, (esCb ? cbE.anio + ' · ' + cbE.visita : nmE.anio + ' · ' + nmE.visita), nmFmt(t.elaborado_at));
     }
     // ----- Pestaña "Subir información": un solo pedido a Claude y el detalle de lo que ya está leído -----
     async function nmSubirCargar() {
