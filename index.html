@@ -5188,7 +5188,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
         return '<tr class="align-top hover:bg-slate-50/80">' +
           '<td class="p-3 border-r border-slate-200"><div class="font-bold text-slate-800">' + escapeHtml(nom) + '</div><div class="text-[11px] text-slate-500">' + p.anio + ' · ' + (p.visita === 'preliminar' ? 'Visita preliminar' : 'Visita final') + '</div></td>' +
           '<td class="p-3 border-r border-slate-200 font-medium text-slate-800">' + escapeHtml((c ? c.cuenta : p.sumaria) + (p.hoja ? ' · ' + pcNombreHoja(p.hoja) : '')) + '</td>' +
-          '<td class="p-3 border-r border-slate-200">' + htmlArchivosPedido(p, true) + (p.nota ? '<div class="text-[11px] text-slate-500 mt-1">' + escapeHtml(p.nota) + '</div>' : '') + '</td>' +
+          '<td class="p-3 border-r border-slate-200">' + htmlArchivosPedido(p, true) + (notaPedidoVisible(p.nota) ? '<div class="text-[11px] text-slate-500 mt-1">' + escapeHtml(notaPedidoVisible(p.nota)) + '</div>' : '') + '</td>' +
           '<td class="p-3 border-r border-slate-200"><span class="' + est[1] + '">' + est[0] + '</span>' + (detalle ? '<div class="text-[11px] text-slate-500 mt-1">' + detalle + '</div>' : '') + (p.estado === 'autorizado' ? (p.detenido_motivo ? pcHtmlDetenido(p.detenido_motivo) : pcBarraAvance(p)) : '') + '</td>' +
           '<td class="p-3 text-center whitespace-nowrap">' + acc + '</td></tr>';
       }).join('');
@@ -5217,7 +5217,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
         return '<tr class="align-top hover:bg-slate-50/80">' +
           '<td class="p-3 border-r border-slate-200"><div class="font-bold text-slate-800">' + escapeHtml(nom) + '</div><div class="text-[11px] text-slate-500">' + p.anio + ' · ' + (p.visita === 'preliminar' ? 'Visita preliminar' : 'Visita final') + '</div></td>' +
           '<td class="p-3 border-r border-slate-200 font-medium text-slate-800">' + escapeHtml((c ? c.cuenta : p.sumaria) + (p.hoja ? ' · ' + pcNombreHoja(p.hoja) : '')) + '</td>' +
-          '<td class="p-3 border-r border-slate-200">' + htmlArchivosPedido(p, true) + (p.nota ? '<div class="text-[11px] text-slate-500 mt-1">' + escapeHtml(p.nota) + '</div>' : '') + '</td>' +
+          '<td class="p-3 border-r border-slate-200">' + htmlArchivosPedido(p, true) + (notaPedidoVisible(p.nota) ? '<div class="text-[11px] text-slate-500 mt-1">' + escapeHtml(notaPedidoVisible(p.nota)) + '</div>' : '') + '</td>' +
           '<td class="p-3 border-r border-slate-200 text-[11px] text-slate-600">' + escapeHtml(p.solicitado_por || '') + '<div class="text-slate-400">' + fechaHoraCorta(p.created_at) + '</div></td>' +
           '<td class="p-3 border-r border-slate-200"><span class="' + est[1] + '">' + est[0] + '</span>' + (detalle ? '<div class="text-[11px] text-slate-500 mt-1">' + detalle + '</div>' : '') + (p.estado === 'autorizado' ? (p.detenido_motivo ? pcHtmlDetenido(p.detenido_motivo) : pcBarraAvance(p)) : '') + (p.resumen_resultado ? '<div class="text-[11px] text-slate-600 mt-1">' + escapeHtml(p.resumen_resultado) + '</div>' : '') + '</td>' +
           '<td class="p-3 text-center whitespace-nowrap">' + acc + '</td></tr>';
@@ -5306,6 +5306,8 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       try { await navigator.clipboard.writeText(txt); m.textContent = 'Orden copiada. Pégala en tu conversación con Claude y envíala.'; }
       catch (e) { m.textContent = 'Copia esta orden: ' + txt; }
     }
+    // La base de datos agrega al final de la nota instrucciones técnicas para Claude: no se muestran a las personas
+    function notaPedidoVisible(n) { return String(n || '').split('INSTRUCCION ADICIONAL MAYOR GUARDADO')[0].trim(); }
     async function avisarPedidoCorreo(id, evento) {
       try {
         const { data, error } = await supabaseClient.functions.invoke('avisar-pedido', { body: { pedido_id: id, evento } });
