@@ -22022,7 +22022,7 @@ ${cont.innerHTML}
       if (!M.filas.length) return cab + ayuda + '<p style="font-size:12px;color:#6b6b63;margin-bottom:14px">El balance no tiene cuentas en las sumarias PB ni PK para este cliente, año y visita.</p>';
       const grupos = [['corto', 'Corto plazo (sumaria PB)'], ['largo', 'Largo plazo (sumaria PK)'], ['interes', 'Intereses por pagar (si hay registro)']];
       const NC = 10, sumar = (fs, k) => R2(fs.reduce((a, x) => a + (Number(x[k]) || 0), 0));
-      let tb = '', tot = { ini: 0, cre: 0, deb: 0, fin: 0, bal: 0 }, nCap = 0;
+      let tb = '', tot = { ini: 0, cre: 0, deb: 0, fin: 0, bal: 0 }, nCap = 0, tInt = { dev: 0, pag: 0, hay: false };
       const notaBtn = (k, t) => '<button type="button" class="v2r-i" style="color:#b45309" onclick="obMovNota(\'' + e(k) + '\')" title="' + e(t) + '">' + IC_OJO + '</button>', notaOn = k => !!(M.nota && M.nota[k]);
       const btn = c => '<button type="button" class="v2r-i" onclick="obMovVer(\'' + e(c) + '\')" title="Ver el movimiento por préstamo y sus pagos">' + IC_OJO + '</button>';
       grupos.forEach(([k, tit]) => {
@@ -22045,12 +22045,13 @@ ${cont.innerHTML}
             }
             tb += '<tr><td colspan="' + NC + '" style="padding:6px 14px;background:#fff;white-space:normal;font-size:12px">' + h + '</td></tr>';
           }
+          if (esInt) { tInt.hay = true; tInt.dev += xcre || 0; tInt.pag += xdeb || 0; }
           if (k !== 'interes') { nCap++; tot.ini += x.ini || 0; tot.cre += x.cre || 0; tot.deb += x.deb || 0; tot.fin += x.fin || 0; tot.bal += x.bal || 0; }
         });
         const cf = fs.filter(x => k !== 'interes');
         if (k !== 'interes' && fs.length > 1) tb += '<tr class="tot"><td colspan="2">Subtotal ' + tit.toLowerCase() + '</td><td class="n">' + fmE(sumar(fs, 'ini')) + '</td><td class="n">' + fmE(sumar(fs, 'cre')) + '</td><td class="n">' + fmE(sumar(fs, 'deb')) + '</td><td></td><td></td><td class="n">' + fmE(sumar(fs, 'fin')) + '</td><td class="n">' + fmE(sumar(fs, 'bal')) + '</td><td></td></tr>';
       });
-      tb += '<tr class="tot"><td colspan="2">Total del capital (corto y largo plazo)</td><td class="n">' + fmE(R2(tot.ini)) + '</td><td class="n">' + fmE(R2(tot.cre)) + '</td><td class="n">' + fmE(R2(tot.deb)) + '</td><td></td><td></td><td class="n">' + fmE(R2(tot.fin)) + '</td><td class="n">' + fmE(R2(tot.bal)) + '</td><td></td></tr>';
+      tb += '<tr class="tot"><td colspan="2">Total (capital e intereses)</td><td class="n">' + fmE(R2(tot.ini)) + '</td><td class="n">' + fmE(R2(tot.cre)) + '</td><td class="n">' + fmE(R2(tot.deb)) + '</td><td class="n">' + (tInt.hay ? fmE(R2(tInt.dev)) : '') + '</td><td class="n">' + (tInt.hay ? fmE(R2(tInt.pag)) : '') + '</td><td class="n">' + fmE(R2(tot.fin)) + '</td><td class="n">' + fmE(R2(tot.bal)) + '</td><td></td></tr>';
       // Comprobación contra el anexo de créditos y gasto de intereses
       const T = obTotales(), dAn = R2(tot.fin - T.cap), malAn = Math.abs(dAn) > NMC_TOL;
       const g = obE.gi; let gasto = null; if (g && g.cargado && g.cand) { const sel = g.cand.filter(x => g.sel[x.cod]); if (sel.length) gasto = R2(sel.reduce((a, x) => a + (x.deb || 0) - (x.cre || 0), 0)); }
