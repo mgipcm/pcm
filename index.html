@@ -18853,6 +18853,22 @@ ${cont.innerHTML}
       const meses = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
       return Number(m[3]) + ' de ' + meses[Number(m[2]) - 1] + ' de ' + m[1];
     }
+    // Aviso general: la fecha de corte del análisis (anexo) debe ser la misma que la del balance cargado en Sumarias
+    const PC_CORTE = { k: '', f: '', t: 0, cargando: false };
+    function pcAvisoCorte(fecha, repintar, modulo) {
+      fecha = String(fecha || '').slice(0, 10); if (!fecha || !nmE.cliente) return '';
+      const k = nmE.cliente + '|' + nmE.anio + '|' + nmE.visita;
+      if (PC_CORTE.k !== k || Date.now() - PC_CORTE.t > 300000) {
+        if (!PC_CORTE.cargando) {
+          PC_CORTE.cargando = true;
+          pcFechaCorteBalance(nmE.cliente, nmE.anio, nmE.visita).then(f => { PC_CORTE.k = k; PC_CORTE.f = String(f || '').slice(0, 10); PC_CORTE.t = Date.now(); PC_CORTE.cargando = false; if (repintar) repintar(); }).catch(() => { PC_CORTE.cargando = false; });
+        }
+        if (PC_CORTE.k !== k) return '';
+      }
+      const fb = PC_CORTE.f; if (!fb || fb === fecha) return '';
+      return '<div style="margin:6px 14px 10px;padding:8px 12px;border:1px solid #e0b64a;background:#fdf6e3;color:#7a5a06;border-radius:8px;font-size:12px;line-height:1.55"><b>La fecha de corte de este análisis (' + pcFechaLarga(fecha) + ') es diferente a la de las sumarias (' + pcFechaLarga(fb) + ').</b> Para que el cruce con el balance sea válido deben ser la misma fecha. <button type="button" onclick="pcAlinearCorte(\'' + modulo + '\')" style="margin-left:6px;padding:2px 10px;font-size:12px;font-weight:700;color:#4a4a44;background:#fff;border:1px solid #e0b64a;border-radius:8px;cursor:pointer">Usar la fecha de las sumarias</button></div>';
+    }
+    function pcAlinearCorte(m) { const f = PC_CORTE.f; if (!f) return; if (m === 'pp') ppCab(f); else if (m === 'ob') obCab('cierre', f); }
     // Fecha de corte del balance cargado para el cliente, año y visita (la que se ingresó al subir el balance)
     async function pcFechaCorteBalance(cli, anio, visita) {
       try {
@@ -20070,7 +20086,7 @@ ${cont.innerHTML}
       return { dias, interes, corto: obR(corto), largo: obR(cap - corto), vencido: !!(ven && cierre && ven < cierre && cap > 0) };
     }
     async function obCargar() {
-      const cli = nmE.cliente, anio = Number(nmE.anio), vis = nmE.visita; const id = ++obE.cargaId;
+      PC_CORTE.t = 0; const cli = nmE.cliente, anio = Number(nmE.anio), vis = nmE.visita; const id = ++obE.cargaId;
       Object.assign(obE, { cargado: false, filas: [], libros: null, bal: { PB: null, PK: null }, msg: '', archivo: '', mov: null, gi: { cargado: false, cand: [], sel: {}, filtro: '', intTab: null, canc: [], man: {}, lineas: [], ids: [], msg: '' } });
       if (!cli) return;
       obE.cierre = ($im('nm-fecha') || {}).value || (vis === 'final' ? anio + '-12-31' : anio + '-09-30');
@@ -20270,6 +20286,7 @@ ${cont.innerHTML}
       const TH = ['', 'Entidad', 'Operación', 'Inicio', 'Vencimiento', 'Tasa %', 'Capital al corte', 'Capital corto plazo (si se deja vacío: lo que vence en 12 meses)', 'Último pago de intereses', 'Días', 'Pasivo pendiente por intereses al corte', 'Corto plazo', 'Largo plazo', 'Intereses devengados ' + (yc - 1), 'Intereses devengados ' + yc, 'Gasto de intereses registrado (mayor)', 'Diferencia gasto menos devengado', 'Pagos de capital ' + yc + ' (mayor)', 'Saldo de capital al corte (mayor)', 'Diferencia anexo menos mayor', 'Alerta', ''];
       c.innerHTML = '<style>' + css + '</style><div style="background:#f1f1ee">'
         + '<div style="padding:16px 14px 14px;font-size:12px;color:#6b6b63;line-height:1.7">Anexo de los créditos del cliente: cada fila es una operación. Aquí van todos los créditos, vigentes y cancelados. La aplicación calcula el pasivo pendiente por intereses al corte (capital × tasa × días desde el último pago ÷ base), separa el corto y el largo plazo y muestra los intereses devengados del año anterior y del año actual (con la tabla de amortización del banco cuando existe; con asterisco si es una estimación). A la derecha están los pagos de capital y el saldo del mayor para cada préstamo, que se comparan con el anexo y con las sumarias PB (corriente) y PK (no corriente). Sube el Excel o CSV, o pídele a Claude que lo arme desde las tablas de amortización en «Subir información».</div>'
+        + pcAvisoCorte(obE.cierre, obPintar, 'ob')
         + '<div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:4px 14px 20px"><label style="font-size:12px;color:#4a4a44">Fecha de cierre <input type="date" value="' + e(obE.cierre) + '" onchange="obCab(\'cierre\',this.value)" style="border:1px solid #dcdcd6;border-radius:6px;padding:2px 6px;font-size:12px"></label><label style="font-size:12px;color:#4a4a44">Base de días <select onchange="obCab(\'base\',this.value)" style="border:1px solid #dcdcd6;border-radius:6px;padding:2px 6px;font-size:12px"><option value="360"' + (obE.base === 360 ? ' selected' : '') + '>360</option><option value="365"' + (obE.base === 365 ? ' selected' : '') + '>365</option></select></label>'
         + '<label class="ob-b" style="cursor:pointer">Subir anexo (Excel o CSV)<input id="ob-archivo" type="file" accept=".xlsx,.xls,.csv" class="hidden" onchange="obSubir(this.files)"></label><button type="button" class="ob-b" onclick="obPlantilla()">Descargar plantilla</button><button type="button" class="ob-b" onclick="obAgregar()">＋ Agregar fila</button>' + (obE.filas.length ? '<button type="button" class="ob-b" onclick="obVaciar()">Vaciar</button>' : '') + '<span id="ob-msg" style="font-size:11px;color:#6b6b63">' + e(obE.msg || (obE.archivo ? 'Archivo: ' + obE.archivo : '')) + '</span><button type="button" onclick="obExcel()" style="margin-left:auto;padding:6px 4px;font-size:12px;font-weight:700;background:transparent;border:0;color:#449964;cursor:pointer">⬇ Descargar Excel</button></div>'
         + '<div style="overflow-x:auto;padding:6px 10px 16px"><table class="ob"><thead><tr>' + TH.map(x => '<th>' + x + '</th>').join('') + '</tr></thead><tbody>' + (fil || '<tr><td colspan="22" style="padding:14px;color:#9a9a92;white-space:normal">Aún no hay créditos. Sube el anexo o agrega filas.</td></tr>') + tot + '</tbody></table></div>'
@@ -20476,7 +20493,7 @@ ${cont.innerHTML}
         tot: { n: ao.length, bruto: suma(ao, x => x.r.bruto), ap: suma(ao, x => x.r.ap), gasto: suma(ao, x => x.r.gasto), ac: suma(ao, x => x.r.ac), neto: suma(ao, x => x.r.neto), sis: ao.every(x => x.r.sis === null) ? null : suma(ao, x => x.r.sis), balC: R(clases.reduce((a, x) => a + x.balC, 0) + sin.filter(s => !s.dep).reduce((a, s) => a + s.b.saldo, 0)), balD: R(clases.reduce((a, x) => a + x.balD, 0) + Math.abs(sin.filter(s => s.dep).reduce((a, s) => a + s.b.saldo, 0))) } };
     }
     async function ppCargar() {
-      const cli = nmE.cliente, anio = Number(nmE.anio), vis = nmE.visita, id = ++ppE.cargaId;
+      PC_CORTE.t = 0; const cli = nmE.cliente, anio = Number(nmE.anio), vis = nmE.visita, id = ++ppE.cargaId;
       Object.assign(ppE, { cargado: false, filas: [], bal: [], mapa: {}, msg: '', archivo: '', pag: 0, ver: {} });
       if (!cli) return;
       ppE.cierre = ($im('nm-fecha') || {}).value || (vis === 'final' ? anio + '-12-31' : anio + '-09-30');
@@ -20587,6 +20604,7 @@ ${cont.innerHTML}
       const sel = '<select onchange="ppFiltro(\'cla\',this.value)" style="border:1px solid #dcdcd6;border-radius:6px;padding:2px 6px;font-size:12px"><option value="">Todas las clasificaciones</option>' + clas.map(k => '<option value="' + e(k) + '"' + (ppE.cla === k ? ' selected' : '') + '>' + e(k) + '</option>').join('') + '</select>';
       c.innerHTML = '<style>' + PP_CSS + '</style><div style="background:#f1f1ee">'
         + '<div style="padding:16px 14px 14px;font-size:12px;color:#6b6b63;line-height:1.7">Anexo de activos fijos del cliente (ref. ' + PP_REF.anexo + '): un activo por fila, con su clasificación, valor de compra, reavalúo, valor residual, vida útil y fecha de inicio de depreciación. La aplicación recalcula la depreciación acumulada (línea recta; el mes de inicio se prorratea por días), el gasto del año y por mes, y la compara con la que entrega el sistema del cliente. Los cuadros contra la sumaria AO y la depreciación por año y por mes están en «Resumen de cuadres y cruces». Los derechos de uso (AOO) no van aquí: tienen su propia herramienta.</div>'
+        + pcAvisoCorte(ppE.cierre, ppPintar, 'pp')
         + '<div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:4px 14px 12px"><label style="font-size:12px;color:#4a4a44">Fecha de cierre <input type="date" value="' + e(ppE.cierre) + '" onchange="ppCab(this.value)" style="border:1px solid #dcdcd6;border-radius:6px;padding:2px 6px;font-size:12px"></label>'
         + '<label class="ob-b" style="cursor:pointer">Subir anexo (Excel o CSV)<input id="pp-archivo" type="file" accept=".xlsx,.xls,.csv" class="hidden" onchange="ppSubir(this.files)"></label><button type="button" class="ob-b" onclick="ppPlantilla()">Descargar plantilla</button><button type="button" class="ob-b" onclick="ppAgregar()">＋ Agregar activo</button>' + (ppE.filas.length ? '<button type="button" class="ob-b" onclick="ppVaciar()">Vaciar</button>' : '') + '<span id="pp-msg" style="font-size:11px;color:#6b6b63">' + e(ppE.msg || (ppE.archivo ? 'Archivo: ' + ppE.archivo : '')) + '</span>'
         + '<button type="button" onclick="ppExcel()" style="margin-left:auto;padding:6px 4px;font-size:12px;font-weight:700;background:transparent;border:0;color:#449964;cursor:pointer">⬇ Descargar Excel</button></div>'
@@ -20649,7 +20667,7 @@ ${cont.innerHTML}
     }
     function ppCuaPrepend() {
       const c = $im('nm-panel'); if (!c || nmE.tab !== 'cuadres' || !nmE.cliente) return;
-      c.innerHTML = '<div style="padding:4px 2px">' + ppCuadresHtml() + '</div>' + c.innerHTML;
+      c.innerHTML = '<div style="padding:4px 2px">' + pcAvisoCorte(ppE.cierre, ppCuaPrepend, 'pp') + ppCuadresHtml() + '</div>' + c.innerHTML;
     }
     // Excel con carátula y una hoja por cuadro
     async function ppExcel() {
