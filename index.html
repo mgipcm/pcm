@@ -19671,13 +19671,13 @@ ${cont.innerHTML}
       ], tabs: [['programa', 'Programa'], ['subir', 'Subir información'], ['resultado', 'Resultado del análisis – Claude'], ['anexos', 'Anexos y cálculos'], ['cuadres', 'Resumen de cuadres y cruces'], ['conclusiones', 'Conclusiones de la cuenta']], sum: 'PB', hoja: 'obligaciones', titulo: '2. PB Obligaciones financieras', subtit: 'Análisis guiado por el programa de auditoría: Claude arma el anexo de créditos, calcula los intereses y el corto y largo plazo, y cruza con las confirmaciones y el mayor; el auditor revisa.', nombre: 'PB - Obligaciones financieras', ref: 'PB · Obligaciones financieras', corto: 'Obligaciones financieras', txtSubir: 'Aquí se sube todo en un solo pedido, menos el mayor contable, que se carga en la pantalla Mayor contable del menú (Claude lo usa solo): las tablas de amortización de cada crédito, los contratos o pagarés con sus garantías, los estados de cuenta o certificados de deuda de las instituciones y las confirmaciones bancarias. Claude lo lee junto, arma el anexo de la pestaña «Anexos y cálculos» y las demás pestañas leen de aquí. Cuando el pedido pase a "hecho", presiona «Actualizar».' };
     NM_CFGS.ppe = { cob: [
         { n: 'Mayor contable completo (se carga en la pantalla Mayor contable)', req: true, et: ['Mayor contable completo'] },
-        { n: 'Anexo o listado de activos fijos (con depreciación) del cliente', req: true, et: ['Anexo de activos fijos'] },
+        { n: 'Anexo o listado de activos fijos (con depreciación) del cliente', req: true, et: ['Anexo de activos fijos'], app: () => (ppE.cargado && ppE.filas.length ? ppE.filas.length + ' activos cargados en «Anexos y cálculos»' : '') },
         { n: 'Facturas y contratos de compra de las adiciones del año', req: true, et: ['Factura de compra de activo fijo', 'Contrato de compra o construcción'] },
         { n: 'Actas de baja, ventas o siniestros de activos', req: false, et: ['Acta de baja de activos', 'Documento de venta de activo'] },
         { n: 'Avalúos o informes de reavalúo', req: false, et: ['Informe de avalúo o reavalúo'] },
         { n: 'Pólizas de seguro y escrituras o matrículas', req: false, et: ['Póliza de seguro', 'Escritura o matrícula'] },
         { n: 'Actas de toma física', req: false, et: ['Acta de toma física de activos'] }
-      ], tabs: [['programa', 'Programa'], ['subir', 'Subir información'], ['resultado', 'Resultado del análisis – Claude'], ['anexos', 'Anexos y cálculos'], ['cuadres', 'Resumen de cuadres y cruces'], ['conclusiones', 'Conclusiones de la cuenta']], sum: 'AO', hoja: 'ppe', titulo: '2. AO Propiedad, planta y equipo', subtit: 'Análisis guiado por el programa de auditoría: Claude arma el anexo de activos fijos, recalcula la depreciación por año y por mes y la cuadra con las sumaria AO; el auditor revisa.', nombre: 'AO - Propiedad, planta y equipo', ref: 'AO · Propiedad, planta y equipo', corto: 'Propiedad, planta y equipo', txtSubir: 'Aquí se sube todo en un solo pedido: el anexo o listado de activos fijos del cliente (Excel), las facturas y contratos de las adiciones, las actas de baja o venta, los avalúos y lo que sirva para respaldar los saldos. El mayor contable se carga una sola vez en la pantalla Mayor contable.' };
+      ], tabs: [['programa', 'Programa'], ['subir', 'Subir información'], ['resultado', 'Resultado del análisis – Claude'], ['anexos', 'Anexos y cálculos'], ['cuadres', 'Resumen de cuadres y cruces'], ['conclusiones', 'Conclusiones de la cuenta']], sum: 'AO', hoja: 'ppe', titulo: '2. AO Propiedad, planta y equipo', subtit: 'Análisis guiado por el programa de auditoría: Claude arma el anexo de activos fijos, recalcula la depreciación por año y por mes y la cuadra con las sumaria AO; el auditor revisa.', nombre: 'AO - Propiedad, planta y equipo', ref: 'AO · Propiedad, planta y equipo', corto: 'Propiedad, planta y equipo', txtSubir: 'Aquí se sube todo en un solo pedido: las facturas y contratos de las adiciones, las actas de baja o venta, los avalúos y lo que sirva para respaldar los saldos. El mayor contable se carga una sola vez en la pantalla Mayor contable. El anexo de activos fijos (Excel) se carga una sola vez en «Anexos y cálculos», no aquí; Claude usa ese anexo ya guardado.' };
     let NM_CTX = NM_CFGS.nomina;
     const nmE = { cliente: '', anio: '', visita: '', procs: [], filas: {}, cargaId: 0, abiertos: {}, tab: 'programa', sv: null };
     const NM_TABS = [['programa', 'Programa'], ['subir', 'Subir información'], ['resultado', 'Resultado del análisis – Claude'], ['cuadres', 'Resumen de cuadres y cruces'], ['conclusiones', 'Conclusiones de la cuenta']];
@@ -20523,7 +20523,7 @@ ${cont.innerHTML}
       const acc = {}; (r2.data || []).forEach(x => { const s = String(x.sumaria).trim().toUpperCase(), k = s + '|' + x.codigo; acc[k] = acc[k] || { sumaria: s, codigo: String(x.codigo), cuenta: x.cuenta, saldo: 0 }; acc[k].saldo += Number(x.saldo) || 0; });
       ppE.bal = Object.values(acc).map(x => ({ ...x, saldo: obR(x.saldo) }));
       ppE.cargado = true;
-      if (nmE.tab === 'anexos') ppPintar(); else if (nmE.tab === 'cuadres') nmCuaPintar();
+      nmPintar();
     }
     function ppGuardar() {
       clearTimeout(ppE.guardando);
@@ -20619,7 +20619,7 @@ ${cont.innerHTML}
       const clas = [...new Set(ppE.filas.map(ppClave))].sort();
       const sel = '<select onchange="ppFiltro(\'cla\',this.value)" style="border:1px solid #dcdcd6;border-radius:6px;padding:2px 6px;font-size:12px"><option value="">Todas las clasificaciones</option>' + clas.map(k => '<option value="' + e(k) + '"' + (ppE.cla === k ? ' selected' : '') + '>' + e(k) + '</option>').join('') + '</select>';
       c.innerHTML = '<style>' + PP_CSS + '</style><div style="background:#f1f1ee">'
-        + '<div style="padding:16px 14px 14px;font-size:12px;color:#6b6b63;line-height:1.7">Anexo de activos fijos del cliente (ref. ' + PP_REF.anexo + '): un activo por fila, con su clasificación, valor de compra, reavalúo, valor residual, vida útil y fecha de inicio de depreciación. La aplicación recalcula la depreciación acumulada (línea recta; el mes de inicio se prorratea por días), el gasto del año y por mes, y la compara con la que entrega el sistema del cliente. Los cuadros contra la sumaria AO y la depreciación por año y por mes están en «Resumen de cuadres y cruces». Los derechos de uso (AOO) no van aquí: tienen su propia herramienta.</div>'
+        + '<div style="padding:16px 14px 14px;font-size:12px;color:#6b6b63;line-height:1.7">Anexo de activos fijos del cliente (ref. ' + PP_REF.anexo + '): un activo por fila, con su clasificación, valor de compra, reavalúo, valor residual, vida útil y fecha de inicio de depreciación. La aplicación recalcula la depreciación acumulada (línea recta; el mes de inicio se prorratea por días), el gasto del año y por mes, y la compara con la que entrega el sistema del cliente. Los cuadros contra la sumaria AO y la depreciación por año y por mes están en «Resumen de cuadres y cruces». Los derechos de uso (AOO) no van aquí: tienen su propia herramienta. Este anexo se carga solo aquí: no hace falta subirlo en «Subir información», porque Claude usa el que queda guardado.</div>'
         + pcAvisoCorte(ppE.cierre, ppPintar, 'pp')
         + '<div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:4px 14px 12px"><label style="font-size:12px;color:#4a4a44">Fecha de cierre <input type="date" value="' + e(ppE.cierre) + '" onchange="ppCab(this.value)" style="border:1px solid #dcdcd6;border-radius:6px;padding:2px 6px;font-size:12px"></label>'
         + '<label class="ob-b" style="cursor:pointer">Subir anexo (Excel o CSV)<input id="pp-archivo" type="file" accept=".xlsx,.xls,.csv" class="hidden" onchange="ppSubir(this.files)"></label><button type="button" class="ob-b" onclick="ppPlantilla()">Descargar plantilla</button><button type="button" class="ob-b" onclick="ppAgregar()">＋ Agregar activo</button>' + (ppE.filas.length ? '<button type="button" class="ob-b" onclick="ppVaciar()">Vaciar</button>' : '') + '<span id="pp-msg" style="font-size:11px;color:#6b6b63">' + e(ppE.msg || (ppE.archivo ? 'Archivo: ' + ppE.archivo : '')) + '</span>'
@@ -21267,20 +21267,22 @@ ${cont.innerHTML}
       const filas = (grupos || []).map(g => {
         const f = arch.filter(a => g.et.includes(a.etiqueta));
         const ok = f.filter(a => a.lectura === 'ok').length, mal = f.filter(a => a.lectura === 'error').length, sin = f.filter(a => a.lectura === 'sin').length;
-        const subido = f.length ? 'si' : (todo.length ? 'junto' : 'no');
+        const ap = (!f.length && typeof g.app === 'function') ? g.app() : '';
+        const subido = f.length ? 'si' : (ap ? 'app' : (todo.length ? 'junto' : 'no'));
         const leido = !f.length ? '' : (f.every(a => !a.lectura) ? '' : (ok === f.length ? 'si' : (ok ? 'parcial' : 'no')));
         const d = decl && decl.find(x => norm(x.tipo) === norm(g.n));
         let an = '';
         if (f.length) { if (d) an = String(d.estado || ''); else if (R) an = 'sd'; else if (appFn) an = appFn() ? 'si' : 'pend'; else an = ''; }
         const obs = [];
         const esMayor = (g.et || []).includes('Mayor contable completo');
-        if (!f.length) obs.push(todo.length ? 'Podría venir dentro de un archivo marcado «Todo en un archivo».' : (g.req ? (esMayor ? 'No se ha subido: cárgalo en la pantalla Mayor contable del menú.' : 'No se ha subido.') : 'No se subió (opcional).'));
+        if (ap) obs.push('Ya está cargado en la aplicación (' + ap + '); no hace falta subirlo aquí.');
+        else if (!f.length) obs.push(todo.length ? 'Podría venir dentro de un archivo marcado «Todo en un archivo».' : (g.req ? (esMayor ? 'No se ha subido: cárgalo en la pantalla Mayor contable del menú.' : 'No se ha subido.') : 'No se subió (opcional).'));
         if (mal) obs.push(mal + ' archivo(s) no se pudieron leer: ' + f.filter(a => a.lectura === 'error').map(a => a.nombre).join(', ') + '. Vuelva a subirlos más livianos, en Excel, CSV o PDF con texto.');
         if (sin) obs.push(sin + ' archivo(s) aún sin leer.');
         if (d && d.nota) obs.push(d.nota);
         const prob = (g.req && subido === 'no') || leido === 'parcial' || leido === 'no' || an === 'parcial' || an === 'no';
         if (prob) n++;
-        return { g, nf: f.length, ok, subido, leido, an, obs, prob, nombres: f.map(a => a.nombre).filter(Boolean) };
+        return { g, nf: f.length, ok, subido, leido, an, obs, prob, nombres: ap ? [ap] : f.map(a => a.nombre).filter(Boolean) };
       });
       return { filas, n, todo: todo.length, otros: arch.filter(a => a.etiqueta !== PC_TODO && !(grupos || []).some(g => g.et.includes(a.etiqueta))).length, hayRes: !!R, vacio: false };
     }
@@ -21314,7 +21316,7 @@ ${cont.innerHTML}
     function nmInformeAbrir() { pcInformeVentana(String(NM_CTX.titulo || '').replace(/<[^>]*>/g, '').trim(), nmCobertura()); }
     function pcInformeVentana(titulo, C) {
       const e = escapeHtml;
-      const chip = (v, txt) => { const col = { si: '#15803d', parcial: '#b45309', no: '#b91c1c', junto: '#b45309', sd: '#64748b', pend: '#64748b' }[v] || '#64748b', t = txt || { si: 'Sí', parcial: 'Parcial', no: 'No', junto: 'Revisar', sd: 'Sin detalle', pend: 'Pendiente' }[v] || '—'; return '<span style="color:' + col + ';font-weight:600">' + t + '</span>'; };
+      const chip = (v, txt) => { const col = { si: '#15803d', app: '#15803d', parcial: '#b45309', no: '#b91c1c', junto: '#b45309', sd: '#64748b', pend: '#64748b' }[v] || '#64748b', t = txt || { si: 'Sí', app: 'En la aplicación', parcial: 'Parcial', no: 'No', junto: 'Revisar', sd: 'Sin detalle', pend: 'Pendiente' }[v] || '—'; return '<span style="color:' + col + ';font-weight:600">' + t + '</span>'; };
       const celda = 'padding:3px 8px;border-bottom:1px solid #e5e7eb;vertical-align:top';
       const cuerpo = C.filas.map(r => '<tr><td style="' + celda + ';font-weight:600;color:#1e293b">' + e(r.g.n) + (r.g.req ? '' : ' <span style="font-weight:400;color:#94a3b8">(opcional)</span>') + '</td>' +
         '<td style="' + celda + ';white-space:nowrap">' + chip(r.subido, r.subido === 'si' ? 'Sí (' + r.nf + ')' : '') + (r.nombres && r.nombres.length ? r.nombres.map(n => '<div style="font-weight:400;font-size:11px;color:#64748b;white-space:normal;max-width:300px;word-break:break-word">' + e(n) + '</div>').join('') : '') + '</td>' +
