@@ -20735,18 +20735,18 @@ ${cont.innerHTML}
     }
     function ppMovVer(k) { ppE.mov.ver[k] = !ppE.mov.ver[k]; nmCuaPintar(); }
     function ppMovHtml(D) {
-      const e = escapeHtml, cab = t => '<div class="v2r-h3" style="margin:6px 0 6px"><span>' + t + '</span></div>', ay = t => '<p style="font-size:12px;color:#6b6b63;line-height:1.6;margin:0 0 8px">' + t + '</p>';
+      const e = escapeHtml, cab = (t, n) => conclH2('pp-sec-' + n, n + '. ' + t, '', 'neutro', n === 1), ay = t => '<p style="font-size:12px;color:#6b6b63;line-height:1.6;margin:0 0 8px">' + t + '</p>';
       const tit = 'Movimiento del mayor contable por tipo de activo (ref. ' + PP_REF.cuadre + ')';
       const M = ppE.mov;
-      if (!M || !M.cargado) return cab(tit) + '<p class="text-xs text-slate-500" style="margin-bottom:14px">Cargando el movimiento del mayor…</p>';
-      if (M.msg) return cab(tit) + '<p style="font-size:12px;color:#b42318;margin-bottom:14px">' + e(M.msg) + '</p>';
-      if (!M.ids.length) return cab(tit) + ay('No hay mayor contable cargado para este cliente y año. Cárgalo en la pantalla Mayor contable para ver aquí el saldo inicial, las compras, bajas, ventas, reclasificaciones, ajustes, reavalúos y el saldo final de cada tipo de activo.');
+      if (!M || !M.cargado) return cab(tit, 2) + '<p class="text-xs text-slate-500" style="margin-bottom:14px">Cargando el movimiento del mayor…</p>';
+      if (M.msg) return cab(tit, 2) + '<p style="font-size:12px;color:#b42318;margin-bottom:14px">' + e(M.msg) + '</p>';
+      if (!M.ids.length) return cab(tit, 2) + ay('No hay mayor contable cargado para este cliente y año. Cárgalo en la pantalla Mayor contable para ver aquí el saldo inicial, las compras, bajas, ventas, reclasificaciones, ajustes, reavalúos y el saldo final de cada tipo de activo.');
       const R2 = obR, num = x => (x === null || x === undefined) ? '<span style="color:#cbd5e1">—</span>' : ppF2(x);
       const th = (t, cls) => '<th class="px-2 py-1 border-b border-slate-200 whitespace-nowrap ' + (cls || 'text-right') + '">' + t + '</th>';
       const tdn = (v, cls) => '<td class="px-2 py-0.5 text-right whitespace-nowrap ' + (cls || '') + '">' + (v === 0 ? '<span style="color:#cbd5e1">0,00</span>' : num(v)) + '</td>';
       const tdd = d => '<td class="px-2 py-0.5 text-right whitespace-nowrap font-bold ' + (Math.abs(d) <= 1 ? 'text-emerald-700' : 'text-red-600') + '">' + num(d) + '</td>';
       const btn = (k, t) => '<button type="button" class="v2r-i" onclick="ppMovVer(\'' + e(k) + '\')" title="' + e(t) + '">' + IC_OJO + '</button>';
-      const DT = ppMovData(D); if (!DT) return cab(tit);
+      const DT = ppMovData(D); if (!DT) return cab(tit, 2);
       const bloque = (dep, B, titulo) => {
         const cols = PP_MOV_COLS.map(c => (dep && c[0] === 'a') ? ['a', 'Depreciación del año'] : c);
         const cuerpo = B.filas.map(f => {
@@ -20767,18 +20767,18 @@ ${cont.innerHTML}
           + '<tr class="border-b border-slate-200 bg-slate-50 font-bold text-slate-800"><td class="px-2 py-0.5">Total</td>' + tdn(T.ini) + cols.map(c => tdn(T[c[0]])).join('') + tdn(T.fin) + tdn(B.bal) + tdd(dT) + '</tr></tbody></table></div>';
       };
       const sinDet = Object.values(M.cta).filter(x => x.hay && !x.lineas).length, faltan = Object.keys(M.cta).filter(c => !M.cta[c].hay).length;
-      return '<style>.ppm td,.ppm th{padding:1px 6px;font-size:11px;line-height:1.25}.ppm th{white-space:normal;vertical-align:bottom}.ppm td:first-child{white-space:normal}</style>' + cab(tit) + ay('Del mayor contable cargado: saldo inicial del año, cada tipo de movimiento y saldo final de cada tipo de activo, contra el balance. Cada asiento se clasifica por su concepto (compras e importaciones, bajas, ventas, reclasificaciones, ajustes, reavalúos); lo que no se reconoce va en «Otros». Toca el ojito de una fila para ver los asientos que la componen.')
+      return '<style>.ppm td,.ppm th{padding:1px 6px;font-size:11px;line-height:1.25}.ppm th{white-space:normal;vertical-align:bottom}.ppm td:first-child{white-space:normal}</style>' + cab(tit, 2) + ay('Del mayor contable cargado: saldo inicial del año, cada tipo de movimiento y saldo final de cada tipo de activo, contra el balance. Cada asiento se clasifica por su concepto (compras e importaciones, bajas, ventas, reclasificaciones, ajustes, reavalúos); lo que no se reconoce va en «Otros». Toca el ojito de una fila para ver los asientos que la componen.')
         + (sinDet ? '<p style="font-size:11px;color:#6b6b63;margin:-4px 0 6px">Cargando el detalle de asientos de ' + sinDet + ' cuenta(s)…</p>' : '')
         + (faltan ? '<p style="font-size:11px;color:#b45309;margin:-4px 0 6px">' + faltan + ' cuenta(s) del balance no aparecen en el mayor cargado.</p>' : '')
         + bloque(false, DT.costo, 'Costo') + bloque(true, DT.dep, 'Depreciación acumulada');
     }
     // Pestaña «Resumen de cuadres y cruces»: detalle de activos fijos arriba del resto
     function ppCuadresHtml() {
-      const e = escapeHtml, cab = t => '<div class="v2r-h3" style="margin:6px 0 6px"><span>' + t + '</span></div>', ay = t => '<p style="font-size:12px;color:#6b6b63;line-height:1.6;margin:0 0 8px">' + t + '</p>';
+      const e = escapeHtml, cab = (t, n) => conclH2('pp-sec-' + n, n + '. ' + t, '', 'neutro', n === 1), ay = t => '<p style="font-size:12px;color:#6b6b63;line-height:1.6;margin:0 0 8px">' + t + '</p>';
       const tit = 'Detalle de activos fijos (propiedad, planta y equipo)';
-      if (!ppE.cargado) return cab(tit) + '<p class="text-xs text-slate-500" style="margin-bottom:14px">Cargando el anexo…</p>';
+      if (!ppE.cargado) return cab(tit, 1) + '<p class="text-xs text-slate-500" style="margin-bottom:14px">Cargando el anexo…</p>';
       const D = ppDatos();
-      if (!D) return cab(tit) + ay('Todavía no hay anexo de activos fijos. Sube el Excel del cliente en la pestaña «Anexos y cálculos» para ver aquí el cuadre con la sumaria AO y la depreciación por año y por mes.');
+      if (!D) return cab(tit, 1) + ay('Todavía no hay anexo de activos fijos. Sube el Excel del cliente en la pestaña «Anexos y cálculos» para ver aquí el cuadre con la sumaria AO y la depreciación por año y por mes.');
       const R2 = obR, num = x => (x === null || x === undefined) ? '<span style="color:#cbd5e1">—</span>' : ppF2(x), TOL = 1;
       const th = (t, cls) => '<th class="px-2 py-1 border-b border-slate-200 whitespace-nowrap ' + (cls || 'text-right') + '">' + t + '</th>';
       const tdn = (v, cls) => '<td class="px-2 py-0.5 text-right whitespace-nowrap ' + (cls || '') + '">' + num(v) + '</td>';
@@ -20821,7 +20821,7 @@ ${cont.innerHTML}
       tb += '<tr class="border-b border-slate-200 bg-slate-50 font-bold text-slate-800"><td class="' + lft + '">' + (D.excl.hay ? 'Total seleccionado' : 'Total propiedad, planta y equipo (sumaria AO)') + '</td><td class="px-2 py-0.5 text-right">' + T.n + '</td>' + tdn(T.bruto) + tdn(T.balC) + tdd(dTC) + tdn(T.ac) + tdn(T.balD) + tdd(dTD) + tdn(T.neto) + tdn(R2(T.balC - T.balD)) + '</tr>';
       if (D.excl.hay) { const X = D.excl; tb += '<tr class="border-b border-slate-100 text-slate-600"><td class="' + lft + '">Partidas no seleccionadas (se revisan aparte)</td><td class="px-2 py-0.5 text-right">' + X.n + '</td>' + tdn(X.bruto) + tdn(X.balC) + '<td></td>' + tdn(X.ac) + tdn(X.balD) + '<td></td>' + tdn(X.neto) + tdn(R2(X.balC - X.balD)) + '</tr><tr class="border-b border-slate-200 bg-slate-50 font-bold text-slate-800"><td class="' + lft + '">Total sumaria AO (seleccionado + no seleccionado)</td><td class="px-2 py-0.5 text-right">' + (T.n + X.n) + '</td>' + tdn(R2(T.bruto + X.bruto)) + tdn(R2(T.balC + X.balC)) + '<td></td>' + tdn(R2(T.ac + X.ac)) + tdn(R2(T.balD + X.balD)) + '<td></td>' + tdn(R2(T.neto + X.neto)) + tdn(R2(T.balC + X.balC - T.balD - X.balD)) + '</tr>'; }
       const sis = T.sis === null ? '' : '<tr class="border-b border-slate-100"><td class="' + lft + '" colspan="6">Depreciación acumulada según el sistema del cliente (columna del Excel)</td>' + tdn(T.sis) + '<td colspan="3"></td></tr><tr class="border-b border-slate-100"><td class="' + lft + '" colspan="6">Diferencia: depreciación recalculada menos la del sistema <span class="text-slate-500 font-normal">(' + D.ao.filter(x => x.r.dif !== null && Math.abs(x.r.dif) > 1).length + ' activo(s) con diferencia mayor a 1,00)</span>' + btnA('dsis', 'Ver los activos con diferencia contra el sistema') + '</td>' + tdd(R2(T.ac - T.sis)) + '<td colspan="3"></td></tr>';
-      let h = cab(tit + ' (ref. ' + PP_REF.cuadre + ')') + ay('Sale del anexo de activos fijos (pestaña «Anexos y cálculos») y del balance de comprobación: costo y depreciación acumulada de cada clasificación contra las cuentas de la sumaria AO (y las de software de la sumaria AR cuando el cliente las lleva en el mismo listado). Las cuentas del balance se asignan solas por su nombre; si alguna quedó mal puedes cambiarla. Diferencias en rojo. Con las casillas eliges qué clasificaciones y cuentas entran al papel de trabajo (totales, costo y depreciación y Excel); lo desmarcado se revisa aparte.');
+      let h = cab(tit + ' (ref. ' + PP_REF.cuadre + ')', 1) + ay('Sale del anexo de activos fijos (pestaña «Anexos y cálculos») y del balance de comprobación: costo y depreciación acumulada de cada clasificación contra las cuentas de la sumaria AO (y las de software de la sumaria AR cuando el cliente las lleva en el mismo listado). Las cuentas del balance se asignan solas por su nombre; si alguna quedó mal puedes cambiarla. Diferencias en rojo. Con las casillas eliges qué clasificaciones y cuentas entran al papel de trabajo (totales, costo y depreciación y Excel); lo desmarcado se revisa aparte.');
       h += '<div class="flex flex-wrap items-center gap-2 text-[11px]" style="margin-bottom:6px"><button type="button" onclick="ppInclModo(\'solo\')" class="px-2 py-0.5 rounded-lg bg-slate-200 text-slate-900 font-semibold hover:bg-slate-300">Solo con anexo y cuenta del balance</button><button type="button" onclick="ppInclModo(\'todo\')" class="px-2 py-0.5 rounded-lg bg-slate-100 text-slate-800 font-medium hover:bg-slate-200">Seleccionar todo</button></div>';
       h += '<div class="overflow-x-auto" style="margin-bottom:12px"><table class="w-full text-[11px] leading-tight border-collapse"><thead class="bg-slate-50 text-slate-600"><tr>' + th('Clasificación', 'text-left') + th('Activos') + th('Costo según anexo') + th('Costo según balance') + th('Diferencia') + th('Dep. acumulada según anexo') + th('Dep. acumulada según balance') + th('Diferencia') + th('Valor neto según anexo') + th('Valor neto según balance') + '</tr></thead><tbody>' + tb + sis + '</tbody></table></div>';
       if (D.sinCalc) h += '<p style="font-size:11px;color:#b45309;margin:-4px 0 10px">' + D.sinCalc + ' activo(s) sin fecha de inicio, vida útil o valor de compra: no se pudo calcular su depreciación.</p>';
@@ -20842,7 +20842,7 @@ ${cont.innerHTML}
         return r;
       };
       const hdr = C.map(c => c.mes ? '<th class="px-2 py-1 border-b border-slate-200 text-right whitespace-nowrap font-normal" style="background:#f1f1ee">' + e(c.etq) + '</th>' : '<th class="px-2 py-1 border-b border-slate-200 text-right whitespace-nowrap cursor-pointer select-none" style="background:#e5e3dc" onclick="ppCdAnio(' + c.y + ')" title="Clic para ' + (an.has(c.y) ? 'ocultar' : 'ver') + ' los meses de ' + c.y + '"><span class="flecha-caja flecha-mini ' + (an.has(c.y) ? 'abierta' : '') + '">' + (an.has(c.y) ? '▾' : '▸') + '</span>' + e(c.etq) + '</th>').join('');
-      h += cab('Costo y depreciación acumulada por activo (ref. ' + PP_REF.dep + ')') + ay('Costo y depreciación acumulada al cierre de cada año, recalculados con las fechas de inicio y la vida útil del anexo. Toca la flecha de cada año para ver sus meses, y la flecha de cada total para ver el detalle por clasificación. El último año llega solo hasta la fecha de cierre.');
+      h += cab('Costo y depreciación acumulada por activo (ref. ' + PP_REF.dep + ')', 3) + ay('Costo y depreciación acumulada al cierre de cada año, recalculados con las fechas de inicio y la vida útil del anexo. Toca la flecha de cada año para ver sus meses, y la flecha de cada total para ver el detalle por clasificación. El último año llega solo hasta la fecha de cierre.');
       h += '<div class="flex flex-wrap items-center gap-2 text-[11px]" style="margin-bottom:6px"><button type="button" onclick="ppCdTodos(true)" class="px-2 py-0.5 rounded-lg bg-slate-200 text-slate-900 font-semibold hover:bg-slate-300">Ver todos los meses</button><button type="button" onclick="ppCdTodos(false)" class="px-2 py-0.5 rounded-lg bg-slate-100 text-slate-800 font-medium hover:bg-slate-200">Ocultar los meses</button></div>';
       h += '<div class="overflow-x-auto" style="margin-bottom:18px"><table class="w-full text-[11px] leading-tight border-collapse"><thead class="bg-slate-50 text-slate-600"><tr><th class="px-2 py-1 border-b border-slate-200 text-left sticky left-0 z-10 bg-slate-50 min-w-[300px]">Concepto</th>' + hdr + '</tr></thead><tbody>'
         + titulo('Costo del activo')
@@ -22552,7 +22552,7 @@ ${cont.innerHTML}
       const e = escapeHtml, M = obE.mov, R2 = obR;
       const fmE = n => Number(n).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
       const num = x => (x === null || x === undefined) ? '<span style="color:#cbd5e1">—</span>' : fmE(x);
-      const cab = '<div class="v2r-h3" style="margin:6px 0 6px"><span>Movimiento de las obligaciones financieras (corto y largo plazo)</span></div>';
+      const cab = conclH2('ob-sec-mov', 'Movimiento de las obligaciones financieras (corto y largo plazo)', '', 'neutro', true);
       const ayuda = '<p style="font-size:12px;color:#6b6b63;line-height:1.6;margin:0 0 8px">Sale del mayor contable y del balance: saldo inicial, préstamos recibidos en el año, pagos, intereses y saldo final de cada cuenta de las sumarias PB (corto plazo) y PK (largo plazo), más las cuentas de intereses por pagar. Sirve para comprobar de primera mano que están todos los créditos antes de calcular el devengo de intereses. Con el ojito de cada cuenta ves el movimiento separado por préstamo y a cuál corresponde cada pago.</p>';
       if (!M || !M.cargado) return cab + ayuda + '<p class="text-xs text-slate-500" style="margin-bottom:14px">Cargando el movimiento…</p>';
       if (M.msg) return cab + ayuda + '<p style="font-size:12px;color:#b42318;margin-bottom:14px">' + e(M.msg) + '</p>';
@@ -22633,7 +22633,7 @@ ${cont.innerHTML}
       const filaNotas = (lineas, n) => lineas.length ? '<tr class="v2r-exp" style="display:none"><td colspan="' + n + '"><div>' + lineas.join('<br>') + '</div></td></tr>' : '';
       const refLink = (r, txt) => r ? ' <a href="#" onclick="nmIrSeccion(\'' + e(r).replace(/'/g, '') + '\');return false" style="color:#3b6fc4;font-size:12px" class="hover:underline">' + txt + '</a>' : '';
       let nTit = 1; // la cobertura se muestra primero y lleva el 1
-      const caja = (titulo, ref, html) => '<div class="v2r-h3" style="margin:22px 0 6px;display:flex;justify-content:space-between;gap:8px"><span>' + e(titulo) + '</span></div><div class="v2r-tw">' + html + '</div>';
+      const caja = (titulo, ref, html) => conclH2('nm-sec', e(titulo), '', 'neutro') + '<div class="v2r-tw">' + html + '</div>';
       const lin = f => { const L = []; if (f.nota) L.push(e(f.nota)); if (f.explicacion) L.push(e(f.explicacion).replace(/\n/g, '<br>')); return L; };
       const tarjComp = q => {
         const filas = q.filas || [], cuentas = Array.isArray(q.cuentas) ? q.cuentas : [], cols = Array.isArray(q.cols) ? q.cols : [];
@@ -22760,7 +22760,7 @@ ${cont.innerHTML}
           }).join('') + '<tr class="tot"><td>Total nómina</td>' + MC.tv.map(x => '<td class="n">' + fmE(x) + '</td>').join('') + '<td class="n">' + fmE(MC.total) + '</td></tr>';
         }
       }
-      const cob = '<div class="v2r-h3" style="margin:6px 0 6px;display:flex;justify-content:space-between;align-items:center;gap:8px"><span>1. Consolidado de gastos de nómina</span></div><div class="v2r-tw"><table class="v2r-t"><thead><tr><th>Rubro</th>' + NMK_COLS.map(([, nm]) => th(nm, true)).join('') + th('Total', true) + '</tr></thead><tbody>' + cobCuerpo + '</tbody></table></div>';
+      const cob = conclH2('nm-sec-cons', '1. Consolidado de gastos de nómina', '', 'neutro', true) + '<div class="v2r-tw"><table class="v2r-t"><thead><tr><th>Rubro</th>' + NMK_COLS.map(([, nm]) => th(nm, true)).join('') + th('Total', true) + '</tr></thead><tbody>' + cobCuerpo + '</tbody></table></div>';
       const chip = (n, t, P) => '<span style="display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:99px;font-size:12px;font-weight:700;background:' + P[1] + ';color:' + P[2] + '"><span style="font-size:14px">' + n + '</span>' + t + '</span>';
       const resumen = '<div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:6px">' + '<span style="font-size:11px;color:#64748b;">Tolerancia: ' + fmE(NMC_TOL) + ' · la sumaria se lee en vivo del balance de comprobación</span><button type="button" onclick="nmCuaExcelTodo()" style="margin-left:auto;font-size:12px;font-weight:700;color:#449964" class="hover:underline" title="Baja un Excel con todos los cuadros de esta pantalla, uno por hoja">Descargar todos los cuadros en Excel</button></div>';
       const faltan = (NM_CTX.sum === 'RC' ? NMC_ESPERADOS_RC : (NM_CTX.sum === 'AH' ? NMC_ESPERADOS_AH : [])).filter(x => !cu.some(x[1])).map(x => x[0]);
