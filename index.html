@@ -19679,7 +19679,7 @@ ${cont.innerHTML}
         { n: 'Avalúos o informes de reavalúo', req: false, et: ['Informe de avalúo o reavalúo'] },
         { n: 'Pólizas de seguro y escrituras o matrículas', req: false, et: ['Póliza de seguro', 'Escritura o matrícula'] },
         { n: 'Actas de toma física', req: false, et: ['Acta de toma física de activos'] }
-      ], tabs: [['programa', 'Programa'], ['subir', 'Subir información'], ['resultado', 'Resultado del análisis – Claude'], ['anexos', 'Anexos y cálculos'], ['cuadres', 'Resumen de cuadres y cruces'], ['conclusiones', 'Conclusiones de la cuenta']], sum: 'AO', hoja: 'ppe', titulo: '2. AO Propiedad, planta y equipo', subtit: 'Análisis guiado por el programa de auditoría: Claude arma el anexo de activos fijos, recalcula la depreciación por año y por mes y la cuadra con las sumaria AO; el auditor revisa.', nombre: 'AO - Propiedad, planta y equipo', ref: 'AO · Propiedad, planta y equipo', corto: 'Propiedad, planta y equipo', txtSubir: 'Aquí se sube todo en un solo pedido: las facturas y contratos de las adiciones, las actas de baja o venta, los avalúos y lo que sirva para respaldar los saldos. El mayor contable se carga una sola vez en la pantalla Mayor contable. El anexo de activos fijos (Excel) se carga una sola vez en «Anexos y cálculos», no aquí; Claude usa ese anexo ya guardado.' };
+      ], tabs: [['programa', 'Programa'], ['subir', 'Subir información'], ['resultado', 'Resultado del análisis – Claude'], ['anexos', 'Anexos y cálculos'], ['cuadres', 'Resumen de cuadres y cruces'], ['voucheo', 'Revisión de documentación (voucheo)'], ['conclusiones', 'Conclusiones de la cuenta']], sum: 'AO', hoja: 'ppe', titulo: '2. AO Propiedad, planta y equipo', subtit: 'Análisis guiado por el programa de auditoría: Claude arma el anexo de activos fijos, recalcula la depreciación por año y por mes y la cuadra con las sumaria AO; el auditor revisa.', nombre: 'AO - Propiedad, planta y equipo', ref: 'AO · Propiedad, planta y equipo', corto: 'Propiedad, planta y equipo', txtSubir: 'Aquí se sube todo en un solo pedido: las facturas y contratos de las adiciones, las actas de baja o venta, los avalúos y lo que sirva para respaldar los saldos. El mayor contable se carga una sola vez en la pantalla Mayor contable. El anexo de activos fijos (Excel) se carga una sola vez en «Anexos y cálculos», no aquí; Claude usa ese anexo ya guardado.' };
     let NM_CTX = NM_CFGS.nomina;
     const nmE = { cliente: '', anio: '', visita: '', procs: [], filas: {}, cargaId: 0, abiertos: {}, tab: 'programa', sv: null };
     const NM_TABS = [['programa', 'Programa'], ['subir', 'Subir información'], ['resultado', 'Resultado del análisis – Claude'], ['cuadres', 'Resumen de cuadres y cruces'], ['conclusiones', 'Conclusiones de la cuenta']];
@@ -20511,6 +20511,212 @@ ${cont.innerHTML}
         tot: { n: ao.length, bruto: suma(ao, x => x.r.bruto), ap: suma(ao, x => x.r.ap), gasto: suma(ao, x => x.r.gasto), ac: suma(ao, x => x.r.ac), neto: suma(ao, x => x.r.neto), sis: ao.every(x => x.r.sis === null) ? null : suma(ao, x => x.r.sis), ...bal(cI, sI) },
         excl: { hay: cX.length + sX.length > 0, n: eX.length, bruto: suma(eX, x => x.r.bruto), ac: suma(eX, x => x.r.ac), neto: suma(eX, x => x.r.neto), ...bal(cX, sX) } };
     }
+    // ===== AO Propiedad, planta y equipo › Revisión de documentación (voucheo) de las adiciones del año =====
+    // Voucheo = ir de lo registrado en los libros (adiciones del mayor) al documento que lo respalda: existencia, ocurrencia, exactitud y corte.
+    const pvR2 = x => Math.round((Number(x) || 0) * 100) / 100;
+    const PV_ATRIB = [
+      { k: 'factura', t: 'Factura del proveedor', ap: 'comp' },
+      { k: 'oc', t: 'Orden de compra, contrato o aprobación', ap: 'comp' },
+      { k: 'dau', t: 'Declaración aduanera (DAI / DAU)', ap: 'imp' },
+      { k: 'rec', t: 'Recepción o verificación física del activo', ap: 'todas' },
+      { k: 'prop', t: 'Propiedad a nombre de la compañía', ap: 'todas' },
+      { k: 'iva', t: 'IVA e impuestos del documento', ap: 'comp' },
+      { k: 'cap', t: 'Es capitalizable (no gasto) y está bien clasificado', ap: 'todas' },
+      { k: 'dep', t: 'Fecha de uso e inicio de depreciación', ap: 'todas' }
+    ];
+    const pvE = { cargaId: 0, cliente: '', anio: '', visita: '', cargado: false, error: '', cfg: { pct: 50, umbral: 0, ctas: null }, filas: [], org: null, docAbierto: -1, tmp: null, filtro: '', nuevo: false, cands: [] };
+    async function pvCargar() {
+      const cli = nmE.cliente, anio = String(nmE.anio), vis = nmE.visita;
+      Object.assign(pvE, { cliente: cli, anio, visita: vis, cargado: false, error: '', cfg: { pct: 50, umbral: 0, ctas: null }, filas: [], org: null, docAbierto: -1, filtro: '', nuevo: false, cands: [] });
+      const id = ++pvE.cargaId; pvPintar();
+      if (!cli) return;
+      const r = await supabaseClient.from('voucheo_ppe').select('*').eq('cliente_id', cli).eq('anio', Number(anio)).eq('visita', vis).maybeSingle();
+      if (id !== pvE.cargaId) return;
+      if (r.data) { pvE.cfg = { pct: 50, umbral: 0, ctas: null, ...(r.data.config || {}) }; pvE.filas = Array.isArray(r.data.filas) ? r.data.filas : []; pvE.org = { origen: r.data.origen, estado_revision: r.data.estado_revision, revisado_por: r.data.revisado_por, revisado_at: r.data.revisado_at }; }
+      pvE.error = r.error ? (/does not exist|schema cache/i.test(r.error.message || '') ? 'Falta la tabla voucheo_ppe en Supabase.' : (r.error.message || String(r.error))) : '';
+      pvE.cargado = true; pvPintar();
+    }
+    function pvGuardar() {
+      clearTimeout(pvE.tmp); const m = document.getElementById('pv-msg'); if (m) { m.textContent = 'Guardando…'; m.style.color = '#6b6b63'; }
+      const snap = { cliente_id: pvE.cliente, anio: Number(pvE.anio), visita: pvE.visita, config: pvE.cfg, filas: pvE.filas };
+      pvE.tmp = setTimeout(() => pvEscribir(snap), 600);
+    }
+    async function pvEscribir(snap) {
+      if (!snap.cliente_id) return false;
+      const { error } = await supabaseClient.from('voucheo_ppe').upsert({ ...snap, actualizado_por: (typeof nombreUsuarioActivo === 'function' ? nombreUsuarioActivo() : '') || null, updated_at: new Date().toISOString() }, { onConflict: 'cliente_id,anio,visita' });
+      const m = document.getElementById('pv-msg'); if (m) { m.textContent = error ? 'No se guardó: ' + (error.message || error) : 'Guardado ✓'; m.style.color = error ? '#b91c1c' : '#047857'; }
+      return !error;
+    }
+    // Adiciones del año (asientos de aumento del costo, ya con las reclasificaciones manuales del movimiento) y su relación con el anexo de activos
+    function pvPoblacion() {
+      const D = ppDatos(); if (!D) return null; const MD = ppMovData(D); if (!MD) return null;
+      const Y = String(D.Yc), corte = ppE.cierre || '', sel = pvE.cfg.ctas, pop = [];
+      const itemsAn = D.items.map(x => ({ cod: String(x.f.cod || '').trim(), nom: String(x.f.nom || x.f.det || '').trim(), v: ppN(x.f.cmp), fc: obFecha(x.f.fcm) || '', fi: obFecha(x.f.fid) || '', vid: ppN(x.f.vid) })).filter(x => x.v > 0);
+      const porFecha = {}; itemsAn.forEach(x => { if (x.fc) (porFecha[x.fc] = porFecha[x.fc] || []).push(x); });
+      const dias = (a, b) => Math.abs((Date.parse(a) - Date.parse(b)) / 86400000);
+      const buscar = (v, fe) => {
+        let m = itemsAn.filter(x => Math.abs(x.v - v) <= 0.02).sort((a, b) => dias(a.fc || fe, fe) - dias(b.fc || fe, fe))[0];
+        if (m && (!m.fc || dias(m.fc, fe) <= 120)) return { n: 1, cod: m.cod, nom: m.nom, fc: m.fc, fi: m.fi };
+        const grupos = Object.keys(porFecha).filter(f => dias(f, fe) <= 60).map(f => porFecha[f]).filter(g => g.length > 1 && Math.abs(g.reduce((a, x) => a + x.v, 0) - v) <= 0.05);
+        if (grupos.length) { const g = grupos[0]; return { n: g.length, cod: g.map(x => x.cod).filter(Boolean).slice(0, 3).join(', ') + (g.length > 3 ? '…' : ''), nom: g[0].nom, fc: g[0].fc, fi: g[0].fi }; }
+        return null;
+      };
+      MD.costo.filas.forEach(fl => {
+        if (Array.isArray(sel) && !sel.includes(fl.etq)) return;
+        fl.ls.forEach(l => {
+          if (l.t !== 'a' || !(l.d > 0)) return;
+          const fe = obFecha(l.fecha); if (!fe || fe.slice(0, 4) !== Y || (corte && fe > corte)) return;
+          const t = ' ' + obClave(l.con) + ' ', tp = /import|liquidacion|nacionaliz|\bdau\b|\bdai\b/.test(t) ? 'imp' : (/reclasif|traspaso|transferencia/.test(t) ? 'tra' : 'loc');
+          pop.push({ id: l.key, cuenta: l.c, cls: fl.etq, fecha: fe, ref: l.asi || '', ter: l.ter || '', desc: String(l.con || ''), valor: pvR2(l.d), tipo: tp, an: buscar(l.d, fe) });
+        });
+      });
+      return { pop, clases: MD.costo.filas.map(f => f.etq), Y };
+    }
+    function pvArmarAuto() {
+      const P = pvPoblacion(); if (!P) return;
+      const pop = P.pop, base = pvR2(pop.reduce((t, x) => t + x.valor, 0)), pct = Number(pvE.cfg.pct) || 0, meta = pvR2(base * pct / 100), umbral = Number(pvE.cfg.umbral) || 0, corte = ppE.cierre || '';
+      const manuales = pvE.filas.filter(f => f.fuente === 'manual'), ids = new Set(manuales.map(f => f.id));
+      let cub = pvR2(manuales.reduce((t, f) => t + (Number(f.valor) || 0), 0));
+      const dCorte = f => { const a = Date.parse(f), b = Date.parse(corte); return (isNaN(a) || isNaN(b)) ? 9999 : (b - a) / 86400000; };
+      const marcar = x => { const m = []; if (umbral > 0 && x.valor >= umbral) m.push('Sobre el monto mínimo'); if (dCorte(x.fecha) <= 15) m.push('Cerca del corte'); if (/reversi|ajuste|manual|correcci|anula|reclasif/i.test(x.desc)) m.push('Concepto inusual'); if (!x.an) m.push('No está en el anexo'); if (base && x.valor >= 0.05 * base) m.push('Monto alto'); return m; };
+      const cand = pop.filter(x => !ids.has(x.id)).map(x => ({ x, m: marcar(x) })), auto = [];
+      const nuevo = c => ({ id: c.x.id, fuente: 'auto', motivo: c.m.length ? c.m.join(', ') : 'Monto', fecha: c.x.fecha, ref: c.x.ref, ter: c.x.ter, desc: c.x.desc, cuenta: c.x.cuenta, cls: c.x.cls, valor: c.x.valor, tipo: c.x.tipo, rev: {}, nota: '', docs: [] });
+      const usados = new Set();
+      cand.filter(c => umbral > 0 && c.x.valor >= umbral).forEach(c => { auto.push(nuevo(c)); usados.add(c.x.id); cub = pvR2(cub + c.x.valor); });
+      const resto = cand.filter(c => !usados.has(c.x.id)), conMarca = resto.filter(c => c.m.some(t => t !== 'Monto alto')).sort((a, b) => b.x.valor - a.x.valor), sinMarca = resto.filter(c => !c.m.some(t => t !== 'Monto alto')).sort((a, b) => b.x.valor - a.x.valor);
+      for (const c of [...conMarca, ...sinMarca]) { if (cub >= meta) break; auto.push(nuevo(c)); cub = pvR2(cub + c.x.valor); }
+      const previas = {}; pvE.filas.filter(f => f.fuente === 'auto').forEach(f => { previas[f.id] = f; });
+      const conTrabajo = f => (f.docs && f.docs.length) || Object.values(f.rev || {}).some(Boolean) || String(f.nota || '').trim();
+      const nuevasIds = new Set(auto.map(a => a.id)), conservadas = pvE.filas.filter(f => f.fuente === 'auto' && !nuevasIds.has(f.id) && conTrabajo(f));
+      pvE.filas = [...manuales, ...conservadas, ...auto.map(a => previas[a.id] ? { ...a, rev: previas[a.id].rev || {}, nota: previas[a.id].nota || '', docs: previas[a.id].docs || [], tipo: previas[a.id].tipo || a.tipo } : a)];
+      pvE.filas.sort((a, b) => String(a.fecha).localeCompare(String(b.fecha))); pvGuardar(); pvPintar();
+    }
+    async function pvLimpiarAuto() {
+      const sinT = f => f.fuente === 'auto' && !(f.docs && f.docs.length) && !Object.values(f.rev || {}).some(Boolean) && !String(f.nota || '').trim(), n = pvE.filas.filter(sinT).length;
+      if (!await confirmarApp('Se quitan ' + n + ' partida(s) automáticas que todavía no tienen marcas, comentarios ni documentos. Las que ya tienen trabajo se conservan. ¿Continuar?')) return;
+      pvE.filas = pvE.filas.filter(f => !sinT(f)); pvGuardar(); pvPintar();
+    }
+    function pvCambiarNum(k, v) { const n = Number(String(v).replace(',', '.')); if (!(n >= 0) || (k === 'pct' && n > 100)) { pvPintar(); return; } pvE.cfg[k] = n; pvGuardar(); pvPintar(); }
+    function pvCambiarClase(i, on) {
+      const P = pvPoblacion(); if (!P) return; const c = P.clases[i]; if (c === undefined) return;
+      let sel = Array.isArray(pvE.cfg.ctas) ? [...pvE.cfg.ctas] : [...P.clases];
+      sel = on ? [...new Set([...sel, c])] : sel.filter(x => x !== c);
+      pvE.cfg.ctas = sel.length === P.clases.length ? null : sel; pvGuardar(); pvPintar();
+    }
+    function pvAgregar(i) {
+      const x = pvE.cands[i]; if (!x || pvE.filas.some(f => f.id === x.id)) return;
+      pvE.filas.push({ id: x.id, fuente: 'manual', motivo: 'Elegida por el auditor', fecha: x.fecha, ref: x.ref, ter: x.ter, desc: x.desc, cuenta: x.cuenta, cls: x.cls, valor: x.valor, tipo: x.tipo, rev: {}, nota: '', docs: [] });
+      pvE.filas.sort((a, b) => String(a.fecha).localeCompare(String(b.fecha))); pvE.filtro = ''; pvGuardar(); pvPintar();
+    }
+    function pvAgregarLibre() {
+      const g = i => (document.getElementById(i) || {}).value || '';
+      const fecha = g('pv-nf'), ref = g('pv-nr').trim(), desc = g('pv-nd').trim(), valor = Number(String(g('pv-nv')).replace(/,/g, '.'));
+      if (!fecha || !desc || !(valor > 0)) { alert('Para agregar una partida que no está en el mayor indica la fecha, la descripción y un valor mayor que cero.'); return; }
+      pvE.filas.push({ id: 'm' + Date.now(), fuente: 'manual', motivo: 'Agregada por el auditor', fecha, ref, ter: '', desc, cuenta: '', cls: '', valor: pvR2(valor), tipo: 'loc', rev: {}, nota: '', docs: [] });
+      pvE.filas.sort((a, b) => String(a.fecha).localeCompare(String(b.fecha))); pvE.nuevo = false; pvGuardar(); pvPintar();
+    }
+    async function pvQuitar(i) {
+      const f = pvE.filas[i]; if (!f) return; const n = f.docs ? f.docs.length : 0;
+      if (!await confirmarApp('¿Quitar esta partida de la muestra?' + (n ? '\n\nTiene ' + n + ' documento(s) subido(s); también se borrarán.' : ''))) return;
+      if (n) { try { await supabaseClient.storage.from('voucheo').remove(f.docs.map(d => d.ruta)); } catch (er) { } }
+      pvE.filas.splice(i, 1); pvGuardar(); pvPintar();
+    }
+    function pvCiclo(i, k) { const f = pvE.filas[i]; if (!f) return; f.rev = f.rev || {}; const sig = { '': 'ok', ok: 'ex', ex: 'na', na: '' }; f.rev[k] = sig[f.rev[k] || ''] || ''; pvGuardar(); pvPintar(); }
+    function pvTipo(i, v) { const f = pvE.filas[i]; if (!f) return; f.tipo = (v === 'imp' || v === 'tra') ? v : 'loc'; pvGuardar(); pvPintar(); }
+    function pvNota(i, v) { const f = pvE.filas[i]; if (!f) return; f.nota = v; pvGuardar(); }
+    function pvAplica(a, f) { return a.ap === 'imp' ? f.tipo === 'imp' : (a.ap === 'comp' ? f.tipo !== 'tra' : true); }
+    function pvResultado(f) { const v = PV_ATRIB.filter(a => pvAplica(a, f)).map(a => (f.rev || {})[a.k] || ''); if (v.includes('ex')) return 'ex'; if (v.every(x => x === 'ok' || x === 'na') && v.some(x => x === 'ok')) return 'ok'; return ''; }
+    function pvDocs(i) { pvE.docAbierto = pvE.docAbierto === i ? -1 : i; pvPintar(); }
+    async function pvSubir(i, input) {
+      const f = pvE.filas[i], archivos = [...(input.files || [])]; if (!f || !archivos.length) return;
+      const m = document.getElementById('pv-msg'), limpio = t => String(t).normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^A-Za-z0-9._-]+/g, '_');
+      for (const a of archivos) {
+        if (a.size > 52428800) { alert('"' + a.name + '" pesa más de 50 MB. Sube una versión más liviana.'); continue; }
+        if (m) { m.textContent = 'Subiendo ' + a.name + '…'; m.style.color = '#6b6b63'; }
+        const ruta = pvE.cliente + '/' + pvE.anio + '_' + pvE.visita + '/ppe/' + Date.now().toString(36) + '/' + limpio(a.name);
+        const { error } = await supabaseClient.storage.from('voucheo').upload(ruta, a, { contentType: a.type || 'application/octet-stream' });
+        if (error) { alert('No se pudo subir "' + a.name + '": ' + (error.message || error)); continue; }
+        f.docs = f.docs || []; f.docs.push({ nombre: a.name, ruta, tamano: a.size, tipo: a.type || '', por: (typeof nombreUsuarioActivo === 'function' ? nombreUsuarioActivo() : '') || '', en: new Date().toISOString() });
+      }
+      input.value = ''; pvGuardar(); pvPintar();
+    }
+    async function pvVerDoc(i, j) {
+      const d = pvE.filas[i] && pvE.filas[i].docs && pvE.filas[i].docs[j]; if (!d) return;
+      const { data, error } = await supabaseClient.storage.from('voucheo').createSignedUrl(d.ruta, 120, { download: d.nombre });
+      if (error || !data) { alert('No se pudo abrir el documento: ' + ((error && error.message) || 'sin acceso')); return; }
+      window.open(data.signedUrl, '_blank');
+    }
+    async function pvBorrarDoc(i, j) {
+      const d = pvE.filas[i] && pvE.filas[i].docs && pvE.filas[i].docs[j]; if (!d) return;
+      if (!await confirmarApp('¿Borrar el documento "' + d.nombre + '"? No se puede deshacer.')) return;
+      try { await supabaseClient.storage.from('voucheo').remove([d.ruta]); } catch (er) { }
+      pvE.filas[i].docs.splice(j, 1); pvGuardar(); pvPintar();
+    }
+    function pvFiltro(v) { pvE.filtro = v; pvPintar(); const el = document.getElementById('pv-filtro'); if (el) { el.focus(); el.setSelectionRange(v.length, v.length); } }
+    function pvPintar() {
+      if (nmE.tab !== 'voucheo' || NM_CTX.hoja !== 'ppe') return;
+      const c = $im('nm-panel'); if (!c) return;
+      const e = escapeHtml, msg = t => { c.innerHTML = '<p class="text-xs text-slate-500 border border-dashed border-slate-300 rounded-xl p-4">' + t + '</p>'; };
+      if (!nmE.cliente) { msg('Selecciona el cliente para comenzar.'); return; }
+      if (pvE.cliente !== nmE.cliente || pvE.anio !== String(nmE.anio) || pvE.visita !== nmE.visita) { msg('Cargando…'); pvCargar(); return; }
+      if (!pvE.cargado || !ppE.cargado) { msg('Cargando…'); return; }
+      if (pvE.error) { c.innerHTML = '<p class="text-xs text-red-600 font-bold p-4">No se pudo cargar: ' + e(pvE.error) + '</p>'; return; }
+      const intro = '<div class="text-[11px] text-slate-500 mb-3">El voucheo va de lo registrado en los libros al documento que lo respalda: prueba que la adición existe, es del período, es del cliente y está bien registrada y depreciada. La población son las adiciones del año del movimiento del mayor (pestaña «Resumen de cuadres y cruces», tabla de costo), con las reclasificaciones que hayas hecho allí.</div>';
+      if (!ppE.filas.length) { c.innerHTML = intro + '<p class="text-xs text-slate-500 border border-dashed border-slate-300 rounded-xl p-4">Primero carga el anexo de activos fijos en «Anexos y cálculos».</p>'; return; }
+      if (!ppE.mov) { ppMovCargar(); }
+      const M = ppE.mov;
+      if (!M || !M.cargado) { c.innerHTML = intro + '<p class="text-xs text-slate-500 p-4">Leyendo el mayor contable…</p>'; return; }
+      if (M.msg) { c.innerHTML = intro + '<p class="text-xs text-red-600 font-bold p-4">' + e(M.msg) + '</p>'; return; }
+      if (!M.ids.length) { c.innerHTML = intro + '<p class="text-xs text-slate-500 border border-dashed border-slate-300 rounded-xl p-4">Carga el mayor contable completo en la pantalla Mayor contable (o espera a que termine de leerse) para que aparezcan las adiciones.</p>'; return; }
+      if (Object.values(M.cta).some(x => x.hay && !x.dep && x.lineas === null)) { c.innerHTML = intro + '<p class="text-xs text-slate-500 p-4">Leyendo los asientos del mayor…</p>'; return; }
+      const P = pvPoblacion(); if (!P) { c.innerHTML = intro + '<p class="text-xs text-slate-500 p-4">No hay datos suficientes para armar las adiciones.</p>'; return; }
+      const F = ppF2, TH = 'px-2 py-1.5 text-[11px] font-bold text-slate-700 border-b border-slate-300 align-bottom', TD = 'px-2 py-0.5 align-top', pop = P.pop;
+      const base = pvR2(pop.reduce((t, x) => t + x.valor, 0)), pct = Number(pvE.cfg.pct) || 0, meta = pvR2(base * pct / 100), cub = pvR2(pvE.filas.reduce((t, f) => t + (Number(f.valor) || 0), 0)), cubPct = base ? pvR2(cub * 100 / base) : 0;
+      const popMap = {}; pop.forEach(x => { popMap[x.id] = x; });
+      const btnS = 'padding:2px 6px;font-size:11px;font-weight:700;color:#449964;background:transparent;border:0', inp = 'border:1px solid #d6d3d1;border-radius:4px;padding:2px 6px;font-size:11px;background:#fff';
+      const sel = Array.isArray(pvE.cfg.ctas) ? pvE.cfg.ctas : null;
+      let h = intro;
+      h += '<div class="p-3 bg-white border border-slate-200 rounded-xl space-y-3 text-xs text-slate-700"><div class="text-[13px] font-semibold text-slate-800">Muestra</div>'
+        + '<div><div class="font-bold text-slate-600 mb-1">Clasificaciones a revisar <span class="font-normal text-slate-500">(por ejemplo, vehículos, maquinaria o construcciones)</span></div><div class="flex flex-wrap gap-x-5 gap-y-1">' + P.clases.map((k, i) => '<label class="flex items-center gap-1.5"><input type="checkbox" ' + (!sel || sel.includes(k) ? 'checked' : '') + ' onchange="pvCambiarClase(' + i + ', this.checked)" style="accent-color:#449964"> ' + e(k) + '</label>').join('') + '</div></div>'
+        + '<div class="flex flex-wrap items-end gap-4"><label class="flex flex-col gap-1 text-slate-600"><span>Cobertura de la muestra (% del valor de las adiciones)</span><input type="number" min="0" max="100" step="1" value="' + pct + '" onchange="pvCambiarNum(\'pct\', this.value)" style="' + inp + ';width:90px"></label>'
+        + '<label class="flex flex-col gap-1 text-slate-600"><span>Monto mínimo: toda adición igual o mayor entra</span><input type="number" min="0" step="100" value="' + (Number(pvE.cfg.umbral) || 0) + '" onchange="pvCambiarNum(\'umbral\', this.value)" style="' + inp + ';width:110px"></label>'
+        + '<button type="button" onclick="pvArmarAuto()" style="' + btnS + '">↻ Armar muestra automática</button><button type="button" onclick="pvLimpiarAuto()" style="' + btnS + '">Quitar las automáticas sin trabajo</button></div>'
+        + '<div class="grid sm:grid-cols-4 gap-2"><div class="p-2 bg-slate-50 rounded-lg"><div class="text-[10px] text-slate-500">Adiciones del año ' + e(P.Y) + ' (clasificaciones elegidas)</div><div class="font-bold">' + F(base) + '</div><div class="text-[10px] text-slate-500">' + pop.length + ' asiento(s)</div></div>'
+        + '<div class="p-2 bg-slate-50 rounded-lg"><div class="text-[10px] text-slate-500">Meta (' + pct + ' %)</div><div class="font-bold">' + F(meta) + '</div></div>'
+        + '<div class="p-2 bg-slate-50 rounded-lg"><div class="text-[10px] text-slate-500">Cubierto por la muestra</div><div class="font-bold">' + F(cub) + '</div><div class="text-[10px] text-slate-500">' + pvE.filas.length + ' partida(s)</div></div>'
+        + '<div class="p-2 rounded-lg" style="background:' + (cub >= meta && meta > 0 ? '#d1fae5' : '#fef3c7') + '"><div class="text-[10px] text-slate-500">% de las adiciones cubierto</div><div class="font-bold">' + cubPct + ' %</div></div></div>'
+        + '<p class="text-[11px] text-slate-500">La muestra automática primero toma lo que supera el monto mínimo, luego lo inusual (cerca del corte, reversiones o ajustes, adiciones que no se encuentran en el anexo) y completa con los montos mayores hasta la cobertura. Las partidas que agregues a mano siempre se conservan. La columna «En el anexo» busca un activo con el mismo valor (o un grupo de activos de la misma fecha que sumen ese valor): si no aparece, la adición no está en el anexo o está por otro valor.</p></div>';
+      // Agregar a mano
+      const filtro = (pvE.filtro || '').toLowerCase(), enM = new Set(pvE.filas.map(f => f.id));
+      pvE.cands = pop.filter(x => !enM.has(x.id) && (!filtro || (x.ref + ' ' + x.desc + ' ' + x.ter + ' ' + x.fecha + ' ' + x.valor).toLowerCase().includes(filtro))).sort((a, b) => b.valor - a.valor).slice(0, 60);
+      h += '<div class="mt-3 p-3 bg-white border border-slate-200 rounded-xl space-y-2 text-xs text-slate-700"><div class="text-[13px] font-semibold text-slate-800">Agregar partidas a mano</div><div class="flex flex-wrap items-center gap-2"><input id="pv-filtro" type="text" value="' + e(pvE.filtro) + '" oninput="pvFiltro(this.value)" placeholder="Buscar en las adiciones: asiento, descripción, proveedor, fecha o valor" style="' + inp + ';flex:1;min-width:260px"><button type="button" onclick="pvE.nuevo = !pvE.nuevo; pvPintar()" style="' + btnS + '">+ Partida que no está en el mayor</button></div>'
+        + (pvE.nuevo ? '<div class="flex flex-wrap items-end gap-2 p-2 bg-slate-50 rounded-lg"><label class="flex flex-col gap-1">Fecha<input id="pv-nf" type="date" style="' + inp + '"></label><label class="flex flex-col gap-1">Asiento<input id="pv-nr" type="text" style="' + inp + ';width:110px"></label><label class="flex flex-col gap-1 flex-1" style="min-width:200px">Descripción<input id="pv-nd" type="text" style="' + inp + '"></label><label class="flex flex-col gap-1">Valor<input id="pv-nv" type="number" step="0.01" style="' + inp + ';width:110px"></label><button type="button" onclick="pvAgregarLibre()" class="px-3 py-1.5 rounded-lg text-xs font-bold text-white" style="background:#449964">Agregar</button></div>' : '')
+        + (filtro || pvE.cands.length ? '<div class="max-h-48 overflow-auto border border-slate-200 rounded-lg"><table class="w-full text-[11px] border-collapse"><tbody>' + (pvE.cands.length ? pvE.cands.map((x, i) => '<tr class="border-t border-slate-100"><td class="' + TD + ' whitespace-nowrap">' + mvFechaCorta(x.fecha) + '</td><td class="' + TD + ' whitespace-nowrap">' + e(x.ref) + '</td><td class="' + TD + '">' + e(x.desc.slice(0, 110)) + (x.ter ? ' <span class="text-slate-400">· ' + e(x.ter.slice(0, 40)) + '</span>' : '') + '</td><td class="' + TD + ' whitespace-nowrap font-semibold text-right">' + F(x.valor) + '</td><td class="' + TD + '"><button type="button" onclick="pvAgregar(' + i + ')" style="' + btnS + '">Agregar</button></td></tr>').join('') : '<tr><td class="p-2 text-slate-500">Sin coincidencias.</td></tr>') + '</tbody></table></div>' : '') + '</div>';
+      // Tabla de revisión
+      h += '<div class="flex flex-wrap items-center gap-2 mt-4 mb-2"><span id="pv-msg" class="text-[11px] text-slate-500"></span></div>';
+      h += '<div class="font-bold text-slate-800 mb-1 text-xs">Partidas a revisar <span class="font-normal text-slate-500">(clic en cada casilla: · pendiente, ✓ sin excepción, ✗ con excepción, N/A no aplica)</span></div>';
+      if (!pvE.filas.length) { h += '<p class="p-4 text-xs text-slate-500 border border-dashed border-slate-300 rounded-xl text-center">Aún no hay partidas. Usa «Armar muestra automática» o agrégalas a mano.</p>'; c.innerHTML = h; return; }
+      h += '<div class="overflow-x-auto border border-slate-200 rounded-xl"><table class="w-full text-[11px] border-collapse" style="min-width:1900px"><thead class="bg-slate-50"><tr><th class="' + TH + ' text-left">Fecha</th><th class="' + TH + ' text-left">Asiento</th><th class="' + TH + ' text-left">Descripción y proveedor</th><th class="' + TH + ' text-left">Clasificación</th><th class="' + TH + ' text-right">Valor</th><th class="' + TH + ' text-left">En el anexo</th><th class="' + TH + ' text-left">Tipo</th>'
+        + PV_ATRIB.map(a => '<th class="' + TH + ' text-center" style="max-width:96px" title="' + e(a.t) + '">' + e(a.t) + '</th>').join('') + '<th class="' + TH + ' text-center">Resultado</th><th class="' + TH + ' text-left">Comentario</th><th class="' + TH + ' text-center">Soporte</th><th class="' + TH + '"></th></tr></thead><tbody>';
+      pvE.filas.forEach((f, i) => {
+        const res = pvResultado(f), nd = f.docs ? f.docs.length : 0, x = popMap[f.id], an = x ? x.an : null, libre = f.id.charAt(0) === 'm' && !x;
+        const anH = libre ? '<span style="color:#cbd5e1">—</span>' : (!x ? '<span style="color:#78716c">No aparece en la población actual</span>' : (an ? '<span style="color:#047857">✓ ' + e(an.cod || 'activo') + (an.n > 1 ? ' (' + an.n + ' activos)' : '') + '</span><div class="text-[10px] text-slate-500">' + (an.fi ? 'inicio dep. ' + mvFechaCorta(an.fi) : (an.fc ? 'compra ' + mvFechaCorta(an.fc) : '')) + '</div>' : '<span style="color:#b91c1c;font-weight:700">No está en el anexo</span>'));
+        h += '<tr class="border-t border-slate-100"><td class="' + TD + ' whitespace-nowrap">' + mvFechaCorta(f.fecha) + '</td><td class="' + TD + ' whitespace-nowrap">' + e(f.ref) + '</td><td class="' + TD + '" style="min-width:260px"><div>' + e(String(f.desc).slice(0, 140)) + '</div>' + (f.ter ? '<div class="text-[10px] text-slate-500">' + e(String(f.ter).slice(0, 60)) + '</div>' : '') + '<div class="text-[10px] text-slate-400">' + (f.fuente === 'auto' ? 'Por qué: ' : '') + e(f.motivo || '') + '</div></td><td class="' + TD + '" style="min-width:140px">' + e(f.cls || '') + '</td><td class="' + TD + ' whitespace-nowrap font-semibold text-right">' + F(f.valor) + '</td><td class="' + TD + '" style="min-width:130px">' + anH + '</td>'
+          + '<td class="' + TD + '"><select onchange="pvTipo(' + i + ', this.value)" style="' + inp + '"><option value="loc"' + (f.tipo === 'loc' || !f.tipo ? ' selected' : '') + '>Compra local</option><option value="imp"' + (f.tipo === 'imp' ? ' selected' : '') + '>Importación</option><option value="tra"' + (f.tipo === 'tra' ? ' selected' : '') + '>Transferencia o reclasificación (sin factura)</option></select></td>'
+          + PV_ATRIB.map(a => { if (!pvAplica(a, f)) return '<td class="' + TD + ' text-center" style="color:#cbd5e1">—</td>'; const v = (f.rev || {})[a.k] || '', st = VC_ESTADOS[v]; return '<td class="' + TD + ' text-center"><button type="button" onclick="pvCiclo(' + i + ', \'' + a.k + '\')" title="' + e(a.t) + '" style="min-width:38px;padding:3px 6px;border-radius:6px;font-weight:700;color:' + st[1] + ';background:' + st[2] + '">' + st[0] + '</button></td>'; }).join('')
+          + '<td class="' + TD + ' text-center font-bold" style="color:' + (res === 'ok' ? '#047857' : (res === 'ex' ? '#b91c1c' : '#94a3b8')) + '">' + (res === 'ok' ? 'Sin excepción' : (res === 'ex' ? 'Con excepción' : 'Pendiente')) + '</td>'
+          + '<td class="' + TD + '"><input type="text" value="' + e(f.nota || '') + '" onchange="pvNota(' + i + ', this.value)" style="' + inp + ';width:176px" placeholder="Comentario"></td>'
+          + '<td class="' + TD + ' text-center"><button type="button" onclick="pvDocs(' + i + ')" class="font-bold whitespace-nowrap" style="color:#449964">' + (pvE.docAbierto === i ? '▾ ' : '▸ ') + '📎 ' + nd + '</button></td>'
+          + '<td class="' + TD + '"><button type="button" onclick="pvQuitar(' + i + ')" class="text-slate-400" title="Quitar de la muestra">✕</button></td></tr>';
+        if (pvE.docAbierto === i) h += '<tr><td colspan="' + (7 + PV_ATRIB.length + 4) + '" class="p-2 bg-slate-50"><div class="space-y-2 text-[11px]"><div class="font-bold text-slate-700">Documentos de soporte (factura, contrato u orden de compra, declaración aduanera, acta de entrega-recepción, fotos, matrícula o escritura)</div>'
+          + (nd ? '<ul class="space-y-1">' + f.docs.map((d, j) => '<li class="flex flex-wrap items-center gap-2"><button type="button" onclick="pvVerDoc(' + i + ', ' + j + ')" class="underline font-semibold" style="color:#44443f">' + e(d.nombre) + '</button><span class="text-slate-400">' + (d.tamano ? Math.round(d.tamano / 1024) + ' KB' : '') + (d.por ? ' · ' + e(d.por) : '') + '</span><button type="button" onclick="pvBorrarDoc(' + i + ', ' + j + ')" class="text-slate-400" title="Borrar">✕</button></li>').join('') + '</ul>' : '<p class="text-slate-500">Aún no hay documentos.</p>')
+          + '<label class="inline-block px-3 py-1.5 rounded-lg text-xs font-bold text-white cursor-pointer" style="background:#449964">Subir documentos<input type="file" multiple accept=".pdf,.jpg,.jpeg,.png,.webp,.xlsx,.xls,.csv,.txt" class="hidden" onchange="pvSubir(' + i + ', this)"></label></div></td></tr>';
+      });
+      h += '</tbody></table></div>';
+      const tot = fn => pvR2(pvE.filas.filter(fn).reduce((t, f) => t + (Number(f.valor) || 0), 0)), nOk = pvE.filas.filter(f => pvResultado(f) === 'ok').length, nEx = pvE.filas.filter(f => pvResultado(f) === 'ex').length, nPe = pvE.filas.length - nOk - nEx;
+      h += '<div class="mt-3 grid sm:grid-cols-4 gap-2 text-xs"><div class="p-2 bg-slate-50 rounded-lg"><div class="text-[10px] text-slate-500">Partidas</div><div class="font-bold">' + pvE.filas.length + ' · ' + F(cub) + '</div></div><div class="p-2 rounded-lg" style="background:#d1fae5"><div class="text-[10px] text-slate-500">Sin excepción</div><div class="font-bold">' + nOk + ' · ' + F(tot(f => pvResultado(f) === 'ok')) + '</div></div><div class="p-2 rounded-lg" style="background:#fee2e2"><div class="text-[10px] text-slate-500">Con excepción</div><div class="font-bold">' + nEx + ' · ' + F(tot(f => pvResultado(f) === 'ex')) + '</div></div><div class="p-2 bg-slate-50 rounded-lg"><div class="text-[10px] text-slate-500">Pendientes</div><div class="font-bold">' + nPe + ' · ' + F(tot(f => !pvResultado(f))) + '</div></div></div>';
+      c.innerHTML = h;
+    }
     async function ppCargar() {
       PC_CORTE.t = 0; const cli = nmE.cliente, anio = Number(nmE.anio), vis = nmE.visita, id = ++ppE.cargaId;
       Object.assign(ppE, { cargado: false, gasX: [], filas: [], bal: [], gas: [], mapa: {}, tipos: {}, notas: {}, mov: null, excl: new Set(), msg: '', archivo: '', pag: 0, ver: {} });
@@ -20722,6 +20928,7 @@ ${cont.innerHTML}
       if (ppE.mov) await ppGasMes(ppE.mov);
     }
     function ppGasQuitar(c) { ppE.gasX = (ppE.gasX || []).filter(x => x !== c); ppE.gas = ppE.gas.filter(x => x.codigo !== c); ppE.excl.delete('g:' + c); ppGuardar(); nmCuaPintar(); }
+    function ppRepintar() { if (nmE.tab === 'cuadres') nmCuaPintar(); else if (nmE.tab === 'voucheo' && NM_CTX.hoja === 'ppe') pvPintar(); }
     async function ppMovCargar() {
       const cli = nmE.cliente, anio = Number(nmE.anio), vis = nmE.visita, id = ppE.cargaId;
       const M = ppE.mov = { cargado: false, ids: [], cta: {}, det: {}, ver: {}, msg: '' };
@@ -20738,7 +20945,7 @@ ${cont.innerHTML}
         if (M.ids.length && cods.length) may = await f104Pag(() => supabaseClient.from('mayor_resumen_cuentas').select('cuenta, nombre, saldo_inicial, debitos, creditos, saldo_final, archivo_id').in('archivo_id', M.ids).in('cuenta', cods));
         if (id !== ppE.cargaId) return;
         cods.forEach(c => { const m = may.filter(x => String(x.cuenta).trim() === c), sum = k => m.reduce((a, x) => a + (Number(x[k]) || 0), 0); M.cta[c] = { dep: natura[c] === 'dep', hay: m.length > 0, ini: sum('saldo_inicial'), deb: sum('debitos'), cre: sum('creditos'), fin: sum('saldo_final'), lineas: null }; });
-        M.cargado = true; if (nmE.tab === 'cuadres') nmCuaPintar();
+        M.cargado = true; ppRepintar();
         await ppGasMes(M, id);
         for (const c of cods) {
           if (!M.ids.length || !M.cta[c].hay) continue;
@@ -20747,8 +20954,8 @@ ${cont.innerHTML}
           if (id !== ppE.cargaId) return;
           M.cta[c].lineas = out;
         }
-        if (nmE.tab === 'cuadres') nmCuaPintar();
-      } catch (er) { M.msg = 'No se pudo armar el movimiento del mayor: ' + (er.message || er); M.cargado = true; if (nmE.tab === 'cuadres') nmCuaPintar(); }
+        ppRepintar();
+      } catch (er) { M.msg = 'No se pudo armar el movimiento del mayor: ' + (er.message || er); M.cargado = true; ppRepintar(); }
     }
     // Una fila (clasificación o cuenta suelta): sumas por tipo de movimiento y lista de asientos con su tipo
     function ppMovFila(etq, codigos, dep, bal) {
@@ -21115,6 +21322,7 @@ ${cont.innerHTML}
       if (nmE.tab === 'f104' && NM_CTX.hoja === 'impuestos') { f104Pintar(); return; }
       if (nmE.tab === 'anexos' && NM_CTX.hoja === 'obligaciones') { obPintar(); return; }
       if (nmE.tab === 'anexos' && NM_CTX.hoja === 'ppe') { ppPintar(); return; }
+      if (nmE.tab === 'voucheo' && NM_CTX.hoja === 'ppe') { pvPintar(); return; }
       if (NM_CTX.hoja === 'gastos') { if (nmE.tab === 'validacion') gaValPintar(); else gaResPintar(); return; }
       if (nmE.tab === 'resultado') { nmResPintar(); return; }
       if (nmE.tab === 'cuadres') { nmCuaPintar(); return; }
