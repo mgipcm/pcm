@@ -20703,6 +20703,15 @@ ${cont.innerHTML}
         if (id !== ppE.cargaId) return;
         cods.forEach(c => { const m = may.filter(x => String(x.cuenta).trim() === c), sum = k => m.reduce((a, x) => a + (Number(x[k]) || 0), 0); M.cta[c] = { dep: natura[c] === 'dep', hay: m.length > 0, ini: sum('saldo_inicial'), deb: sum('debitos'), cre: sum('creditos'), fin: sum('saldo_final'), lineas: null }; });
         M.cargado = true; if (nmE.tab === 'cuadres') nmCuaPintar();
+        // gasto de depreciación en resultados, mes a mes (cuentas de gasto detectadas en el balance)
+        M.gm = {};
+        if (M.ids.length && ppE.gas.length) {
+          const gc = ppE.gas.map(x => x.codigo), Yg = String(ppE.cierre || '').slice(0, 4);
+          const rg = await f104Pag(() => supabaseClient.from('mayor_resumen_mes').select('cuenta, anio_mes, debitos, creditos').in('archivo_id', M.ids).in('cuenta', gc).gte('anio_mes', Yg + '-01').lte('anio_mes', Yg + '-12'));
+          rg.forEach(x => { const k = String(x.cuenta).trim(), o = (M.gm[k] = M.gm[k] || {}); o[x.anio_mes] = (o[x.anio_mes] || 0) + (Number(x.debitos) || 0) - (Number(x.creditos) || 0); });
+          if (id !== ppE.cargaId) return;
+          if (nmE.tab === 'cuadres') nmCuaPintar();
+        }
         for (const c of cods) {
           if (!M.ids.length || !M.cta[c].hay) continue;
           const out = [];
@@ -20863,9 +20872,12 @@ ${cont.innerHTML}
         // por mes: anexo (herramienta) contra créditos del año en las cuentas de depreciación acumulada del mayor
         const mmK = k => (D.mm.find(z => z.k === k) || { v: [] }).v;
         const mayMes = k => { const f = fz(k), a = Array(D.Mc).fill(0); if (f) f.ls.forEach(l => { if (l.t !== 'a') return; const fe = obFecha(l.fecha); if (!fe || fe.slice(0, 4) !== String(D.Yc)) return; const m = +fe.slice(5, 7) - 1; if (m >= 0 && m < D.Mc) a[m] = R2(a[m] - l.d); }); return a; };
-        const tablaMes = (an, ma) => '<table class="text-[11px] leading-tight border-collapse my-1" style="min-width:520px"><thead class="bg-slate-50 text-slate-600"><tr>' + th('Mes', 'text-left') + th('Gasto según el anexo') + th('Aumento de dep. acumulada en el mayor') + th('Diferencia') + '</tr></thead><tbody>'
-          + D.meses.map((nm, i) => '<tr class="border-b border-slate-100"><td class="px-2 py-0.5">' + nm + '</td>' + tdn(an[i] || 0) + (hayM ? tdn(ma[i] || 0) : '<td></td>') + (hayM ? tdd(R2((an[i] || 0) - (ma[i] || 0))) : '<td></td>') + '</tr>').join('')
-          + '<tr class="border-t border-slate-300 bg-slate-50 font-bold text-slate-800"><td class="px-2 py-0.5">Total</td>' + tdn(R2(an.reduce((a, b) => a + b, 0))) + (hayM ? tdn(R2(ma.reduce((a, b) => a + b, 0))) : '<td></td>') + (hayM ? tdd(R2(an.reduce((a, b) => a + b, 0) - ma.reduce((a, b) => a + b, 0))) : '<td></td>') + '</tr></tbody></table>';
+        const tablaMes = (an, ma, re) => { const sm = a => R2(a.reduce((x, y) => x + (y || 0), 0)), c = (x, y) => (x === null || y === null) ? '<td></td>' : tdd(R2(x - y));
+          return '<table class="text-[11px] leading-tight border-collapse my-1" style="min-width:' + (re ? 860 : 520) + 'px"><thead class="bg-slate-50 text-slate-600"><tr>' + th('Mes', 'text-left') + th('Gasto según el anexo') + th('Aumento de dep. acumulada en el mayor') + (re ? th('Gasto en resultados (mayor)') : '') + th('Diferencia anexo – mayor') + (re ? th('Diferencia anexo – resultados') + th('Diferencia mayor – resultados') : '') + '</tr></thead><tbody>'
+          + D.meses.map((nm, i) => '<tr class="border-b border-slate-100"><td class="px-2 py-0.5">' + nm + '</td>' + tdn(an[i] || 0) + (hayM ? tdn(ma[i] || 0) : '<td></td>') + (re ? tdn(re[i] || 0) : '') + (hayM ? tdd(R2((an[i] || 0) - (ma[i] || 0))) : '<td></td>') + (re ? c(an[i] || 0, re[i] || 0) + (hayM ? c(ma[i] || 0, re[i] || 0) : '<td></td>') : '') + '</tr>').join('')
+          + '<tr class="border-t border-slate-300 bg-slate-50 font-bold text-slate-800"><td class="px-2 py-0.5">Total</td>' + tdn(sm(an)) + (hayM ? tdn(sm(ma)) : '<td></td>') + (re ? tdn(sm(re)) : '') + (hayM ? tdd(R2(sm(an) - sm(ma))) : '<td></td>') + (re ? c(sm(an), sm(re)) + (hayM ? c(sm(ma), sm(re)) : '<td></td>') : '') + '</tr></tbody></table>'; };
+        // gasto en resultados por mes (cuentas de gasto marcadas), tomado del mayor; null si aún no está cargado
+        const resMes = (() => { const M = ppE.mov; if (!M || !M.gm || !M.ids.length || !ppE.gas.length) return null; return Array.from({ length: D.Mc }, (_, i) => R2(gsel.reduce((a, x) => a + ((M.gm[x.codigo] || {})[String(D.Yc) + '-' + String(i + 1).padStart(2, '0')] || 0), 0))); })();
         h += '<div style="font-size:12px;font-weight:700;color:#44443f;margin:14px 0 4px">Gasto de depreciación del año ' + e(Yg) + ': anexo, depreciación acumulada del mayor y resultados</div>'
           + ay('Compara tres cifras del año hasta la fecha de corte: (1) el gasto que calculó la herramienta con el anexo, (2) el aumento de la depreciación acumulada en el mayor contable (créditos del año en las cuentas de depreciación acumulada, sin bajas ni ventas) y (3) el gasto de depreciación registrado en resultados. Las cuentas de gasto se detectan por su nombre; desmarca las que no correspondan.'
             + (hayM ? '' : ' <b style="color:#b45309">Para ver la cifra del mayor carga el mayor contable en la pantalla Mayor contable.</b>'));
@@ -20873,7 +20885,8 @@ ${cont.innerHTML}
           + CA.map(x => { const m = gMayor(x); return '<tr class="border-b border-slate-100"><td class="px-2 py-0.5 min-w-[280px]">' + e(x.k) + btn('gm' + x.k, 'Ver el gasto mes a mes de esta clasificación: anexo contra mayor') + '</td>' + tdn(gAnexo(x)) + (m === null ? '<td class="px-2 py-0.5 text-right" style="color:#cbd5e1">—</td>' : tdn(m)) + dif(gAnexo(x), m) + '</tr>' + (ppE.ver['gm' + x.k] ? '<tr><td colspan="4" class="px-3 py-2 bg-white">' + tablaMes(mmK(x.k), mayMes(x.k)) + '</td></tr>' : ''); }).join('')
           + '<tr class="border-b border-slate-200 bg-slate-50 font-bold text-slate-800"><td class="px-2 py-0.5">Total</td>' + tdn(tAn) + (tMa === null ? '<td></td>' : tdn(tMa)) + dif(tAn, tMa) + '</tr></tbody></table></div>';
         { const sumM = f => Array.from({ length: D.Mc }, (_, i) => R2(CA.reduce((a, x) => a + (f(x.k)[i] || 0), 0)));
-          h += '<div style="font-size:11px;font-weight:700;color:#44443f;margin:6px 0 2px">Mes a mes, todas las clasificaciones</div><div class="overflow-x-auto" style="margin-bottom:8px">' + tablaMes(sumM(mmK), hayM ? sumM(mayMes) : []) + '</div>'; }
+          h += '<div style="font-size:11px;font-weight:700;color:#44443f;margin:6px 0 2px">Mes a mes, todas las clasificaciones</div><div class="overflow-x-auto" style="margin-bottom:8px">' + tablaMes(sumM(mmK), hayM ? sumM(mayMes) : [], resMes) + '</div>'
+            + (resMes ? '' : '<div style="font-size:11px;color:#b45309;margin-bottom:8px">El gasto en resultados mes a mes se toma del mayor contable: cárgalo en la pantalla Mayor contable (o espera a que termine de leerse) para verlo aquí.</div>'); }
         h += '<div class="overflow-x-auto" style="margin-bottom:12px"><table class="text-[11px] leading-tight border-collapse" style="min-width:760px"><thead class="bg-slate-50 text-slate-600"><tr>' + th('Gasto de depreciación en resultados (balance y mayor)', 'text-left') + th('Sumaria', 'text-left') + th('Saldo al corte') + '</tr></thead><tbody>'
           + (ppE.gas.length ? ppE.gas.map(x => '<tr class="border-b border-slate-100"' + (ppE.excl.has('g:' + x.codigo) ? ' style="opacity:.5"' : '') + '><td class="px-2 py-0.5 min-w-[360px]">' + chk('g:' + x.codigo, !ppE.excl.has('g:' + x.codigo)) + e(x.codigo) + ' ' + e(x.cuenta) + '</td><td class="px-2 py-0.5">' + e(x.sumaria) + '</td>' + tdn(x.saldo) + '</tr>').join('') : '<tr class="border-b border-slate-100"><td class="px-2 py-0.5" colspan="3" style="color:#b45309">No se encontraron cuentas de gasto de depreciación en el balance de comprobación.</td></tr>')
           + '<tr class="border-b border-slate-200 bg-slate-50 font-bold text-slate-800"><td class="px-2 py-0.5" colspan="2">Total gasto de depreciación en resultados</td>' + tdn(tGas) + '</tr>'
