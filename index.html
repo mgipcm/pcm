@@ -21209,7 +21209,7 @@ ${cont.innerHTML}
         + titulo('Propiedad, planta y equipo neto')
         + total('neto', 'Costo − depreciación acumulada', c => R2(sm(c.fin, o => o.c) - sm(c.fin, o => o.d)), (k, c) => R2(c.fin[k].c - c.fin[k].d))
         + '<tr class="border-b border-slate-100"><td class="px-2 py-0.5 text-slate-600 sticky left-0 bg-white">Diferencia de costo contra el balance (sumaria AO)</td>' + C.map((c, i) => '<td class="px-2 py-0.5 text-right whitespace-nowrap"' + bg(c, i) + '>' + (c.ult ? (Math.abs(dTC) < 0.5 ? '<span class="font-bold text-emerald-700">Cuadra</span>' : '<span class="font-bold text-red-600">' + num(dTC) + '</span>') : '') + '</td>').join('') + '</tr>'
-        + '<tr><td class="px-2 py-0.5 text-slate-600 sticky left-0 bg-white">Diferencia de depreciación contra el balance (sumaria AO)</td>' + C.map((c, i) => '<td class="px-2 py-0.5 text-right whitespace-nowrap"' + bg(c, i) + '>' + (c.ult ? (Math.abs(dTD) < 0.5 ? '<span class="font-bold text-emerald-700">Cuadra</span>' : '<span class="font-bold text-red-600">' + num(dTD) + '</span>') : '') + '</td>').join('') + '</tr>'
+        + '<tr><td class="px-2 py-0.5 text-slate-600 sticky left-0 bg-white">Diferencia de depreciación recalculada contra el balance (sumaria AO)</td>' + C.map((c, i) => '<td class="px-2 py-0.5 text-right whitespace-nowrap"' + bg(c, i) + '>' + (c.ult ? (Math.abs(dTD) < 0.5 ? '<span class="font-bold text-emerald-700">Cuadra</span>' : '<span class="font-bold text-red-600">' + num(dTD) + '</span>') : '') + '</td>').join('') + '</tr>'
         + '</tbody></table></div>';
       return h;
     }
