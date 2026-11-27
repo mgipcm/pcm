@@ -20438,7 +20438,7 @@ ${cont.innerHTML}
     }
     // ===== AO Propiedad, planta y equipo: anexo de activos fijos, depreciación por año y mes, y cuadre con las sumarias (AO y AOO) =====
     const PP_CUENTA = 'propiedad_planta_equipo';
-    const ppE = { cargado: false, cargaId: 0, filas: [], cierre: '', bal: [], mapa: {}, msg: '', archivo: '', guardando: null, filtro: '', cla: '', pag: 0, ver: {}, excl: new Set(), mov: null, cdAn: new Set(), cdAb: new Set(['costo', 'dep']) };
+    const ppE = { cargado: false, cargaId: 0, filas: [], cierre: '', bal: [], mapa: {}, tipos: {}, notas: {}, msg: '', archivo: '', guardando: null, filtro: '', cla: '', pag: 0, ver: {}, excl: new Set(), mov: null, cdAn: new Set(), cdAb: new Set(['costo', 'dep']) };
     const PP_COLS = [['cod', 'Código de activo'], ['cla', 'Clasificación (tipo de activo)'], ['nom', 'Nombre del activo'], ['det', 'Detalle'], ['est', 'Estado'], ['cmp', 'Valor de compra'], ['fcm', 'Fecha de compra'], ['rev', 'Valor de reavalúo'], ['frv', 'Fecha de reavalúo'], ['res', 'Valor residual'], ['vid', 'Meses de vida útil'], ['fid', 'Fecha de inicio de depreciación'], ['sis', 'Depreciación acumulada según el sistema (opcional)']];
     const PP_REF = { anexo: 'AO-02', dep: 'AO-03', cuadre: 'AO-04' };
     const PP_CSS = '.ob{border-collapse:collapse;font-size:10.5px;color:#2b2b27}.ob th{background:#fff;border:1px solid #dfdfdb;padding:2px 4px;font-weight:700;font-size:9.5px;text-align:center;line-height:1.2}.ob td{background:#f1f1ee;border:1px solid #e2e2dd;padding:0 3px;white-space:nowrap}.ob td.n{text-align:right}.ob td.ob-c{text-align:center;color:#9a9a92;width:26px}.ob tr.tot td{font-weight:700;border-top:1px solid #cfcfc8;background:#fff}.ob-i{border:0;background:transparent;font-size:10.5px;padding:1px 1px;outline:none;color:#2b2b27}.ob-i:focus{background:#fff;box-shadow:inset 0 0 0 1px #c9c9c0;border-radius:3px}.ob-b{font-size:12px;font-weight:600;color:#4a4a44;border:1px solid #dcdcd6;border-radius:8px;padding:4px 10px;background:#fff}.ob-h{font-size:13px;font-weight:700;color:#2b2b27;padding:12px 14px 6px}';
@@ -20512,7 +20512,7 @@ ${cont.innerHTML}
     }
     async function ppCargar() {
       PC_CORTE.t = 0; const cli = nmE.cliente, anio = Number(nmE.anio), vis = nmE.visita, id = ++ppE.cargaId;
-      Object.assign(ppE, { cargado: false, filas: [], bal: [], mapa: {}, mov: null, excl: new Set(), msg: '', archivo: '', pag: 0, ver: {} });
+      Object.assign(ppE, { cargado: false, filas: [], bal: [], mapa: {}, tipos: {}, notas: {}, mov: null, excl: new Set(), msg: '', archivo: '', pag: 0, ver: {} });
       if (!cli) return;
       ppE.cierre = ($im('nm-fecha') || {}).value || (vis === 'final' ? anio + '-12-31' : anio + '-09-30');
       const [r1, r2] = await Promise.all([
@@ -20521,7 +20521,7 @@ ${cont.innerHTML}
       ]);
       if (id !== ppE.cargaId) return;
       const d = r1.data;
-      if (d) { ppE.filas = Array.isArray(d.filas) ? d.filas : []; if (d.fecha_cierre) ppE.cierre = d.fecha_cierre; ppE.archivo = d.archivo_nombre || ''; ppE.mapa = (d.partidas && !Array.isArray(d.partidas) && d.partidas.mapa) || {}; ppE.excl = new Set((d.partidas && !Array.isArray(d.partidas) && Array.isArray(d.partidas.excl)) ? d.partidas.excl : []); }
+      if (d) { ppE.filas = Array.isArray(d.filas) ? d.filas : []; if (d.fecha_cierre) ppE.cierre = d.fecha_cierre; ppE.archivo = d.archivo_nombre || ''; ppE.mapa = (d.partidas && !Array.isArray(d.partidas) && d.partidas.mapa) || {}; ppE.excl = new Set((d.partidas && !Array.isArray(d.partidas) && Array.isArray(d.partidas.excl)) ? d.partidas.excl : []); ppE.tipos = (d.partidas && !Array.isArray(d.partidas) && d.partidas.tipos) || {}; ppE.notas = (d.partidas && !Array.isArray(d.partidas) && d.partidas.notas) || {}; }
       const acc = {}; (r2.data || []).forEach(x => { const s = String(x.sumaria).trim().toUpperCase(), k = s + '|' + x.codigo; acc[k] = acc[k] || { sumaria: s, codigo: String(x.codigo), cuenta: x.cuenta, saldo: 0 }; acc[k].saldo += Number(x.saldo) || 0; });
       ppE.bal = Object.values(acc).map(x => ({ ...x, saldo: obR(x.saldo) }));
       ppE.cargado = true;
@@ -20531,7 +20531,7 @@ ${cont.innerHTML}
       clearTimeout(ppE.guardando);
       ppE.guardando = setTimeout(async () => {
         if (!nmE.cliente) return;
-        const fila = { cliente_id: nmE.cliente, anio: Number(nmE.anio), visita: nmE.visita, cuenta: PP_CUENTA, archivo_nombre: ppE.archivo || null, filas: ppE.filas, fecha_cierre: ppE.cierre || null, base_dias: 360, partidas: { mapa: ppE.mapa, excl: [...ppE.excl] }, auditor: (typeof nombreUsuarioActivo === 'function' ? nombreUsuarioActivo() : '') || null, updated_at: new Date().toISOString() };
+        const fila = { cliente_id: nmE.cliente, anio: Number(nmE.anio), visita: nmE.visita, cuenta: PP_CUENTA, archivo_nombre: ppE.archivo || null, filas: ppE.filas, fecha_cierre: ppE.cierre || null, base_dias: 360, partidas: { mapa: ppE.mapa, excl: [...ppE.excl], tipos: ppE.tipos, notas: ppE.notas }, auditor: (typeof nombreUsuarioActivo === 'function' ? nombreUsuarioActivo() : '') || null, updated_at: new Date().toISOString() };
         const { error } = await supabaseClient.from('anexo_inversiones').upsert(fila, { onConflict: 'cliente_id,anio,cuenta,visita' });
         ppE.msg = error ? 'No se pudo guardar: ' + (error.message || error) : 'Guardado ' + new Date().toLocaleTimeString('es-EC');
         const m = $im('pp-msg'); if (m) { m.textContent = ppE.msg; m.style.color = error ? '#b91c1c' : '#6b6b63'; }
@@ -20672,6 +20672,7 @@ ${cont.innerHTML}
       if (/reavalu|revalu|avaluo/.test(t)) return 'rea';
       if (/reclasif|traspaso|transferencia entre/.test(t)) return 'rec';
       if (/ajust|regulariz|correccion|corrige|reversion|reverso|reversa|revierte|extorno|anulacion/.test(t)) return 'aju';
+      if (!dep && /vta de activo|venta de activo|vta activo|venta activo|vta\. de activo|venta del activo|venta de vehiculo|venta de maquinaria/.test(t)) return 'ven';
       const aum = dep ? l.cre > l.deb : l.deb > l.cre;
       if (aum) return dep ? 'a' : (/import|liquidacion|nacionaliz|compra|adquis|factura|\bfac\b|\bfac-|fact |n\/v|\bnv\b|fcch|proveedor|instalac|construc|obra|licencia|software|equipo|maquinaria|vehiculo|mueble/.test(t) ? 'a' : 'otr');
       if (/venta|vend|\bvta/.test(t)) return 'ven';
@@ -20698,7 +20699,7 @@ ${cont.innerHTML}
         for (const c of cods) {
           if (!M.ids.length || !M.cta[c].hay) continue;
           const out = [];
-          for (const a of M.ids) { const r = await supabaseClient.rpc('mayor_lineas_cuenta_app', { p_archivo: a, p_cuenta: c, p_filtro: null, p_limite: 2000 }); if (r.error) throw r.error; (r.data || []).forEach(x => { const q = String(x.linea || '').split(';'); if (!String(q[3] || '').trim()) return; const d = obGiNum(q[14]), h = obGiNum(q[15]); out.push({ fecha: String(q[3]).trim(), ter: String(q[6] || '').trim(), con: String(q[10] || '').trim(), deb: isNaN(d) ? 0 : d, cre: isNaN(h) ? 0 : h }); }); }
+          for (const a of M.ids) { const r = await supabaseClient.rpc('mayor_lineas_cuenta_app', { p_archivo: a, p_cuenta: c, p_filtro: null, p_limite: 2000 }); if (r.error) throw r.error; (r.data || []).forEach(x => { const q = String(x.linea || '').split(';'); if (!String(q[3] || '').trim()) return; const d = obGiNum(q[14]), h = obGiNum(q[15]); out.push({ fecha: String(q[3]).trim(), ter: String(q[6] || '').trim(), asi: String(q[8] || '').trim(), con: String(q[10] || '').trim(), deb: isNaN(d) ? 0 : d, cre: isNaN(h) ? 0 : h }); }); }
           if (id !== ppE.cargaId) return;
           M.cta[c].lineas = out;
         }
@@ -20714,7 +20715,11 @@ ${cont.innerHTML}
         const sg = 1; z.ini += x.ini; z.fin += x.fin;
         if (x.lineas) {
           let s = 0;
-          x.lineas.forEach(l => { const t = ppMovTipo(l, dep), d = l.deb - l.cre; z[t] += d; s += d; ls.push({ ...l, t, d, c }); });
+          const lc = [];
+          x.lineas.forEach(l => { const ta = ppMovTipo(l, dep), d = l.deb - l.cre, key = ppMovKey(c, l), ov = ppE.tipos[key], t = (ov && z[ov[0]] !== undefined) ? ov[0] : ta; z[t] += d; s += d; const o = { ...l, t, ta, d, c, key, man: t !== ta, ix: ppMovIx(key), par: false }; ls.push(o); lc.push(o); });
+          // compensaciones: dos asientos con el mismo valor y signo contrario, del mismo tipo o alguno en «Otros»
+          lc.forEach((o, i) => { if (o.par || Math.abs(R(o.d)) < 0.005) return; for (let j = i + 1; j < lc.length; j++) { const q = lc[j]; if (q.par || Math.abs(R(o.d + q.d)) > 0.005 || (o.d > 0) === (q.d > 0)) continue; if (o.t === q.t || o.t === 'otr' || q.t === 'otr') { o.par = true; q.par = true; break; } } });
+          const abiertos = {}; lc.forEach(o => { const v = Math.abs(R(o.d)); if (v < 0.005) return; const k = o.t + '|' + v, a = abiertos[k] = abiertos[k] || { p: [], n: [] }, q = o.d > 0 ? a.p : a.n, op = o.d > 0 ? a.n : a.p; if (op.length) { const m = op.shift(); m.par = true; o.par = true; } else q.push(o); });
           const falta = R((sg * (x.fin - x.ini)) - s); if (Math.abs(falta) > 0.5) { z.otr += falta; ls.push({ fecha: '', ter: '', con: 'Diferencia entre el movimiento del resumen del mayor y la suma de sus asientos (revisar si el mayor trae todos los asientos)', deb: 0, cre: 0, t: 'otr', d: falta, c }); }
         } else if (x.hay) { const d = sg * (x.fin - x.ini); z.otr += d; sinDetalle++; ls.push({ fecha: '', ter: '', con: 'Sin detalle de asientos en el mayor cargado: movimiento neto de la cuenta', deb: 0, cre: 0, t: 'otr', d: R(d), c }); }
       });
@@ -20733,6 +20738,15 @@ ${cont.innerHTML}
       };
       return { costo: mk(false), dep: mk(true) };
     }
+    function ppMovKey(c, l) { return [c, l.asi || '', l.fecha, R2k(l.deb), R2k(l.cre), String(l.con || '').slice(0, 40)].join('|'); }
+    function R2k(x) { return (Math.round(x * 100) / 100).toFixed(2); }
+    function ppMovIx(key) { const M = ppE.mov; M.kix = M.kix || {}; M.kl = M.kl || []; if (!(key in M.kix)) { M.kix[key] = M.kl.length; M.kl.push(key); } return M.kix[key]; }
+    function ppMovSet(ix, v) {
+      const key = ppE.mov.kl[ix]; if (!key) return;
+      if (!v) delete ppE.tipos[key]; else ppE.tipos[key] = [v, (typeof nombreUsuarioActivo === 'function' ? nombreUsuarioActivo() : '') || '', new Date().toISOString().slice(0, 10)];
+      ppGuardar(); nmCuaPintar();
+    }
+    function ppMovNota(ix, v) { const key = ppE.mov.kl[ix]; if (!key) return; if (String(v).trim()) ppE.notas[key] = v; else delete ppE.notas[key]; ppGuardar(); }
     function ppMovVer(k) { ppE.mov.ver[k] = !ppE.mov.ver[k]; nmCuaPintar(); }
     function ppMovHtml(D) {
       const e = escapeHtml, cab = (t, n) => conclH2('pp-sec-' + n, n + '. ' + t, '', 'neutro', n === 1), ay = t => '<p style="font-size:12px;color:#6b6b63;line-height:1.6;margin:0 0 8px">' + t + '</p>';
@@ -20751,13 +20765,13 @@ ${cont.innerHTML}
         const cols = PP_MOV_COLS.map(c => (dep && c[0] === 'a') ? ['a', 'Depreciación del año'] : c);
         const cuerpo = B.filas.map(f => {
           const k = (dep ? 'd' : 'c') + ':' + f.etq, dif = R2(f.z.fin - (f.bal === null ? f.z.fin : f.bal));
-          let r = '<tr class="border-b border-slate-100"><td class="px-2 py-0.5 min-w-[260px]">' + e(f.etq) + btn(k, 'Ver la composición del movimiento (asientos del mayor)') + (f.hay ? '' : ' <span class="text-[10px]" style="color:#b45309">Sin movimiento en el mayor</span>') + '</td>' + tdn(f.z.ini) + cols.map(c => tdn(f.z[c[0]])).join('') + tdn(f.z.fin, 'font-bold') + tdn(f.bal) + tdd(dif) + '</tr>';
+          let r = '<tr class="border-b border-slate-100"><td class="px-2 py-0.5 min-w-[260px]">' + e(f.etq) + btn(k, 'Ver la composición del movimiento (asientos del mayor)') + (f.hay ? '' : ' <span class="text-[10px]" style="color:#b45309">Sin movimiento en el mayor</span>') + (f.ls.some(l => l.par) ? ' <span class="text-[10px]" style="color:#b45309" title="Hay asientos que parecen compensarse entre sí; ábrela y revisa">⚠</span>' : '') + (f.ls.some(l => l.man) ? ' <span class="text-[10px]" style="color:#b45309" title="Tiene asientos reclasificados a mano">●</span>' : '') + '</td>' + tdn(f.z.ini) + cols.map(c => tdn(f.z[c[0]])).join('') + tdn(f.z.fin, 'font-bold') + tdn(f.bal) + tdd(dif) + '</tr>';
           if (M.ver[k]) {
             const orden = cols.map(c => c[0]), ls = f.ls.slice().sort((a, b) => orden.indexOf(a.t) - orden.indexOf(b.t) || String(obFecha(a.fecha) || '').localeCompare(String(obFecha(b.fecha) || '')));
             const resumen = cols.map(c => { const s = R2(f.ls.filter(l => l.t === c[0]).reduce((a, l) => a + l.d, 0)), n = f.ls.filter(l => l.t === c[0]).length; return n ? '<span style="margin-right:14px"><b>' + e(c[1]) + ':</b> ' + ppF2(s) + ' (' + n + ' asiento' + (n > 1 ? 's' : '') + ')</span>' : ''; }).join('');
             r += '<tr><td colspan="' + (cols.length + 5) + '" class="px-3 py-2 bg-white"><div style="font-size:11px;color:#6b6b63;margin-bottom:4px">Cuentas del balance: ' + e(f.codigos.join(' · ')) + '</div><div style="font-size:11px;margin-bottom:4px">' + resumen + '</div>'
-              + '<div class="overflow-x-auto"><table class="w-full text-[11px] leading-tight border-collapse"><thead class="bg-slate-50 text-slate-600"><tr>' + th('Tipo', 'text-left') + th('Cuenta', 'text-left') + th('Fecha', 'text-left') + th('Concepto', 'text-left') + th('Tercero', 'text-left') + th('Valor') + '</tr></thead><tbody>'
-              + ls.slice(0, 400).map(l => '<tr class="border-b border-slate-100"><td class="px-2 py-0.5 whitespace-nowrap">' + e(PP_MOV_ETQ[l.t] === 'Compras / importaciones' && dep ? 'Depreciación del año' : PP_MOV_ETQ[l.t]) + '</td><td class="px-2 py-0.5 whitespace-nowrap">' + e(l.c) + '</td><td class="px-2 py-0.5 whitespace-nowrap">' + e(l.fecha) + '</td><td class="px-2 py-0.5" style="max-width:520px;white-space:normal">' + e(l.con) + '</td><td class="px-2 py-0.5 whitespace-nowrap">' + e(l.ter) + '</td>' + tdn(R2(l.d)) + '</tr>').join('')
+              + '<div class="overflow-x-auto"><table class="w-full text-[11px] leading-tight border-collapse"><thead class="bg-slate-50 text-slate-600"><tr>' + th('Tipo (puedes cambiarlo)', 'text-left') + th('Cuenta', 'text-left') + th('Fecha', 'text-left') + th('Concepto', 'text-left') + th('Tercero', 'text-left') + th('Valor') + th('Nota', 'text-left') + '</tr></thead><tbody>'
+              + ls.slice(0, 400).map(l => '<tr class="border-b border-slate-100"' + (l.man ? ' style="background:#f6f3ea"' : '') + '><td class="px-2 py-0.5 whitespace-nowrap">' + (l.key ? '<select onchange="ppMovSet(' + l.ix + ', this.value)" style="font-size:11px;border:1px solid #d4d4cf;border-radius:4px;background:#fff;padding:0 2px;max-width:150px"><option value="">' + e('Automático: ' + (l.ta === 'a' && dep ? 'Depreciación del año' : PP_MOV_ETQ[l.ta])) + '</option>' + cols.map(c => '<option value="' + c[0] + '"' + (l.man && l.t === c[0] ? ' selected' : '') + '>' + e(c[1]) + '</option>').join('') + '</select>' + (l.man ? ' <span title="Reclasificado a mano" style="color:#b45309">●</span>' : '') : e(PP_MOV_ETQ[l.t])) + '</td><td class="px-2 py-0.5 whitespace-nowrap">' + e(l.c) + '</td><td class="px-2 py-0.5 whitespace-nowrap">' + e(l.fecha) + '</td><td class="px-2 py-0.5" style="max-width:520px;white-space:normal">' + e(l.con) + (l.par ? ' <span title="Hay otro asiento del mismo tipo con el mismo valor y signo contrario: posible compensación, revisar el tratamiento" style="color:#b45309;font-size:10px;white-space:nowrap">⚠ posible compensación</span>' : '') + '</td><td class="px-2 py-0.5 whitespace-nowrap">' + e(l.ter) + '</td>' + tdn(R2(l.d)) + '<td class="px-2 py-0.5">' + (l.key ? '<input type="text" value="' + e(ppE.notas[l.key] || '') + '" oninput="ppMovNota(' + l.ix + ', this.value)" placeholder="Motivo" style="font-size:11px;border:1px solid #e0e0db;border-radius:4px;padding:0 4px;width:150px">' : '') + '</td></tr>').join('')
               + '</tbody></table></div>' + (ls.length > 400 ? '<div style="font-size:11px;color:#6b6b63">Se muestran los primeros 400 de ' + ls.length + ' asientos.</div>' : '') + '</td></tr>';
           }
           return r;
@@ -20767,7 +20781,7 @@ ${cont.innerHTML}
           + '<tr class="border-b border-slate-200 bg-slate-50 font-bold text-slate-800"><td class="px-2 py-0.5">Total</td>' + tdn(T.ini) + cols.map(c => tdn(T[c[0]])).join('') + tdn(T.fin) + tdn(B.bal) + tdd(dT) + '</tr></tbody></table></div>';
       };
       const sinDet = Object.values(M.cta).filter(x => x.hay && !x.lineas).length, faltan = Object.keys(M.cta).filter(c => !M.cta[c].hay).length;
-      return '<style>.ppm td,.ppm th{padding:1px 6px;font-size:11px;line-height:1.25}.ppm th{white-space:normal;vertical-align:bottom}.ppm td:first-child{white-space:normal}</style>' + cab(tit, 2) + ay('Del mayor contable cargado: saldo inicial del año, cada tipo de movimiento y saldo final de cada tipo de activo, contra el balance. Cada asiento se clasifica por su concepto (compras e importaciones, bajas, ventas, reclasificaciones, ajustes, reavalúos); lo que no se reconoce va en «Otros». Toca el ojito de una fila para ver los asientos que la componen.')
+      return '<style>.ppm td,.ppm th{padding:1px 6px;font-size:11px;line-height:1.25}.ppm th{white-space:normal;vertical-align:bottom}.ppm td:first-child{white-space:normal}</style>' + cab(tit, 2) + ay('Del mayor contable cargado: saldo inicial del año, cada tipo de movimiento y saldo final de cada tipo de activo, contra el balance. Cada asiento se clasifica por su concepto (compras e importaciones, bajas, ventas, reclasificaciones, ajustes, reavalúos); lo que no se reconoce va en «Otros». Toca el ojito de una fila para ver los asientos; si uno está mal clasificado, cámbialo en su selector de tipo (se traslada a esa columna, el saldo final no cambia) y deja una nota con el motivo. ⚠ avisa asientos que parecen compensarse entre sí y ● marca lo reclasificado a mano.')
         + (sinDet ? '<p style="font-size:11px;color:#6b6b63;margin:-4px 0 6px">Cargando el detalle de asientos de ' + sinDet + ' cuenta(s)…</p>' : '')
         + (faltan ? '<p style="font-size:11px;color:#b45309;margin:-4px 0 6px">' + faltan + ' cuenta(s) del balance no aparecen en el mayor cargado.</p>' : '')
         + bloque(false, DT.costo, 'Costo') + bloque(true, DT.dep, 'Depreciación acumulada');
