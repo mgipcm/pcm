@@ -20719,7 +20719,7 @@ ${cont.innerHTML}
     }
     async function ppCargar() {
       PC_CORTE.t = 0; const cli = nmE.cliente, anio = Number(nmE.anio), vis = nmE.visita, id = ++ppE.cargaId;
-      Object.assign(ppE, { cargado: false, gasX: [], filas: [], bal: [], gas: [], mapa: {}, tipos: {}, notas: {}, mov: null, excl: new Set(), msg: '', archivo: '', pag: 0, ver: {} });
+      Object.assign(ppE, { cargado: false, leyendo: false, autoId: '', gasX: [], filas: [], bal: [], gas: [], mapa: {}, tipos: {}, notas: {}, mov: null, excl: new Set(), msg: '', archivo: '', pag: 0, ver: {} });
       if (!cli) return;
       ppE.cierre = ($im('nm-fecha') || {}).value || (vis === 'final' ? anio + '-12-31' : anio + '-09-30');
       const [r1, r2, r3] = await Promise.all([
@@ -20739,6 +20739,7 @@ ${cont.innerHTML}
       }
       ppE.cargado = true;
       nmPintar();
+      if (!nmE.sv || !nmE.sv.cargado) { if (!(nmE.sv && !nmE.sv.cargado)) nmSubirCargar(); } else ppAutoLeer();
     }
     function ppGuardar() {
       clearTimeout(ppE.guardando);
@@ -20797,12 +20798,10 @@ ${cont.innerHTML}
       if (/^estado( activo)?$/.test(t)) return 'est';
       return null;
     }
-    async function ppSubir(files) {
-      const f = files && files[0]; const inp = $im('pp-archivo'); if (inp) inp.value = ''; if (!f) return;
-      try {
-        if (!window.XLSX) throw new Error('No se pudo cargar el lector de Excel. Revisa tu conexión a internet.');
-        if (ppE.filas.length && !(await confirmarApp('Ya hay ' + ppE.filas.length + ' activos en el anexo. Si subes "' + f.name + '" se reemplazarán. ¿Continuar?'))) return;
-        const wb = XLSX.read(await f.arrayBuffer(), { type: 'array', cellDates: true });
+    // Lee el anexo (Excel o CSV): busca la hoja y la fila de títulos que mejor calzan con las columnas del anexo
+    function ppParsear(buf) {
+      if (!window.XLSX) throw new Error('No se pudo cargar el lector de Excel. Revisa tu conexión a internet.');
+        const wb = XLSX.read(buf, { type: 'array', cellDates: true });
         let mejor = null;
         wb.SheetNames.forEach(n => {
           const M = XLSX.utils.sheet_to_json(wb.Sheets[n], { header: 1, raw: true, defval: null });
@@ -20822,9 +20821,38 @@ ${cont.innerHTML}
           filas.push({ cod: s('cod'), cla: s('cla'), nom: s('nom'), det: s('det'), est: s('est'), cmp, fcm: obFecha(g('fcm')), rev: n('rev'), frv: obFecha(g('frv')), res: n('res'), vid: n('vid'), fid: obFecha(g('fid')) || obFecha(g('fcm')), sis: n('sis') });
         }
         if (!filas.length) throw new Error('No encontré activos con valor de compra.');
-        ppE.filas = filas; ppE.archivo = f.name; ppE.pag = 0; ppE.filtro = ''; ppE.cla = '';
-        ppE.msg = 'Se cargaron ' + filas.length + ' activos de "' + f.name + '" (hoja ' + mejor.n + ').'; ppGuardar(); ppPintar();
-      } catch (e) { ppE.msg = 'No se pudo leer el archivo: ' + (e && e.message ? e.message : e); ppPintar(); }
+      return { filas, hoja: mejor.n };
+    }
+    // El anexo se sube en «Subir información» (etiqueta «Anexo de activos fijos»): aquí se toma el último archivo Excel o CSV que no esté borrado
+    function ppAnexoSubido() {
+      const A = (nmE.sv && nmE.sv.cargado && nmE.sv.archivos) || [];
+      return A.filter(a => a.etiqueta === 'Anexo de activos fijos' && !a.eliminado_at && /\.(xlsx|xls|csv)$/i.test(a.nombre || '')).sort((x, y) => String(y.created_at).localeCompare(String(x.created_at)))[0] || null;
+    }
+    async function ppLeerSubido(auto) {
+      const a = ppAnexoSubido();
+      if (!a) { ppE.msg = 'No hay un anexo de activos fijos (Excel o CSV) en «Subir información».'; ppPintar(); return; }
+      if (!auto && ppE.filas.length && !(await confirmarApp('Ya hay ' + ppE.filas.length + ' activos en el anexo. Si lees "' + a.nombre + '" se reemplazarán. ¿Continuar?'))) return;
+      ppE.leyendo = true; ppE.msg = 'Leyendo ' + a.nombre + '…'; ppPintar();
+      try {
+        const { data, error } = await supabaseClient.storage.from('pedidos-claude').download(a.ruta);
+        if (error || !data) throw new Error((error && error.message) || 'No se pudo descargar el archivo');
+        const r = ppParsear(await data.arrayBuffer());
+        ppE.filas = r.filas; ppE.archivo = a.nombre; ppE.pag = 0; ppE.filtro = ''; ppE.cla = ''; ppE.mov = null;
+        ppE.msg = 'Se cargaron ' + r.filas.length + ' activos de "' + a.nombre + '" (hoja ' + r.hoja + ').'; ppGuardar();
+      } catch (e) { ppE.msg = 'No se pudo leer el archivo: ' + (e && e.message ? e.message : e); }
+      ppE.leyendo = false; ppPintar();
+    }
+    // Si el anexo está vacío y ya hay un archivo subido, se lee solo (una vez por archivo)
+    function ppAutoLeer() {
+      if (NM_CTX.hoja !== 'ppe' || !ppE.cargado || ppE.leyendo || ppE.filas.length) return;
+      const a = ppAnexoSubido(); if (!a || ppE.autoId === a.id) return;
+      ppE.autoId = a.id; ppLeerSubido(true);
+    }
+    function ppAnexoBoton() {
+      const a = ppAnexoSubido(), e = escapeHtml;
+      if (!a) return '<button type="button" class="ob-b" onclick="nmIrTab(\'subir\')" title="El anexo se sube en Subir información, con la etiqueta Anexo de activos fijos">Ir a «Subir información» para cargar el anexo</button>';
+      const nuevo = a.nombre !== ppE.archivo;
+      return '<button type="button" class="ob-b" onclick="ppLeerSubido()"' + (ppE.leyendo ? ' disabled style="opacity:.5"' : '') + ' title="Lee de nuevo el archivo ' + e(a.nombre) + ' subido en Subir información">' + (nuevo ? 'Leer «' + e(a.nombre) + '» (archivo subido en «Subir información»)' : '↻ Volver a leer el anexo subido') + '</button>';
     }
     // Pestaña «Anexos y cálculos»: registro de activos fijos
     function ppPintar() {
@@ -20845,13 +20873,13 @@ ${cont.innerHTML}
       const clas = [...new Set(ppE.filas.map(ppClave))].sort();
       const sel = '<select onchange="ppFiltro(\'cla\',this.value)" style="border:1px solid #dcdcd6;border-radius:6px;padding:2px 6px;font-size:12px"><option value="">Todas las clasificaciones</option>' + clas.map(k => '<option value="' + e(k) + '"' + (ppE.cla === k ? ' selected' : '') + '>' + e(k) + '</option>').join('') + '</select>';
       c.innerHTML = '<style>' + PP_CSS + '</style><div style="background:#f1f1ee">'
-        + '<div style="padding:16px 14px 14px;font-size:12px;color:#6b6b63;line-height:1.7">Anexo de activos fijos del cliente (ref. ' + PP_REF.anexo + '): un activo por fila, con su clasificación, valor de compra, reavalúo, valor residual, vida útil y fecha de inicio de depreciación. La aplicación recalcula la depreciación acumulada (línea recta; el mes de inicio se prorratea por días), el gasto del año y por mes, y la compara con la que entrega el sistema del cliente. Los cuadros contra la sumaria AO y la depreciación por año y por mes están en «Resumen de cuadres y cruces». Los derechos de uso (AOO) no van aquí: tienen su propia herramienta. Este anexo se carga solo aquí: no hace falta subirlo en «Subir información», porque Claude usa el que queda guardado.</div>'
+        + '<div style="padding:16px 14px 14px;font-size:12px;color:#6b6b63;line-height:1.7">Anexo de activos fijos del cliente (ref. ' + PP_REF.anexo + '): un activo por fila, con su clasificación, valor de compra, reavalúo, valor residual, vida útil y fecha de inicio de depreciación. La aplicación recalcula la depreciación acumulada (línea recta; el mes de inicio se prorratea por días), el gasto del año y por mes, y la compara con la que entrega el sistema del cliente. Los cuadros contra la sumaria AO y la depreciación por año y por mes están en «Resumen de cuadres y cruces». Los derechos de uso (AOO) no van aquí: tienen su propia herramienta. El archivo del anexo se sube en «Subir información» (etiqueta «Anexo de activos fijos»); aquí se lee y queda guardado, y Claude usa ese.</div>'
         + pcAvisoCorte(ppE.cierre, ppPintar, 'pp')
         + '<div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:4px 14px 12px"><label style="font-size:12px;color:#4a4a44">Fecha de cierre <input type="date" value="' + e(ppE.cierre) + '" onchange="ppCab(this.value)" style="border:1px solid #dcdcd6;border-radius:6px;padding:2px 6px;font-size:12px"></label>' + '<span title="La depreciación se calcula en línea recta por meses completos; el primer mes se prorratea por los días que faltan sobre un mes de 30 días." style="font-size:12px;color:#4a4a44;border:1px solid #dcdcd6;border-radius:6px;padding:2px 8px;background:#fafaf8">Base de cálculo: <b>año de 360 días</b> (12 meses de 30 días)</span>'
-        + '<label class="ob-b" style="cursor:pointer">Subir anexo (Excel o CSV)<input id="pp-archivo" type="file" accept=".xlsx,.xls,.csv" class="hidden" onchange="ppSubir(this.files)"></label><button type="button" class="ob-b" onclick="ppPlantilla()">Descargar plantilla</button><button type="button" class="ob-b" onclick="ppAgregar()">＋ Agregar activo</button>' + (ppE.filas.length ? '<button type="button" class="ob-b" onclick="ppVaciar()">Vaciar</button>' : '') + '<span id="pp-msg" style="font-size:11px;color:#6b6b63">' + e(ppE.msg || (ppE.archivo ? 'Archivo: ' + ppE.archivo : '')) + '</span>'
+        + ppAnexoBoton() + '<button type="button" class="ob-b" onclick="ppPlantilla()">Descargar plantilla</button><button type="button" class="ob-b" onclick="ppAgregar()">＋ Agregar activo</button>' + (ppE.filas.length ? '<button type="button" class="ob-b" onclick="ppVaciar()">Vaciar</button>' : '') + '<span id="pp-msg" style="font-size:11px;color:#6b6b63">' + e(ppE.msg || (ppE.archivo ? 'Archivo: ' + ppE.archivo : '')) + '</span>'
         + '<button type="button" onclick="ppExcel()" style="margin-left:auto;padding:6px 4px;font-size:12px;font-weight:700;background:transparent;border:0;color:#449964;cursor:pointer">⬇ Descargar Excel</button></div>'
         + (ppE.filas.length ? '<div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:0 14px 10px;font-size:12px;color:#4a4a44"><input id="pp-q" placeholder="Buscar por código, nombre o estado" value="' + e(ppE.filtro) + '" oninput="ppFiltro(\'filtro\',this.value)" style="border:1px solid #dcdcd6;border-radius:6px;padding:3px 8px;font-size:12px;width:260px">' + sel + '<span>' + idx.length + ' de ' + ppE.filas.length + ' activos</span><button type="button" class="ob-b" onclick="ppPag(-1)"' + (ppE.pag ? '' : ' disabled style="opacity:.4"') + '>‹</button><span>Página ' + (ppE.pag + 1) + ' de ' + tp + '</span><button type="button" class="ob-b" onclick="ppPag(1)"' + (ppE.pag + 1 < tp ? '' : ' disabled style="opacity:.4"') + '>›</button></div>' : '')
-        + '<div style="overflow-x:auto;padding:6px 10px 16px"><table class="ob"><thead><tr>' + TH.map(x => '<th>' + x + '</th>').join('') + '</tr></thead><tbody>' + (rows || '<tr><td colspan="21" style="padding:14px;color:#9a9a92;white-space:normal">Aún no hay activos. Sube el anexo del cliente o agrega filas.</td></tr>') + '</tbody></table></div></div>';
+        + '<div style="overflow-x:auto;padding:6px 10px 16px"><table class="ob"><thead><tr>' + TH.map(x => '<th>' + x + '</th>').join('') + '</tr></thead><tbody>' + (rows || '<tr><td colspan="21" style="padding:14px;color:#9a9a92;white-space:normal">Aún no hay activos. Sube el anexo del cliente en «Subir información» o agrega filas.</td></tr>') + '</tbody></table></div></div>';
       c.scrollTop = sc; c.scrollLeft = hs;
     }
     // Costo del activo a una fecha (fin del mes Y-M): con reavalúo cuando ya ocurrió
@@ -21422,6 +21450,7 @@ ${cont.innerHTML}
       if (!nmE.sv || id !== nmE.sv.id) return;
       nmE.sv = { id, cargado: true, error: peT.error ? (peT.error.message || String(peT.error)) : '', pedidos: peT.data || [], archivos };
       if (nmE.tab === 'subir' || nmE.tab === 'programa') nmPintar();
+      if (NM_CTX.hoja === 'ppe') { if (nmE.tab === 'anexos') ppPintar(); ppAutoLeer(); }
     }
     function nmSubirPintar() {
       const c = $im('nm-panel'), S = nmE.sv;
