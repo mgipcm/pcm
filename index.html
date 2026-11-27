@@ -20130,22 +20130,39 @@ ${cont.innerHTML}
       const cd = mvCands(b);
       return cd.filter(x => b.defBC ? x.bc : (b.def ? b.def(x.nombre) : false)).map(x => x.c);
     }
+    // El mayor se recorre por tandas de partes (todas las cuentas marcadas a la vez) y el resultado queda guardado: la segunda vez es inmediato
     async function mvCalcular(tok) {
       const S = nmE.mv; if (!S || !S.ids.length) return;
-      const falta = [...new Set([].concat(...MV_BLQ.map(b => mvSel(b))))].filter(c => !(c in S.cache));
-      S.total = falta.length; S.calc = 0;
-      if (!falta.length) { if (nmE.tab === 'movs') mvPintar(true); return; }
-      let i = 0;
-      const un = async () => {
-        while (i < falta.length) {
-          const c = falta[i++]; const ct = S.ctas[c];
-          if (!ct) { S.cache[c] = []; S.calc++; continue; }
-          try { const r = await supabaseClient.rpc('mayor_mov_clasif_app', { p_archivo: ct.arch, p_cuenta: c }); if (r.error) throw r.error; S.cache[c] = r.data || []; }
-          catch (er) { S.cache[c] = []; S.errores = (S.errores || []).concat([c + ': ' + ((er && er.message) || er)]); }
-          S.calc++; if (tok === nmE.mvTok && nmE.tab === 'movs') mvPintar(true);
-        }
-      };
-      await Promise.all([un(), un(), un()]);
+      if (S.busy) { S.otra = true; return; }
+      S.busy = true; S.errores = [];
+      try {
+        do {
+          S.otra = false;
+          const falta = [...new Set([].concat(...MV_BLQ.map(b => mvSel(b))))].filter(c => !(c in S.cache));
+          falta.filter(c => !S.ctas[c]).forEach(c => { S.cache[c] = []; });
+          const porArch = {}; falta.filter(c => S.ctas[c]).forEach(c => { (porArch[S.ctas[c].arch] = porArch[S.ctas[c].arch] || []).push(c); });
+          S.total = 0; S.calc = 0;
+          for (const arch of Object.keys(porArch)) {
+            const cuentas = porArch[arch];
+            const es = await supabaseClient.rpc('mayor_clasif_estado_app', { p_archivo: arch, p_cuentas: cuentas }); if (es.error) throw es.error;
+            const inf = es.data || {}, hechas = new Set(inf.hechas || []), pend = cuentas.filter(c => !hechas.has(c));
+            const ini = Number(inf.min_n) || 0, fin = Number(inf.max_n) || 0, PASO = 10, rangos = [];
+            if (pend.length) for (let d = ini; d <= fin; d += PASO) rangos.push(d);
+            S.total += rangos.length;
+            if (tok === nmE.mvTok && nmE.tab === 'movs') mvPintar(true);
+            for (const d of rangos) {
+              if (tok !== nmE.mvTok) return;
+              const r = await supabaseClient.rpc('mayor_clasif_tanda_app', { p_archivo: arch, p_cuentas: pend, p_desde: d, p_hasta: d + PASO - 1 }); if (r.error) throw r.error;
+              S.calc++; if (tok === nmE.mvTok && nmE.tab === 'movs') mvPintar(true);
+            }
+            if (pend.length) { const ce = await supabaseClient.rpc('mayor_clasif_cerrar_app', { p_archivo: arch, p_cuentas: pend }); if (ce.error) throw ce.error; }
+            const lee = await supabaseClient.rpc('mayor_clasif_leer_app', { p_archivo: arch, p_cuentas: cuentas }); if (lee.error) throw lee.error;
+            cuentas.forEach(c => { S.cache[c] = []; });
+            (lee.data || []).forEach(r => { S.cache[r.cuenta].push(r); });
+          }
+        } while (S.otra && tok === nmE.mvTok);
+      } catch (er) { S.errores = (S.errores || []).concat([(er && er.message) || String(er)]); }
+      S.busy = false; S.total = 0;
       if (tok === nmE.mvTok && nmE.tab === 'movs') mvPintar(true);
     }
     async function mvGuardar(b, cuentas) {
@@ -20190,7 +20207,7 @@ ${cont.innerHTML}
       let html = '<style>.mvt{border-collapse:collapse;font-size:12px;color:#2b2b27;width:100%}.mvt th{background:#f4f4f1;border:1px solid #dfdfdb;padding:3px 6px;font-weight:700;font-size:11px;text-align:center}.mvt td{border-bottom:1px solid #ecece8;padding:2px 6px;line-height:1.3}.mvt td.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}.mvt tr.tot td{font-weight:700;background:#f4f4f1;border-top:1px solid #cfcfc8}.mvt tr.sub td{font-size:11px;color:#55554f;background:#fbfbf9}.mvt tr.sub td.l{padding-left:26px}.mvt td.l{min-width:300px}.mv-h{font-size:13px;font-weight:800;color:#2b2b27;padding:14px 14px 2px}.mv-ojo{border:0;background:transparent;cursor:pointer;padding:0 4px 0 0;vertical-align:middle}.mv-det{margin:4px 14px 6px;border:1px solid #e3e3de;border-radius:8px;background:#fff}.mv-det summary{cursor:pointer;font-size:12px;padding:5px 10px;color:#55554f}.mv-lis{columns:2;column-gap:18px;padding:4px 12px 8px;font-size:12px}.mv-lis label{display:flex;gap:6px;align-items:flex-start;padding:1px 0;break-inside:avoid;cursor:pointer}</style>'
         + '<div style="padding:12px 14px 2px"><div style="font-size:15px;font-weight:800;color:#2b2b27">Movimientos mensuales de ingresos e impuestos</div><div style="font-size:12px;color:#6b6b63;margin-top:2px">Todo sale del mayor contable. En cada cuadro marque con un check las cuentas que deben entrar; el movimiento se separa por mes y por tipo de operación, y el ojito muestra de qué cuentas sale cada valor.</div></div>';
       if (!S.ids.length) html += '<div style="margin:8px 14px;padding:8px 10px;border:1px solid #e8d9a8;background:#fbf6e4;border-radius:8px;font-size:12px;color:#6b5a1c">No hay un mayor contable completo ya resumido para este cliente, año y visita. Súbalo en la pantalla «Mayor contable» y espere a que termine de leerse.</div>';
-      if (S.total && S.calc < S.total) html += '<div style="padding:4px 14px;font-size:12px;color:#6b6b63">Calculando movimientos del mayor… ' + S.calc + ' de ' + S.total + ' cuentas</div>';
+      if (S.busy) html += '<div style="padding:4px 14px;font-size:12px;color:#6b6b63">Calculando los movimientos del mayor (solo la primera vez, luego queda guardado)… paso ' + S.calc + ' de ' + S.total + '</div>';
       if (S.errores && S.errores.length) html += '<div style="margin:4px 14px;padding:6px 10px;border:1px solid #f0c8c4;background:#fdf0ee;border-radius:8px;font-size:11px;color:#8a2a22">No se pudo leer: ' + e(S.errores.slice(0, 5).join(' · ')) + '</div>';
       MV_BLQ.forEach(b => {
         const sel = mvSel(b), cands = mvCands(b), nat = b.nat;
@@ -20233,7 +20250,7 @@ ${cont.innerHTML}
           + '<details class="mv-det mv-sel" data-k="' + b.k + '"' + (abiertos.has(b.k) ? ' open' : '') + '><summary>Cuentas que entran en este cuadro</summary><div style="padding:0 12px 4px;font-size:11px"><a href="#" onclick="mvTodas(\'' + b.k + '\',true);return false" style="text-decoration:underline">Marcar todas</a> · <a href="#" onclick="mvTodas(\'' + b.k + '\',false);return false" style="text-decoration:underline">Quitar todas</a></div>'
           + (cands.length ? '<div class="mv-lis">' + lis + '</div>' : '<div style="padding:4px 12px;font-size:12px;color:#6b6b63">No hay cuentas de ' + e(b.sum.join(' / ')) + ' en el balance de este cliente, año y visita; agréguelas con el buscador.</div>')
           + '<div style="padding:0 12px 8px"><input list="mv-cuentas" type="text" placeholder="+ Agregar otra cuenta del mayor (código o nombre)" onchange="mvAgregar(\'' + b.k + '\',this)" style="width:100%;max-width:520px;border:1px solid #dcdcd6;border-radius:6px;padding:3px 6px;font-size:12px;background:#fff"></div></details>'
-          + '<div class="overflow-x-auto" style="overflow-x:auto;padding:4px 14px 6px"><table class="mvt" style="min-width:' + (420 + meses.length * 92) + 'px"><thead><tr><th style="text-align:left">Concepto</th>' + meses.map(m => '<th>' + F104_MESES[m - 1] + '</th>').join('') + '<th>' + (b.saldos ? 'Total / saldo' : 'Total') + '</th></tr></thead><tbody>' + cuerpo.join('') + chk + '</tbody></table>' + (noCalc && S.ids.length ? '<div style="font-size:11px;color:#8a8a82;padding-top:2px">Calculando…</div>' : '') + '</div>';
+          + '<div class="overflow-x-auto" style="overflow-x:auto;padding:4px 14px 6px"><table class="mvt" style="min-width:' + (420 + meses.length * 92) + 'px"><thead><tr><th style="text-align:left">Concepto</th>' + meses.map(m => '<th>' + F104_MESES[m - 1] + '</th>').join('') + '<th>' + (b.saldos ? 'Total / saldo' : 'Total') + '</th></tr></thead><tbody>' + cuerpo.join('') + (noCalc ? '' : chk) + '</tbody></table>' + (noCalc && S.ids.length ? '<div style="font-size:11px;color:#8a8a82;padding-top:2px">Calculando…</div>' : '') + '</div>';
       });
       html += dl + '<div style="padding:4px 14px 16px;font-size:11px;color:#6b6b63;line-height:1.55"><b>Cómo se clasifica.</b> Cada línea del mayor se ubica por su texto: «cierre de impuestos», reversos o anulaciones, provisiones, notas de crédito, ajustes y reclasificaciones (incluye los asientos de diario manuales); lo demás es la facturación o compra normal. Las notas de crédito se compensan dentro de la facturación. El saldo inicial es el del mayor al inicio del año. La diferencia contra el balance de comprobación debe ser cero.</div>';
       c.innerHTML = html; c.scrollTop = sc; c.scrollLeft = hs;
