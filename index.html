@@ -20438,7 +20438,7 @@ ${cont.innerHTML}
     }
     // ===== AO Propiedad, planta y equipo: anexo de activos fijos, depreciación por año y mes, y cuadre con las sumarias (AO y AOO) =====
     const PP_CUENTA = 'propiedad_planta_equipo';
-    const ppE = { cargado: false, cargaId: 0, filas: [], cierre: '', bal: [], mapa: {}, tipos: {}, notas: {}, msg: '', archivo: '', guardando: null, filtro: '', cla: '', pag: 0, ver: {}, excl: new Set(), mov: null, cdAn: new Set(), cdAb: new Set(['costo', 'dep']) };
+    const ppE = { cargado: false, cargaId: 0, filas: [], cierre: '', bal: [], mapa: {}, gas: [], tipos: {}, notas: {}, msg: '', archivo: '', guardando: null, filtro: '', cla: '', pag: 0, ver: {}, excl: new Set(), mov: null, cdAn: new Set(), cdAb: new Set(['costo', 'dep']) };
     const PP_COLS = [['cod', 'Código de activo'], ['cla', 'Clasificación (tipo de activo)'], ['nom', 'Nombre del activo'], ['det', 'Detalle'], ['est', 'Estado'], ['cmp', 'Valor de compra'], ['fcm', 'Fecha de compra'], ['rev', 'Valor de reavalúo'], ['frv', 'Fecha de reavalúo'], ['res', 'Valor residual'], ['vid', 'Meses de vida útil'], ['fid', 'Fecha de inicio de depreciación'], ['sis', 'Depreciación acumulada según el sistema (opcional)']];
     const PP_REF = { anexo: 'AO-02', dep: 'AO-03', cuadre: 'AO-04' };
     const PP_CSS = '.ob{border-collapse:collapse;font-size:10.5px;color:#2b2b27}.ob th{background:#fff;border:1px solid #dfdfdb;padding:2px 4px;font-weight:700;font-size:9.5px;text-align:center;line-height:1.2}.ob td{background:#f1f1ee;border:1px solid #e2e2dd;padding:0 3px;white-space:nowrap}.ob td.n{text-align:right}.ob td.ob-c{text-align:center;color:#9a9a92;width:26px}.ob tr.tot td{font-weight:700;border-top:1px solid #cfcfc8;background:#fff}.ob-i{border:0;background:transparent;font-size:10.5px;padding:1px 1px;outline:none;color:#2b2b27}.ob-i:focus{background:#fff;box-shadow:inset 0 0 0 1px #c9c9c0;border-radius:3px}.ob-b{font-size:12px;font-weight:600;color:#4a4a44;border:1px solid #dcdcd6;border-radius:8px;padding:4px 10px;background:#fff}.ob-h{font-size:13px;font-weight:700;color:#2b2b27;padding:12px 14px 6px}';
@@ -20513,18 +20513,23 @@ ${cont.innerHTML}
     }
     async function ppCargar() {
       PC_CORTE.t = 0; const cli = nmE.cliente, anio = Number(nmE.anio), vis = nmE.visita, id = ++ppE.cargaId;
-      Object.assign(ppE, { cargado: false, filas: [], bal: [], mapa: {}, tipos: {}, notas: {}, mov: null, excl: new Set(), msg: '', archivo: '', pag: 0, ver: {} });
+      Object.assign(ppE, { cargado: false, filas: [], bal: [], gas: [], mapa: {}, tipos: {}, notas: {}, mov: null, excl: new Set(), msg: '', archivo: '', pag: 0, ver: {} });
       if (!cli) return;
       ppE.cierre = ($im('nm-fecha') || {}).value || (vis === 'final' ? anio + '-12-31' : anio + '-09-30');
-      const [r1, r2] = await Promise.all([
+      const [r1, r2, r3] = await Promise.all([
         supabaseClient.from('anexo_inversiones').select('*').eq('cliente_id', cli).eq('anio', anio).eq('cuenta', PP_CUENTA).eq('visita', vis).maybeSingle(),
-        supabaseClient.from('balance_comprobacion').select('sumaria, codigo, cuenta, saldo').eq('cliente_id', cli).eq('anio', anio).eq('visita', vis).in('sumaria', ['AO', 'AR']).limit(5000)
+        supabaseClient.from('balance_comprobacion').select('sumaria, codigo, cuenta, saldo').eq('cliente_id', cli).eq('anio', anio).eq('visita', vis).in('sumaria', ['AO', 'AR']).limit(5000),
+        supabaseClient.from('balance_comprobacion').select('sumaria, codigo, cuenta, saldo').eq('cliente_id', cli).eq('anio', anio).eq('visita', vis).or('cuenta.ilike.%deprec%,cuenta.ilike.%amortiz%').limit(5000)
       ]);
       if (id !== ppE.cargaId) return;
       const d = r1.data;
       if (d) { ppE.filas = Array.isArray(d.filas) ? d.filas : []; if (d.fecha_cierre) ppE.cierre = d.fecha_cierre; ppE.archivo = d.archivo_nombre || ''; ppE.mapa = (d.partidas && !Array.isArray(d.partidas) && d.partidas.mapa) || {}; ppE.excl = new Set((d.partidas && !Array.isArray(d.partidas) && Array.isArray(d.partidas.excl)) ? d.partidas.excl : []); ppE.tipos = (d.partidas && !Array.isArray(d.partidas) && d.partidas.tipos) || {}; ppE.notas = (d.partidas && !Array.isArray(d.partidas) && d.partidas.notas) || {}; }
       const acc = {}; (r2.data || []).forEach(x => { const s = String(x.sumaria).trim().toUpperCase(), k = s + '|' + x.codigo; acc[k] = acc[k] || { sumaria: s, codigo: String(x.codigo), cuenta: x.cuenta, saldo: 0 }; acc[k].saldo += Number(x.saldo) || 0; });
       ppE.bal = Object.values(acc).map(x => ({ ...x, saldo: obR(x.saldo) }));
+      { // cuentas de gasto de depreciación (resultados): por nombre, en cuentas de gastos o costos (código que empieza en 5 o 6)
+        const g = {}; (r3.data || []).forEach(x => { const c = String(x.codigo).trim(), sm = String(x.sumaria).trim().toUpperCase(); if (!/^[56]/.test(c) || sm === 'AO' || sm === 'AR') return; g[c] = g[c] || { sumaria: sm, codigo: c, cuenta: x.cuenta, saldo: 0 }; g[c].saldo += Number(x.saldo) || 0; });
+        ppE.gas = Object.values(g).map(x => ({ ...x, saldo: obR(x.saldo) }));
+      }
       ppE.cargado = true;
       nmPintar();
     }
@@ -20858,6 +20863,26 @@ ${cont.innerHTML}
           + fila3('Cuentas sin detalle en el anexo', tCo, tDe)
           + fila3('Total del balance de propiedad, planta y equipo', R2(tA.balC + nCo + tCo), R2(tA.balD + nDe + tDe), 'font-bold bg-slate-50')
           + '</tbody></table></div>';
+      }
+      // Comparación del gasto de depreciación del año: anexo (herramienta) contra el aumento de la depreciación acumulada en el mayor y contra el gasto en resultados
+      {
+        const Yg = (ppE.cierre || '').slice(0, 4), DTm = ppMovData(D), mm = DTm && DTm.dep, fz = k => mm && mm.filas.find(f => f.etq === k), hayM = !!mm;
+        const gAnexo = x => x.gasto, gMayor = x => { const f = fz(x.k); return f ? R2(-f.z.a) : null; };
+        const gsel = ppE.gas.filter(x => !ppE.excl.has('g:' + x.codigo)), tGas = R2(gsel.reduce((a, x) => a + x.saldo, 0)), tAn = sumC(CA, gAnexo), tMa = hayM ? R2(CA.reduce((a, x) => a + (gMayor(x) || 0), 0)) : null;
+        const dif = (a, b) => (a === null || b === null) ? '<td></td>' : tdd(R2(a - b));
+        h += '<div style="font-size:12px;font-weight:700;color:#44443f;margin:14px 0 4px">Gasto de depreciación del año ' + e(Yg) + ': anexo, depreciación acumulada del mayor y resultados</div>'
+          + ay('Compara tres cifras del año hasta la fecha de corte: (1) el gasto que calculó la herramienta con el anexo, (2) el aumento de la depreciación acumulada en el mayor contable (créditos del año en las cuentas de depreciación acumulada, sin bajas ni ventas) y (3) el gasto de depreciación registrado en resultados. Las cuentas de gasto se detectan por su nombre; desmarca las que no correspondan.'
+            + (hayM ? '' : ' <b style="color:#b45309">Para ver la cifra del mayor carga el mayor contable en la pantalla Mayor contable.</b>'));
+        h += '<div class="overflow-x-auto" style="margin-bottom:8px"><table class="text-[11px] leading-tight border-collapse" style="min-width:760px"><thead class="bg-slate-50 text-slate-600"><tr>' + th('Clasificación', 'text-left') + th('Gasto del año según el anexo') + th('Aumento de dep. acumulada en el mayor') + th('Diferencia') + '</tr></thead><tbody>'
+          + CA.map(x => { const m = gMayor(x); return '<tr class="border-b border-slate-100"><td class="px-2 py-0.5 min-w-[280px]">' + e(x.k) + '</td>' + tdn(gAnexo(x)) + (m === null ? '<td class="px-2 py-0.5 text-right" style="color:#cbd5e1">—</td>' : tdn(m)) + dif(gAnexo(x), m) + '</tr>'; }).join('')
+          + '<tr class="border-b border-slate-200 bg-slate-50 font-bold text-slate-800"><td class="px-2 py-0.5">Total</td>' + tdn(tAn) + (tMa === null ? '<td></td>' : tdn(tMa)) + dif(tAn, tMa) + '</tr></tbody></table></div>';
+        h += '<div class="overflow-x-auto" style="margin-bottom:12px"><table class="text-[11px] leading-tight border-collapse" style="min-width:760px"><thead class="bg-slate-50 text-slate-600"><tr>' + th('Gasto de depreciación en resultados (balance y mayor)', 'text-left') + th('Sumaria', 'text-left') + th('Saldo al corte') + '</tr></thead><tbody>'
+          + (ppE.gas.length ? ppE.gas.map(x => '<tr class="border-b border-slate-100"' + (ppE.excl.has('g:' + x.codigo) ? ' style="opacity:.5"' : '') + '><td class="px-2 py-0.5 min-w-[360px]">' + chk('g:' + x.codigo, !ppE.excl.has('g:' + x.codigo)) + e(x.codigo) + ' ' + e(x.cuenta) + '</td><td class="px-2 py-0.5">' + e(x.sumaria) + '</td>' + tdn(x.saldo) + '</tr>').join('') : '<tr class="border-b border-slate-100"><td class="px-2 py-0.5" colspan="3" style="color:#b45309">No se encontraron cuentas de gasto de depreciación en el balance de comprobación.</td></tr>')
+          + '<tr class="border-b border-slate-200 bg-slate-50 font-bold text-slate-800"><td class="px-2 py-0.5" colspan="2">Total gasto de depreciación en resultados</td>' + tdn(tGas) + '</tr>'
+          + '<tr class="border-b border-slate-100"><td class="px-2 py-0.5" colspan="2">Diferencia: gasto según el anexo menos gasto en resultados</td>' + (ppE.gas.length ? tdd(R2(tAn - tGas)) : '<td></td>') + '</tr>'
+          + (tMa === null ? '' : '<tr class="border-b border-slate-100"><td class="px-2 py-0.5" colspan="2">Diferencia: aumento de dep. acumulada en el mayor menos gasto en resultados</td>' + (ppE.gas.length ? tdd(R2(tMa - tGas)) : '<td></td>') + '</tr>')
+          + '</tbody></table></div>'
+          + '<p style="font-size:11px;color:#6b6b63;margin:-6px 0 10px">Causas más comunes de diferencia: depreciación de activos que no están en el anexo (derechos de uso, intangibles, adecuaciones), depreciación llevada a costos o inventario, activos dados de baja durante el año, fecha de corte distinta entre el anexo y el balance, o gasto registrado en una cuenta con otro nombre.</p>';
       }
       if (D.sinCalc) h += '<p style="font-size:11px;color:#b45309;margin:-4px 0 10px">' + D.sinCalc + ' activo(s) sin fecha de inicio, vida útil o valor de compra: no se pudo calcular su depreciación.</p>';
       if (D.dups.length) h += '<p style="font-size:11px;color:#b45309;margin:-4px 0 10px">Hay ' + D.dups.length + ' código(s) de activo repetido(s) en el anexo: ' + e(D.dups.slice(0, 8).join(', ')) + (D.dups.length > 8 ? '…' : '') + '. Revisa si es el mismo activo duplicado.</p>';
