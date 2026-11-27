@@ -20436,7 +20436,7 @@ ${cont.innerHTML}
     }
     // ===== AO Propiedad, planta y equipo: anexo de activos fijos, depreciación por año y mes, y cuadre con las sumarias (AO y AOO) =====
     const PP_CUENTA = 'propiedad_planta_equipo';
-    const ppE = { cargado: false, cargaId: 0, filas: [], cierre: '', bal: [], mapa: {}, msg: '', archivo: '', guardando: null, filtro: '', cla: '', pag: 0, ver: {}, cdAn: new Set(), cdAb: new Set(['costo', 'dep']) };
+    const ppE = { cargado: false, cargaId: 0, filas: [], cierre: '', bal: [], mapa: {}, msg: '', archivo: '', guardando: null, filtro: '', cla: '', pag: 0, ver: {}, excl: new Set(), cdAn: new Set(), cdAb: new Set(['costo', 'dep']) };
     const PP_COLS = [['cod', 'Código de activo'], ['cla', 'Clasificación (tipo de activo)'], ['nom', 'Nombre del activo'], ['det', 'Detalle'], ['est', 'Estado'], ['cmp', 'Valor de compra'], ['fcm', 'Fecha de compra'], ['rev', 'Valor de reavalúo'], ['frv', 'Fecha de reavalúo'], ['res', 'Valor residual'], ['vid', 'Meses de vida útil'], ['fid', 'Fecha de inicio de depreciación'], ['sis', 'Depreciación acumulada según el sistema (opcional)']];
     const PP_REF = { anexo: 'AO-02', dep: 'AO-03', cuadre: 'AO-04' };
     const PP_CSS = '.ob{border-collapse:collapse;font-size:10.5px;color:#2b2b27}.ob th{background:#fff;border:1px solid #dfdfdb;padding:2px 4px;font-weight:700;font-size:9.5px;text-align:center;line-height:1.2}.ob td{background:#f1f1ee;border:1px solid #e2e2dd;padding:0 3px;white-space:nowrap}.ob td.n{text-align:right}.ob td.ob-c{text-align:center;color:#9a9a92;width:26px}.ob tr.tot td{font-weight:700;border-top:1px solid #cfcfc8;background:#fff}.ob-i{border:0;background:transparent;font-size:10.5px;padding:1px 1px;outline:none;color:#2b2b27}.ob-i:focus{background:#fff;box-shadow:inset 0 0 0 1px #c9c9c0;border-radius:3px}.ob-b{font-size:12px;font-weight:600;color:#4a4a44;border:1px solid #dcdcd6;border-radius:8px;padding:4px 10px;background:#fff}.ob-h{font-size:13px;font-weight:700;color:#2b2b27;padding:12px 14px 6px}';
@@ -20482,16 +20482,16 @@ ${cont.innerHTML}
       const c = ppE.cierre; if (!c || !ppE.filas.length) return null;
       const Yc = +c.slice(0, 4), Mc = +c.slice(5, 7), R = obR;
       const items = ppE.filas.map((f, i) => ({ f, i, r: ppFila(f), k: ppClave(f) }));
-      const ao = items;
-      const claves = [...new Set(ao.map(x => x.k))];
+      const exc = ppE.excl, ao = items.filter(x => !exc.has('c:' + x.k));
+      const todas = [...new Set(items.map(x => x.k))], claves = todas.filter(k => !exc.has('c:' + k));
       const suma = (arr, g) => R(arr.reduce((a, x) => a + (g(x) || 0), 0));
-      const porCta = ppMapaCuentas(claves);
+      const porCta = ppMapaCuentas(todas);
       const cuentas = ppE.bal;
       const g = {};
-      claves.forEach(k => { g[k] = { k, items: ao.filter(x => x.k === k), costo: [], dep: [] }; });
+      todas.forEach(k => { g[k] = { k, items: items.filter(x => x.k === k), costo: [], dep: [] }; });
       const sin = [];
-      cuentas.forEach(b => { const k = porCta[b.codigo]; const dep = b.saldo < 0 || /deprec|dep\./i.test(b.cuenta); if (k && g[k]) (dep ? g[k].dep : g[k].costo).push(b); else if (b.sumaria === 'AO') sin.push({ b, dep }); });
-      const clases = Object.values(g).map(x => ({ ...x, n: x.items.length, bruto: suma(x.items, y => y.r.bruto), ap: suma(x.items, y => y.r.ap), gasto: suma(x.items, y => y.r.gasto), ac: suma(x.items, y => y.r.ac), neto: suma(x.items, y => y.r.neto), sis: x.items.every(y => y.r.sis === null) ? null : suma(x.items, y => y.r.sis), balC: R(x.costo.reduce((a, b) => a + b.saldo, 0)), balD: R(Math.abs(x.dep.reduce((a, b) => a + b.saldo, 0))) })).sort((a, b) => b.bruto - a.bruto);
+      cuentas.forEach(b => { const k = porCta[b.codigo]; const dep = b.saldo < 0 || /deprec|dep\./i.test(b.cuenta); if (k && g[k]) (dep ? g[k].dep : g[k].costo).push(b); else if (b.sumaria === 'AO') sin.push({ b, dep, inc: !exc.has('s:' + b.codigo) }); });
+      const clases = Object.values(g).map(x => ({ ...x, inc: !exc.has('c:' + x.k), n: x.items.length, bruto: suma(x.items, y => y.r.bruto), ap: suma(x.items, y => y.r.ap), gasto: suma(x.items, y => y.r.gasto), ac: suma(x.items, y => y.r.ac), neto: suma(x.items, y => y.r.neto), sis: x.items.every(y => y.r.sis === null) ? null : suma(x.items, y => y.r.sis), balC: R(x.costo.reduce((a, b) => a + b.saldo, 0)), balD: R(Math.abs(x.dep.reduce((a, b) => a + b.saldo, 0))) })).sort((a, b) => b.bruto - a.bruto);
       // por año
       const yIni = Math.min(...ao.map(x => +(obFecha(x.f.fid) || obFecha(x.f.fcm) || (Yc + '')).slice(0, 4)), Yc);
       const anios = []; let accPrev = 0;
@@ -20502,12 +20502,15 @@ ${cont.innerHTML}
       mm.sort((a, b) => b.t - a.t);
       const cnt = {}; items.forEach(x => { const k = String(x.f.cod || '').trim(); if (k) cnt[k] = (cnt[k] || 0) + 1; }); const dups = Object.keys(cnt).filter(k => cnt[k] > 1);
       const sinCalc = items.filter(x => !(obFecha(x.f.fid) || obFecha(x.f.fcm)) || !ppN(x.f.vid) || !ppN(x.f.cmp)).length;
-      return { Yc, Mc, items, ao, clases, sin, anios, meses, mm, claves, sinCalc, dups, porCta,
-        tot: { n: ao.length, bruto: suma(ao, x => x.r.bruto), ap: suma(ao, x => x.r.ap), gasto: suma(ao, x => x.r.gasto), ac: suma(ao, x => x.r.ac), neto: suma(ao, x => x.r.neto), sis: ao.every(x => x.r.sis === null) ? null : suma(ao, x => x.r.sis), balC: R(clases.reduce((a, x) => a + x.balC, 0) + sin.filter(s => !s.dep).reduce((a, s) => a + s.b.saldo, 0)), balD: R(clases.reduce((a, x) => a + x.balD, 0) + Math.abs(sin.filter(s => s.dep).reduce((a, s) => a + s.b.saldo, 0))) } };
+      const cI = clases.filter(x => x.inc), sI = sin.filter(s => s.inc), cX = clases.filter(x => !x.inc), sX = sin.filter(s => !s.inc), eX = items.filter(x => exc.has('c:' + x.k));
+      const bal = (cs, ss) => ({ balC: R(cs.reduce((a, x) => a + x.balC, 0) + ss.filter(s => !s.dep).reduce((a, s) => a + s.b.saldo, 0)), balD: R(cs.reduce((a, x) => a + x.balD, 0) + Math.abs(ss.filter(s => s.dep).reduce((a, s) => a + s.b.saldo, 0))) });
+      return { Yc, Mc, items, ao, clases, sin, anios, meses, mm, claves, todas, sinCalc, dups, porCta,
+        tot: { n: ao.length, bruto: suma(ao, x => x.r.bruto), ap: suma(ao, x => x.r.ap), gasto: suma(ao, x => x.r.gasto), ac: suma(ao, x => x.r.ac), neto: suma(ao, x => x.r.neto), sis: ao.every(x => x.r.sis === null) ? null : suma(ao, x => x.r.sis), ...bal(cI, sI) },
+        excl: { hay: cX.length + sX.length > 0, n: eX.length, bruto: suma(eX, x => x.r.bruto), ac: suma(eX, x => x.r.ac), neto: suma(eX, x => x.r.neto), ...bal(cX, sX) } };
     }
     async function ppCargar() {
       PC_CORTE.t = 0; const cli = nmE.cliente, anio = Number(nmE.anio), vis = nmE.visita, id = ++ppE.cargaId;
-      Object.assign(ppE, { cargado: false, filas: [], bal: [], mapa: {}, msg: '', archivo: '', pag: 0, ver: {} });
+      Object.assign(ppE, { cargado: false, filas: [], bal: [], mapa: {}, excl: new Set(), msg: '', archivo: '', pag: 0, ver: {} });
       if (!cli) return;
       ppE.cierre = ($im('nm-fecha') || {}).value || (vis === 'final' ? anio + '-12-31' : anio + '-09-30');
       const [r1, r2] = await Promise.all([
@@ -20516,7 +20519,7 @@ ${cont.innerHTML}
       ]);
       if (id !== ppE.cargaId) return;
       const d = r1.data;
-      if (d) { ppE.filas = Array.isArray(d.filas) ? d.filas : []; if (d.fecha_cierre) ppE.cierre = d.fecha_cierre; ppE.archivo = d.archivo_nombre || ''; ppE.mapa = (d.partidas && !Array.isArray(d.partidas) && d.partidas.mapa) || {}; }
+      if (d) { ppE.filas = Array.isArray(d.filas) ? d.filas : []; if (d.fecha_cierre) ppE.cierre = d.fecha_cierre; ppE.archivo = d.archivo_nombre || ''; ppE.mapa = (d.partidas && !Array.isArray(d.partidas) && d.partidas.mapa) || {}; ppE.excl = new Set((d.partidas && !Array.isArray(d.partidas) && Array.isArray(d.partidas.excl)) ? d.partidas.excl : []); }
       const acc = {}; (r2.data || []).forEach(x => { const s = String(x.sumaria).trim().toUpperCase(), k = s + '|' + x.codigo; acc[k] = acc[k] || { sumaria: s, codigo: String(x.codigo), cuenta: x.cuenta, saldo: 0 }; acc[k].saldo += Number(x.saldo) || 0; });
       ppE.bal = Object.values(acc).map(x => ({ ...x, saldo: obR(x.saldo) }));
       ppE.cargado = true;
@@ -20526,7 +20529,7 @@ ${cont.innerHTML}
       clearTimeout(ppE.guardando);
       ppE.guardando = setTimeout(async () => {
         if (!nmE.cliente) return;
-        const fila = { cliente_id: nmE.cliente, anio: Number(nmE.anio), visita: nmE.visita, cuenta: PP_CUENTA, archivo_nombre: ppE.archivo || null, filas: ppE.filas, fecha_cierre: ppE.cierre || null, base_dias: 360, partidas: { mapa: ppE.mapa }, auditor: (typeof nombreUsuarioActivo === 'function' ? nombreUsuarioActivo() : '') || null, updated_at: new Date().toISOString() };
+        const fila = { cliente_id: nmE.cliente, anio: Number(nmE.anio), visita: nmE.visita, cuenta: PP_CUENTA, archivo_nombre: ppE.archivo || null, filas: ppE.filas, fecha_cierre: ppE.cierre || null, base_dias: 360, partidas: { mapa: ppE.mapa, excl: [...ppE.excl] }, auditor: (typeof nombreUsuarioActivo === 'function' ? nombreUsuarioActivo() : '') || null, updated_at: new Date().toISOString() };
         const { error } = await supabaseClient.from('anexo_inversiones').upsert(fila, { onConflict: 'cliente_id,anio,cuenta,visita' });
         ppE.msg = error ? 'No se pudo guardar: ' + (error.message || error) : 'Guardado ' + new Date().toLocaleTimeString('es-EC');
         const m = $im('pp-msg'); if (m) { m.textContent = ppE.msg; m.style.color = error ? '#b91c1c' : '#6b6b63'; }
@@ -20648,6 +20651,13 @@ ${cont.innerHTML}
       });
       return cols;
     }
+    // Qué clasificaciones y cuentas del balance entran al papel de trabajo; lo demás se revisa aparte
+    function ppIncl(k, on) { if (on) ppE.excl.delete(k); else ppE.excl.add(k); ppGuardar(); nmCuaPintar(); }
+    function ppInclModo(m) {
+      const D = ppDatos(); if (!D) return; ppE.excl = new Set();
+      if (m === 'solo') { D.clases.forEach(x => { if (!(x.n && x.costo.length + x.dep.length)) ppE.excl.add('c:' + x.k); }); D.sin.forEach(s => ppE.excl.add('s:' + s.b.codigo)); }
+      ppGuardar(); nmCuaPintar();
+    }
     function ppCdAnio(y) { if (ppE.cdAn.has(y)) ppE.cdAn.delete(y); else ppE.cdAn.add(y); nmCuaPintar(); }
     function ppCdTodos(ab) { const D = ppDatos(); ppE.cdAn = new Set(ab && D ? D.anios.map(a => a.y) : []); nmCuaPintar(); }
     function ppCdFila(k) { if (ppE.cdAb.has(k)) ppE.cdAb.delete(k); else ppE.cdAb.add(k); nmCuaPintar(); }
@@ -20664,6 +20674,7 @@ ${cont.innerHTML}
       const tdd = d => '<td class="px-2 py-0.5 text-right whitespace-nowrap font-bold ' + (Math.abs(d) <= TOL ? 'text-emerald-700' : 'text-red-600') + '">' + num(d) + '</td>';
       const btn = (k, t) => '<button type="button" class="v2r-i" onclick="ppVer(\'' + e(k) + '\')" title="' + e(t) + '">' + IC_OJO + '</button>';
       const btnT = (k, t, w) => '<button type="button" class="v2r-i" onclick="ppVer(\'' + e(k) + '\')" title="' + e(t) + '" style="width:auto;gap:2px">' + IC_OJO + '<span style="font-size:10px;color:#9a9a92;margin-left:1px">' + w + '</span></button>';
+      const chk = (k, on) => '<input type="checkbox"' + (on ? ' checked' : '') + ' onchange="ppIncl(\'' + e(k) + '\',this.checked)" title="Marcado: entra al cuadre y al costo y depreciación. Desmarcado: se revisa aparte." style="margin-right:6px;accent-color:#449964;vertical-align:middle">';
       const btnA = (k, t) => '<button type="button" class="v2r-i" style="color:#b45309" onclick="ppVer(\'' + e(k) + '\')" title="' + e(t) + '">' + IC_OJO.replace('#449964', '#b45309') + '</button>';
       const lista = (arr, lim) => {
         const sh = arr.slice(0, lim), c2 = 'px-2 py-0.5 whitespace-nowrap';
@@ -20686,19 +20697,21 @@ ${cont.innerHTML}
       let tb = '';
       D.clases.forEach(x => {
         const hayCta = x.costo.length + x.dep.length > 0;
-        tb += '<tr class="border-b border-slate-100"><td class="' + lft + '">' + e(x.k) + btnT('c' + x.k, 'Ver los activos de esta clasificación', 'activos') + btnT('a' + x.k, 'Ver las cuentas del balance y las diferencias', 'cuentas') + (hayCta ? '' : ' <span class="text-[10px]" style="color:#b45309">Sin cuenta del balance asignada</span>') + '</td><td class="px-2 py-0.5 text-right">' + x.n + '</td>' + tdn(x.bruto) + tdn(x.balC) + tdd(R2(x.bruto - x.balC)) + tdn(x.ac) + tdn(x.balD) + tdd(R2(x.ac - x.balD)) + tdn(x.neto) + tdn(R2(x.balC - x.balD)) + '</tr>';
+        tb += '<tr class="border-b border-slate-100"' + (x.inc ? '' : ' style="opacity:.5"') + '><td class="' + lft + '">' + chk('c:' + x.k, x.inc) + e(x.k) + btnT('c' + x.k, 'Ver los activos de esta clasificación', 'activos') + btnT('a' + x.k, 'Ver las cuentas del balance y las diferencias', 'cuentas') + (hayCta ? '' : ' <span class="text-[10px]" style="color:#b45309">Sin cuenta del balance asignada</span>') + '</td><td class="px-2 py-0.5 text-right">' + x.n + '</td>' + tdn(x.bruto) + tdn(x.balC) + tdd(R2(x.bruto - x.balC)) + tdn(x.ac) + tdn(x.balD) + tdd(R2(x.ac - x.balD)) + tdn(x.neto) + tdn(R2(x.balC - x.balD)) + '</tr>';
         if (ppE.ver['c' + x.k]) tb += '<tr><td colspan="10" class="px-3 py-2 bg-white">' + lista(x.items, 400) + '</td></tr>';
         if (ppE.ver['a' + x.k]) tb += '<tr><td colspan="10" class="px-3 py-2 bg-white">' + cuentasHtml(x) + '</td></tr>';
       });
-      const opts = k => '<option value="-"' + (k === '-' ? ' selected' : '') + '>No va en el anexo</option>' + D.claves.map(c => '<option value="' + e(c) + '"' + (k === c ? ' selected' : '') + '>' + e(c) + '</option>').join('');
+      const opts = k => '<option value="-"' + (k === '-' ? ' selected' : '') + '>No va en el anexo</option>' + D.todas.map(c => '<option value="' + e(c) + '"' + (k === c ? ' selected' : '') + '>' + e(c) + '</option>').join('');
       D.sin.forEach(s => {
         const v = Math.abs(s.b.saldo), k = ppE.mapa[s.b.codigo];
-        tb += '<tr class="border-b border-slate-100"><td class="' + lft + '"><span style="color:#b45309">Cuenta del balance sin activos en el anexo:</span> ' + e(s.b.codigo) + ' ' + e(s.b.cuenta) + ' <select onchange="ppMapear(\'' + e(s.b.codigo) + '\',this.value)" class="text-[11px] border border-slate-300 rounded ml-1"><option value="">Asignar a una clasificación…</option>' + opts(k) + '</select></td><td></td>' + tdn(0) + tdn(s.dep ? 0 : v) + tdd(s.dep ? 0 : -v) + tdn(0) + tdn(s.dep ? v : 0) + tdd(s.dep ? -v : 0) + tdn(0) + tdn(s.dep ? -v : v) + '</tr>';
+        tb += '<tr class="border-b border-slate-100"' + (s.inc ? '' : ' style="opacity:.5"') + '><td class="' + lft + '">' + chk('s:' + s.b.codigo, s.inc) + '<span style="color:#b45309">Cuenta del balance sin activos en el anexo:</span> ' + e(s.b.codigo) + ' ' + e(s.b.cuenta) + ' <select onchange="ppMapear(\'' + e(s.b.codigo) + '\',this.value)" class="text-[11px] border border-slate-300 rounded ml-1"><option value="">Asignar a una clasificación…</option>' + opts(k) + '</select></td><td></td>' + tdn(0) + tdn(s.dep ? 0 : v) + tdd(s.dep ? 0 : -v) + tdn(0) + tdn(s.dep ? v : 0) + tdd(s.dep ? -v : 0) + tdn(0) + tdn(s.dep ? -v : v) + '</tr>';
       });
       const T = D.tot, dTC = R2(T.bruto - T.balC), dTD = R2(T.ac - T.balD);
-      tb += '<tr class="border-b border-slate-200 bg-slate-50 font-bold text-slate-800"><td class="' + lft + '">Total propiedad, planta y equipo (sumaria AO)</td><td class="px-2 py-0.5 text-right">' + T.n + '</td>' + tdn(T.bruto) + tdn(T.balC) + tdd(dTC) + tdn(T.ac) + tdn(T.balD) + tdd(dTD) + tdn(T.neto) + tdn(R2(T.balC - T.balD)) + '</tr>';
+      tb += '<tr class="border-b border-slate-200 bg-slate-50 font-bold text-slate-800"><td class="' + lft + '">' + (D.excl.hay ? 'Total seleccionado' : 'Total propiedad, planta y equipo (sumaria AO)') + '</td><td class="px-2 py-0.5 text-right">' + T.n + '</td>' + tdn(T.bruto) + tdn(T.balC) + tdd(dTC) + tdn(T.ac) + tdn(T.balD) + tdd(dTD) + tdn(T.neto) + tdn(R2(T.balC - T.balD)) + '</tr>';
+      if (D.excl.hay) { const X = D.excl; tb += '<tr class="border-b border-slate-100 text-slate-600"><td class="' + lft + '">Partidas no seleccionadas (se revisan aparte)</td><td class="px-2 py-0.5 text-right">' + X.n + '</td>' + tdn(X.bruto) + tdn(X.balC) + '<td></td>' + tdn(X.ac) + tdn(X.balD) + '<td></td>' + tdn(X.neto) + tdn(R2(X.balC - X.balD)) + '</tr><tr class="border-b border-slate-200 bg-slate-50 font-bold text-slate-800"><td class="' + lft + '">Total sumaria AO (seleccionado + no seleccionado)</td><td class="px-2 py-0.5 text-right">' + (T.n + X.n) + '</td>' + tdn(R2(T.bruto + X.bruto)) + tdn(R2(T.balC + X.balC)) + '<td></td>' + tdn(R2(T.ac + X.ac)) + tdn(R2(T.balD + X.balD)) + '<td></td>' + tdn(R2(T.neto + X.neto)) + tdn(R2(T.balC + X.balC - T.balD - X.balD)) + '</tr>'; }
       const sis = T.sis === null ? '' : '<tr class="border-b border-slate-100"><td class="' + lft + '" colspan="6">Depreciación acumulada según el sistema del cliente (columna del Excel)</td>' + tdn(T.sis) + '<td colspan="3"></td></tr><tr class="border-b border-slate-100"><td class="' + lft + '" colspan="6">Diferencia: depreciación recalculada menos la del sistema <span class="text-slate-500 font-normal">(' + D.ao.filter(x => x.r.dif !== null && Math.abs(x.r.dif) > 1).length + ' activo(s) con diferencia mayor a 1,00)</span>' + btnA('dsis', 'Ver los activos con diferencia contra el sistema') + '</td>' + tdd(R2(T.ac - T.sis)) + '<td colspan="3"></td></tr>';
-      let h = cab(tit + ' (ref. ' + PP_REF.cuadre + ')') + ay('Sale del anexo de activos fijos (pestaña «Anexos y cálculos») y del balance de comprobación: costo y depreciación acumulada de cada clasificación contra las cuentas de la sumaria AO (y las de software de la sumaria AR cuando el cliente las lleva en el mismo listado). Las cuentas del balance se asignan solas por su nombre; si alguna quedó mal puedes cambiarla. Diferencias en rojo.');
+      let h = cab(tit + ' (ref. ' + PP_REF.cuadre + ')') + ay('Sale del anexo de activos fijos (pestaña «Anexos y cálculos») y del balance de comprobación: costo y depreciación acumulada de cada clasificación contra las cuentas de la sumaria AO (y las de software de la sumaria AR cuando el cliente las lleva en el mismo listado). Las cuentas del balance se asignan solas por su nombre; si alguna quedó mal puedes cambiarla. Diferencias en rojo. Con las casillas eliges qué clasificaciones y cuentas entran al papel de trabajo (totales, costo y depreciación y Excel); lo desmarcado se revisa aparte.');
+      h += '<div class="flex flex-wrap items-center gap-2 text-[11px]" style="margin-bottom:6px"><button type="button" onclick="ppInclModo(\'solo\')" class="px-2 py-0.5 rounded-lg bg-slate-200 text-slate-900 font-semibold hover:bg-slate-300">Solo con anexo y cuenta del balance</button><button type="button" onclick="ppInclModo(\'todo\')" class="px-2 py-0.5 rounded-lg bg-slate-100 text-slate-800 font-medium hover:bg-slate-200">Seleccionar todo</button></div>';
       h += '<div class="overflow-x-auto" style="margin-bottom:12px"><table class="w-full text-[11px] leading-tight border-collapse"><thead class="bg-slate-50 text-slate-600"><tr>' + th('Clasificación', 'text-left') + th('Activos') + th('Costo según anexo') + th('Costo según balance') + th('Diferencia') + th('Dep. acumulada según anexo') + th('Dep. acumulada según balance') + th('Diferencia') + th('Valor neto según anexo') + th('Valor neto según balance') + '</tr></thead><tbody>' + tb + sis + '</tbody></table></div>';
       if (D.sinCalc) h += '<p style="font-size:11px;color:#b45309;margin:-4px 0 10px">' + D.sinCalc + ' activo(s) sin fecha de inicio, vida útil o valor de compra: no se pudo calcular su depreciación.</p>';
       if (D.dups.length) h += '<p style="font-size:11px;color:#b45309;margin:-4px 0 10px">Hay ' + D.dups.length + ' código(s) de activo repetido(s) en el anexo: ' + e(D.dups.slice(0, 8).join(', ')) + (D.dups.length > 8 ? '…' : '') + '. Revisa si es el mismo activo duplicado.</p>';
@@ -20762,11 +20775,17 @@ ${cont.innerHTML}
         const Yc = D.Yc;
         const fa = D.items.map(x => [x.f.cod, x.f.cla, x.f.nom, x.f.det, x.f.est, ppN(x.f.cmp), obFecha(x.f.fcm), x.f.rev === '' ? null : ppN(x.f.rev), obFecha(x.f.frv), ppN(x.f.res), x.r.imp, ppN(x.f.vid), obFecha(x.f.fid), x.r.bruto, x.r.ap, x.r.gasto, x.r.ac, x.r.neto, x.r.sis, x.r.dif]);
         hoja('1. Anexo de activos', 'Anexo de propiedad, planta y equipo (' + PP_REF.anexo + ')', ['Código de activo', 'Clasificación', 'Nombre del activo', 'Detalle', 'Estado', 'Valor de compra', 'Fecha de compra', 'Valor de reavalúo', 'Fecha de reavalúo', 'Valor residual', 'Importe depreciable (compra o reavalúo menos residual)', 'Meses de vida útil', 'Fecha de inicio de depreciación', 'Valor bruto al corte', 'Dep. acumulada al 31-dic ' + (Yc - 1), 'Gasto de depreciación ' + Yc, 'Dep. acumulada al corte', 'Valor neto al corte', 'Dep. acumulada según el sistema', 'Diferencia (cálculo menos sistema)'], fa);
-        const fc = D.clases.map(x => [x.k, x.n, x.bruto, x.balC, obR(x.bruto - x.balC), x.ac, x.balD, obR(x.ac - x.balD), x.neto, obR(x.balC - x.balD), x.costo.concat(x.dep).map(b => b.codigo).join(' · ')]);
-        D.sin.forEach(s => { const v = Math.abs(s.b.saldo); fc.push(['Cuenta del balance sin activos en el anexo: ' + s.b.codigo + ' ' + s.b.cuenta, null, 0, s.dep ? 0 : v, s.dep ? 0 : -v, 0, s.dep ? v : 0, s.dep ? -v : 0, 0, s.dep ? -v : v, s.b.codigo]); });
-        const T = D.tot; fc.push(['Total propiedad, planta y equipo (sumaria AO)', T.n, T.bruto, T.balC, obR(T.bruto - T.balC), T.ac, T.balD, obR(T.ac - T.balD), T.neto, obR(T.balC - T.balD), '']);
-        hoja('2. Cuadre con sumarias', 'Cuadre con la sumaria AO (' + PP_REF.cuadre + ')', ['Clasificación', 'Activos', 'Costo según anexo', 'Costo según balance', 'Diferencia', 'Dep. acumulada según anexo', 'Dep. acumulada según balance', 'Diferencia', 'Valor neto según anexo', 'Valor neto según balance', 'Cuentas del balance'], fc, [fc.length - 2]);
-        const ks = D.clases.map(x => x.k);
+        const fc = D.clases.filter(x => x.inc).map(x => [x.k, x.n, x.bruto, x.balC, obR(x.bruto - x.balC), x.ac, x.balD, obR(x.ac - x.balD), x.neto, obR(x.balC - x.balD), x.costo.concat(x.dep).map(b => b.codigo).join(' · ')]);
+        D.sin.filter(s => s.inc).forEach(s => { const v = Math.abs(s.b.saldo); fc.push(['Cuenta del balance sin activos en el anexo: ' + s.b.codigo + ' ' + s.b.cuenta, null, 0, s.dep ? 0 : v, s.dep ? 0 : -v, 0, s.dep ? v : 0, s.dep ? -v : 0, 0, s.dep ? -v : v, s.b.codigo]); });
+        const T = D.tot; fc.push([D.excl.hay ? 'Total seleccionado' : 'Total propiedad, planta y equipo (sumaria AO)', T.n, T.bruto, T.balC, obR(T.bruto - T.balC), T.ac, T.balD, obR(T.ac - T.balD), T.neto, obR(T.balC - T.balD), '']);
+        const iTot = fc.length - 1;
+        if (D.excl.hay) {
+          const X = D.excl; D.clases.filter(x => !x.inc).forEach(x => fc.push(['No seleccionada (se revisa aparte): ' + x.k, x.n, x.bruto, x.balC, obR(x.bruto - x.balC), x.ac, x.balD, obR(x.ac - x.balD), x.neto, obR(x.balC - x.balD), x.costo.concat(x.dep).map(b => b.codigo).join(' · ')]));
+          D.sin.filter(s => !s.inc).forEach(s => { const v = Math.abs(s.b.saldo); fc.push(['No seleccionada (se revisa aparte): ' + s.b.codigo + ' ' + s.b.cuenta, null, 0, s.dep ? 0 : v, s.dep ? 0 : -v, 0, s.dep ? v : 0, s.dep ? -v : 0, 0, s.dep ? -v : v, s.b.codigo]); });
+          fc.push(['Total sumaria AO (seleccionado + no seleccionado)', T.n + X.n, obR(T.bruto + X.bruto), obR(T.balC + X.balC), '', obR(T.ac + X.ac), obR(T.balD + X.balD), '', obR(T.neto + X.neto), obR(T.balC + X.balC - T.balD - X.balD), '']);
+        }
+        hoja('2. Cuadre con sumarias', 'Cuadre con la sumaria AO (' + PP_REF.cuadre + ')', ['Clasificación', 'Activos', 'Costo según anexo', 'Costo según balance', 'Diferencia', 'Dep. acumulada según anexo', 'Dep. acumulada según balance', 'Diferencia', 'Valor neto según anexo', 'Valor neto según balance', 'Cuentas del balance'], fc, D.excl.hay ? [iTot, fc.length - 1] : [iTot]);
+        const ks = D.claves.slice();
         hoja('3. Depreciación por año', 'Depreciación por año (' + PP_REF.dep + ')', ['Año'].concat(ks, ['Gasto del año', 'Dep. acumulada al cierre del año']), D.anios.map(a => [String(a.y) + (a.parcial ? ' (hasta ' + ppE.cierre + ')' : '')].concat(ks.map(k => a.porK[k] || 0), [a.gasto, a.ac])));
         const tm = D.meses.map((_, m) => obR(D.mm.reduce((a, r) => a + r.v[m], 0)));
         hoja('4. Depreciación por mes', 'Gasto de depreciación por mes, año ' + Yc + ' (' + PP_REF.dep + ')', ['Clasificación'].concat(D.meses, ['Total del año']), D.mm.map(r => [r.k].concat(r.v, [r.t])).concat([['Total'].concat(tm, [obR(tm.reduce((a, b) => a + b, 0))])]), [D.mm.length]);
