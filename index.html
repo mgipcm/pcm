@@ -19660,7 +19660,7 @@ ${cont.innerHTML}
         { n: 'Retenciones en la fuente de renta (formulario 103 o comprobantes del SRI)', req: false, et: ['Formulario 103 (retenciones en la fuente)', 'Comprobantes de retención recibidos (SRI)'] },
         { n: 'Impuesto a la renta (formulario 101)', req: false, et: ['Declaración de impuesto a la renta (Formulario 101)'] },
         { n: 'Documentos del ISD', req: false, et: ['Documentos del ISD (pago y partida arancelaria)'] }
-      ], tabs: [['programa', 'Programa'], ['subir', 'Subir información'], ['resultado', 'Resultado del análisis – Claude'], ['f104', 'Anexo IVA (formulario 104)'], ['cuadres', 'Resumen de cuadres y cruces'], ['conclusiones', 'Conclusiones de la cuenta']], sum: 'AH', hoja: 'impuestos', titulo: '2. AH Activos por impuestos corrientes', subtit: 'Análisis guiado por el programa de auditoría: Claude arma el movimiento de las cuentas de impuestos y los cruces con los formularios 104, el ATS y las retenciones; el auditor revisa.', nombre: 'AH - Activos por impuestos corrientes', ref: 'AH · Impuestos corrientes', corto: 'Impuestos corrientes', txtSubir: 'Aquí se sube todo en un solo pedido: los mayores contables de IVA en compras, retenciones de IVA y retenciones de renta recibidas (y de ISD si hay), los formularios 104 de cada mes, el ATS de cada mes (PDF, XML o Excel), los comprobantes de retención del SRI o el formulario 103, y la declaración de renta del año anterior. Claude lo lee junto y las demás pestañas leen de aquí. Cuando el pedido pase a "hecho", presiona «Actualizar».' }
+      ], tabs: [['programa', 'Programa'], ['subir', 'Subir información'], ['resultado', 'Resultado del análisis – Claude'], ['f104', 'Anexo IVA (formulario 104)'], ['movs', 'Movimientos mensuales'], ['cuadres', 'Resumen de cuadres y cruces'], ['conclusiones', 'Conclusiones de la cuenta']], sum: 'AH', hoja: 'impuestos', titulo: '2. AH Activos por impuestos corrientes', subtit: 'Análisis guiado por el programa de auditoría: Claude arma el movimiento de las cuentas de impuestos y los cruces con los formularios 104, el ATS y las retenciones; el auditor revisa.', nombre: 'AH - Activos por impuestos corrientes', ref: 'AH · Impuestos corrientes', corto: 'Impuestos corrientes', txtSubir: 'Aquí se sube todo en un solo pedido: los mayores contables de IVA en compras, retenciones de IVA y retenciones de renta recibidas (y de ISD si hay), los formularios 104 de cada mes, el ATS de cada mes (PDF, XML o Excel), los comprobantes de retención del SRI o el formulario 103, y la declaración de renta del año anterior. Claude lo lee junto y las demás pestañas leen de aquí. Cuando el pedido pase a "hecho", presiona «Actualizar».' }
     };
     NM_CFGS.obligaciones = { cob: [
         { n: 'Mayor contable completo (se carga en la pantalla Mayor contable)', req: true, et: ['Mayor contable completo'] },
@@ -19684,7 +19684,7 @@ ${cont.innerHTML}
     const nmE = { cliente: '', anio: '', visita: '', procs: [], filas: {}, cargaId: 0, abiertos: {}, tab: 'programa', sv: null };
     const NM_TABS = [['programa', 'Programa'], ['subir', 'Subir información'], ['resultado', 'Resultado del análisis – Claude'], ['cuadres', 'Resumen de cuadres y cruces'], ['conclusiones', 'Conclusiones de la cuenta']];
     function nmIrProg(cod) { nmE.tab = 'programa'; nmPintar(); setTimeout(() => irFilaResaltada('nm-prog-' + cod), 40); }
-    function nmIrTab(t) { if (t === 'f104') nmE.f104 = null; nmE.tab = t; nmPintar(); }
+    function nmIrTab(t) { if (t === 'f104') nmE.f104 = null; if (t === 'movs') nmE.mv = null; nmE.tab = t; nmPintar(); }
     // ===== Anexo de IVA y retenciones de IVA (Anexo No. 4 del informe de cumplimiento tributario): libros contra declaraciones, mes por mes =====
     // Los valores «según libros» salen del mayor contable (cuentas asignadas a cada columna); los «según declaraciones» son los casilleros del formulario 104.
     const F104_MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
@@ -20067,6 +20067,174 @@ ${cont.innerHTML}
         + '<div class="overflow-x-auto" style="overflow-x:auto;padding:0 10px 12px"><table class="f104" style="min-width:1700px"><thead>' + HR + '</thead><tbody>' + cuerpoR + totR + '</tbody></table></div>'
         + '<div style="padding:0 14px 14px;font-size:11px;color:#6b6b63;line-height:1.55"><b>Cómo se arma.</b> Todo sale del mayor contable. Ventas netas = cuentas de ingresos por ventas. Ventas con tarifa ≠ 0% = IVA generado ÷ tarifa del mes; el resto de las ventas va como tarifa 0% y exentas. Impuesto causado = IVA generado − IVA en compras del mes. Crédito tributario final = saldo inicial + débitos − créditos de la cuenta de crédito tributario de IVA. La tarifa del mes se puede cambiar (por defecto 15% desde 2025). Se considera diferencia cuando supera ' + f104Fm(TOL) + '. Toda diferencia debe explicarse al pie de este cuadro y en las recomendaciones.</div>';
       c.scrollTop = sc; c.scrollLeft = hs;
+    }
+    // ===== Movimientos mensuales de impuestos (ingresos, IVA en compras, retenciones de IVA recibidas e IVA en ventas) =====
+    // Cada cuadro toma las cuentas que el auditor marca con un check (salen de las sumarias del balance) y clasifica los movimientos del mayor mes por mes.
+    const MV_BLQ = [
+      { k: 'ing', tit: '1. Movimiento de ingresos por mes', sub: 'Cuentas de ingresos de las sumarias RA y RF', sum: ['RA', 'RF'], nat: 'cr', saldos: false, defBC: true,
+        filas: [['fac', 'Ingresos por facturación, compensada con las notas de crédito', ['normal', 'nc']], ['pro', 'Provisiones de ingresos', ['provision']], ['rev', 'Reversiones', ['reverso']], ['aj', 'Ajustes y otros', ['ajuste', 'cierre']]], tot: 'Total ingresos del mes' },
+      { k: 'ivac', tit: '2. Movimiento del IVA en compras por mes', sub: 'Cuentas de la sumaria AH', sum: ['AH'], nat: 'db', saldos: true, def: n => /iva|i\.v\.a/i.test(n) && !/retenc/i.test(n),
+        filas: [['mov', 'IVA en compras', ['normal', 'nc', 'provision', 'reverso']], ['cie', 'Cierre de impuestos', ['cierre']], ['aj', 'Ajustes', ['ajuste']]] },
+      { k: 'ret', tit: '3. Movimiento de retenciones de IVA recibidas por mes', sub: 'Cuentas de la sumaria AH', sum: ['AH'], nat: 'db', saldos: true, def: n => /retenc/i.test(n) && /iva|i\.v\.a/i.test(n),
+        filas: [['mov', 'Retenciones de IVA recibidas', ['normal', 'nc', 'provision', 'reverso']], ['cie', 'Cierre de impuestos', ['cierre']], ['aj', 'Ajustes', ['ajuste']]] },
+      { k: 'ivav', tit: '4. Movimiento del IVA en ventas por mes', sub: 'Cuentas de la sumaria PH', sum: ['PH'], nat: 'cr', saldos: true, def: n => /iva|i\.v\.a/i.test(n) && !/retenc/i.test(n),
+        filas: [['mov', 'IVA en ventas, neto de notas de crédito', ['normal', 'nc', 'provision', 'reverso']], ['cie', 'Cierre de impuestos', ['cierre']], ['aj', 'Ajustes', ['ajuste']]] }
+    ];
+    function mvF(x) { x = Math.round((Number(x) || 0) * 100) / 100; if (x === 0) return '<span style="color:#c4c4bd">0.00</span>'; return x.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+    function mvR(x) { return Math.round((Number(x) || 0) * 100) / 100; }
+    async function mvCargar() {
+      const cli = nmE.cliente, anio = Number(nmE.anio), vis = nmE.visita;
+      const tok = (nmE.mvTok = (nmE.mvTok || 0) + 1);
+      if (!cli) { nmE.mv = null; return; }
+      const S = nmE.mv = { key: cli + '|' + anio + '|' + vis, cargado: false, error: '', ids: [], ctas: {}, lista: [], bc: [], mapeo: {}, cache: {}, ab: new Set(), calc: 0, total: 0, corte: 0 };
+      try {
+        const arch = await f104Pag(() => supabaseClient.from('pedidos_claude_archivos').select('id, nombre').is('pedido_id', null).eq('cliente_id', cli).eq('anio', anio).eq('visita', vis).eq('etiqueta', MC_ETQ).is('eliminado_at', null).order('created_at', { ascending: false }));
+        let ids = [];
+        if (arch.length) {
+          const es = await supabaseClient.from('mayor_resumen_estado').select('archivo_id, listo').in('archivo_id', arch.map(a => a.id));
+          const listos = new Set(((es.data) || []).filter(x => x.listo).map(x => x.archivo_id));
+          ids = arch.filter(a => listos.has(a.id)).map(a => a.id);
+        }
+        S.ids = ids; S.nArch = arch.length;
+        if (ids.length) {
+          const cu = await f104Pag(() => supabaseClient.from('mayor_resumen_cuentas').select('cuenta, nombre, saldo_inicial, archivo_id').in('archivo_id', ids).order('cuenta'));
+          cu.forEach(x => { const k = String(x.cuenta).trim(); if (!S.ctas[k]) { S.ctas[k] = { nombre: x.nombre || '', si: Number(x.saldo_inicial) || 0, arch: x.archivo_id }; S.lista.push(k); } });
+        }
+        const [bc, mp] = await Promise.all([
+          f104Pag(() => supabaseClient.from('balance_comprobacion').select('codigo, cuenta, saldo, sumaria, fecha_corte').eq('cliente_id', cli).eq('anio', anio).eq('visita', vis).order('codigo')),
+          supabaseClient.from('f104_mapeo').select('clave, cuentas').eq('cliente_id', cli).like('clave', 'mv\\_%')
+        ]);
+        if (mp.error) throw mp.error;
+        S.bc = bc; (mp.data || []).forEach(x => { S.mapeo[x.clave] = Array.isArray(x.cuentas) ? x.cuentas.map(String) : []; });
+        const fc = bc.map(x => x.fecha_corte).filter(Boolean)[0]; S.corte = fc ? Number(String(fc).slice(5, 7)) : 0;
+        S.cargado = true;
+      } catch (er) { S.error = (er && er.message) || String(er); S.cargado = true; }
+      if (tok !== nmE.mvTok) return;
+      if (nmE.tab === 'movs') mvPintar();
+      if (S.cargado && !S.error) mvCalcular(tok);
+    }
+    // Cuentas que se ofrecen en cada cuadro: las de la sumaria en el balance y las del mayor con código parecido
+    function mvCands(b) {
+      const S = nmE.mv, out = [], vistos = new Set(), pref = [];
+      S.bc.filter(r => b.sum.includes(String(r.sumaria || '').trim())).forEach(r => { const c = String(r.codigo).trim(); if (vistos.has(c)) return; vistos.add(c); out.push({ c, nombre: r.cuenta || (S.ctas[c] || {}).nombre || '', bc: true, saldo: Number(r.saldo) || 0 }); pref.push(c.slice(0, Math.max(4, c.length - 2))); });
+      const P = [...new Set(pref)];
+      S.lista.forEach(c => { if (vistos.has(c) || !P.some(p => c.startsWith(p))) return; vistos.add(c); out.push({ c, nombre: S.ctas[c].nombre, bc: false, saldo: null }); });
+      ((S.mapeo['mv_' + b.k]) || []).forEach(c => { if (vistos.has(c)) return; vistos.add(c); out.push({ c, nombre: (S.ctas[c] || {}).nombre || '(no está en el mayor)', bc: false, saldo: null, man: true }); });
+      return out;
+    }
+    function mvSel(b) {
+      const S = nmE.mv, g = S.mapeo['mv_' + b.k];
+      if (g) return g.filter(c => c);
+      const cd = mvCands(b);
+      return cd.filter(x => b.defBC ? x.bc : (b.def ? b.def(x.nombre) : false)).map(x => x.c);
+    }
+    async function mvCalcular(tok) {
+      const S = nmE.mv; if (!S || !S.ids.length) return;
+      const falta = [...new Set([].concat(...MV_BLQ.map(b => mvSel(b))))].filter(c => !(c in S.cache));
+      S.total = falta.length; S.calc = 0;
+      if (!falta.length) { if (nmE.tab === 'movs') mvPintar(true); return; }
+      let i = 0;
+      const un = async () => {
+        while (i < falta.length) {
+          const c = falta[i++]; const ct = S.ctas[c];
+          if (!ct) { S.cache[c] = []; S.calc++; continue; }
+          try { const r = await supabaseClient.rpc('mayor_mov_clasif_app', { p_archivo: ct.arch, p_cuenta: c }); if (r.error) throw r.error; S.cache[c] = r.data || []; }
+          catch (er) { S.cache[c] = []; S.errores = (S.errores || []).concat([c + ': ' + ((er && er.message) || er)]); }
+          S.calc++; if (tok === nmE.mvTok && nmE.tab === 'movs') mvPintar(true);
+        }
+      };
+      await Promise.all([un(), un(), un()]);
+      if (tok === nmE.mvTok && nmE.tab === 'movs') mvPintar(true);
+    }
+    async function mvGuardar(b, cuentas) {
+      const S = nmE.mv; if (!S) return;
+      cuentas = [...new Set(cuentas)];
+      S.mapeo['mv_' + b.k] = cuentas; mvPintar(true);
+      const r = await supabaseClient.from('f104_mapeo').upsert({ cliente_id: nmE.cliente, clave: 'mv_' + b.k, cuentas, modo: null, updated_at: new Date().toISOString() }, { onConflict: 'cliente_id,clave' });
+      if (r.error) { alert('No se pudo guardar la selección: ' + r.error.message); return; }
+      mvCalcular(nmE.mvTok);
+    }
+    function mvToggle(k, c, on) { const b = MV_BLQ.find(x => x.k === k), sel = mvSel(b); mvGuardar(b, on ? sel.concat([c]) : sel.filter(x => x !== c)); }
+    function mvTodas(k, on) { const b = MV_BLQ.find(x => x.k === k); mvGuardar(b, on ? mvCands(b).map(x => x.c) : []); }
+    function mvAgregar(k, el) {
+      const S = nmE.mv, b = MV_BLQ.find(x => x.k === k); if (!S || !b) return;
+      const txt = String(el.value || '').trim(); if (!txt) return;
+      let c = txt.split(/\s+[—-]\s+/)[0].trim(); if (!S.ctas[c]) { const q = txt.toLowerCase(); c = S.lista.find(x => (x + ' ' + S.ctas[x].nombre).toLowerCase().includes(q)) || ''; }
+      el.value = ''; if (!c) { alert('No encontré esa cuenta en el mayor.'); return; }
+      mvGuardar(b, mvSel(b).concat([c]));
+    }
+    function mvOjo(k) { const S = nmE.mv; if (!S) return; if (S.ab.has(k)) S.ab.delete(k); else S.ab.add(k); mvPintar(true); }
+    function mvPintar(mantener) {
+      const c = $im('nm-panel'), e = escapeHtml;
+      if (!nmE.cliente) { c.innerHTML = '<p class="text-xs text-slate-500 p-4">Selecciona el cliente para comenzar.</p>'; return; }
+      let S = nmE.mv;
+      if (S && S.key !== nmE.cliente + '|' + Number(nmE.anio) + '|' + nmE.visita) S = nmE.mv = null;
+      if (!S) { mvCargar(); c.innerHTML = '<p class="text-xs text-slate-500 p-4">Cargando el mayor y el balance…</p>'; return; }
+      if (!S.cargado) { c.innerHTML = '<p class="text-xs text-slate-500 p-4">Cargando el mayor y el balance…</p>'; return; }
+      if (S.error) { c.innerHTML = '<p class="text-xs text-red-600 font-bold p-4">No se pudo cargar: ' + e(S.error) + '</p>'; return; }
+      const sc = c.scrollTop, hs = c.scrollLeft;
+      const abiertos = new Set([].slice.call(c.querySelectorAll('details.mv-sel[open]')).map(x => x.getAttribute('data-k')));
+      const RCOL = '#b42318', TOL = 0.5;
+      // meses a mostrar: hasta el último con movimiento o el mes de corte
+      let M = S.corte || 0;
+      Object.keys(S.cache).forEach(cu => (S.cache[cu] || []).forEach(r => { const m = Number(String(r.anio_mes).slice(5, 7)); if (String(r.anio_mes).slice(0, 4) === String(nmE.anio) && m > M) M = m; }));
+      if (!M) M = 12;
+      const meses = []; for (let m = 1; m <= M; m++) meses.push(m);
+      const ym = m => nmE.anio + '-' + String(m).padStart(2, '0');
+      const net = (cu, m, cats, nat) => (S.cache[cu] || []).filter(r => r.anio_mes === ym(m) && cats.includes(r.cat)).reduce((t, r) => t + (nat === 'cr' ? Number(r.creditos) - Number(r.debitos) : Number(r.debitos) - Number(r.creditos)), 0);
+      const si0 = (cu, nat) => nat === 'cr' ? -((S.ctas[cu] || {}).si || 0) : ((S.ctas[cu] || {}).si || 0);
+      const dl = '<datalist id="mv-cuentas">' + S.lista.map(k => '<option value="' + e(k) + '">' + e(k + ' — ' + S.ctas[k].nombre) + '</option>').join('') + '</datalist>';
+      const celdas = arr => arr.map(v => '<td class="n">' + mvF(v) + '</td>').join('');
+      let html = '<style>.mvt{border-collapse:collapse;font-size:12px;color:#2b2b27;width:100%}.mvt th{background:#f4f4f1;border:1px solid #dfdfdb;padding:3px 6px;font-weight:700;font-size:11px;text-align:center}.mvt td{border-bottom:1px solid #ecece8;padding:2px 6px;line-height:1.3}.mvt td.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}.mvt tr.tot td{font-weight:700;background:#f4f4f1;border-top:1px solid #cfcfc8}.mvt tr.sub td{font-size:11px;color:#55554f;background:#fbfbf9}.mvt tr.sub td.l{padding-left:26px}.mvt td.l{min-width:300px}.mv-h{font-size:13px;font-weight:800;color:#2b2b27;padding:14px 14px 2px}.mv-ojo{border:0;background:transparent;cursor:pointer;padding:0 4px 0 0;vertical-align:middle}.mv-det{margin:4px 14px 6px;border:1px solid #e3e3de;border-radius:8px;background:#fff}.mv-det summary{cursor:pointer;font-size:12px;padding:5px 10px;color:#55554f}.mv-lis{columns:2;column-gap:18px;padding:4px 12px 8px;font-size:12px}.mv-lis label{display:flex;gap:6px;align-items:flex-start;padding:1px 0;break-inside:avoid;cursor:pointer}</style>'
+        + '<div style="padding:12px 14px 2px"><div style="font-size:15px;font-weight:800;color:#2b2b27">Movimientos mensuales de ingresos e impuestos</div><div style="font-size:12px;color:#6b6b63;margin-top:2px">Todo sale del mayor contable. En cada cuadro marque con un check las cuentas que deben entrar; el movimiento se separa por mes y por tipo de operación, y el ojito muestra de qué cuentas sale cada valor.</div></div>';
+      if (!S.ids.length) html += '<div style="margin:8px 14px;padding:8px 10px;border:1px solid #e8d9a8;background:#fbf6e4;border-radius:8px;font-size:12px;color:#6b5a1c">No hay un mayor contable completo ya resumido para este cliente, año y visita. Súbalo en la pantalla «Mayor contable» y espere a que termine de leerse.</div>';
+      if (S.total && S.calc < S.total) html += '<div style="padding:4px 14px;font-size:12px;color:#6b6b63">Calculando movimientos del mayor… ' + S.calc + ' de ' + S.total + ' cuentas</div>';
+      if (S.errores && S.errores.length) html += '<div style="margin:4px 14px;padding:6px 10px;border:1px solid #f0c8c4;background:#fdf0ee;border-radius:8px;font-size:11px;color:#8a2a22">No se pudo leer: ' + e(S.errores.slice(0, 5).join(' · ')) + '</div>';
+      MV_BLQ.forEach(b => {
+        const sel = mvSel(b), cands = mvCands(b), nat = b.nat;
+        const noCalc = sel.some(cu => !(cu in S.cache));
+        // valores por fila y mes
+        const filas = b.filas.map(([k, t, cats]) => ({ k, t, cats, v: meses.map(m => mvR(sel.reduce((s, cu) => s + net(cu, m, cats, nat), 0))) }));
+        const movTot = meses.map((m, i) => mvR(filas.reduce((s, f) => s + f.v[i], 0)));
+        let ini = [], fin = [];
+        if (b.saldos) { let p = mvR(sel.reduce((s, cu) => s + si0(cu, nat), 0)); meses.forEach((m, i) => { ini.push(p); p = mvR(p + movTot[i]); fin.push(p); }); }
+        const sumF = v => mvR(v.reduce((a, x) => a + x, 0));
+        const cuerpo = [];
+        const detalle = (clave, fn) => {
+          if (!S.ab.has(b.k + ':' + clave)) return '';
+          let h = '';
+          sel.forEach(cu => { const v = meses.map((m, i) => mvR(fn(cu, m, i))); if (v.every(x => Math.abs(x) < 0.005)) return; h += '<tr class="sub"><td class="l">' + e(cu + ' — ' + ((S.ctas[cu] || {}).nombre || '')) + '</td>' + celdas(v) + '<td class="n">' + mvF(clave === 'ini' ? v[0] : (clave === 'fin' ? v[v.length - 1] : sumF(v))) + '</td></tr>'; });
+          return h || '<tr class="sub"><td class="l" colspan="' + (meses.length + 2) + '">Sin movimientos en las cuentas marcadas.</td></tr>';
+        };
+        const ojo = clave => '<button type="button" class="mv-ojo" onclick="mvOjo(\'' + b.k + ':' + clave + '\')" title="Ver la composición por cuenta">' + IC_OJO + '</button>';
+        const fila = (clave, t, v, tot, cls) => '<tr' + (cls ? ' class="' + cls + '"' : '') + '><td class="l">' + ojo(clave) + e(t) + '</td>' + celdas(v) + '<td class="n">' + mvF(tot) + '</td></tr>' + detalle(clave, null);
+        // saldo
+        const saldoRun = (cu, upto) => { let p = si0(cu, nat); for (let m = 1; m <= upto; m++) p += b.filas.reduce((s, f) => s + net(cu, m, f[2], nat), 0); return p; };
+        if (b.saldos) {
+          cuerpo.push('<tr><td class="l">' + ojo('ini') + 'Saldo inicial</td>' + celdas(ini) + '<td class="n">' + mvF(ini[0]) + '</td></tr>' + detalle('ini', (cu, m) => m === 1 ? si0(cu, nat) : saldoRun(cu, m - 1)));
+        }
+        filas.forEach(f => { cuerpo.push('<tr><td class="l">' + ojo(f.k) + e(f.t) + '</td>' + celdas(f.v) + '<td class="n">' + mvF(sumF(f.v)) + '</td></tr>' + detalle(f.k, (cu, m) => net(cu, m, f.cats, nat))); });
+        let chk = '';
+        if (b.saldos) {
+          cuerpo.push('<tr class="tot"><td class="l">' + ojo('fin') + 'Saldo final</td>' + celdas(fin) + '<td class="n">' + mvF(fin[fin.length - 1]) + '</td></tr>' + detalle('fin', (cu, m) => saldoRun(cu, m)));
+          const bcS = mvR(sel.reduce((s, cu) => { const r = S.bc.find(x => String(x.codigo).trim() === cu); return s + (r ? (nat === 'cr' ? -Number(r.saldo) : Number(r.saldo)) : 0); }, 0)), fl = fin[fin.length - 1], dif = mvR(bcS - fl);
+          chk = [bcS, dif, fl];
+          chk = '<tr><td class="l">Saldo según balance de comprobación</td>' + meses.map((m, i) => '<td></td>').join('') + '<td class="n">' + mvF(bcS) + '</td></tr><tr><td class="l">Diferencia con el mayor</td>' + meses.map(() => '<td></td>').join('') + '<td class="n">' + (Math.abs(dif) > TOL ? '<b style="color:' + RCOL + '">' + mvF(dif) + '</b>' : mvF(dif)) + '</td></tr>';
+        } else {
+          cuerpo.push('<tr class="tot"><td class="l">' + e(b.tot) + '</td>' + celdas(movTot) + '<td class="n">' + mvF(sumF(movTot)) + '</td></tr>');
+          const bcS = mvR(sel.reduce((s, cu) => { const r = S.bc.find(x => String(x.codigo).trim() === cu); return s + (r ? -Number(r.saldo) : 0); }, 0)), dif = mvR(bcS - sumF(movTot));
+          chk = '<tr><td class="l">Saldo según balance de comprobación (ingresos acumulados al corte)</td>' + meses.map(() => '<td></td>').join('') + '<td class="n">' + mvF(bcS) + '</td></tr><tr><td class="l">Diferencia con el mayor</td>' + meses.map(() => '<td></td>').join('') + '<td class="n">' + (Math.abs(dif) > TOL ? '<b style="color:' + RCOL + '">' + mvF(dif) + '</b>' : mvF(dif)) + '</td></tr>';
+        }
+        const lis = cands.map(x => '<label title="' + e(x.c + ' — ' + x.nombre) + '"><input type="checkbox"' + (sel.includes(x.c) ? ' checked' : '') + ' onchange="mvToggle(\'' + b.k + '\',\'' + e(x.c) + '\',this.checked)"><span><span style="color:#6b6b63">' + e(x.c) + '</span> ' + e(x.nombre) + (x.saldo !== null ? ' <span style="color:#8a8a82">(' + mvF(x.saldo).replace(/<[^>]+>/g, '') + ')</span>' : (x.man ? ' <span style="color:#8a8a82">(agregada)</span>' : '')) + '</span></label>').join('');
+        const guardada = !!S.mapeo['mv_' + b.k];
+        html += '<div class="mv-h">' + e(b.tit) + '</div><div style="font-size:11px;color:#6b6b63;padding:0 14px">' + e(b.sub) + ' · ' + sel.length + ' cuenta(s) marcada(s)' + (guardada ? '' : ' · selección sugerida: ajústela con los checks') + '</div>'
+          + '<details class="mv-det mv-sel" data-k="' + b.k + '"' + (abiertos.has(b.k) ? ' open' : '') + '><summary>Cuentas que entran en este cuadro</summary><div style="padding:0 12px 4px;font-size:11px"><a href="#" onclick="mvTodas(\'' + b.k + '\',true);return false" style="text-decoration:underline">Marcar todas</a> · <a href="#" onclick="mvTodas(\'' + b.k + '\',false);return false" style="text-decoration:underline">Quitar todas</a></div>'
+          + (cands.length ? '<div class="mv-lis">' + lis + '</div>' : '<div style="padding:4px 12px;font-size:12px;color:#6b6b63">No hay cuentas de ' + e(b.sum.join(' / ')) + ' en el balance de este cliente, año y visita; agréguelas con el buscador.</div>')
+          + '<div style="padding:0 12px 8px"><input list="mv-cuentas" type="text" placeholder="+ Agregar otra cuenta del mayor (código o nombre)" onchange="mvAgregar(\'' + b.k + '\',this)" style="width:100%;max-width:520px;border:1px solid #dcdcd6;border-radius:6px;padding:3px 6px;font-size:12px;background:#fff"></div></details>'
+          + '<div class="overflow-x-auto" style="overflow-x:auto;padding:4px 14px 6px"><table class="mvt" style="min-width:' + (420 + meses.length * 92) + 'px"><thead><tr><th style="text-align:left">Concepto</th>' + meses.map(m => '<th>' + F104_MESES[m - 1] + '</th>').join('') + '<th>' + (b.saldos ? 'Total / saldo' : 'Total') + '</th></tr></thead><tbody>' + cuerpo.join('') + chk + '</tbody></table>' + (noCalc && S.ids.length ? '<div style="font-size:11px;color:#8a8a82;padding-top:2px">Calculando…</div>' : '') + '</div>';
+      });
+      html += dl + '<div style="padding:4px 14px 16px;font-size:11px;color:#6b6b63;line-height:1.55"><b>Cómo se clasifica.</b> Cada línea del mayor se ubica por su texto: «cierre de impuestos», reversos o anulaciones, provisiones, notas de crédito, ajustes y reclasificaciones (incluye los asientos de diario manuales); lo demás es la facturación o compra normal. Las notas de crédito se compensan dentro de la facturación. El saldo inicial es el del mayor al inicio del año. La diferencia contra el balance de comprobación debe ser cero.</div>';
+      c.innerHTML = html; c.scrollTop = sc; c.scrollLeft = hs;
     }
     function nmFmt(t) { return t ? new Date(t).toLocaleString('es-EC', { day: '2-digit', month: '2-digit', year: 'numeric', hour: 'numeric', minute: '2-digit' }) : ''; }
     function nmUsarContexto(k) {
@@ -21390,6 +21558,7 @@ ${cont.innerHTML}
       if (tb) { const cbN = nmCobertura().n; tb.innerHTML = (NM_CTX.tabs || NM_TABS).map(([k, n]) => '<button type="button" onclick="nmIrTab(\'' + k + '\')" class="px-3 py-1.5 text-xs transition rounded-lg ' + (nmE.tab === k ? 'bg-slate-200 text-slate-900 font-semibold' : 'text-slate-600 hover:bg-slate-100 font-medium') + '">' + n + (k === 'subir' && cbN ? '<span title="Información incompleta: abra Informe" style="display:inline-block;min-width:18px;padding:0 5px;margin-left:6px;border-radius:9px;background:#dc2626;color:#fff;font-size:11px;font-weight:700;line-height:18px;text-align:center">' + cbN + '</span>' : '') + (k === 'conclusiones' ? pcConcBadgeHtml('nm') : '') + '</button>').join(''); }
       if (nmE.tab === 'subir') { nmSubirPintar(); return; }
       if (nmE.tab === 'f104' && NM_CTX.hoja === 'impuestos') { f104Pintar(); return; }
+      if (nmE.tab === 'movs' && NM_CTX.hoja === 'impuestos') { mvPintar(); return; }
       if (nmE.tab === 'anexos' && NM_CTX.hoja === 'obligaciones') { obPintar(); return; }
       if (nmE.tab === 'anexos' && NM_CTX.hoja === 'ppe') { ppPintar(); return; }
       if (nmE.tab === 'voucheo' && NM_CTX.hoja === 'ppe') { pvPintar(); return; }
