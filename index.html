@@ -20848,6 +20848,44 @@ ${cont.innerHTML}
       const a = ppAnexoSubido(); if (!a || ppE.autoId === a.id) return;
       ppE.autoId = a.id; ppLeerSubido(true);
     }
+    // Caja «Anexo de activos fijos» en Subir información: se sube directo, sin pedido, y la aplicación lo lee
+    function ppCajaAnexo() {
+      const a = ppAnexoSubido(), e = escapeHtml;
+      return '<div class="mb-3 p-3 bg-white border border-slate-200 rounded-xl text-xs text-slate-700"><div class="text-[13px] font-semibold text-slate-800 mb-1">Anexo de activos fijos de la compañía</div>'
+        + '<p class="text-slate-500 mb-2">Se sube aquí sin necesidad de un pedido: la aplicación lo lee y llena «Anexos y cálculos». Excel o CSV, un activo por fila. Si subes otro, se vuelve a leer y reemplaza al anterior.</p>'
+        + '<div class="flex flex-wrap items-center gap-2"><input id="pp-anexo-arch" type="file" accept=".xlsx,.xls,.csv" style="font-size:11px"><button type="button" onclick="ppSubirAnexo()" id="pp-anexo-btn" class="px-3 py-1.5 rounded-lg text-xs font-bold text-white" style="background:#449964">Subir y leer</button>'
+        + (a ? '<span class="text-slate-500">Último subido: <b>' + e(a.nombre) + '</b></span><button type="button" onclick="ppQuitarAnexo(\'' + e(a.id) + '\')" class="text-[11px] underline text-slate-500">Quitar</button>' : '<span class="text-slate-500">Todavía no hay anexo subido.</span>')
+        + '<span id="pp-anexo-msg" class="text-[11px] text-slate-500"></span></div></div>';
+    }
+    async function ppSubirAnexo() {
+      const inp = $im('pp-anexo-arch'), msg = $im('pp-anexo-msg'), btn = $im('pp-anexo-btn'), f = inp && inp.files && inp.files[0];
+      const dec = (t, mal) => { if (msg) { msg.textContent = t || ''; msg.style.color = mal ? '#b91c1c' : '#6b6b63'; msg.style.fontWeight = mal ? '700' : '400'; } };
+      if (!nmE.cliente) { dec('Elige primero el cliente.', true); return; }
+      if (!f) { dec('Elige el archivo del anexo.', true); return; }
+      if (!/\.(xlsx|xls|csv)$/i.test(f.name)) { dec('El anexo debe ser un Excel (.xlsx, .xls) o un CSV.', true); return; }
+      if (f.size > 52428800) { dec('El archivo pesa más de 50 MB. Sube una versión más liviana.', true); return; }
+      const seguro = f.name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^A-Za-z0-9._-]+/g, '_'), ruta = 'anexos/' + nmE.cliente + '/' + nmE.anio + '-' + nmE.visita + '/' + Date.now() + '-' + seguro;
+      if (btn) btn.disabled = true; dec('Subiendo ' + f.name + '…');
+      try {
+        // se prueba que se pueda leer antes de reemplazar nada
+        const r = ppParsear(await f.arrayBuffer());
+        if (ppE.filas.length && !(await confirmarApp('Ya hay ' + ppE.filas.length + ' activos en el anexo. Si subes "' + f.name + '" (' + r.filas.length + ' activos) se reemplazarán. ¿Continuar?'))) { dec(''); if (btn) btn.disabled = false; return; }
+        const up = await supabaseClient.storage.from('pedidos-claude').upload(ruta, f, { contentType: f.type || 'application/octet-stream' });
+        if (up.error) throw new Error(up.error.message || 'No se pudo subir');
+        const ins = await supabaseClient.from('pedidos_claude_archivos').insert([{ pedido_id: null, cliente_id: nmE.cliente, anio: Number(nmE.anio), visita: nmE.visita, nombre: f.name, ruta, tamano: f.size, tipo: f.type || '', subido_por: nombreUsuarioActivo(), etiqueta: 'Anexo de activos fijos' }]);
+        if (ins.error) { await supabaseClient.storage.from('pedidos-claude').remove([ruta]); throw new Error(ins.error.message || 'No se pudo registrar el archivo'); }
+        ppE.filas = r.filas; ppE.archivo = f.name; ppE.pag = 0; ppE.filtro = ''; ppE.cla = ''; ppE.mov = null; ppE.msg = 'Se cargaron ' + r.filas.length + ' activos de "' + f.name + '" (hoja ' + r.hoja + ').'; ppGuardar();
+        await nmSubirCargar();
+        dec('Listo: se leyeron ' + r.filas.length + ' activos (hoja ' + r.hoja + ').');
+      } catch (er) { dec(er.message || String(er), true); }
+      const b2 = $im('pp-anexo-btn'); if (b2) b2.disabled = false;
+    }
+    async function ppQuitarAnexo(id) {
+      if (!await confirmarApp('¿Quitar el archivo del anexo subido? Los activos ya leídos se quedan en «Anexos y cálculos»; para cambiarlos sube otro archivo o usa «Vaciar».')) return;
+      const { data: a } = await supabaseClient.from('pedidos_claude_archivos').select('id, ruta').eq('id', id).maybeSingle();
+      if (a) { try { await supabaseClient.storage.from('pedidos-claude').remove([a.ruta]); } catch (er) { } await supabaseClient.from('pedidos_claude_archivos').update({ eliminado_at: new Date().toISOString(), eliminado_motivo: 'Quitado por ' + (nombreUsuarioActivo() || 'una persona') }).eq('id', id); }
+      nmSubirCargar();
+    }
     // Fecha de corte escrita corta, como «31-oct 2026»
     function ppCorteTxt() { const f = obFecha(ppE.cierre); if (!f) return 'corte'; return +f.slice(8, 10) + '-' + ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'][+f.slice(5, 7) - 1] + ' ' + f.slice(0, 4); }
     function ppAnexoBoton() {
@@ -20881,7 +20919,7 @@ ${cont.innerHTML}
         + ppAnexoBoton() + '<button type="button" class="ob-b" onclick="ppPlantilla()">Descargar plantilla</button><button type="button" class="ob-b" onclick="ppAgregar()">＋ Agregar activo</button>' + (ppE.filas.length ? '<button type="button" class="ob-b" onclick="ppVaciar()">Vaciar</button>' : '') + '<span id="pp-msg" style="font-size:11px;color:#6b6b63">' + e(ppE.msg || (ppE.archivo ? 'Archivo: ' + ppE.archivo : '')) + '</span>'
         + '<button type="button" onclick="ppExcel()" style="margin-left:auto;padding:6px 4px;font-size:12px;font-weight:700;background:transparent;border:0;color:#449964;cursor:pointer">⬇ Descargar Excel</button></div>'
         + (ppE.filas.length ? '<div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:0 14px 10px;font-size:12px;color:#4a4a44"><input id="pp-q" placeholder="Buscar por código, nombre o estado" value="' + e(ppE.filtro) + '" oninput="ppFiltro(\'filtro\',this.value)" style="border:1px solid #dcdcd6;border-radius:6px;padding:3px 8px;font-size:12px;width:260px">' + sel + '<span>' + idx.length + ' de ' + ppE.filas.length + ' activos</span><button type="button" class="ob-b" onclick="ppPag(-1)"' + (ppE.pag ? '' : ' disabled style="opacity:.4"') + '>‹</button><span>Página ' + (ppE.pag + 1) + ' de ' + tp + '</span><button type="button" class="ob-b" onclick="ppPag(1)"' + (ppE.pag + 1 < tp ? '' : ' disabled style="opacity:.4"') + '>›</button></div>' : '')
-        + '<div style="overflow-x:auto;padding:6px 10px 16px"><table class="ob"><thead><tr><th colspan="14" style="background:transparent;border:0"></th><th colspan="4">Recálculo Auditoría (herramienta)</th><th colspan="3" style="background:transparent;border:0"></th></tr><tr>' + TH.map((x, i) => i === 19 ? '<th style="color:#b42318">' + x + '</th>' : '<th>' + x + '</th>').join('') + '</tr></thead><tbody>' + (rows || '<tr><td colspan="21" style="padding:14px;color:#9a9a92;white-space:normal">Aún no hay activos. Sube el anexo del cliente en «Subir información» o agrega filas.</td></tr>') + '</tbody></table></div></div>';
+        + '<div style="overflow-x:auto;padding:6px 10px 16px"><table class="ob"><thead><tr><th colspan="14" style="background:transparent;border:0"></th><th colspan="4">Recálculo Auditoría (herramienta)</th><th colspan="3" style="background:transparent;border:0"></th></tr><tr>' + TH.map((x, i) => i === 19 ? '<th style="color:#b42318">' + x + '</th>' : '<th>' + x + '</th>').join('') + '</tr></thead><tbody>' + (rows || '<tr><td colspan="21" style="padding:14px;color:#9a9a92;white-space:normal">Aún no hay activos. Sube el anexo del cliente en «Subir información» (caja «Anexo de activos fijos») o agrega filas.</td></tr>') + '</tbody></table></div></div>';
       c.scrollTop = sc; c.scrollLeft = hs;
     }
     // Costo del activo a una fecha (fin del mes Y-M): con reavalúo cuando ya ocurrió
@@ -21451,6 +21489,12 @@ ${cont.innerHTML}
           lm.forEach(a => { archivos.push({ ...a, pedido: null, lectura: !(a.id in mp) ? 'sin' : (mp[a.id] ? 'error' : 'ok'), lecturaError: mp[a.id] || '' }); });
         }
       } catch (er) { /* sin dato del mayor */ }
+      if (NM_CTX.hoja === 'ppe') { // el anexo de activos fijos se sube directo (sin pedido), como el mayor contable
+        try {
+          const an = await supabaseClient.from('pedidos_claude_archivos').select('id, nombre, ruta, tamano, tipo, subido_por, created_at, eliminado_at, etiqueta').is('pedido_id', null).eq('cliente_id', cli).eq('anio', anio).eq('visita', vis).eq('etiqueta', 'Anexo de activos fijos').is('eliminado_at', null).order('created_at', { ascending: false });
+          (an.data || []).forEach(a => { archivos.push({ ...a, pedido: null, lectura: 'ok', lecturaError: '' }); });
+        } catch (er) { /* sin dato del anexo */ }
+      }
       if (!nmE.sv || id !== nmE.sv.id) return;
       nmE.sv = { id, cargado: true, error: peT.error ? (peT.error.message || String(peT.error)) : '', pedidos: peT.data || [], archivos };
       if (nmE.tab === 'subir' || nmE.tab === 'programa') nmPintar();
@@ -21468,7 +21512,8 @@ ${cont.innerHTML}
       const detalle = '<div class="mt-3 p-3 bg-white border border-slate-200 rounded-xl text-xs text-slate-700"><div class="flex items-center justify-between gap-2 mb-1"><div class="text-[13px] font-semibold text-slate-800">Información subida para este cliente, año y visita</div><button type="button" onclick="nmSubirCargar()" class="px-2 py-1 text-[11px] font-semibold border border-slate-300 rounded-lg hover:bg-slate-50">↻ Actualizar</button></div>' + (filasA ? '<div class="overflow-x-auto"><table class="w-full text-[11px] leading-tight border-collapse" style="min-width:44rem"><thead><tr class="bg-slate-100 text-slate-700"><th class="px-2 py-1.5 text-left font-bold">Archivo</th><th class="px-2 py-1.5 text-left font-bold">Qué es</th><th class="px-2 py-1.5 text-right font-bold">Tamaño</th><th class="px-2 py-1.5 text-left font-bold">Subido por</th><th class="px-2 py-1.5 text-left font-bold">Fecha</th><th class="px-2 py-1.5 text-left font-bold">Pedido</th><th class="px-2 py-1.5"></th></tr></thead><tbody>' + filasA + '</tbody></table></div>' : '<p class="text-slate-500">Aún no se ha subido información de nómina para este cliente, año y visita.</p>') + '</div>';
       const CB = nmCobertura(), insig = CB.n ? '<span style="display:inline-block;min-width:18px;padding:0 5px;margin-left:6px;border-radius:9px;background:#dc2626;color:#fff;font-size:11px;font-weight:700;line-height:18px;text-align:center">' + CB.n + '</span>' : '';
       const barraInf = '<div class="flex justify-end mb-2"><button type="button" onclick="nmInformeAbrir()" class="px-3 py-1.5 text-xs font-semibold rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50" title="Qué información se subió, si se pudo leer y si Claude la analizó">Informe' + insig + '</button></div>';
-      c.innerHTML = '<div class="p-3">' + barraInf + pcBarraPedido(NM_CTX.hoja, nmE.cliente, nmE.anio, nmE.visita, NM_CTX.txtSubir) + detalle + '</div>';
+      const anx = NM_CTX.hoja === 'ppe' ? ppCajaAnexo() : '';
+      c.innerHTML = '<div class="p-3">' + barraInf + anx + pcBarraPedido(NM_CTX.hoja, nmE.cliente, nmE.anio, nmE.visita, NM_CTX.txtSubir) + detalle + '</div>';
     }
     // ===== RC02 Gastos: subir los soportes de la muestra, validar contra el mayor y resumir =====
     const GA_ATRIB = [['cuenta', 'Cuenta'], ['valor', 'Valor'], ['iva', 'IVA'], ['ret', 'Retención'], ['conc', 'Concepto y fecha']];
