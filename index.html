@@ -19640,11 +19640,11 @@ ${cont.innerHTML}
         { n: 'Mayor contable (completo o por cuenta)', req: true, et: ['Mayor contable completo', 'Mayor contable de nómina', 'Mayor de pasivos laborales (beneficios sociales)', 'Mayor de IESS por pagar', 'Mayor de anticipos a empleados'] },
         { n: 'Roles de pago', req: true, et: ['Rol de pagos (por mes y por persona)'] },
         { n: 'Planillas del IESS (fondos de reserva y préstamos)', req: true, et: ['Planilla de fondos de reserva del IESS', 'Planilla de préstamos hipotecarios del IESS', 'Planilla de préstamos quirografarios del IESS', 'Planilla del IESS'] },
-        { n: 'Listado de personal con fecha de ingreso', req: true, et: ['Listado de personal con fecha de ingreso'] },
-        { n: 'Cálculos de décimos y fondo de reserva', req: false, et: ['Cálculo de décimos', 'Cálculo de fondo de reserva'] },
+        { n: 'Listado de personal con fecha de ingreso', req: true, et: ['Listado de personal con fecha de ingreso'], app: arch => (arch || []).some(a => a.etiqueta === 'Rol de pagos (por mes y por persona)' && !a.eliminado_at) ? 'roles de pago' : '', appObs: () => 'No hace falta subirlo: los roles de pago traen la fecha de ingreso y de salida de cada persona, y Claude la toma de ahí.' },
+        { n: 'Cálculos de décimos y fondo de reserva', req: false, et: ['Cálculo de décimos', 'Cálculo de fondo de reserva'], app: arch => (arch || []).some(a => a.etiqueta === 'Rol de pagos (por mes y por persona)' && !a.eliminado_at) ? 'roles de pago' : '', appObs: () => 'Si los roles de pago traen las provisiones de décimos, fondo de reserva, vacaciones y aporte patronal, Claude las toma de ellos; solo súbelos aparte si el cliente los lleva en otro archivo.' },
         { n: 'Utilidades, finiquitos y liquidaciones', req: false, et: ['Utilidades a trabajadores', 'Finiquitos', 'Liquidaciones'] },
         { n: 'Formulario 107 y contratos', req: false, et: ['Formulario 107', 'Contrato o expediente del colaborador'] }
-      ], sum: 'RC', hoja: 'nomina', titulo: '2. Nómina', subtit: 'Análisis guiado por el programa de auditoría: Claude elabora cada procedimiento de nómina y arma los papeles de trabajo; el auditor revisa.', nombre: 'RC - Nómina', ref: 'RC · Nómina', corto: 'Nómina', txtSubir: 'Aquí se sube todo en un solo pedido: el mayor contable de las cuentas de nómina, los mayores de los pasivos laborales (beneficios sociales e IESS por pagar) y de anticipos a empleados, los roles de pago de todos los meses, las planillas del IESS, el listado de personal con fecha de ingreso (para saber quién tiene más de un año y accede al fondo de reserva), el cálculo de décimos, fondo de reserva y utilidades, y los finiquitos. Claude lo lee junto y las demás pestañas leen de aquí. Cuando el pedido pase a "hecho", presiona «Actualizar».' },
+      ], sum: 'RC', hoja: 'nomina', titulo: '2. Nómina', subtit: 'Análisis guiado por el programa de auditoría: Claude elabora cada procedimiento de nómina y arma los papeles de trabajo; el auditor revisa.', nombre: 'RC - Nómina', ref: 'RC · Nómina', corto: 'Nómina', txtSubir: 'Aquí se sube todo en un solo pedido: el mayor contable de las cuentas de nómina, los mayores de los pasivos laborales (beneficios sociales e IESS por pagar) y de anticipos a empleados, los roles de pago de todos los meses, las planillas del IESS, el listado de personal con fecha de ingreso (para saber quién tiene más de un año y accede al fondo de reserva), el cálculo de décimos, fondo de reserva y utilidades, y los finiquitos. Si los roles de pago ya traen la fecha de ingreso y las provisiones, no hace falta subir el listado ni el cálculo aparte. Claude lo lee junto y las demás pestañas leen de aquí. Cuando el pedido pase a "hecho", presiona «Actualizar».' },
       gastos: { tabs: [['subir', 'Subir información'], ['validacion', 'Validación con el mayor'], ['resumen', 'Resumen']], tab0: 'subir', cob: [
         { n: 'Mayor contable completo (se carga en la pantalla Mayor contable)', req: true, et: ['Mayor contable completo'] },
         { n: 'Facturas y documentos de compra o gasto de la muestra', req: true, et: ['Factura de compra o gasto'] },
@@ -21401,7 +21401,7 @@ ${cont.innerHTML}
       const filas = (grupos || []).map(g => {
         const f = arch.filter(a => g.et.includes(a.etiqueta));
         const ok = f.filter(a => a.lectura === 'ok').length, mal = f.filter(a => a.lectura === 'error').length, sin = f.filter(a => a.lectura === 'sin').length;
-        const ap = (!f.length && typeof g.app === 'function') ? g.app() : '';
+        const ap = (!f.length && typeof g.app === 'function') ? g.app(arch) : '';
         const subido = f.length ? 'si' : (ap ? 'app' : (todo.length ? 'junto' : 'no'));
         const leido = !f.length ? '' : (f.every(a => !a.lectura) ? '' : (ok === f.length ? 'si' : (ok ? 'parcial' : 'no')));
         const d = decl && decl.find(x => norm(x.tipo) === norm(g.n));
@@ -21409,7 +21409,7 @@ ${cont.innerHTML}
         if (f.length) { if (d) an = String(d.estado || ''); else if (R) an = 'sd'; else if (appFn) an = appFn() ? 'si' : 'pend'; else an = ''; }
         const obs = [];
         const esMayor = (g.et || []).includes('Mayor contable completo');
-        if (ap) obs.push('Ya está cargado en la aplicación (' + ap + '); no hace falta subirlo aquí.');
+        if (ap) obs.push(g.appObs ? g.appObs(ap) : 'Ya está cargado en la aplicación (' + ap + '); no hace falta subirlo aquí.');
         else if (!f.length) obs.push(todo.length ? 'Podría venir dentro de un archivo marcado «Todo en un archivo».' : (g.req ? (esMayor ? 'No se ha subido: cárgalo en la pantalla Mayor contable del menú.' : 'No se ha subido.') : 'No se subió (opcional).'));
         if (mal) obs.push(mal + ' archivo(s) no se pudieron leer: ' + f.filter(a => a.lectura === 'error').map(a => a.nombre).join(', ') + '. Vuelva a subirlos más livianos, en Excel, CSV o PDF con texto.');
         if (sin) obs.push(sin + ' archivo(s) aún sin leer.');
