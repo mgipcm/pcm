@@ -20763,11 +20763,11 @@ ${cont.innerHTML}
           return r;
         }).join('');
         const T = B.T, dT = R2(T.fin - B.bal);
-        return '<div class="overflow-x-auto" style="margin-bottom:12px"><table class="w-full text-[11px] leading-tight border-collapse"><thead class="bg-slate-50 text-slate-600"><tr>' + th(titulo, 'text-left') + th('Saldo inicial') + cols.map(c => th(c[1])).join('') + th('Saldo final') + th('Según balance') + th('Diferencia') + '</tr></thead><tbody>' + cuerpo
+        return '<div class="overflow-x-auto" style="margin-bottom:12px"><table class="ppm border-collapse" style="table-layout:fixed;width:1262px"><colgroup><col style="width:250px">' + '<col style="width:92px">'.repeat(11) + '</colgroup><thead class="bg-slate-50 text-slate-600"><tr>' + th(titulo, 'text-left') + th('Saldo inicial') + cols.map(c => th(c[1])).join('') + th('Saldo final') + th('Según balance') + th('Diferencia') + '</tr></thead><tbody>' + cuerpo
           + '<tr class="border-b border-slate-200 bg-slate-50 font-bold text-slate-800"><td class="px-2 py-0.5">Total</td>' + tdn(T.ini) + cols.map(c => tdn(T[c[0]])).join('') + tdn(T.fin) + tdn(B.bal) + tdd(dT) + '</tr></tbody></table></div>';
       };
       const sinDet = Object.values(M.cta).filter(x => x.hay && !x.lineas).length, faltan = Object.keys(M.cta).filter(c => !M.cta[c].hay).length;
-      return cab(tit) + ay('Del mayor contable cargado: saldo inicial del año, cada tipo de movimiento y saldo final de cada tipo de activo, contra el balance. Cada asiento se clasifica por su concepto (compras e importaciones, bajas, ventas, reclasificaciones, ajustes, reavalúos); lo que no se reconoce va en «Otros». Toca el ojito de una fila para ver los asientos que la componen.')
+      return '<style>.ppm td,.ppm th{padding:1px 6px;font-size:10px;line-height:1.25}.ppm th{white-space:normal;vertical-align:bottom}.ppm td:first-child{white-space:normal}</style>' + cab(tit) + ay('Del mayor contable cargado: saldo inicial del año, cada tipo de movimiento y saldo final de cada tipo de activo, contra el balance. Cada asiento se clasifica por su concepto (compras e importaciones, bajas, ventas, reclasificaciones, ajustes, reavalúos); lo que no se reconoce va en «Otros». Toca el ojito de una fila para ver los asientos que la componen.')
         + (sinDet ? '<p style="font-size:11px;color:#6b6b63;margin:-4px 0 6px">Cargando el detalle de asientos de ' + sinDet + ' cuenta(s)…</p>' : '')
         + (faltan ? '<p style="font-size:11px;color:#b45309;margin:-4px 0 6px">' + faltan + ' cuenta(s) del balance no aparecen en el mayor cargado.</p>' : '')
         + bloque(false, DT.costo, 'Costo') + bloque(true, DT.dep, 'Depreciación acumulada');
