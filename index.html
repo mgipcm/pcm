@@ -20671,7 +20671,7 @@ ${cont.innerHTML}
       const t = ' ' + obClave(l.con) + ' ';
       if (/reavalu|revalu|avaluo/.test(t)) return 'rea';
       if (/reclasif|traspaso|transferencia entre/.test(t)) return 'rec';
-      if (/ajust|regulariz|correccion|corrige/.test(t)) return 'aju';
+      if (/ajust|regulariz|correccion|corrige|reversion|reverso|reversa|revierte|extorno|anulacion/.test(t)) return 'aju';
       const aum = dep ? l.cre > l.deb : l.deb > l.cre;
       if (aum) return dep ? 'a' : (/import|liquidacion|nacionaliz|compra|adquis|factura|\bfac\b|\bfac-|fact |n\/v|\bnv\b|fcch|proveedor|instalac|construc|obra|licencia|software|equipo|maquinaria|vehiculo|mueble/.test(t) ? 'a' : 'otr');
       if (/venta|vend|\bvta/.test(t)) return 'ven';
