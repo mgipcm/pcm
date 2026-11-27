@@ -2283,7 +2283,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
         </div>
         <div>
           <label for="nm-fecha" class="block text-xs font-semibold text-slate-600 mb-1">Fecha de corte</label>
-          <input type="date" id="nm-fecha" class="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs sm:text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+          <input type="date" id="nm-fecha" onchange="nmFechaCambio(this.value)" class="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs sm:text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
         </div>
         <div class="md:col-span-2 xl:col-span-2">
           <label class="block text-xs font-semibold text-slate-600 mb-1">Auditor responsable</label>
@@ -11229,7 +11229,7 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
     function arrCambiarPeriodo() {
       const anio = document.getElementById('ar-anio').value, vis = document.getElementById('ar-visita').value;
       arrEstado.verif.__anio = anio; arrEstado.verif.__visita = vis;
-      const mes = vis === 'final' ? '12' : (arrConcCorte().slice(5, 7) === '12' ? '09' : arrConcCorte().slice(5, 7));
+      const fbP = pcFbSync(arrEstado.cliente, anio, vis), mes = fbP ? fbP.slice(5, 7) : (vis === 'final' ? '12' : (arrConcCorte().slice(5, 7) === '12' ? '09' : arrConcCorte().slice(5, 7)));
       arrEstado.concCorte = anio + '-' + mes; arrEstado.concBorrador = null; arrEstado.sumHecho = null;
       arrGuardarVerif(); arrRender();
     }
@@ -12128,7 +12128,9 @@ body.menu-fijo #sidebar-slot { width:calc(18rem + 12px); }
       const vp = arrEstado.verif || {};
       if (vp.__anio) { // año y visita elegidos: el último corte guardado de ese año, o diciembre (final) / septiembre (preliminar)
         const delAnio = Object.keys(arrConcCortes()).filter(k => k.slice(0, 4) === String(vp.__anio)).sort();
-        return delAnio.length ? delAnio[delAnio.length - 1] : vp.__anio + '-' + (vp.__visita === 'preliminar' ? '09' : '12');
+        if (delAnio.length) return delAnio[delAnio.length - 1];
+        const fbA = pcFbSync(arrEstado.cliente, vp.__anio, vp.__visita, () => { try { arrConcRender(); } catch (e) { } });
+        return fbA ? fbA.slice(0, 7) : vp.__anio + '-' + (vp.__visita === 'preliminar' ? '09' : '12');
       }
       const ks = Object.keys(arrConcCortes()).sort(); if (ks.length) return ks[ks.length - 1];
       const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - 1);
@@ -15430,7 +15432,7 @@ ${cont.innerHTML}
       if (r1.error) cbMsg(/does not exist|schema cache/i.test(r1.error.message || '') ? 'Falta la tabla conciliaciones_datos en Supabase.' : 'No se pudo cargar: ' + (r1.error.message || r1.error), 'text-red-600 font-bold'); else cbMsg('');
       const d = r1.data;
       if (d) { cbE.cuentas = Array.isArray(d.cuentas) ? d.cuentas : []; cbE.config = d.config || {}; cbE.programa = Array.isArray(d.programa) ? d.programa : []; cbE.corte = d.corte || ''; cbE.act = { por: d.actualizado_por, en: d.updated_at }; cbE.org = { origen: d.origen, estado_revision: d.estado_revision, revisado_por: d.revisado_por, revisado_at: d.revisado_at }; } else cbE.org = null;
-      if (!cbE.corte) cbE.corte = vis === 'final' ? anio + '-12-31' : anio + '-09-30';
+      if (!cbE.corte) { const fbB = await pcFechaCorteBalance(cli, anio, vis); if (id !== cbE.cargaId) return; cbE.corte = fbB || (vis === 'final' ? anio + '-12-31' : anio + '-09-30'); }
       cbE.analisis = (r2.data && r2.data[0]) || null;
       try { const rp = await supabaseClient.from('v2_pt').select('*').eq('cliente_id', cli).eq('anio', Number(anio)).eq('visita', vis).eq('sumaria', 'AA').eq('hoja', 'bancos').order('ref'); cbE.pts = rp.error ? [] : (rp.data || []); } catch (e) { cbE.pts = []; }
       if (id !== cbE.cargaId) return;
@@ -18511,7 +18513,7 @@ ${cont.innerHTML}
       vcPintar(); vcCargarPedido();
       alert('Pedido enviado con ' + envio.length + ' soporte(s). Quedó en «Pedidos y aprobaciones» esperando la autorización del Socio o Supervisor.');
     }
-    function vcCorte() { const c = vcE.imp && vcE.imp.config && vcE.imp.config.corte; return c || (vcE.visita === 'final' ? vcE.anio + '-12-31' : vcE.anio + '-09-30'); }
+    function vcCorte() { const c = vcE.imp && vcE.imp.config && vcE.imp.config.corte; return c || pcFbSync(vcE.cliente, vcE.anio, vcE.visita, () => { try { vcPintar(); } catch (e) { } }) || (vcE.visita === 'final' ? vcE.anio + '-12-31' : vcE.anio + '-09-30'); }
     // Población: las adiciones (compras) de las cuentas de inventario del Movimiento del inventario, asiento por asiento
     function vcPoblacion() {
       const sel = vcE.cfg.cuentas, liqs = (vcE.imp && vcE.imp.liquidaciones && Array.isArray(vcE.imp.liquidaciones.imports)) ? vcE.imp.liquidaciones.imports : [];
@@ -18717,7 +18719,9 @@ ${cont.innerHTML}
     async function v2Cargar() {
       const cli = $im('v2-cliente').value, anio = $im('v2-anio').value, vis = $im('v2-visita').value;
       Object.assign(v2E, { cliente: cli, anio, visita: vis, filas: {}, pts: [], sv: null, res: null, bal: null, conc: null });
-      const f = $im('v2-fecha'); if (f) f.value = vis === 'final' ? anio + '-12-31' : anio + '-09-30';
+      const f = $im('v2-fecha'), fbV = cli ? await pcFechaCorteBalance(cli, anio, vis) : '';
+      if (v2E.cliente !== cli || v2E.anio !== anio || v2E.visita !== vis) return;
+      if (f) f.value = fbV || (vis === 'final' ? anio + '-12-31' : anio + '-09-30');
       const a = $im('v2-auditor'); if (a) a.value = (typeof nombreUsuarioActivo === 'function' ? nombreUsuarioActivo() : '') || '';
       const aviso = $im('v2-aviso'), esp = $im('v2-espacio');
       if (!cli) { aviso.classList.remove('hidden'); esp.classList.add('hidden'); $im('v2-actualizado').value = ''; return; }
@@ -18870,11 +18874,20 @@ ${cont.innerHTML}
     }
     function pcAlinearCorte(m) { const f = PC_CORTE.f; if (!f) return; if (m === 'pp') ppCab(f); else if (m === 'ob') obCab('cierre', f); }
     // Fecha de corte del balance cargado para el cliente, año y visita (la que se ingresó al subir el balance)
+    const PC_FB = {}, PC_FB_REQ = {};
     async function pcFechaCorteBalance(cli, anio, visita) {
       try {
         const r = await supabaseClient.from('balance_comprobacion').select('fecha_corte').eq('cliente_id', cli).eq('anio', Number(anio)).eq('visita', visita).not('fecha_corte', 'is', null).limit(1);
-        return (r.data && r.data[0] && r.data[0].fecha_corte) || '';
+        const f = String((r.data && r.data[0] && r.data[0].fecha_corte) || '').slice(0, 10);
+        PC_FB[cli + '|' + anio + '|' + visita] = f; return f;
       } catch (e) { return ''; }
+    }
+    // Lectura inmediata de esa fecha (si ya se consultó); si no, la pide y avisa cuando llega para repintar
+    function pcFbSync(cli, anio, visita, alRecibir) {
+      const k = cli + '|' + anio + '|' + visita;
+      if (k in PC_FB) return PC_FB[k];
+      if (cli && anio && visita && !PC_FB_REQ[k]) { PC_FB_REQ[k] = 1; pcFechaCorteBalance(cli, anio, visita).then(() => { if (alRecibir) alRecibir(); }); }
+      return '';
     }
     // d: { titulo, cuenta, ref, cliente, anioVisita, fechaCorte, fechaAnalisis, elaboro, reviso, objetivo, procedimiento, fuente, responsable, conclusion } (texto o lista)
     // Datos que salen del programa guardado: fecha de corte, quién revisó, lista de procedimientos y conclusión de la cuenta
@@ -20125,7 +20138,7 @@ ${cont.innerHTML}
       else f[k] = v;
       obGuardar(); obPintar();
     }
-    function obCab(k, v) { if (k === 'cierre') obE.cierre = v; else if (k === 'base') obE.base = Number(v) || 360; else if (k === 'libros') obE.libros = String(v).trim() === '' ? null : obNum(v); obGuardar(); obPintar(); }
+    function obCab(k, v) { if (k === 'cierre') { obE.cierre = v; const fh = $im('nm-fecha'); if (fh && v) fh.value = v; } else if (k === 'base') obE.base = Number(v) || 360; else if (k === 'libros') obE.libros = String(v).trim() === '' ? null : obNum(v); obGuardar(); obPintar(); }
     function obAgregar() { obE.filas.push({ ent: '', op: '', ini: '', ven: '', tasa: '', cap: '', corto: null, ult: '' }); obGuardar(); obPintar(); }
     async function obQuitar(i) { if (!(await confirmarApp('¿Quitar esta fila del anexo?'))) return; obE.filas.splice(i, 1); obGuardar(); obPintar(); }
     async function obVaciar() { if (!obE.filas.length) return; if (!(await confirmarApp('Se borrarán las ' + obE.filas.length + ' filas del anexo. ¿Continuar?'))) return; obE.filas = []; obE.archivo = ''; obGuardar(); obPintar(); }
@@ -20519,7 +20532,7 @@ ${cont.innerHTML}
         const m = $im('pp-msg'); if (m) { m.textContent = ppE.msg; m.style.color = error ? '#b91c1c' : '#6b6b63'; }
       }, 700);
     }
-    function ppCab(v) { ppE.cierre = v; ppGuardar(); ppPintar(); }
+    function ppCab(v) { ppE.cierre = v; { const fh = $im('nm-fecha'); if (fh && v) fh.value = v; } ppGuardar(); ppPintar(); }
     function ppSet(i, k, v) {
       const f = ppE.filas[i]; if (!f) return;
       if (k === 'fcm' || k === 'frv' || k === 'fid') f[k] = v ? obFecha(v) : '';
@@ -20650,20 +20663,32 @@ ${cont.innerHTML}
       const tdn = (v, cls) => '<td class="px-2 py-0.5 text-right whitespace-nowrap ' + (cls || '') + '">' + num(v) + '</td>';
       const tdd = d => '<td class="px-2 py-0.5 text-right whitespace-nowrap font-bold ' + (Math.abs(d) <= TOL ? 'text-emerald-700' : 'text-red-600') + '">' + num(d) + '</td>';
       const btn = (k, t) => '<button type="button" class="v2r-i" onclick="ppVer(\'' + e(k) + '\')" title="' + e(t) + '">' + IC_OJO + '</button>';
+      const btnT = (k, t, w) => '<button type="button" class="v2r-i" onclick="ppVer(\'' + e(k) + '\')" title="' + e(t) + '" style="width:auto;gap:2px">' + IC_OJO + '<span style="font-size:10px;color:#9a9a92;margin-left:1px">' + w + '</span></button>';
       const btnA = (k, t) => '<button type="button" class="v2r-i" style="color:#b45309" onclick="ppVer(\'' + e(k) + '\')" title="' + e(t) + '">' + IC_OJO.replace('#449964', '#b45309') + '</button>';
       const lista = (arr, lim) => {
         const sh = arr.slice(0, lim), c2 = 'px-2 py-0.5 whitespace-nowrap';
         return '<div class="overflow-x-auto"><table class="w-full text-[11px] leading-tight border-collapse my-1"><thead class="bg-slate-50 text-slate-600"><tr>' + th('Código', 'text-left') + th('Nombre', 'text-left') + th('Detalle', 'text-left') + th('Estado', 'text-left') + th('Compra') + th('Importe depreciable') + th('Fecha', 'text-left') + th('Vida (meses)') + th('Dep. al 31-dic ' + (D.Yc - 1)) + th('Gasto ' + D.Yc) + th('Dep. al corte') + th('Neto') + th('Sistema') + th('Diferencia') + '</tr></thead><tbody>'
           + sh.map(x => '<tr class="border-b border-slate-100"><td class="' + c2 + '">' + e(x.f.cod) + '</td><td class="' + c2 + '">' + e(x.f.nom) + '</td><td class="' + c2 + '">' + e(x.f.det) + '</td><td class="' + c2 + '">' + e(x.f.est) + '</td>' + tdn(ppN(x.f.cmp)) + tdn(x.r.imp) + '<td class="' + c2 + '">' + e(obFecha(x.f.fcm) || obFecha(x.f.fid)) + '</td><td class="' + c2 + ' text-right">' + e(String(x.f.vid || '')) + '</td>' + tdn(x.r.ap) + tdn(x.r.gasto) + tdn(x.r.ac) + tdn(x.r.neto) + tdn(x.r.sis) + (x.r.dif === null ? tdn(null) : tdd(x.r.dif)) + '</tr>').join('')
+          + (() => { const S = g => R2(arr.reduce((a, x) => a + (g(x) || 0), 0)), hs = arr.some(x => x.r.sis !== null); return '<tr class="border-t border-slate-300 bg-slate-50 font-bold text-slate-800"><td class="px-2 py-0.5" colspan="4">Total (' + arr.length + ' activos)</td>' + tdn(S(x => ppN(x.f.cmp))) + tdn(S(x => x.r.imp)) + '<td></td><td></td>' + tdn(S(x => x.r.ap)) + tdn(S(x => x.r.gasto)) + tdn(S(x => x.r.ac)) + tdn(S(x => x.r.neto)) + (hs ? tdn(S(x => x.r.sis)) : '<td></td>') + '<td></td></tr>'; })()
           + '</tbody></table></div>' + (arr.length > lim ? '<div style="font-size:11px;color:#6b6b63">Se muestran los primeros ' + lim + ' de ' + arr.length + '. El Excel trae todos.</div>' : '');
+      };
+      // Cuentas del balance de una clasificación, con las dos diferencias
+      const cuentasHtml = x => {
+        const dC = R2(x.bruto - x.balC), dD = R2(x.ac - x.balD), c1 = 'px-2 py-0.5 whitespace-nowrap', tr = (a, v, cls, d) => '<tr class="border-b border-slate-100 ' + (cls || '') + '"><td class="' + c1 + '">' + a + '</td>' + (d ? tdd(v) : tdn(v, cls)) + '</tr>';
+        const ct = (arr, ab) => arr.length ? arr.map(b => tr('<span class="pl-4 text-slate-600">' + e(b.codigo) + ' ' + e(b.cuenta) + (b.sumaria === 'AR' ? ' (AR)' : '') + '</span>', ab ? Math.abs(b.saldo) : b.saldo, 'text-slate-600')).join('') : '<tr class="border-b border-slate-100"><td class="' + c1 + ' pl-6" style="color:#b45309" colspan="2">Sin cuenta del balance asignada</td></tr>';
+        return '<div class="overflow-x-auto"><table class="text-[11px] leading-tight border-collapse my-1"><tbody>'
+          + tr('Costo según el anexo (' + x.n + ' activos)', x.bruto) + ct(x.costo, false) + tr('Costo según el balance', x.balC, 'font-bold bg-slate-50') + tr('Diferencia de costo', dC, 'font-bold', true)
+          + tr('Depreciación acumulada según el anexo', x.ac) + ct(x.dep, true) + tr('Depreciación acumulada según el balance', x.balD, 'font-bold bg-slate-50') + tr('Diferencia de depreciación', dD, 'font-bold', true)
+          + '</tbody></table></div>' + ((Math.abs(dC) > TOL || Math.abs(dD) > TOL) ? '<div style="font-size:11px;color:#6b6b63;margin-bottom:4px">Causas más comunes: activos que faltan en el anexo, bajas registradas en un solo lado, reavalúos o una cuenta asignada a otra clasificación.</div>' : '');
       };
       // 1. Cuadre con las sumarias
       const lft = 'px-2 py-0.5 min-w-[280px]';
       let tb = '';
       D.clases.forEach(x => {
-        const ctas = x.costo.concat(x.dep).map(b => b.codigo + (b.sumaria === 'AR' ? ' (AR)' : '')).join(' · ');
-        tb += '<tr class="border-b border-slate-100"><td class="' + lft + '">' + e(x.k) + btn('c' + x.k, 'Ver los activos de esta clasificación') + (ctas ? '<div class="text-[10px] text-slate-400">Cuentas del balance: ' + e(ctas) + '</div>' : '<div class="text-[10px]" style="color:#b45309">Sin cuenta del balance asignada</div>') + '</td><td class="px-2 py-0.5 text-right">' + x.n + '</td>' + tdn(x.bruto) + tdn(x.balC) + tdd(R2(x.bruto - x.balC)) + tdn(x.ac) + tdn(x.balD) + tdd(R2(x.ac - x.balD)) + tdn(x.neto) + tdn(R2(x.balC - x.balD)) + '</tr>';
+        const hayCta = x.costo.length + x.dep.length > 0;
+        tb += '<tr class="border-b border-slate-100"><td class="' + lft + '">' + e(x.k) + btnT('c' + x.k, 'Ver los activos de esta clasificación', 'activos') + btnT('a' + x.k, 'Ver las cuentas del balance y las diferencias', 'cuentas') + (hayCta ? '' : ' <span class="text-[10px]" style="color:#b45309">Sin cuenta del balance asignada</span>') + '</td><td class="px-2 py-0.5 text-right">' + x.n + '</td>' + tdn(x.bruto) + tdn(x.balC) + tdd(R2(x.bruto - x.balC)) + tdn(x.ac) + tdn(x.balD) + tdd(R2(x.ac - x.balD)) + tdn(x.neto) + tdn(R2(x.balC - x.balD)) + '</tr>';
         if (ppE.ver['c' + x.k]) tb += '<tr><td colspan="10" class="px-3 py-2 bg-white">' + lista(x.items, 400) + '</td></tr>';
+        if (ppE.ver['a' + x.k]) tb += '<tr><td colspan="10" class="px-3 py-2 bg-white">' + cuentasHtml(x) + '</td></tr>';
       });
       const opts = k => '<option value="-"' + (k === '-' ? ' selected' : '') + '>No va en el anexo</option>' + D.claves.map(c => '<option value="' + e(c) + '"' + (k === c ? ' selected' : '') + '>' + e(c) + '</option>').join('');
       D.sin.forEach(s => {
@@ -20760,10 +20785,18 @@ ${cont.innerHTML}
       if (sa && !sa.options.length) { for (let y = hoy + 1; y >= hoy - 4; y--) sa.add(new Option('Año ' + y, String(y))); sa.value = String(($im('an-anio') || {}).value || hoy); }
       nmCargar();
     }
+    // Si se cambia la fecha del encabezado en un cálculo que la usa, se aplica al cálculo y queda guardada
+    function nmFechaCambio(v) {
+      if (!v) return;
+      if (NM_CTX.hoja === 'ppe' && ppE.cargado && ppE.cierre !== v) ppCab(v);
+      else if (NM_CTX.hoja === 'obligaciones' && obE.cargado && obE.cierre !== v) obCab('cierre', v);
+    }
     async function nmCargar() {
       const cli = $im('nm-cliente').value, anio = $im('nm-anio').value, vis = $im('nm-visita').value;
       Object.assign(nmE, { cliente: cli, anio, visita: vis, filas: {}, pts: [], sv: null, res: null, bal: null, conc: null, cons: null, f104: null });
-      const f = $im('nm-fecha'); if (f) f.value = vis === 'final' ? anio + '-12-31' : anio + '-09-30';
+      const f = $im('nm-fecha'), fbN = cli ? await pcFechaCorteBalance(cli, anio, vis) : '';
+      if (nmE.cliente !== cli || nmE.anio !== anio || nmE.visita !== vis) return;
+      if (f) f.value = fbN || (vis === 'final' ? anio + '-12-31' : anio + '-09-30');
       const a = $im('nm-auditor'); if (a) a.value = (typeof nombreUsuarioActivo === 'function' ? nombreUsuarioActivo() : '') || '';
       const aviso = $im('nm-aviso'), esp = $im('nm-espacio');
       if (!cli) { aviso.classList.remove('hidden'); esp.classList.add('hidden'); $im('nm-actualizado').value = ''; return; }
