@@ -20146,15 +20146,21 @@ ${cont.innerHTML}
             const cuentas = porArch[arch];
             const es = await supabaseClient.rpc('mayor_clasif_estado_app', { p_archivo: arch, p_cuentas: cuentas }); if (es.error) throw es.error;
             const inf = es.data || {}, hechas = new Set(inf.hechas || []), pend = cuentas.filter(c => !hechas.has(c));
-            const ini = Number(inf.min_n) || 0, fin = Number(inf.max_n) || 0, PASO = 10, rangos = [];
+            const ini = Number(inf.min_n) || 0, fin = Number(inf.max_n) || 0, PASO = 4, rangos = [];
             if (pend.length) for (let d = ini; d <= fin; d += PASO) rangos.push(d);
             S.total += rangos.length;
             if (tok === nmE.mvTok && nmE.tab === 'movs') mvPintar(true);
-            for (const d of rangos) {
-              if (tok !== nmE.mvTok) return;
-              const r = await supabaseClient.rpc('mayor_clasif_tanda_app', { p_archivo: arch, p_cuentas: pend, p_desde: d, p_hasta: d + PASO - 1 }); if (r.error) throw r.error;
-              S.calc++; if (tok === nmE.mvTok && nmE.tab === 'movs') mvPintar(true);
-            }
+            let ir = 0;
+            const obrero = async () => {
+              while (ir < rangos.length) {
+                if (tok !== nmE.mvTok) return;
+                const d = rangos[ir++];
+                const r = await supabaseClient.rpc('mayor_clasif_tanda_app', { p_archivo: arch, p_cuentas: pend, p_desde: d, p_hasta: d + PASO - 1 }); if (r.error) throw r.error;
+                S.calc++; if (tok === nmE.mvTok && nmE.tab === 'movs') mvPintar(true);
+              }
+            };
+            await Promise.all([obrero(), obrero()]);
+            if (tok !== nmE.mvTok) return;
             if (pend.length) { const ce = await supabaseClient.rpc('mayor_clasif_cerrar_app', { p_archivo: arch, p_cuentas: pend }); if (ce.error) throw ce.error; }
             const lee = await supabaseClient.rpc('mayor_clasif_leer_app', { p_archivo: arch, p_cuentas: cuentas }); if (lee.error) throw lee.error;
             cuentas.forEach(c => { S.cache[c] = []; });
