@@ -20856,14 +20856,6 @@ ${cont.innerHTML}
         // Intangibles (sumaria AR): no entran solos a esta comparación
         const ar = ppE.bal.filter(b => b.sumaria === 'AR' && !(ppE.mapa[b.codigo] && ppE.mapa[b.codigo] !== '-'));
         if (ar.length) h += '<div style="font-size:11px;color:#6b6b63;margin:0 0 10px"><div style="margin-bottom:3px">Intangibles de la sumaria AR (no entran en esta comparación; se analizan en su propia sumaria). Si el anexo del cliente sí trae esos activos, asígnalos a su clasificación:</div>' + ar.map(b => '<div style="margin-bottom:2px">' + e(b.codigo) + ' ' + e(b.cuenta) + ' · ' + ppF2(Math.abs(b.saldo)) + ' <select onchange="ppMapear(\'' + e(b.codigo) + '\',this.value)" class="text-[11px] border border-slate-300 rounded ml-1"><option value="">No incluir</option>' + opts('') + '</select></div>').join('') + '</div>';
-        // Conciliación: todo el saldo de la sumaria queda explicado
-        const nCo = sumC(CN, x => x.balC), nDe = sumC(CN, x => x.balD), fila3 = (t, c, d, cls) => '<tr class="border-b border-slate-100 ' + (cls || '') + '"><td class="px-2 py-0.5 min-w-[300px]">' + t + '</td>' + tdn(c, cls) + tdn(d, cls) + tdn(R2(c - d), cls) + '</tr>';
-        h += '<div style="font-size:12px;font-weight:700;color:#44443f;margin:10px 0 4px">Total del balance de propiedad, planta y equipo = con anexo + sin anexo</div><div class="overflow-x-auto" style="margin-bottom:12px"><table class="text-[11px] leading-tight border-collapse" style="min-width:620px"><thead class="bg-slate-50 text-slate-600"><tr>' + th('', 'text-left') + th('Costo según balance') + th('Dep. acumulada según balance') + th('Valor neto según balance') + '</tr></thead><tbody>'
-          + fila3('Clasificaciones con anexo' + (CN.length ? ' (seleccionadas)' : ''), tA.balC, tA.balD)
-          + (CN.length ? fila3('Clasificaciones con anexo no seleccionadas', nCo, nDe) : '')
-          + fila3('Cuentas sin detalle en el anexo', tCo, tDe)
-          + fila3('Total del balance de propiedad, planta y equipo', R2(tA.balC + nCo + tCo), R2(tA.balD + nDe + tDe), 'font-bold bg-slate-50')
-          + '</tbody></table></div>';
       }
       // Comparación del gasto de depreciación del año: anexo (herramienta) contra el aumento de la depreciación acumulada en el mayor y contra el gasto en resultados
       {
