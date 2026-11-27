@@ -20711,10 +20711,10 @@ ${cont.innerHTML}
       let sinDetalle = 0, hay = false;
       codigos.forEach(c => {
         const x = M.cta[c]; if (!x) return; hay = hay || x.hay;
-        const sg = dep ? -1 : 1; z.ini += sg * x.ini; z.fin += sg * x.fin;
+        const sg = 1; z.ini += x.ini; z.fin += x.fin;
         if (x.lineas) {
           let s = 0;
-          x.lineas.forEach(l => { const t = ppMovTipo(l, dep), d = dep ? l.cre - l.deb : l.deb - l.cre; z[t] += d; s += d; ls.push({ ...l, t, d, c }); });
+          x.lineas.forEach(l => { const t = ppMovTipo(l, dep), d = l.deb - l.cre; z[t] += d; s += d; ls.push({ ...l, t, d, c }); });
           const falta = R((sg * (x.fin - x.ini)) - s); if (Math.abs(falta) > 0.5) { z.otr += falta; ls.push({ fecha: '', ter: '', con: 'Diferencia entre el movimiento del resumen del mayor y la suma de sus asientos (revisar si el mayor trae todos los asientos)', deb: 0, cre: 0, t: 'otr', d: falta, c }); }
         } else if (x.hay) { const d = sg * (x.fin - x.ini); z.otr += d; sinDetalle++; ls.push({ fecha: '', ter: '', con: 'Sin detalle de asientos en el mayor cargado: movimiento neto de la cuenta', deb: 0, cre: 0, t: 'otr', d: R(d), c }); }
       });
@@ -20726,8 +20726,8 @@ ${cont.innerHTML}
       const M = ppE.mov; if (!M || !M.cargado || !M.ids.length) return null;
       const mk = dep => {
         const filas = [];
-        D.clases.filter(x => x.inc).forEach(x => { const cs = (dep ? x.dep : x.costo).map(b => b.codigo); if (cs.length) filas.push(ppMovFila(x.k, cs, dep, Math.abs((dep ? x.dep : x.costo).reduce((a, b) => a + b.saldo, 0)))); });
-        D.sin.filter(s => s.inc && !!s.dep === dep).forEach(s => filas.push(ppMovFila(s.b.codigo + ' ' + s.b.cuenta + ' (sin activos en el anexo)', [s.b.codigo], dep, Math.abs(s.b.saldo))));
+        D.clases.filter(x => x.inc).forEach(x => { const cs = (dep ? x.dep : x.costo).map(b => b.codigo); if (cs.length) filas.push(ppMovFila(x.k, cs, dep, (dep ? -1 : 1) * Math.abs((dep ? x.dep : x.costo).reduce((a, b) => a + b.saldo, 0)))); });
+        D.sin.filter(s => s.inc && !!s.dep === dep).forEach(s => filas.push(ppMovFila(s.b.codigo + ' ' + s.b.cuenta + ' (sin activos en el anexo)', [s.b.codigo], dep, (dep ? -1 : 1) * Math.abs(s.b.saldo))));
         const T = { ini: 0, a: 0, baj: 0, ven: 0, rec: 0, aju: 0, rea: 0, otr: 0, fin: 0 }; filas.forEach(f => Object.keys(T).forEach(k => { T[k] = obR(T[k] + f.z[k]); }));
         return { filas, T, bal: obR(filas.reduce((a, f) => a + (f.bal || 0), 0)) };
       };
