@@ -20784,7 +20784,7 @@ ${cont.innerHTML}
       const tdn = (v, cls) => '<td class="px-2 py-0.5 text-right whitespace-nowrap ' + (cls || '') + '">' + num(v) + '</td>';
       const tdd = d => '<td class="px-2 py-0.5 text-right whitespace-nowrap font-bold ' + (Math.abs(d) <= TOL ? 'text-emerald-700' : 'text-red-600') + '">' + num(d) + '</td>';
       const btn = (k, t) => '<button type="button" class="v2r-i" onclick="ppVer(\'' + e(k) + '\')" title="' + e(t) + '">' + IC_OJO + '</button>';
-      const btnT = (k, t, w) => '<button type="button" class="v2r-i" onclick="ppVer(\'' + e(k) + '\')" title="' + e(t) + '" style="width:auto;gap:2px">' + IC_OJO + '<span style="font-size:10px;color:#9a9a92;margin-left:1px">' + w + '</span></button>';
+      const btnT = (k, t, w) => '<button type="button" class="v2r-i" onclick="ppVer(\'' + e(k) + '\')" title="' + e(t) + '" style="width:auto">' + (w === 'cuentas' ? IC_OJO.replace('#449964', '#b45309') : IC_OJO) + '</button>';
       const chk = (k, on) => '<input type="checkbox"' + (on ? ' checked' : '') + ' onchange="ppIncl(\'' + e(k) + '\',this.checked)" title="Marcado: entra al cuadre y al costo y depreciación. Desmarcado: se revisa aparte." style="margin-right:6px;accent-color:#449964;vertical-align:middle">';
       const btnA = (k, t) => '<button type="button" class="v2r-i" style="color:#b45309" onclick="ppVer(\'' + e(k) + '\')" title="' + e(t) + '">' + IC_OJO.replace('#449964', '#b45309') + '</button>';
       const lista = (arr, lim) => {
