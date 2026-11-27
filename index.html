@@ -20513,7 +20513,7 @@ ${cont.innerHTML}
     }
     async function ppCargar() {
       PC_CORTE.t = 0; const cli = nmE.cliente, anio = Number(nmE.anio), vis = nmE.visita, id = ++ppE.cargaId;
-      Object.assign(ppE, { cargado: false, filas: [], bal: [], gas: [], mapa: {}, tipos: {}, notas: {}, mov: null, excl: new Set(), msg: '', archivo: '', pag: 0, ver: {} });
+      Object.assign(ppE, { cargado: false, gasX: [], filas: [], bal: [], gas: [], mapa: {}, tipos: {}, notas: {}, mov: null, excl: new Set(), msg: '', archivo: '', pag: 0, ver: {} });
       if (!cli) return;
       ppE.cierre = ($im('nm-fecha') || {}).value || (vis === 'final' ? anio + '-12-31' : anio + '-09-30');
       const [r1, r2, r3] = await Promise.all([
@@ -20523,11 +20523,12 @@ ${cont.innerHTML}
       ]);
       if (id !== ppE.cargaId) return;
       const d = r1.data;
-      if (d) { ppE.filas = Array.isArray(d.filas) ? d.filas : []; if (d.fecha_cierre) ppE.cierre = d.fecha_cierre; ppE.archivo = d.archivo_nombre || ''; ppE.mapa = (d.partidas && !Array.isArray(d.partidas) && d.partidas.mapa) || {}; ppE.excl = new Set((d.partidas && !Array.isArray(d.partidas) && Array.isArray(d.partidas.excl)) ? d.partidas.excl : []); ppE.tipos = (d.partidas && !Array.isArray(d.partidas) && d.partidas.tipos) || {}; ppE.notas = (d.partidas && !Array.isArray(d.partidas) && d.partidas.notas) || {}; }
+      if (d) { ppE.filas = Array.isArray(d.filas) ? d.filas : []; if (d.fecha_cierre) ppE.cierre = d.fecha_cierre; ppE.archivo = d.archivo_nombre || ''; ppE.mapa = (d.partidas && !Array.isArray(d.partidas) && d.partidas.mapa) || {}; ppE.excl = new Set((d.partidas && !Array.isArray(d.partidas) && Array.isArray(d.partidas.excl)) ? d.partidas.excl : []); ppE.tipos = (d.partidas && !Array.isArray(d.partidas) && d.partidas.tipos) || {}; ppE.notas = (d.partidas && !Array.isArray(d.partidas) && d.partidas.notas) || {}; ppE.gasX = (d.partidas && !Array.isArray(d.partidas) && Array.isArray(d.partidas.gasX)) ? d.partidas.gasX.map(String) : []; }
       const acc = {}; (r2.data || []).forEach(x => { const s = String(x.sumaria).trim().toUpperCase(), k = s + '|' + x.codigo; acc[k] = acc[k] || { sumaria: s, codigo: String(x.codigo), cuenta: x.cuenta, saldo: 0 }; acc[k].saldo += Number(x.saldo) || 0; });
       ppE.bal = Object.values(acc).map(x => ({ ...x, saldo: obR(x.saldo) }));
       { // cuentas de gasto de depreciación (resultados): por nombre, en cuentas de gastos o costos (código que empieza en 5 o 6)
-        const g = {}; (r3.data || []).forEach(x => { const c = String(x.codigo).trim(), sm = String(x.sumaria).trim().toUpperCase(); if (!/^[56]/.test(c) || sm === 'AO' || sm === 'AR') return; g[c] = g[c] || { sumaria: sm, codigo: c, cuenta: x.cuenta, saldo: 0 }; g[c].saldo += Number(x.saldo) || 0; });
+        const g = {}; (r3.data || []).forEach(x => { const c = String(x.codigo).trim(), sm = String(x.sumaria).trim().toUpperCase(); if (/^[123]/.test(c) || sm === 'AO' || sm === 'AR') return; g[c] = g[c] || { sumaria: sm, codigo: c, cuenta: x.cuenta, saldo: 0 }; g[c].saldo += Number(x.saldo) || 0; });
+        if (ppE.gasX.length) { const rx = await supabaseClient.from('balance_comprobacion').select('sumaria, codigo, cuenta, saldo').eq('cliente_id', cli).eq('anio', anio).eq('visita', vis).in('codigo', ppE.gasX).limit(500); (rx.data || []).forEach(x => { const c = String(x.codigo).trim(); g[c] = g[c] || { sumaria: String(x.sumaria).trim().toUpperCase(), codigo: c, cuenta: x.cuenta, saldo: 0 }; g[c].saldo += Number(x.saldo) || 0; g[c].man = true; }); }
         ppE.gas = Object.values(g).map(x => ({ ...x, saldo: obR(x.saldo) }));
       }
       ppE.cargado = true;
@@ -20537,7 +20538,7 @@ ${cont.innerHTML}
       clearTimeout(ppE.guardando);
       ppE.guardando = setTimeout(async () => {
         if (!nmE.cliente) return;
-        const fila = { cliente_id: nmE.cliente, anio: Number(nmE.anio), visita: nmE.visita, cuenta: PP_CUENTA, archivo_nombre: ppE.archivo || null, filas: ppE.filas, fecha_cierre: ppE.cierre || null, base_dias: 360, partidas: { mapa: ppE.mapa, excl: [...ppE.excl], tipos: ppE.tipos, notas: ppE.notas }, auditor: (typeof nombreUsuarioActivo === 'function' ? nombreUsuarioActivo() : '') || null, updated_at: new Date().toISOString() };
+        const fila = { cliente_id: nmE.cliente, anio: Number(nmE.anio), visita: nmE.visita, cuenta: PP_CUENTA, archivo_nombre: ppE.archivo || null, filas: ppE.filas, fecha_cierre: ppE.cierre || null, base_dias: 360, partidas: { mapa: ppE.mapa, excl: [...ppE.excl], tipos: ppE.tipos, notas: ppE.notas, gasX: ppE.gasX || [] }, auditor: (typeof nombreUsuarioActivo === 'function' ? nombreUsuarioActivo() : '') || null, updated_at: new Date().toISOString() };
         const { error } = await supabaseClient.from('anexo_inversiones').upsert(fila, { onConflict: 'cliente_id,anio,cuenta,visita' });
         ppE.msg = error ? 'No se pudo guardar: ' + (error.message || error) : 'Guardado ' + new Date().toLocaleTimeString('es-EC');
         const m = $im('pp-msg'); if (m) { m.textContent = ppE.msg; m.style.color = error ? '#b91c1c' : '#6b6b63'; }
@@ -20686,6 +20687,30 @@ ${cont.innerHTML}
       if (/baja|siniestro|robo|hurto|castigo|obsolet|retiro|desecho|chatarra|destruc/.test(t)) return 'baj';
       return 'otr';
     }
+    // Gasto de depreciación en resultados mes a mes (cuentas de gasto del balance), tomado del resumen mensual del mayor
+    async function ppGasMes(M, id) {
+      M.gm = M.gm || {};
+      if (!M.ids.length || !ppE.gas.length) return;
+      const gc = ppE.gas.map(x => x.codigo).filter(c => !M.gm[c]), Yg = String(ppE.cierre || '').slice(0, 4);
+      if (!gc.length) return;
+      const rg = await f104Pag(() => supabaseClient.from('mayor_resumen_mes').select('cuenta, anio_mes, debitos, creditos').in('archivo_id', M.ids).in('cuenta', gc).gte('anio_mes', Yg + '-01').lte('anio_mes', Yg + '-12'));
+      gc.forEach(c => { M.gm[c] = {}; });
+      rg.forEach(x => { const k = String(x.cuenta).trim(), o = (M.gm[k] = M.gm[k] || {}); o[x.anio_mes] = (o[x.anio_mes] || 0) + (Number(x.debitos) || 0) - (Number(x.creditos) || 0); });
+      if (id !== undefined && id !== ppE.cargaId) return;
+      if (nmE.tab === 'cuadres') nmCuaPintar();
+    }
+    // Agregar a mano una cuenta de gasto (cualquier código del balance) o quitarla
+    async function ppGasAdd() {
+      const inp = $im('pp-gas-cod'), c = String((inp && inp.value) || '').trim(); if (!c) return;
+      if (ppE.gas.some(x => x.codigo === c)) { ppE.gmsg = 'Esa cuenta ya está en la lista.'; nmCuaPintar(); return; }
+      const r = await supabaseClient.from('balance_comprobacion').select('sumaria, codigo, cuenta, saldo').eq('cliente_id', nmE.cliente).eq('anio', Number(nmE.anio)).eq('visita', nmE.visita).eq('codigo', c).limit(50);
+      const f = r.data || []; if (!f.length) { ppE.gmsg = 'No encontré la cuenta ' + c + ' en el balance de comprobación.'; nmCuaPintar(); return; }
+      ppE.gasX = (ppE.gasX || []).concat([c]);
+      ppE.gas.push({ sumaria: String(f[0].sumaria).trim().toUpperCase(), codigo: c, cuenta: f[0].cuenta, saldo: obR(f.reduce((a, x) => a + (Number(x.saldo) || 0), 0)), man: true });
+      ppE.gmsg = ''; ppGuardar(); nmCuaPintar();
+      if (ppE.mov) await ppGasMes(ppE.mov);
+    }
+    function ppGasQuitar(c) { ppE.gasX = (ppE.gasX || []).filter(x => x !== c); ppE.gas = ppE.gas.filter(x => x.codigo !== c); ppE.excl.delete('g:' + c); ppGuardar(); nmCuaPintar(); }
     async function ppMovCargar() {
       const cli = nmE.cliente, anio = Number(nmE.anio), vis = nmE.visita, id = ppE.cargaId;
       const M = ppE.mov = { cargado: false, ids: [], cta: {}, det: {}, ver: {}, msg: '' };
@@ -20703,15 +20728,7 @@ ${cont.innerHTML}
         if (id !== ppE.cargaId) return;
         cods.forEach(c => { const m = may.filter(x => String(x.cuenta).trim() === c), sum = k => m.reduce((a, x) => a + (Number(x[k]) || 0), 0); M.cta[c] = { dep: natura[c] === 'dep', hay: m.length > 0, ini: sum('saldo_inicial'), deb: sum('debitos'), cre: sum('creditos'), fin: sum('saldo_final'), lineas: null }; });
         M.cargado = true; if (nmE.tab === 'cuadres') nmCuaPintar();
-        // gasto de depreciación en resultados, mes a mes (cuentas de gasto detectadas en el balance)
-        M.gm = {};
-        if (M.ids.length && ppE.gas.length) {
-          const gc = ppE.gas.map(x => x.codigo), Yg = String(ppE.cierre || '').slice(0, 4);
-          const rg = await f104Pag(() => supabaseClient.from('mayor_resumen_mes').select('cuenta, anio_mes, debitos, creditos').in('archivo_id', M.ids).in('cuenta', gc).gte('anio_mes', Yg + '-01').lte('anio_mes', Yg + '-12'));
-          rg.forEach(x => { const k = String(x.cuenta).trim(), o = (M.gm[k] = M.gm[k] || {}); o[x.anio_mes] = (o[x.anio_mes] || 0) + (Number(x.debitos) || 0) - (Number(x.creditos) || 0); });
-          if (id !== ppE.cargaId) return;
-          if (nmE.tab === 'cuadres') nmCuaPintar();
-        }
+        await ppGasMes(M, id);
         for (const c of cods) {
           if (!M.ids.length || !M.cta[c].hay) continue;
           const out = [];
@@ -20888,11 +20905,12 @@ ${cont.innerHTML}
           h += '<div style="font-size:11px;font-weight:700;color:#44443f;margin:6px 0 2px">Mes a mes, todas las clasificaciones</div><div class="overflow-x-auto" style="margin-bottom:8px">' + tablaMes(sumM(mmK), hayM ? sumM(mayMes) : [], resMes) + '</div>'
             + (resMes ? '' : '<div style="font-size:11px;color:#b45309;margin-bottom:8px">El gasto en resultados mes a mes se toma del mayor contable: cárgalo en la pantalla Mayor contable (o espera a que termine de leerse) para verlo aquí.</div>'); }
         h += '<div class="overflow-x-auto" style="margin-bottom:12px"><table class="text-[11px] leading-tight border-collapse" style="min-width:760px"><thead class="bg-slate-50 text-slate-600"><tr>' + th('Gasto de depreciación en resultados (balance y mayor)', 'text-left') + th('Sumaria', 'text-left') + th('Saldo al corte') + '</tr></thead><tbody>'
-          + (ppE.gas.length ? ppE.gas.map(x => '<tr class="border-b border-slate-100"' + (ppE.excl.has('g:' + x.codigo) ? ' style="opacity:.5"' : '') + '><td class="px-2 py-0.5 min-w-[360px]">' + chk('g:' + x.codigo, !ppE.excl.has('g:' + x.codigo)) + e(x.codigo) + ' ' + e(x.cuenta) + '</td><td class="px-2 py-0.5">' + e(x.sumaria) + '</td>' + tdn(x.saldo) + '</tr>').join('') : '<tr class="border-b border-slate-100"><td class="px-2 py-0.5" colspan="3" style="color:#b45309">No se encontraron cuentas de gasto de depreciación en el balance de comprobación.</td></tr>')
+          + (ppE.gas.length ? ppE.gas.map(x => '<tr class="border-b border-slate-100"' + (ppE.excl.has('g:' + x.codigo) ? ' style="opacity:.5"' : '') + '><td class="px-2 py-0.5 min-w-[360px]">' + chk('g:' + x.codigo, !ppE.excl.has('g:' + x.codigo)) + e(x.codigo) + ' ' + e(x.cuenta) + (x.man ? ' <span style="color:#78716c">(agregada)</span> <a href="#" onclick="ppGasQuitar(\'' + e(x.codigo) + '\');return false" title="Quitar esta cuenta" style="color:#a8a29e">✕</a>' : '') + '</td><td class="px-2 py-0.5">' + e(x.sumaria) + '</td>' + tdn(x.saldo) + '</tr>').join('') : '<tr class="border-b border-slate-100"><td class="px-2 py-0.5" colspan="3" style="color:#b45309">No se encontraron cuentas de gasto de depreciación en el balance de comprobación.</td></tr>')
           + '<tr class="border-b border-slate-200 bg-slate-50 font-bold text-slate-800"><td class="px-2 py-0.5" colspan="2">Total gasto de depreciación en resultados</td>' + tdn(tGas) + '</tr>'
           + '<tr class="border-b border-slate-100"><td class="px-2 py-0.5" colspan="2">Diferencia: gasto según el anexo menos gasto en resultados</td>' + (ppE.gas.length ? tdd(R2(tAn - tGas)) : '<td></td>') + '</tr>'
           + (tMa === null ? '' : '<tr class="border-b border-slate-100"><td class="px-2 py-0.5" colspan="2">Diferencia: aumento de dep. acumulada en el mayor menos gasto en resultados</td>' + (ppE.gas.length ? tdd(R2(tMa - tGas)) : '<td></td>') + '</tr>')
           + '</tbody></table></div>'
+          + '<div style="font-size:11px;color:#6b6b63;margin:-6px 0 8px">Agregar otra cuenta de gasto: <input id="pp-gas-cod" type="text" placeholder="código de la cuenta" style="border:1px solid #d6d3d1;border-radius:4px;padding:1px 6px;font-size:11px;width:150px;background:#fff" onkeydown="if(event.key===\'Enter\')ppGasAdd()"> <button type="button" onclick="ppGasAdd()" style="border:1px solid #d6d3d1;border-radius:4px;padding:1px 8px;font-size:11px;background:#f5f5f4;color:#44443f">Agregar</button> ' + (ppE.gmsg ? '<span style="color:#b45309">' + e(ppE.gmsg) + '</span>' : '') + '</div>'
           + '<p style="font-size:11px;color:#6b6b63;margin:-6px 0 10px">Causas más comunes de diferencia: depreciación de activos que no están en el anexo (derechos de uso, intangibles, adecuaciones), depreciación llevada a costos o inventario, activos dados de baja durante el año, fecha de corte distinta entre el anexo y el balance, o gasto registrado en una cuenta con otro nombre.</p>';
       }
       if (D.sinCalc) h += '<p style="font-size:11px;color:#b45309;margin:-4px 0 10px">' + D.sinCalc + ' activo(s) sin fecha de inicio, vida útil o valor de compra: no se pudo calcular su depreciación.</p>';
