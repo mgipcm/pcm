@@ -20438,7 +20438,7 @@ ${cont.innerHTML}
     }
     // ===== AO Propiedad, planta y equipo: anexo de activos fijos, depreciación por año y mes, y cuadre con las sumarias (AO y AOO) =====
     const PP_CUENTA = 'propiedad_planta_equipo';
-    const ppE = { cargado: false, cargaId: 0, filas: [], cierre: '', bal: [], mapa: {}, msg: '', archivo: '', guardando: null, filtro: '', cla: '', pag: 0, ver: {}, excl: new Set(), cdAn: new Set(), cdAb: new Set(['costo', 'dep']) };
+    const ppE = { cargado: false, cargaId: 0, filas: [], cierre: '', bal: [], mapa: {}, msg: '', archivo: '', guardando: null, filtro: '', cla: '', pag: 0, ver: {}, excl: new Set(), mov: null, cdAn: new Set(), cdAb: new Set(['costo', 'dep']) };
     const PP_COLS = [['cod', 'Código de activo'], ['cla', 'Clasificación (tipo de activo)'], ['nom', 'Nombre del activo'], ['det', 'Detalle'], ['est', 'Estado'], ['cmp', 'Valor de compra'], ['fcm', 'Fecha de compra'], ['rev', 'Valor de reavalúo'], ['frv', 'Fecha de reavalúo'], ['res', 'Valor residual'], ['vid', 'Meses de vida útil'], ['fid', 'Fecha de inicio de depreciación'], ['sis', 'Depreciación acumulada según el sistema (opcional)']];
     const PP_REF = { anexo: 'AO-02', dep: 'AO-03', cuadre: 'AO-04' };
     const PP_CSS = '.ob{border-collapse:collapse;font-size:10.5px;color:#2b2b27}.ob th{background:#fff;border:1px solid #dfdfdb;padding:2px 4px;font-weight:700;font-size:9.5px;text-align:center;line-height:1.2}.ob td{background:#f1f1ee;border:1px solid #e2e2dd;padding:0 3px;white-space:nowrap}.ob td.n{text-align:right}.ob td.ob-c{text-align:center;color:#9a9a92;width:26px}.ob tr.tot td{font-weight:700;border-top:1px solid #cfcfc8;background:#fff}.ob-i{border:0;background:transparent;font-size:10.5px;padding:1px 1px;outline:none;color:#2b2b27}.ob-i:focus{background:#fff;box-shadow:inset 0 0 0 1px #c9c9c0;border-radius:3px}.ob-b{font-size:12px;font-weight:600;color:#4a4a44;border:1px solid #dcdcd6;border-radius:8px;padding:4px 10px;background:#fff}.ob-h{font-size:13px;font-weight:700;color:#2b2b27;padding:12px 14px 6px}';
@@ -20512,7 +20512,7 @@ ${cont.innerHTML}
     }
     async function ppCargar() {
       PC_CORTE.t = 0; const cli = nmE.cliente, anio = Number(nmE.anio), vis = nmE.visita, id = ++ppE.cargaId;
-      Object.assign(ppE, { cargado: false, filas: [], bal: [], mapa: {}, excl: new Set(), msg: '', archivo: '', pag: 0, ver: {} });
+      Object.assign(ppE, { cargado: false, filas: [], bal: [], mapa: {}, mov: null, excl: new Set(), msg: '', archivo: '', pag: 0, ver: {} });
       if (!cli) return;
       ppE.cierre = ($im('nm-fecha') || {}).value || (vis === 'final' ? anio + '-12-31' : anio + '-09-30');
       const [r1, r2] = await Promise.all([
@@ -20663,6 +20663,115 @@ ${cont.innerHTML}
     function ppCdAnio(y) { if (ppE.cdAn.has(y)) ppE.cdAn.delete(y); else ppE.cdAn.add(y); nmCuaPintar(); }
     function ppCdTodos(ab) { const D = ppDatos(); ppE.cdAn = new Set(ab && D ? D.anios.map(a => a.y) : []); nmCuaPintar(); }
     function ppCdFila(k) { if (ppE.cdAb.has(k)) ppE.cdAb.delete(k); else ppE.cdAb.add(k); nmCuaPintar(); }
+    // ===== Movimiento del mayor contable por tipo de activo (saldo inicial, compras, bajas, ventas, reclasificaciones, ajustes, reavalúos, otros y saldo final) =====
+    const PP_MOV_COLS = [['a', 'Compras / importaciones'], ['baj', 'Bajas'], ['ven', 'Ventas'], ['rec', 'Reclasificaciones'], ['aju', 'Ajustes'], ['rea', 'Reavalúos'], ['otr', 'Otros']];
+    const PP_MOV_ETQ = { a: 'Compras / importaciones', baj: 'Bajas', ven: 'Ventas', rec: 'Reclasificaciones', aju: 'Ajustes', rea: 'Reavalúos', otr: 'Otros' };
+    // Clasifica un asiento del mayor por su concepto; en la depreciación acumulada, el crédito normal es la depreciación del año
+    function ppMovTipo(l, dep) {
+      const t = ' ' + obClave(l.con) + ' ';
+      if (/reavalu|revalu|avaluo/.test(t)) return 'rea';
+      if (/reclasif|traspaso|transferencia entre/.test(t)) return 'rec';
+      if (/ajust|regulariz|correccion|corrige/.test(t)) return 'aju';
+      const aum = dep ? l.cre > l.deb : l.deb > l.cre;
+      if (aum) return dep ? 'a' : (/import|liquidacion|nacionaliz|compra|adquis|factura|\bfac\b|\bfac-|fact |n\/v|\bnv\b|fcch|proveedor|instalac|construc|obra|licencia|software|equipo|maquinaria|vehiculo|mueble/.test(t) ? 'a' : 'otr');
+      if (/venta|vend|\bvta/.test(t)) return 'ven';
+      if (/baja|siniestro|robo|hurto|castigo|obsolet|retiro|desecho|chatarra|destruc/.test(t)) return 'baj';
+      return 'otr';
+    }
+    async function ppMovCargar() {
+      const cli = nmE.cliente, anio = Number(nmE.anio), vis = nmE.visita, id = ppE.cargaId;
+      const M = ppE.mov = { cargado: false, ids: [], cta: {}, det: {}, ver: {}, msg: '' };
+      try {
+        if (!cli) return;
+        const D = ppDatos(); if (!D) { ppE.mov = null; return; }
+        const natura = {}; D.clases.forEach(x => { x.costo.forEach(b => { natura[b.codigo] = 'costo'; }); x.dep.forEach(b => { natura[b.codigo] = 'dep'; }); }); D.sin.forEach(s => { natura[s.b.codigo] = s.dep ? 'dep' : 'costo'; });
+        const cods = Object.keys(natura);
+        let arch = await f104Pag(() => supabaseClient.from('pedidos_claude_archivos').select('id, nombre').is('pedido_id', null).eq('cliente_id', cli).eq('anio', anio).eq('visita', vis).eq('etiqueta', MC_ETQ).is('eliminado_at', null).order('created_at', { ascending: false }));
+        if (!arch.length) arch = await f104Pag(() => supabaseClient.from('pedidos_claude_archivos').select('id, nombre').is('pedido_id', null).eq('cliente_id', cli).eq('anio', anio).eq('etiqueta', MC_ETQ).is('eliminado_at', null).order('created_at', { ascending: false }));
+        if (arch.length) { const es = await supabaseClient.from('mayor_resumen_estado').select('archivo_id, listo').in('archivo_id', arch.map(a => a.id)); const ok = new Set(((es.data) || []).filter(x => x.listo).map(x => x.archivo_id)); M.ids = arch.filter(a => ok.has(a.id)).map(a => a.id).slice(0, 1); }
+        if (id !== ppE.cargaId) return;
+        let may = [];
+        if (M.ids.length && cods.length) may = await f104Pag(() => supabaseClient.from('mayor_resumen_cuentas').select('cuenta, nombre, saldo_inicial, debitos, creditos, saldo_final, archivo_id').in('archivo_id', M.ids).in('cuenta', cods));
+        if (id !== ppE.cargaId) return;
+        cods.forEach(c => { const m = may.filter(x => String(x.cuenta).trim() === c), sum = k => m.reduce((a, x) => a + (Number(x[k]) || 0), 0); M.cta[c] = { dep: natura[c] === 'dep', hay: m.length > 0, ini: sum('saldo_inicial'), deb: sum('debitos'), cre: sum('creditos'), fin: sum('saldo_final'), lineas: null }; });
+        M.cargado = true; if (nmE.tab === 'cuadres') nmCuaPintar();
+        for (const c of cods) {
+          if (!M.ids.length || !M.cta[c].hay) continue;
+          const out = [];
+          for (const a of M.ids) { const r = await supabaseClient.rpc('mayor_lineas_cuenta_app', { p_archivo: a, p_cuenta: c, p_filtro: null, p_limite: 2000 }); if (r.error) throw r.error; (r.data || []).forEach(x => { const q = String(x.linea || '').split(';'); if (!String(q[3] || '').trim()) return; const d = obGiNum(q[14]), h = obGiNum(q[15]); out.push({ fecha: String(q[3]).trim(), ter: String(q[6] || '').trim(), con: String(q[10] || '').trim(), deb: isNaN(d) ? 0 : d, cre: isNaN(h) ? 0 : h }); }); }
+          if (id !== ppE.cargaId) return;
+          M.cta[c].lineas = out;
+        }
+        if (nmE.tab === 'cuadres') nmCuaPintar();
+      } catch (er) { M.msg = 'No se pudo armar el movimiento del mayor: ' + (er.message || er); M.cargado = true; if (nmE.tab === 'cuadres') nmCuaPintar(); }
+    }
+    // Una fila (clasificación o cuenta suelta): sumas por tipo de movimiento y lista de asientos con su tipo
+    function ppMovFila(etq, codigos, dep, bal) {
+      const M = ppE.mov, R = obR, z = { ini: 0, a: 0, baj: 0, ven: 0, rec: 0, aju: 0, rea: 0, otr: 0, fin: 0 }, ls = [];
+      let sinDetalle = 0, hay = false;
+      codigos.forEach(c => {
+        const x = M.cta[c]; if (!x) return; hay = hay || x.hay;
+        const sg = dep ? -1 : 1; z.ini += sg * x.ini; z.fin += sg * x.fin;
+        if (x.lineas) {
+          let s = 0;
+          x.lineas.forEach(l => { const t = ppMovTipo(l, dep), d = dep ? l.cre - l.deb : l.deb - l.cre; z[t] += d; s += d; ls.push({ ...l, t, d, c }); });
+          const falta = R((sg * (x.fin - x.ini)) - s); if (Math.abs(falta) > 0.5) { z.otr += falta; ls.push({ fecha: '', ter: '', con: 'Diferencia entre el movimiento del resumen del mayor y la suma de sus asientos (revisar si el mayor trae todos los asientos)', deb: 0, cre: 0, t: 'otr', d: falta, c }); }
+        } else if (x.hay) { const d = sg * (x.fin - x.ini); z.otr += d; sinDetalle++; ls.push({ fecha: '', ter: '', con: 'Sin detalle de asientos en el mayor cargado: movimiento neto de la cuenta', deb: 0, cre: 0, t: 'otr', d: R(d), c }); }
+      });
+      Object.keys(z).forEach(k => { z[k] = R(z[k]); });
+      return { etq, codigos, dep, z, bal: bal === null ? null : R(bal), hay, sinDetalle, ls };
+    }
+    // Datos de las dos tablas (costo y depreciación acumulada) con las clasificaciones y cuentas que van en el papel
+    function ppMovData(D) {
+      const M = ppE.mov; if (!M || !M.cargado || !M.ids.length) return null;
+      const mk = dep => {
+        const filas = [];
+        D.clases.filter(x => x.inc).forEach(x => { const cs = (dep ? x.dep : x.costo).map(b => b.codigo); if (cs.length) filas.push(ppMovFila(x.k, cs, dep, Math.abs((dep ? x.dep : x.costo).reduce((a, b) => a + b.saldo, 0)))); });
+        D.sin.filter(s => s.inc && !!s.dep === dep).forEach(s => filas.push(ppMovFila(s.b.codigo + ' ' + s.b.cuenta + ' (sin activos en el anexo)', [s.b.codigo], dep, Math.abs(s.b.saldo))));
+        const T = { ini: 0, a: 0, baj: 0, ven: 0, rec: 0, aju: 0, rea: 0, otr: 0, fin: 0 }; filas.forEach(f => Object.keys(T).forEach(k => { T[k] = obR(T[k] + f.z[k]); }));
+        return { filas, T, bal: obR(filas.reduce((a, f) => a + (f.bal || 0), 0)) };
+      };
+      return { costo: mk(false), dep: mk(true) };
+    }
+    function ppMovVer(k) { ppE.mov.ver[k] = !ppE.mov.ver[k]; nmCuaPintar(); }
+    function ppMovHtml(D) {
+      const e = escapeHtml, cab = t => '<div class="v2r-h3" style="margin:6px 0 6px"><span>' + t + '</span></div>', ay = t => '<p style="font-size:12px;color:#6b6b63;line-height:1.6;margin:0 0 8px">' + t + '</p>';
+      const tit = 'Movimiento del mayor contable por tipo de activo (ref. ' + PP_REF.cuadre + ')';
+      const M = ppE.mov;
+      if (!M || !M.cargado) return cab(tit) + '<p class="text-xs text-slate-500" style="margin-bottom:14px">Cargando el movimiento del mayor…</p>';
+      if (M.msg) return cab(tit) + '<p style="font-size:12px;color:#b42318;margin-bottom:14px">' + e(M.msg) + '</p>';
+      if (!M.ids.length) return cab(tit) + ay('No hay mayor contable cargado para este cliente y año. Cárgalo en la pantalla Mayor contable para ver aquí el saldo inicial, las compras, bajas, ventas, reclasificaciones, ajustes, reavalúos y el saldo final de cada tipo de activo.');
+      const R2 = obR, num = x => (x === null || x === undefined) ? '<span style="color:#cbd5e1">—</span>' : ppF2(x);
+      const th = (t, cls) => '<th class="px-2 py-1 border-b border-slate-200 whitespace-nowrap ' + (cls || 'text-right') + '">' + t + '</th>';
+      const tdn = (v, cls) => '<td class="px-2 py-0.5 text-right whitespace-nowrap ' + (cls || '') + '">' + (v === 0 ? '<span style="color:#cbd5e1">0,00</span>' : num(v)) + '</td>';
+      const tdd = d => '<td class="px-2 py-0.5 text-right whitespace-nowrap font-bold ' + (Math.abs(d) <= 1 ? 'text-emerald-700' : 'text-red-600') + '">' + num(d) + '</td>';
+      const btn = (k, t) => '<button type="button" class="v2r-i" onclick="ppMovVer(\'' + e(k) + '\')" title="' + e(t) + '">' + IC_OJO + '</button>';
+      const DT = ppMovData(D); if (!DT) return cab(tit);
+      const bloque = (dep, B, titulo) => {
+        const cols = PP_MOV_COLS.map(c => (dep && c[0] === 'a') ? ['a', 'Depreciación del año'] : c);
+        const cuerpo = B.filas.map(f => {
+          const k = (dep ? 'd' : 'c') + ':' + f.etq, dif = R2(f.z.fin - (f.bal === null ? f.z.fin : f.bal));
+          let r = '<tr class="border-b border-slate-100"><td class="px-2 py-0.5 min-w-[260px]">' + e(f.etq) + btn(k, 'Ver la composición del movimiento (asientos del mayor)') + (f.hay ? '' : ' <span class="text-[10px]" style="color:#b45309">Sin movimiento en el mayor</span>') + '</td>' + tdn(f.z.ini) + cols.map(c => tdn(f.z[c[0]])).join('') + tdn(f.z.fin, 'font-bold') + tdn(f.bal) + tdd(dif) + '</tr>';
+          if (M.ver[k]) {
+            const orden = cols.map(c => c[0]), ls = f.ls.slice().sort((a, b) => orden.indexOf(a.t) - orden.indexOf(b.t) || String(obFecha(a.fecha) || '').localeCompare(String(obFecha(b.fecha) || '')));
+            const resumen = cols.map(c => { const s = R2(f.ls.filter(l => l.t === c[0]).reduce((a, l) => a + l.d, 0)), n = f.ls.filter(l => l.t === c[0]).length; return n ? '<span style="margin-right:14px"><b>' + e(c[1]) + ':</b> ' + ppF2(s) + ' (' + n + ' asiento' + (n > 1 ? 's' : '') + ')</span>' : ''; }).join('');
+            r += '<tr><td colspan="' + (cols.length + 5) + '" class="px-3 py-2 bg-white"><div style="font-size:11px;color:#6b6b63;margin-bottom:4px">Cuentas del balance: ' + e(f.codigos.join(' · ')) + '</div><div style="font-size:11px;margin-bottom:4px">' + resumen + '</div>'
+              + '<div class="overflow-x-auto"><table class="w-full text-[11px] leading-tight border-collapse"><thead class="bg-slate-50 text-slate-600"><tr>' + th('Tipo', 'text-left') + th('Cuenta', 'text-left') + th('Fecha', 'text-left') + th('Concepto', 'text-left') + th('Tercero', 'text-left') + th('Valor') + '</tr></thead><tbody>'
+              + ls.slice(0, 400).map(l => '<tr class="border-b border-slate-100"><td class="px-2 py-0.5 whitespace-nowrap">' + e(PP_MOV_ETQ[l.t] === 'Compras / importaciones' && dep ? 'Depreciación del año' : PP_MOV_ETQ[l.t]) + '</td><td class="px-2 py-0.5 whitespace-nowrap">' + e(l.c) + '</td><td class="px-2 py-0.5 whitespace-nowrap">' + e(l.fecha) + '</td><td class="px-2 py-0.5" style="max-width:520px;white-space:normal">' + e(l.con) + '</td><td class="px-2 py-0.5 whitespace-nowrap">' + e(l.ter) + '</td>' + tdn(R2(l.d)) + '</tr>').join('')
+              + '</tbody></table></div>' + (ls.length > 400 ? '<div style="font-size:11px;color:#6b6b63">Se muestran los primeros 400 de ' + ls.length + ' asientos.</div>' : '') + '</td></tr>';
+          }
+          return r;
+        }).join('');
+        const T = B.T, dT = R2(T.fin - B.bal);
+        return '<div class="overflow-x-auto" style="margin-bottom:12px"><table class="w-full text-[11px] leading-tight border-collapse"><thead class="bg-slate-50 text-slate-600"><tr>' + th(titulo, 'text-left') + th('Saldo inicial') + cols.map(c => th(c[1])).join('') + th('Saldo final') + th('Según balance') + th('Diferencia') + '</tr></thead><tbody>' + cuerpo
+          + '<tr class="border-b border-slate-200 bg-slate-50 font-bold text-slate-800"><td class="px-2 py-0.5">Total</td>' + tdn(T.ini) + cols.map(c => tdn(T[c[0]])).join('') + tdn(T.fin) + tdn(B.bal) + tdd(dT) + '</tr></tbody></table></div>';
+      };
+      const sinDet = Object.values(M.cta).filter(x => x.hay && !x.lineas).length, faltan = Object.keys(M.cta).filter(c => !M.cta[c].hay).length;
+      return cab(tit) + ay('Del mayor contable cargado: saldo inicial del año, cada tipo de movimiento y saldo final de cada tipo de activo, contra el balance. Cada asiento se clasifica por su concepto (compras e importaciones, bajas, ventas, reclasificaciones, ajustes, reavalúos); lo que no se reconoce va en «Otros». Toca el ojito de una fila para ver los asientos que la componen.')
+        + (sinDet ? '<p style="font-size:11px;color:#6b6b63;margin:-4px 0 6px">Cargando el detalle de asientos de ' + sinDet + ' cuenta(s)…</p>' : '')
+        + (faltan ? '<p style="font-size:11px;color:#b45309;margin:-4px 0 6px">' + faltan + ' cuenta(s) del balance no aparecen en el mayor cargado.</p>' : '')
+        + bloque(false, DT.costo, 'Costo') + bloque(true, DT.dep, 'Depreciación acumulada');
+    }
     // Pestaña «Resumen de cuadres y cruces»: detalle de activos fijos arriba del resto
     function ppCuadresHtml() {
       const e = escapeHtml, cab = t => '<div class="v2r-h3" style="margin:6px 0 6px"><span>' + t + '</span></div>', ay = t => '<p style="font-size:12px;color:#6b6b63;line-height:1.6;margin:0 0 8px">' + t + '</p>';
@@ -20718,6 +20827,7 @@ ${cont.innerHTML}
       if (D.sinCalc) h += '<p style="font-size:11px;color:#b45309;margin:-4px 0 10px">' + D.sinCalc + ' activo(s) sin fecha de inicio, vida útil o valor de compra: no se pudo calcular su depreciación.</p>';
       if (D.dups.length) h += '<p style="font-size:11px;color:#b45309;margin:-4px 0 10px">Hay ' + D.dups.length + ' código(s) de activo repetido(s) en el anexo: ' + e(D.dups.slice(0, 8).join(', ')) + (D.dups.length > 8 ? '…' : '') + '. Revisa si es el mismo activo duplicado.</p>';
       if (ppE.ver.dsis) h += '<div style="margin-bottom:12px;font-size:12px"><div style="font-weight:700;margin-bottom:2px">Activos con diferencia contra la depreciación del sistema</div>' + lista(D.ao.filter(x => x.r.dif !== null && Math.abs(x.r.dif) > 1).sort((a, b) => Math.abs(b.r.dif) - Math.abs(a.r.dif)), 200) + '</div>';
+      h += ppMovHtml(D);
       // 2. Costo y depreciación acumulada por año y mes (como el de derechos de uso)
       const C = ppCdCalc(D), an = ppE.cdAn, ab = ppE.cdAb, ks = D.claves.slice().sort((a, b) => (D.clases.find(x => x.k === b) || { bruto: 0 }).bruto - (D.clases.find(x => x.k === a) || { bruto: 0 }).bruto);
       const sm = (o, f) => R2(ks.reduce((a, k) => a + f(o[k]), 0));
@@ -20752,6 +20862,7 @@ ${cont.innerHTML}
     }
     function ppCuaPrepend() {
       const c = $im('nm-panel'); if (!c || nmE.tab !== 'cuadres' || !nmE.cliente) return;
+      if (ppE.cargado && ppE.filas.length && !ppE.mov) ppMovCargar();
       c.innerHTML = '<div style="padding:4px 2px">' + pcAvisoCorte(ppE.cierre, ppCuaPrepend, 'pp') + ppCuadresHtml() + '</div>' + c.innerHTML;
     }
     // Excel con carátula y una hoja por cuadro
@@ -20791,6 +20902,13 @@ ${cont.innerHTML}
         hoja('3. Depreciación por año', 'Depreciación por año (' + PP_REF.dep + ')', ['Año'].concat(ks, ['Gasto del año', 'Dep. acumulada al cierre del año']), D.anios.map(a => [String(a.y) + (a.parcial ? ' (hasta ' + ppE.cierre + ')' : '')].concat(ks.map(k => a.porK[k] || 0), [a.gasto, a.ac])));
         const tm = D.meses.map((_, m) => obR(D.mm.reduce((a, r) => a + r.v[m], 0)));
         hoja('4. Depreciación por mes', 'Gasto de depreciación por mes, año ' + Yc + ' (' + PP_REF.dep + ')', ['Clasificación'].concat(D.meses, ['Total del año']), D.mm.map(r => [r.k].concat(r.v, [r.t])).concat([['Total'].concat(tm, [obR(tm.reduce((a, b) => a + b, 0))])]), [D.mm.length]);
+        const MV = ppMovData(D);
+        if (MV) [[false, MV.costo, '5. Mayor costo', 'Costo'], [true, MV.dep, '6. Mayor depreciación', 'Depreciación acumulada']].forEach(([dep, B, nom, t0]) => {
+          const cs = PP_MOV_COLS.map(c => (dep && c[0] === 'a') ? ['a', 'Depreciación del año'] : c);
+          const fm = B.filas.map(f => [f.etq, f.z.ini].concat(cs.map(c => f.z[c[0]]), [f.z.fin, f.bal, f.bal === null ? null : obR(f.z.fin - f.bal)]));
+          fm.push(['Total', B.T.ini].concat(cs.map(c => B.T[c[0]]), [B.T.fin, B.bal, obR(B.T.fin - B.bal)]));
+          hoja(nom, 'Movimiento del mayor contable: ' + t0.toLowerCase() + ' (' + PP_REF.cuadre + ')', [t0, 'Saldo inicial'].concat(cs.map(c => c[1]), ['Saldo final', 'Según balance', 'Diferencia']), fm, [fm.length - 1]);
+        });
         const buf = await wb.xlsx.writeBuffer();
         ptBajarArchivo(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), ('Anexo propiedad planta y equipo - ' + cli + '.xlsx').replace(/[\\\/:*?"<>|\r\n\t]/g, '-').replace(/\s+/g, ' '));
       } catch (er) { console.error('Excel de PPE:', er); alert('No se pudo generar el Excel: ' + (er.message || er)); }
